@@ -1,0 +1,101 @@
+site_name: RoomKit
+site_description: Pure async Python library for multi-channel conversations
+site_url: https://www.roomkit.live
+repo_url: https://github.com/sboily/roomkit
+repo_name: sboily/roomkit
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: false
+            show_symbol_type_toc: false
+            members_order: source
+            merge_init_into_class: true
+            docstring_style: google
+            show_if_no_docstring: false
+            signature_crossrefs: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Features: features.md
+  - Architecture: architecture.md
+  - Technical: technical.md
+  - FAQ: faq.md
+  - CPaaS Comparison: cpaas-comparison.md
+  - AI Assistant Integration: ai-integration.md
+  - MCP Integration: mcp.md
+  - RFC: roomkit-rfc.md
+  - API Reference:
+      - api/index.md
+      - Core:
+          - RoomKit: api/roomkit.md
+          - Hooks: api/hooks.md
+          - Routing: api/routing.md
+          - Store: api/store.md
+          - Realtime: api/realtime.md
+          - Event Sources: api/sources.md
+      - Channels:
+          - Channel ABC: api/channel.md
+          - Built-in Channels: api/channels.md
+          - Voice Channel: api/providers-voice.md
+          - Realtime Voice: api/providers-realtime-voice.md
+      - Models:
+          - Room & Timers: api/room.md
+          - Events & Content: api/events.md
+          - Channel Models: api/channel-models.md
+          - Participants & Identity: api/identity.md
+          - Delivery: api/delivery.md
+          - Hooks & Side Effects: api/hook-models.md
+          - Enums: api/enums.md
+      - Providers:
+          - AI: api/providers-ai.md
+          - SMS: api/providers-sms.md
+          - RCS: api/providers-rcs.md
+          - Email: api/providers-email.md
+          - WhatsApp: api/providers-whatsapp.md
+          - Messenger: api/providers-messenger.md
+          - Teams: api/providers-teams.md
+          - HTTP: api/providers-http.md
