@@ -298,7 +298,7 @@ await kit.attach_channel(
 Or implement rate limiting in hooks:
 
 ```python
-@kit.hook(HookTrigger.PRE_DELIVERY)
+@kit.hook(HookTrigger.BEFORE_BROADCAST)
 async def rate_limit(event, ctx):
     if await is_rate_limited(ctx.channel_id):
         return HookResult.block("Rate limited - try again later")
@@ -377,7 +377,7 @@ Hooks run during normal message processing, so test them end-to-end:
 ```python
 blocked_messages = []
 
-@kit.hook(HookTrigger.PRE_INBOUND, name="test_blocker")
+@kit.hook(HookTrigger.BEFORE_BROADCAST, name="test_blocker")
 async def block_spam(event, ctx):
     if "spam" in event.content.body.lower():
         blocked_messages.append(event)
