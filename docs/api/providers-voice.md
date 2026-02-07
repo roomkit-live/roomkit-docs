@@ -81,6 +81,12 @@ tts = SherpaOnnxTTSProvider(SherpaOnnxTTSConfig(
 
 Install with: `pip install roomkit[sherpa-onnx]`
 
+## RTP Backend
+
+::: roomkit.voice.backends.rtp.RTPVoiceBackend
+
+Install with: `pip install roomkit[rtp]`
+
 ## Mock Voice Backend
 
 ::: roomkit.voice.backends.mock.MockVoiceBackend

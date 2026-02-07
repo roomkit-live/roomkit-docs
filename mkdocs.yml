@@ -81,6 +81,7 @@ nav:
           - Channel ABC: api/channel.md
           - Built-in Channels: api/channels.md
           - Voice Channel: api/providers-voice.md
+          - RTP Backend: api/rtp-backend.md
           - Realtime Voice: api/providers-realtime-voice.md
       - Models:
           - Room & Timers: api/room.md
