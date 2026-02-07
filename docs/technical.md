@@ -870,7 +870,7 @@ repos:
 
 ```bash
 # Clone the repository
-git clone https://github.com/sboily/roomkit.git
+git clone https://github.com/roomkit-live/roomkit.git
 cd roomkit
 
 # Install all dev dependencies (requires uv)

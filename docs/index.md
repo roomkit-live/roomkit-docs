@@ -47,4 +47,4 @@ result = await kit.process_inbound(message)
 RoomKit provides AI-friendly documentation:
 
 - **[llms.txt](llms.txt)** — Structured documentation index for LLMs
-- **[AGENTS.md](https://github.com/sboily/roomkit/blob/main/AGENTS.md)** — Project guidance for coding assistants
+- **[AGENTS.md](https://github.com/roomkit-live/roomkit/blob/main/AGENTS.md)** — Project guidance for coding assistants
