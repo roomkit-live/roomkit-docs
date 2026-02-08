@@ -2,6 +2,8 @@
 
 Technical documentation for [RoomKit](https://github.com/roomkit-live/roomkit), built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
 
+This is the single source of truth for all RoomKit documentation — API reference, guides, architecture, and more. The `roomkit` repo itself contains no docs (only a pointer back here).
+
 ## Local Development
 
 ```bash
@@ -23,6 +25,11 @@ docs/
   mcp.md              MCP integration
   faq.md              FAQ
   cpaas-comparison.md CPaaS comparison
+  guides/             Hands-on guides
+    resampler.md        Audio resampler
+    sherpa-onnx.md      sherpa-onnx providers (VAD, denoiser, STT, TTS)
+    wav-file-recorder.md  WAV file recorder & debug taps
+    rtp-backend.md      RTP voice backend & SIP integration
   api/                API reference (auto-generated from docstrings)
 mkdocs.yml            MkDocs configuration
 ```

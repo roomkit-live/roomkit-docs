@@ -67,6 +67,11 @@ nav:
   - CPaaS Comparison: cpaas-comparison.md
   - AI Assistant Integration: ai-integration.md
   - MCP Integration: mcp.md
+  - Guides:
+      - Audio Resampler: guides/resampler.md
+      - sherpa-onnx Providers: guides/sherpa-onnx.md
+      - WAV File Recorder: guides/wav-file-recorder.md
+      - RTP Voice Backend: guides/rtp-backend.md
   - RFC: roomkit-rfc.md
   - API Reference:
       - api/index.md
