@@ -376,6 +376,7 @@ vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="ten-vad.onnx"))
 
 ## Examples
 
-- [`examples/voice_local_onnx_vllm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_local_onnx_vllm.py) — fully local voice assistant with sherpa-onnx STT/TTS/VAD + Ollama/vLLM, CUDA support.
+- [`examples/voice_local_onnx_vllm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_local_onnx_vllm.py) — fully local voice assistant with sherpa-onnx STT/TTS/VAD + Ollama/vLLM, CUDA support. Supports optional [smart-turn detection](smart-turn.md) via `SMART_TURN_MODEL` env var.
+- [`examples/voice_smart_turn.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_smart_turn.py) — audio-native turn detection with smart-turn + sherpa-onnx STT/TTS/VAD. See the [Smart Turn Detection guide](smart-turn.md).
 - [`examples/voice_sherpa_onnx_vad.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_sherpa_onnx_vad.py) — standalone local mic demo with neural VAD + optional denoiser.
 - [`examples/voice_cloud.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_cloud.py) — cloud voice assistant with Deepgram STT + ElevenLabs TTS + Claude (set `VAD_MODEL` and/or `DENOISE_MODEL` env vars).
