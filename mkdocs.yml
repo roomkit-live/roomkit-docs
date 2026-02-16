@@ -73,6 +73,7 @@ nav:
       - Smart Turn Detection: guides/smart-turn.md
       - WAV File Recorder: guides/wav-file-recorder.md
       - RTP Voice Backend: guides/rtp-backend.md
+      - Memory Provider: guides/memory-provider.md
   - RFC: roomkit-rfc.md
   - API Reference:
       - api/index.md
@@ -81,6 +82,7 @@ nav:
           - Hooks: api/hooks.md
           - Routing: api/routing.md
           - Store: api/store.md
+          - Memory: api/memory.md
           - Realtime: api/realtime.md
           - Event Sources: api/sources.md
       - Channels:

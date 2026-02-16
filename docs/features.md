@@ -392,6 +392,30 @@ gemini = GeminiAIProvider(GeminiConfig(api_key="..."))
 assert gemini.supports_vision is True  # All Gemini models support vision
 ```
 
+### Memory Providers
+
+The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:
+
+```python
+from roomkit import AIChannel, MemoryProvider, MemoryResult, AIMessage, SlidingWindowMemory
+
+# Default — last 50 events (same as omitting memory)
+ai = AIChannel("ai", provider=provider, max_context_events=50)
+
+# Custom provider that injects a summary
+class SummaryMemory(MemoryProvider):
+    async def retrieve(self, room_id, current_event, context, *, channel_id=None):
+        summary = await my_summarizer.summarize(room_id)
+        return MemoryResult(
+            messages=[AIMessage(role="system", content=summary)],
+            events=context.recent_events[-5:],
+        )
+
+ai = AIChannel("ai", provider=provider, memory=SummaryMemory())
+```
+
+`MemoryResult` has two fields: `messages` (pre-built `AIMessage` objects prepended to context) and `events` (raw `RoomEvent` objects converted by `AIChannel` with vision support preserved). See the [Memory Provider guide](guides/memory-provider.md) for details.
+
 ### Realtime Events (Typing, Presence, Read Receipts)
 
 RoomKit provides a pluggable realtime backend for ephemeral events that don't require persistence:
@@ -1396,6 +1420,22 @@ class CustomAIProvider(AIProvider):
             usage={"tokens": response.usage},
             tool_calls=[...],  # If function calling
         )
+```
+
+### Custom Memory Providers
+
+Implement `MemoryProvider` to control AI context construction:
+
+```python
+class VectorMemory(MemoryProvider):
+    async def retrieve(self, room_id, current_event, context, *, channel_id=None):
+        relevant = await self.vector_store.search(current_event.content.body)
+        return MemoryResult(
+            messages=[AIMessage(role="system", content=f"Relevant context: {relevant}")],
+            events=context.recent_events[-3:],
+        )
+
+ai = AIChannel("ai", provider=provider, memory=VectorMemory())
 ```
 
 ### Custom Identity Resolvers
