@@ -70,10 +70,14 @@ nav:
   - Guides:
       - Audio Resampler: guides/resampler.md
       - sherpa-onnx Providers: guides/sherpa-onnx.md
+      - NeuTTS Provider: guides/neutts.md
       - Smart Turn Detection: guides/smart-turn.md
       - WAV File Recorder: guides/wav-file-recorder.md
       - RTP Voice Backend: guides/rtp-backend.md
+      - SIP Voice Backend: guides/sip-backend.md
       - Memory Provider: guides/memory-provider.md
+      - Agent Skills: guides/agent-skills.md
+      - Telemetry: guides/telemetry.md
   - RFC: roomkit-rfc.md
   - API Reference:
       - api/index.md
@@ -90,6 +94,7 @@ nav:
           - Built-in Channels: api/channels.md
           - Voice Channel: api/providers-voice.md
           - RTP Backend: api/rtp-backend.md
+          - SIP Backend: api/sip-backend.md
           - Realtime Voice: api/providers-realtime-voice.md
       - Models:
           - Room & Timers: api/room.md

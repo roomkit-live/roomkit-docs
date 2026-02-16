@@ -374,8 +374,158 @@ vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="ten-vad.onnx"))
 
 ---
 
+## SherpaOnnxSTTProvider
+
+Speech-to-text using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Supports **transducer** models (streaming + batch) and **Whisper** models (batch only). All inference runs locally — no cloud APIs.
+
+### Quick start
+
+```python
+from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+
+stt = SherpaOnnxSTTProvider(
+    SherpaOnnxSTTConfig(
+        mode="transducer",
+        encoder="path/to/encoder.onnx",
+        decoder="path/to/decoder.onnx",
+        joiner="path/to/joiner.onnx",
+        tokens="path/to/tokens.txt",
+    )
+)
+```
+
+### Configuration
+
+| Parameter | Default | Description |
+|---|---|---|
+| `mode` | `"transducer"` | Recognition mode: `"transducer"` or `"whisper"`. |
+| `tokens` | `""` | Path to `tokens.txt`. |
+| `encoder` | `""` | Path to encoder `.onnx` model. |
+| `decoder` | `""` | Path to decoder `.onnx` model. |
+| `joiner` | `""` | Path to joiner `.onnx` model (transducer only). |
+| `model_type` | `""` | Model type hint (e.g. `"nemo_transducer"` for NeMo models). When set, the model is offline-only. |
+| `language` | `"en"` | Language code (Whisper only). |
+| `sample_rate` | `16000` | Expected audio sample rate. |
+| `num_threads` | `2` | CPU threads for inference. |
+| `provider` | `"cpu"` | ONNX execution provider (`"cpu"` or `"cuda"`). |
+| `enable_endpoint_detection` | `True` | Enable endpoint detection (streaming transducer only). |
+| `rule1_min_trailing_silence` | `2.4` | Endpoint rule 1 — trailing silence threshold (seconds). |
+| `rule2_min_trailing_silence` | `1.2` | Endpoint rule 2 — trailing silence with text (seconds). |
+| `rule3_min_utterance_length` | `20.0` | Endpoint rule 3 — minimum utterance length (seconds). |
+
+### Streaming vs offline
+
+| Mode | Streaming | Batch `transcribe()` | Use case |
+|---|---|---|---|
+| `transducer` (no `model_type`) | Yes | Yes | Real-time partial results (Zipformer, etc.) |
+| `transducer` + `model_type` | No | Yes | High-accuracy offline models (NeMo TDT, Parakeet) |
+| `whisper` | No | Yes | Whisper-family models |
+
+When streaming is not supported, VoiceChannel uses VAD to segment speech and calls `transcribe()` on each complete utterance.
+
+---
+
+## NVIDIA Parakeet TDT
+
+[NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is a 600M-parameter FastConformer-TDT model with excellent accuracy (6.34% average WER). It supports **25 European languages** with automatic language detection, punctuation, and capitalization.
+
+> **Note:** Parakeet TDT is an **offline model** — it does not support streaming. In the voice pipeline, VAD segments speech into utterances, then each utterance is transcribed in a single batch call. Latency depends on utterance length and hardware.
+
+### Download the model
+
+A pre-converted int8-quantized version is available (~640 MB):
+
+```bash
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2
+tar xf sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2
+```
+
+This contains:
+
+| File | Size | Description |
+|---|---|---|
+| `encoder.int8.onnx` | 622 MB | FastConformer encoder |
+| `decoder.int8.onnx` | 12 MB | TDT decoder |
+| `joiner.int8.onnx` | 6.1 MB | Joiner network |
+| `tokens.txt` | 92 KB | SentencePiece vocabulary (8192 tokens) |
+
+### Quick start
+
+```python
+from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+
+stt = SherpaOnnxSTTProvider(
+    SherpaOnnxSTTConfig(
+        mode="transducer",
+        model_type="nemo_transducer",
+        encoder="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/encoder.int8.onnx",
+        decoder="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/decoder.int8.onnx",
+        joiner="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/joiner.int8.onnx",
+        tokens="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/tokens.txt",
+    )
+)
+```
+
+The `model_type="nemo_transducer"` tells sherpa-onnx how to handle the NeMo model format and disables streaming (since TDT requires full-context attention).
+
+### Full pipeline example
+
+```python
+from roomkit import VoiceChannel
+from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
+from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+
+vad = SherpaOnnxVADProvider(
+    SherpaOnnxVADConfig(model="ten-vad.onnx")
+)
+stt = SherpaOnnxSTTProvider(
+    SherpaOnnxSTTConfig(
+        mode="transducer",
+        model_type="nemo_transducer",
+        encoder="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/encoder.int8.onnx",
+        decoder="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/decoder.int8.onnx",
+        joiner="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/joiner.int8.onnx",
+        tokens="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/tokens.txt",
+        provider="cuda",  # recommended for 600M model
+    )
+)
+backend = LocalAudioBackend(
+    input_sample_rate=16000,
+    output_sample_rate=22050,
+)
+
+voice = VoiceChannel(
+    "voice",
+    stt=stt,
+    tts=...,  # your TTS provider
+    backend=backend,
+    pipeline=AudioPipelineConfig(vad=vad),
+)
+```
+
+### Supported languages
+
+Bulgarian, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, German, Greek, Hungarian, Italian, Latvian, Lithuanian, Maltese, Polish, Portuguese, Romanian, Russian, Slovak, Slovenian, Spanish, Swedish, Ukrainian.
+
+Language is detected automatically — no configuration needed.
+
+### Performance tips
+
+- **Use CUDA** for STT inference — the 600M model benefits significantly from GPU acceleration.
+- **Use int8** (the default download) for ~2x faster inference with minimal quality loss.
+- **Warmup** before the first interaction to avoid cold-start latency:
+
+```python
+await stt.warmup()  # loads the model into memory
+```
+
+---
+
 ## Examples
 
+- [`examples/voice_parakeet_tdt.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_parakeet_tdt.py) — local voice assistant with NVIDIA Parakeet TDT 0.6B v3 STT + sherpa-onnx TTS/VAD + Ollama/vLLM.
 - [`examples/voice_local_onnx_vllm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_local_onnx_vllm.py) — fully local voice assistant with sherpa-onnx STT/TTS/VAD + Ollama/vLLM, CUDA support. Supports optional [smart-turn detection](smart-turn.md) via `SMART_TURN_MODEL` env var.
 - [`examples/voice_smart_turn.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_smart_turn.py) — audio-native turn detection with smart-turn + sherpa-onnx STT/TTS/VAD. See the [Smart Turn Detection guide](smart-turn.md).
 - [`examples/voice_sherpa_onnx_vad.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_sherpa_onnx_vad.py) — standalone local mic demo with neural VAD + optional denoiser.

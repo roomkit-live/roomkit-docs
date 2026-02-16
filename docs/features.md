@@ -351,6 +351,36 @@ await kit.attach_channel("support-room", "ai-bot",
 
 Tool calls are returned in `AIResponse.tool_calls` for the host application to execute.
 
+#### Agent Skills
+
+RoomKit supports the [Agent Skills](https://agentskills.io) open standard for packaging knowledge, instructions, and scripts into reusable skill bundles. Skills complement MCP (runtime tool integration) with a structured knowledge-packaging format adopted by Claude Code, Cursor, Gemini CLI, and others.
+
+```python
+from roomkit import AIChannel, SkillRegistry
+
+# Discover skills from a directory of SKILL.md packages
+registry = SkillRegistry()
+registry.discover("./skills")
+
+# Pass to AIChannel — tools are auto-registered
+ai = AIChannel(
+    "ai-assistant",
+    provider=provider,
+    system_prompt="You are a helpful assistant.",
+    skills=registry,
+)
+```
+
+When skills are configured, the AI channel automatically:
+
+- Appends `<available_skills>` XML to the system prompt
+- Registers `activate_skill` and `read_skill_reference` tools
+- Optionally registers `run_skill_script` when a `ScriptExecutor` is provided
+
+The `ScriptExecutor` ABC has no default implementation — execution policy (sandboxing, timeouts, interpreters) is always the integrator's responsibility.
+
+See the [Agent Skills guide](guides/agent-skills.md) for full details on skill directory structure, script execution, and configuration.
+
 #### Vision Support
 
 AI providers can optionally support vision (image processing) by setting `supports_vision=True`. When enabled:
@@ -1180,6 +1210,28 @@ Framework event types:
 - `identity_timeout`, `process_timeout`
 - `hook_error`
 - `channel_connected`, `channel_disconnected` (WebSocket)
+
+### Telemetry Providers
+
+RoomKit includes a provider-agnostic telemetry system for tracing spans and recording metrics. Instrument STT, TTS, LLM, hooks, audio pipeline, and realtime voice sessions with zero configuration overhead.
+
+```python
+from roomkit import RoomKit
+from roomkit.telemetry import ConsoleTelemetryProvider
+
+kit = RoomKit(telemetry=ConsoleTelemetryProvider())
+```
+
+Built-in providers:
+
+- **NoopTelemetryProvider** -- Zero-overhead default (no-ops)
+- **ConsoleTelemetryProvider** -- Logs span summaries via Python logging
+- **MockTelemetryProvider** -- Records spans/metrics for test assertions
+- **OpenTelemetryProvider** -- Bridges to the OTel SDK (`pip install 'roomkit[opentelemetry]'`)
+
+14 span kinds cover the full stack: `STT_TRANSCRIBE`, `TTS_SYNTHESIZE`, `LLM_GENERATE`, `LLM_TOOL_CALL`, `HOOK_SYNC`, `HOOK_ASYNC`, `INBOUND_PIPELINE`, `REALTIME_SESSION`, `REALTIME_TURN`, `REALTIME_TOOL_CALL`, and more.
+
+See the [Telemetry Guide](guides/telemetry.md) for details on custom providers, span hierarchy, and configuration.
 
 ### Hook-Based Monitoring
 

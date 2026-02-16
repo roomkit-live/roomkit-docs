@@ -137,7 +137,7 @@ The backend accepts either a complete `bytes` buffer or an `AsyncIterator[AudioC
 
 ## SIP integration
 
-The RTP backend handles only the media (RTP) plane. For SIP signaling (INVITE, BYE, codec negotiation via SDP), pair it with a SIP library such as `aiosip` or `pjsip`. The SIP layer negotiates the codec and provides the remote RTP address, which you pass to `RTPVoiceBackend` via `remote_addr` or `metadata["remote_addr"]`.
+The RTP backend handles only the media (RTP) plane. For full SIP signaling (INVITE, BYE, codec negotiation via SDP), use the [SIP Voice Backend](sip-backend.md) instead, which handles the complete call lifecycle automatically. The SIP backend uses `aiosipua` for signaling and creates RTP sessions from negotiated SDP.
 
 ## API Reference
 
