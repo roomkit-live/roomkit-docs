@@ -78,6 +78,7 @@ nav:
       - Memory Provider: guides/memory-provider.md
       - Agent Skills: guides/agent-skills.md
       - MCP Tool Provider: guides/mcp-tool-provider.md
+      - Streaming with Tools: guides/streaming-tools.md
       - Telemetry: guides/telemetry.md
   - RFC: roomkit-rfc.md
   - API Reference:

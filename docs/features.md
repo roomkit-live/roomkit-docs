@@ -351,6 +351,39 @@ await kit.attach_channel("support-room", "ai-bot",
 
 Tool calls are returned in `AIResponse.tool_calls` for the host application to execute.
 
+#### Streaming with Tools
+
+When tools are configured and the AI provider supports streaming, RoomKit uses a **streaming tool loop** that delivers text progressively while handling tool calls between generation rounds:
+
+```python
+from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig
+
+async def tool_handler(name: str, arguments: dict) -> str:
+    if name == "lookup_order":
+        return '{"status": "shipped", "eta": "2026-02-20"}'
+    return '{"error": "Unknown tool"}'
+
+ai = AIChannel(
+    "ai-assistant",
+    provider=AnthropicAIProvider(AnthropicConfig(api_key="sk-...")),
+    tool_handler=tool_handler,
+    max_tool_rounds=10,  # default
+)
+```
+
+The streaming tool loop works as follows:
+
+1. **Stream generation** -- text deltas are yielded to downstream channels as they arrive
+2. **Collect tool calls** -- any tool calls from the generation are gathered after streaming completes
+3. **Execute tools** -- each tool call is dispatched to the `tool_handler`
+4. **Re-generate** -- the loop continues with tool results appended to the conversation context
+
+This means downstream channels (WebSocket, Voice/TTS) receive text in real time during each generation round, with no delay waiting for tool calls to complete. The `max_tool_rounds` parameter controls the maximum number of tool execution rounds (default 10).
+
+Providers that support structured streaming (`supports_structured_streaming=True`) emit `StreamTextDelta`, `StreamToolCall`, and `StreamDone` events. The Anthropic provider has native support; other providers use a default fallback that wraps `generate()`.
+
+See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture details and the full event protocol.
+
 #### MCP Tool Provider
 
 `MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's tool system. It discovers tools from a remote MCP server and exposes them as `AITool` objects with a standard `ToolHandler` for `AIChannel`:
