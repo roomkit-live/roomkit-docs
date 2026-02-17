@@ -470,6 +470,56 @@ gemini = GeminiAIProvider(GeminiConfig(api_key="..."))
 assert gemini.supports_vision is True  # All Gemini models support vision
 ```
 
+### Multi-Agent Orchestration
+
+Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. A `ConversationRouter` (installed as a BEFORE_BROADCAST hook) directs events to the right agent based on conversation phase, rules, and affinity. Agents transfer conversations via the `handoff_conversation` tool.
+
+```python
+from roomkit import (
+    ConversationPipeline,
+    HandoffHandler,
+    HandoffMemoryProvider,
+    HookExecution,
+    HookTrigger,
+    PipelineStage,
+    SlidingWindowMemory,
+    setup_handoff,
+)
+
+# Define a pipeline: triage -> handler -> resolver
+pipeline = ConversationPipeline(
+    stages=[
+        PipelineStage(phase="triage", agent_id="agent-triage", next="handling"),
+        PipelineStage(phase="handling", agent_id="agent-handler", next="resolution"),
+        PipelineStage(phase="resolution", agent_id="agent-resolver", next=None),
+    ],
+    supervisor_id="agent-supervisor",
+)
+
+# Generate router and install as a hook
+router = pipeline.to_router()
+kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
+    router.as_hook()
+)
+
+# Wire handoff into each agent
+handler = HandoffHandler(kit=kit, router=router, phase_map=pipeline.get_phase_map())
+for channel in [ai_triage, ai_handler, ai_resolver]:
+    channel._memory = HandoffMemoryProvider(channel._memory)
+    setup_handoff(channel, handler)
+```
+
+Key features:
+
+- **ConversationState** — Immutable state model tracking phase, active agent, handoff count, and transition history
+- **ConversationRouter** — Three-tier agent selection: affinity, rule matching, default fallback
+- **HandoffHandler** — Validates targets, updates state, persists, emits system events
+- **HandoffMemoryProvider** — Injects handoff context (summary, reason) into the receiving agent's prompt
+- **ConversationPipeline** — Syntactic sugar for sequential workflows with optional loops (`can_return_to`)
+- **Supervisor** — A designated agent that always receives events regardless of routing
+
+See the [Orchestration guide](guides/orchestration.md) for details on state management, routing rules, and handoff configuration.
+
 ### Memory Providers
 
 The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:

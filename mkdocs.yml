@@ -75,6 +75,7 @@ nav:
       - WAV File Recorder: guides/wav-file-recorder.md
       - RTP Voice Backend: guides/rtp-backend.md
       - SIP Voice Backend: guides/sip-backend.md
+      - Multi-Agent Orchestration: guides/orchestration.md
       - Memory Provider: guides/memory-provider.md
       - Agent Skills: guides/agent-skills.md
       - MCP Tool Provider: guides/mcp-tool-provider.md
