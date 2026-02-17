@@ -207,6 +207,7 @@ handler = HandoffHandler(
     router=router,
     agent_aliases={"billing": "agent-billing", "human": "human"},
     phase_map={"agent-billing": "handling", "agent-resolver": "resolution"},
+    allowed_transitions=pipeline.get_allowed_transitions(),  # enforce pipeline topology
 )
 ```
 
@@ -216,6 +217,7 @@ handler = HandoffHandler(
 | `router` | The `ConversationRouter` (for rule validation) |
 | `agent_aliases` | Map friendly names to channel IDs (e.g., `"billing"` -> `"agent-billing"`) |
 | `phase_map` | Map agent IDs to default phases (used when `next_phase` not specified) |
+| `allowed_transitions` | Optional `dict[str, set[str]]` from `pipeline.get_allowed_transitions()`. When set, handoffs to disallowed phases are rejected. |
 
 ### setup_handoff
 
