@@ -351,6 +351,21 @@ await kit.attach_channel("support-room", "ai-bot",
 
 Tool calls are returned in `AIResponse.tool_calls` for the host application to execute.
 
+#### MCP Tool Provider
+
+`MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's tool system. It discovers tools from a remote MCP server and exposes them as `AITool` objects with a standard `ToolHandler` for `AIChannel`:
+
+```python
+from roomkit import AIChannel, compose_tool_handlers
+from roomkit.tools import MCPToolProvider
+
+async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
+    handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
+    ai = AIChannel("ai", provider=provider, tool_handler=handler)
+```
+
+`compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports both streamable HTTP and SSE transports. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
+
 #### Agent Skills
 
 RoomKit supports the [Agent Skills](https://agentskills.io) open standard for packaging knowledge, instructions, and scripts into reusable skill bundles. Skills complement MCP (runtime tool integration) with a structured knowledge-packaging format adopted by Claude Code, Cursor, Gemini CLI, and others.

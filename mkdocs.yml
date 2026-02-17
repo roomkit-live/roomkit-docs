@@ -77,6 +77,7 @@ nav:
       - SIP Voice Backend: guides/sip-backend.md
       - Memory Provider: guides/memory-provider.md
       - Agent Skills: guides/agent-skills.md
+      - MCP Tool Provider: guides/mcp-tool-provider.md
       - Telemetry: guides/telemetry.md
   - RFC: roomkit-rfc.md
   - API Reference:
