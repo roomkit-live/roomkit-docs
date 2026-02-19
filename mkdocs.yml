@@ -76,6 +76,7 @@ nav:
       - RTP Voice Backend: guides/rtp-backend.md
       - SIP Voice Backend: guides/sip-backend.md
       - Multi-Agent Orchestration: guides/orchestration.md
+      - Agent Delegation: guides/agent-delegation.md
       - Memory Provider: guides/memory-provider.md
       - Agent Skills: guides/agent-skills.md
       - MCP Tool Provider: guides/mcp-tool-provider.md
@@ -92,6 +93,7 @@ nav:
           - Memory: api/memory.md
           - Realtime: api/realtime.md
           - Event Sources: api/sources.md
+          - Delegation: api/delegation.md
       - Channels:
           - Channel ABC: api/channel.md
           - Built-in Channels: api/channels.md

@@ -520,6 +520,35 @@ Key features:
 
 See the [Orchestration guide](guides/orchestration.md) for details on state management, routing rules, and handoff configuration.
 
+### Agent Delegation
+
+Delegate tasks to background agents while conversations continue. A voice agent can hand off a PR review to a specialist while still chatting with the user:
+
+```python
+# One call: creates child room, attaches agent, shares channels, runs task
+task = await kit.delegate(
+    room_id="call-room",
+    agent_id="pr-reviewer",
+    task="Review the latest PR on roomkit",
+    share_channels=["email-out"],
+    notify="voice-assistant",
+)
+
+# Fire and forget, or block for result
+result = await task.wait(timeout=30.0)
+```
+
+Key features:
+
+- **Child room isolation** — each task gets its own room, event history, and agent
+- **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`)
+- **Result routing** — system prompt injection on the `notify` channel
+- **Tool integration** — `setup_delegation()` lets the AI decide when to delegate (same pattern as `setup_handoff()`)
+- **Pluggable backend** — `TaskRunner` ABC with `InMemoryTaskRunner` default; swap in Redis/Celery for distributed deployments
+- **Hooks** — `ON_TASK_DELEGATED` and `ON_TASK_COMPLETED` for observability
+
+See the [Agent Delegation guide](guides/agent-delegation.md) for the full API, tool integration, and custom task runners.
+
 ### Memory Providers
 
 The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:
