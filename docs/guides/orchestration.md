@@ -7,17 +7,11 @@ Route conversations between multiple AI agents with state tracking, rule-based r
 ```python
 from roomkit import (
     AIChannel,
-    ChannelCategory,
     ConversationPipeline,
-    ConversationRouter,
-    HandoffHandler,
     HandoffMemoryProvider,
-    HookExecution,
-    HookTrigger,
     PipelineStage,
     RoomKit,
     SlidingWindowMemory,
-    setup_handoff,
 )
 
 # 1. Define the pipeline
@@ -36,29 +30,15 @@ pipeline = ConversationPipeline(
     supervisor_id="agent-supervisor",
 )
 
-# 2. Generate the router
-router = pipeline.to_router()
-
-# 3. Create the framework and register channels
+# 2. Create the framework and register channels
 kit = RoomKit()
-ai_triage = AIChannel("agent-triage", provider=provider, system_prompt="You triage requests.")
-ai_handler = AIChannel("agent-handler", provider=provider, system_prompt="You handle requests.")
+memory = HandoffMemoryProvider(SlidingWindowMemory(max_events=50))
+ai_triage = AIChannel("agent-triage", provider=provider, system_prompt="You triage.", memory=memory)
+ai_handler = AIChannel("agent-handler", provider=provider, system_prompt="You handle.", memory=memory)
 # ... register all channels
 
-# 4. Wire handoff into each agent
-handler = HandoffHandler(
-    kit=kit,
-    router=router,
-    phase_map=pipeline.get_phase_map(),
-)
-for channel in [ai_triage, ai_handler]:
-    channel._memory = HandoffMemoryProvider(channel._memory)
-    setup_handoff(channel, handler)
-
-# 5. Install the routing hook
-kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
-    router.as_hook()
-)
+# 3. One-liner: routing hook + handoff wiring on all agents
+router, handler = pipeline.install(kit, [ai_triage, ai_handler])
 ```
 
 ## How it works
@@ -183,7 +163,22 @@ All conditions within a rule are ANDed. Available condition fields:
 
 The `supervisor_id` agent always receives events regardless of routing. Use this for oversight, logging, or intervention.
 
-### Installing the hook
+### One-liner setup
+
+Use `router.install()` to register the hook and wire handoff on all agents in one call:
+
+```python
+handler = router.install(
+    kit,
+    [ai_triage, ai_billing, ai_tech],
+    agent_aliases={"billing": "agent-billing"},
+    phase_map={"agent-billing": "handling"},
+)
+```
+
+### Manual setup
+
+For full control, register the hook and handoff separately:
 
 ```python
 kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
@@ -295,6 +290,16 @@ pipeline = ConversationPipeline(
 
 router = pipeline.to_router()
 ```
+
+### One-liner setup
+
+Use `pipeline.install()` to generate the router, register the hook, and wire handoff on all agents:
+
+```python
+router, handler = pipeline.install(kit, [ai_triage, ai_handler, ai_reviewer])
+```
+
+You can pass `agent_aliases` and `hook_priority` as keyword arguments. The handler is created with `phase_map` and `allowed_transitions` derived from the pipeline stages automatically.
 
 ### PipelineStage fields
 

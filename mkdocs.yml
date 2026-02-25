@@ -77,6 +77,7 @@ nav:
       - SIP Voice Backend: guides/sip-backend.md
       - Multi-Agent Orchestration: guides/orchestration.md
       - Agent Delegation: guides/agent-delegation.md
+      - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
       - Memory Provider: guides/memory-provider.md
       - Agent Skills: guides/agent-skills.md
       - MCP Tool Provider: guides/mcp-tool-provider.md
