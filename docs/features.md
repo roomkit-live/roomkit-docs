@@ -429,6 +429,35 @@ The `ScriptExecutor` ABC has no default implementation — execution policy (san
 
 See the [Agent Skills guide](guides/agent-skills.md) for full details on skill directory structure, script execution, and configuration.
 
+#### AI Thinking / Reasoning
+
+AI models with chain-of-thought reasoning (Claude 3.5+, DeepSeek-R1, QwQ) can expose their internal thinking. RoomKit captures this reasoning, preserves it across tool-loop rounds, and exposes it through hooks and ephemeral events.
+
+```python
+ai = AIChannel(
+    "ai-thinker",
+    provider=provider,
+    system_prompt="Think step by step before answering.",
+    thinking_budget=8192,  # Token budget for reasoning
+)
+
+# Per-room override via binding metadata
+await kit.attach_channel("math-room", "ai-thinker",
+    category=ChannelCategory.INTELLIGENCE,
+    metadata={"thinking_budget": 16384},
+)
+```
+
+Thinking support varies by provider:
+
+- **Anthropic** — Native extended thinking API with signature-based round-trip fidelity
+- **Ollama / vLLM** — `<think>...</think>` tag parsing with streaming support (handles tags split across chunk boundaries)
+- **Gemini** — Accepted but no effect (Gemini does not currently emit thinking content)
+
+During streaming, thinking arrives as `StreamThinkingDelta` events before text. The `ON_AI_THINKING` hook fires when reasoning is produced, and `THINKING_START` / `THINKING_END` ephemeral events enable real-time UI indicators.
+
+See the [AI Thinking guide](guides/ai-thinking.md) for full details on configuration, streaming, and provider-specific behavior.
+
 #### Vision Support
 
 AI providers can optionally support vision (image processing) by setting `supports_vision=True`. When enabled:
