@@ -278,7 +278,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Gemini, PydanticAI, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Gemini, Mistral, or custom providers
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
 - **Vision support** -- Providers with vision capability can receive and process images

@@ -10,7 +10,7 @@
 | **AI - Anthropic** | anthropic SDK | >= 0.30 (optional) |
 | **AI - OpenAI** | openai SDK | >= 1.30 (optional) |
 | **AI - Gemini** | google-genai | >= 1.0.0 (optional) |
-| **AI - Framework** | pydantic-ai | >= 0.1 (optional) |
+| **AI - Mistral** | mistralai | >= 1.0 (optional) |
 | **SMS - Twilio** | twilio | >= 9.0 (optional) |
 | **Phone Validation** | phonenumbers | >= 8.13 (optional) |
 | **Crypto (Telnyx)** | pynacl | >= 1.5 (optional) |
@@ -99,7 +99,7 @@ roomkit/
 │   │   ├── anthropic/             # AnthropicAIProvider + AnthropicConfig
 │   │   ├── openai/                # OpenAIAIProvider + OpenAIConfig
 │   │   ├── gemini/                # GeminiAIProvider + GeminiConfig
-│   │   ├── pydantic_ai/           # Pydantic AI integration support
+│   │   ├── mistral/               # MistralAIProvider + MistralConfig
 │   │   ├── sms/                   # SMSProvider ABC + MockSMSProvider + utilities
 │   │   ├── voicemeup/             # VoiceMeUpSMSProvider + VoiceMeUpConfig + MMS aggregation
 │   │   ├── twilio/                # TwilioSMSProvider + TwilioRCSProvider + configs
@@ -691,15 +691,16 @@ httpx = ["httpx>=0.27"]
 anthropic = ["anthropic>=0.30"]
 openai = ["openai>=1.30"]
 gemini = ["google-genai>=1.0.0"]
+mistral = ["mistralai>=1.0"]
 twilio = ["twilio>=9.0"]
 phonenumbers = ["phonenumbers>=8.13"]
 pynacl = ["pynacl>=1.5"]
-pydantic-ai = ["pydantic-ai>=0.1"]
+
 fastrtc = ["fastrtc", "numpy"]
 websocket = ["websockets>=13.0"]
 sse = ["httpx>=0.27", "httpx-sse>=0.4"]
 providers = ["roomkit[httpx,anthropic,openai,gemini,twilio]"]
-all = ["roomkit[providers,pydantic-ai,phonenumbers,pynacl]"]
+all = ["roomkit[providers,phonenumbers,pynacl]"]
 ```
 
 ---
