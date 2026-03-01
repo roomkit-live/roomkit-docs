@@ -255,7 +255,7 @@ Filter options:
 | `ON_PARTIAL_TRANSCRIPTION` | Async | Voice: streaming transcription |
 | `ON_VAD_SILENCE` | Async | Voice: silence detected |
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
-| `ON_VOICE_SESSION_READY` | Async | Voice: audio path ready, safe to greet |
+| `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
 
 ### AI Intelligence Layer
 

@@ -1,6 +1,6 @@
 # Voice Greeting
 
-Greet callers automatically when the voice audio path is ready. RoomKit provides several patterns ranging from zero-code static greetings to fully dynamic LLM-generated responses.
+Greet callers automatically when a session starts. RoomKit provides several patterns ranging from zero-code static greetings to fully dynamic LLM-generated responses. The `ON_SESSION_STARTED` hook fires for both voice and text channels, so the same greeting patterns work across channel types.
 
 ---
 
@@ -17,7 +17,7 @@ Greet callers automatically when the voice audio path is ready. RoomKit provides
 
 ## Pattern 1: Agent auto_greet (recommended)
 
-Set `greeting` on the Agent and it speaks automatically when the voice session is ready. No hooks or extra code needed.
+Set `greeting` on the Agent and it speaks automatically when the session starts. No hooks or extra code needed.
 
 ```python
 from roomkit import Agent, RoomKit, VoiceChannel
@@ -41,11 +41,11 @@ The greeting text is sent directly through TTS â€” no LLM round-trip, so the cal
 
 ## Pattern 2: Explicit hook + send_greeting()
 
-Register an `ON_VOICE_SESSION_READY` hook and call `send_greeting()` yourself. This gives you control over timing and lets you add conditional logic.
+Register an `ON_SESSION_STARTED` hook and call `send_greeting()` yourself. This gives you control over timing and lets you add conditional logic.
 
 ```python
 from roomkit import Agent, HookExecution, HookTrigger, RoomKit, VoiceChannel
-from roomkit.voice.events import VoiceSessionReadyEvent
+from roomkit.models.session_event import SessionStartedEvent
 
 agent = Agent(
     "agent",
@@ -60,8 +60,8 @@ room = await kit.create_room()
 await kit.attach_channel(room.id, "voice")
 await kit.attach_channel(room.id, "agent")
 
-@kit.hook(HookTrigger.ON_VOICE_SESSION_READY, HookExecution.ASYNC)
-async def on_ready(event: VoiceSessionReadyEvent, context: object) -> None:
+@kit.hook(HookTrigger.ON_SESSION_STARTED, HookExecution.ASYNC)
+async def on_ready(event: SessionStartedEvent, context: object) -> None:
     # Add any conditional logic here
     await kit.send_greeting(room.id)
 ```
@@ -77,14 +77,15 @@ Use the hook to call `voice.say()` directly. This bypasses the Agent entirely â€
 
 ```python
 from roomkit import HookExecution, HookTrigger, VoiceChannel
-from roomkit.voice.events import VoiceSessionReadyEvent
+from roomkit.models.session_event import SessionStartedEvent
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend)
 kit.register_channel(voice)
 
-@kit.hook(HookTrigger.ON_VOICE_SESSION_READY, HookExecution.ASYNC)
-async def on_ready(event: VoiceSessionReadyEvent, context: object) -> None:
-    await voice.say(event.session, "Please hold while we connect you.")
+@kit.hook(HookTrigger.ON_SESSION_STARTED, HookExecution.ASYNC)
+async def on_ready(event: SessionStartedEvent, context: object) -> None:
+    if event.session is not None:
+        await voice.say(event.session, "Please hold while we connect you.")
 ```
 
 ---
@@ -97,7 +98,7 @@ Inject a synthetic user message via `process_inbound()` to trigger an LLM round-
 from roomkit import Agent, HookExecution, HookTrigger, RoomKit, VoiceChannel
 from roomkit.models.delivery import InboundMessage
 from roomkit.models.event import TextContent
-from roomkit.voice.events import VoiceSessionReadyEvent
+from roomkit.models.session_event import SessionStartedEvent
 
 agent = Agent(
     "agent",
@@ -113,13 +114,16 @@ room = await kit.create_room()
 await kit.attach_channel(room.id, "voice")
 await kit.attach_channel(room.id, "agent")
 
-@kit.hook(HookTrigger.ON_VOICE_SESSION_READY, HookExecution.ASYNC)
-async def on_ready(event: VoiceSessionReadyEvent, context: object) -> None:
+@kit.hook(HookTrigger.ON_SESSION_STARTED, HookExecution.ASYNC)
+async def on_ready(event: SessionStartedEvent, context: object) -> None:
     inbound = InboundMessage(
         channel_id="voice",
-        sender_id=event.session.participant_id,
+        sender_id=event.participant_id,
         content=TextContent(body="[session started]"),
-        metadata={"voice_session_id": event.session.id, "source": "greeting"},
+        metadata={
+            "voice_session_id": event.session.id if event.session else None,
+            "source": "greeting",
+        },
     )
     await kit.process_inbound(inbound, room_id=room.id)
 ```
