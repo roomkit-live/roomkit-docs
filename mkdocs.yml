@@ -83,6 +83,7 @@ nav:
       - MCP Tool Provider: guides/mcp-tool-provider.md
       - AI Thinking: guides/ai-thinking.md
       - Streaming with Tools: guides/streaming-tools.md
+      - Voice Greeting: guides/voice-greeting.md
       - Telemetry: guides/telemetry.md
   - RFC: roomkit-rfc.md
   - API Reference:
