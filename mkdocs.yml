@@ -79,6 +79,7 @@ nav:
       - Agent Delegation: guides/agent-delegation.md
       - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
       - Memory Provider: guides/memory-provider.md
+      - Response Visibility: guides/response-visibility.md
       - Agent Skills: guides/agent-skills.md
       - MCP Tool Provider: guides/mcp-tool-provider.md
       - AI Thinking: guides/ai-thinking.md

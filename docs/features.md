@@ -1332,6 +1332,36 @@ await kit.set_access("room-1", "observer-channel", Access.READ_ONLY)
 await kit.set_visibility("room-1", "ai-channel", "intelligence")
 ```
 
+### Response Visibility
+
+`visibility` controls where **inbound** events are routed, but AI is asymmetric -- it transforms rather than participates. `response_visibility` controls where the AI's **response** gets delivered, using the same value vocabulary (`"all"`, `"none"`, `"transport"`, `"intelligence"`, channel ID, or comma-separated IDs):
+
+```python
+# Via BEFORE_BROADCAST hook
+@kit.hook(HookTrigger.BEFORE_BROADCAST)
+async def route_response(event, context):
+    if event.source.channel_id == "text-input":
+        return HookResult(
+            action="modify",
+            event=event.model_copy(update={
+                "visibility": "ai",              # only AI sees the message
+                "response_visibility": "ws-ui",   # AI reply goes to WebSocket only
+            }),
+        )
+    return HookResult(action="allow")
+
+# Or via send_event
+await kit.send_event(
+    room_id=room_id,
+    channel_id="voice",
+    content=TextContent(body=user_text),
+    visibility="ai",
+    response_visibility="ws-ui",
+)
+```
+
+This enables hybrid voice+text setups where typed text produces a text-only reply without triggering TTS. `None` (the default) preserves existing behavior. See the [Response Visibility guide](guides/response-visibility.md) for details.
+
 ### Muting
 
 Muting suppresses a channel's response events without detaching it:
