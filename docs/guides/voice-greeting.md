@@ -2,6 +2,14 @@
 
 Greet callers automatically when a session starts. RoomKit provides several patterns ranging from zero-code static greetings to fully dynamic LLM-generated responses. The `ON_SESSION_STARTED` hook fires for both voice and text channels, so the same greeting patterns work across channel types.
 
+## Greeting gate
+
+When `auto_greet` is enabled, RoomKit uses a **greeting gate** to guarantee the greeting is stored in conversation history before the AI processes the first user message. This prevents the race condition where a fast-talking user's message reaches the AI before the greeting lands in context.
+
+- **Voice channels**: the gate holds AI processing until TTS delivery completes.
+- **Text channels** (SMS, Email, etc.): the `ON_SESSION_STARTED` hook runs synchronously before the first inbound message is processed, so the greeting is always stored first.
+- **Multi-agent rooms**: the gate is reference-counted — it releases only when all agents finish their greetings.
+
 ---
 
 ## When to use each pattern
@@ -35,7 +43,7 @@ kit.register_channel(voice)
 kit.register_channel(agent)
 ```
 
-The greeting text is sent directly through TTS — no LLM round-trip, so the caller hears it with near-zero latency.
+The greeting text is sent via `say()` (voice) or broadcast (text) — no LLM round-trip, so the caller hears it with near-zero latency. The voice path runs through `BEFORE_TTS` / `AFTER_TTS` hooks, so you can intercept or modify the greeting.
 
 ---
 
@@ -63,8 +71,14 @@ await kit.attach_channel(room.id, "agent")
 @kit.hook(HookTrigger.ON_SESSION_STARTED, HookExecution.ASYNC)
 async def on_ready(event: SessionStartedEvent, context: object) -> None:
     # Add any conditional logic here
-    await kit.send_greeting(room.id)
+    await kit.send_greeting(
+        room.id,
+        session=event.session,
+        channel_type=event.channel_type,
+    )
 ```
+
+Passing `session` and `channel_type` lets `send_greeting()` dispatch correctly — voice sessions get TTS via `say()`, text sessions get a broadcast. Without these parameters, the greeting falls back to the text broadcast path.
 
 !!! tip
     Use this pattern when you need to check caller metadata, time of day, or other conditions before deciding which greeting to send.
