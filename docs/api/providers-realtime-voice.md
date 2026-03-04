@@ -23,7 +23,7 @@ Async callback for executing tool/function calls from the AI provider. Receives 
 
 ## Transport ABC
 
-::: roomkit.voice.realtime.transport.RealtimeAudioTransport
+::: roomkit.voice.backends.base.VoiceBackend
 
 ## Session & State
 
