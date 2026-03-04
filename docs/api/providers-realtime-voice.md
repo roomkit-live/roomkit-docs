@@ -27,9 +27,9 @@ Async callback for executing tool/function calls from the AI provider. Receives 
 
 ## Session & State
 
-::: roomkit.RealtimeSession
+::: roomkit.VoiceSession
 
-::: roomkit.RealtimeSessionState
+::: roomkit.VoiceSessionState
 
 ## Events
 
