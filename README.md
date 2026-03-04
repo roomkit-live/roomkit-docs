@@ -47,3 +47,4 @@ Output goes to `site/`.
 - [roomkit](https://github.com/roomkit-live/roomkit) — Python library
 - [roomkit-website](https://github.com/roomkit-live/roomkit-website) — Landing page
 - [roomkit-specs](https://github.com/roomkit-live/roomkit-specs) — Protocol specs
+- [roomkit-skills](https://github.com/roomkit-live/roomkit-skills) — Agent Skills
