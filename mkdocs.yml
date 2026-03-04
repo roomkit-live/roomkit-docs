@@ -68,25 +68,44 @@ nav:
   - AI Assistant Integration: ai-integration.md
   - MCP Integration: mcp.md
   - Guides:
-      - Audio Resampler: guides/resampler.md
-      - sherpa-onnx Providers: guides/sherpa-onnx.md
-      - NeuTTS Provider: guides/neutts.md
-      - Smart Turn Detection: guides/smart-turn.md
-      - WAV File Recorder: guides/wav-file-recorder.md
-      - FastRTC Voice Backend: guides/fastrtc-backend.md
-      - RTP Voice Backend: guides/rtp-backend.md
-      - SIP Voice Backend: guides/sip-backend.md
-      - Multi-Agent Orchestration: guides/orchestration.md
-      - Agent Delegation: guides/agent-delegation.md
-      - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
-      - Memory Provider: guides/memory-provider.md
-      - Response Visibility: guides/response-visibility.md
-      - Agent Skills: guides/agent-skills.md
-      - MCP Tool Provider: guides/mcp-tool-provider.md
-      - AI Thinking: guides/ai-thinking.md
-      - Streaming with Tools: guides/streaming-tools.md
-      - Voice Greeting: guides/voice-greeting.md
-      - Telemetry: guides/telemetry.md
+      - Voice:
+          - Voice Interruption & Barge-In: guides/voice-interruption.md
+          - Audio Pipeline Stages: guides/audio-pipeline-stages.md
+          - STT & TTS Providers: guides/stt-tts-providers.md
+          - Realtime Voice (Speech-to-Speech): guides/realtime-voice-providers.md
+          - Audio Resampler: guides/resampler.md
+          - sherpa-onnx Providers: guides/sherpa-onnx.md
+          - NeuTTS Provider: guides/neutts.md
+          - Smart Turn Detection: guides/smart-turn.md
+          - WAV File Recorder: guides/wav-file-recorder.md
+          - Voice Greeting: guides/voice-greeting.md
+          - FastRTC Voice Backend: guides/fastrtc-backend.md
+          - RTP Voice Backend: guides/rtp-backend.md
+          - SIP Voice Backend: guides/sip-backend.md
+      - AI & Tools:
+          - AI Steering Directives: guides/ai-steering.md
+          - Tool Calling & Policies: guides/tool-calling.md
+          - MCP Tool Provider: guides/mcp-tool-provider.md
+          - AI Thinking: guides/ai-thinking.md
+          - Streaming with Tools: guides/streaming-tools.md
+          - Multi-Agent Orchestration: guides/orchestration.md
+          - Agent Delegation: guides/agent-delegation.md
+          - Agent Skills: guides/agent-skills.md
+          - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
+      - Channels & Content:
+          - SMS & RCS Providers: guides/sms-providers.md
+          - Content Transcoding: guides/content-transcoding.md
+          - Response Visibility: guides/response-visibility.md
+      - Data & Infrastructure:
+          - Advanced Memory Providers: guides/advanced-memory.md
+          - Memory Provider: guides/memory-provider.md
+          - Identity Resolution: guides/identity-resolution.md
+          - PostgreSQL Storage: guides/postgres-store.md
+          - Realtime Features: guides/realtime-features.md
+          - Production Resilience: guides/production-resilience.md
+          - Telemetry: guides/telemetry.md
+      - Development:
+          - Testing Patterns: guides/testing-patterns.md
   - RFC: roomkit-rfc.md
   - API Reference:
       - api/index.md
