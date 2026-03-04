@@ -23,13 +23,11 @@ Async callback for executing tool/function calls from the AI provider. Receives 
 
 ## Transport ABC
 
-::: roomkit.voice.backends.base.VoiceBackend
+All realtime transports extend [`VoiceBackend`](providers-voice.md#roomkit.voice.backends.base.VoiceBackend).
 
 ## Session & State
 
-::: roomkit.VoiceSession
-
-::: roomkit.VoiceSessionState
+See [`VoiceSession`](providers-voice.md#roomkit.VoiceSession) and [`VoiceSessionState`](providers-voice.md#roomkit.VoiceSessionState).
 
 ## Events
 
