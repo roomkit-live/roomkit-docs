@@ -81,6 +81,8 @@ If neither the constructor nor metadata provides a remote address, `connect()` r
 
 ## DTMF
 
+### Inbound (receiving)
+
 The backend receives DTMF digits out-of-band via RFC 4733 (telephone-event payload type). Inbound DTMF events are delivered as `DTMFEvent` objects containing `digit` (str) and `duration_ms` (float).
 
 DTMF integrates with the hook system via `HookTrigger.ON_DTMF`:
@@ -104,13 +106,29 @@ pipeline = AudioPipelineConfig(
 )
 ```
 
+### Outbound (sending)
+
+You can send DTMF digits to the remote party via `VoiceChannel.send_dtmf()`:
+
+```python
+# Send a single digit (RFC 4733 telephone-event)
+voice.send_dtmf(session, "1")
+
+# Send with custom duration (ms)
+voice.send_dtmf(session, "*", duration_ms=250)
+
+# Valid digits: 0-9, *, #, A-D
+```
+
+This is useful for AI agents that need to navigate IVR menus or enter numeric codes during a call.
+
 ## Capabilities
 
 The RTP backend declares two capabilities:
 
 | Capability | Description |
 |---|---|
-| `DTMF_SIGNALING` | DTMF digits are received out-of-band via RFC 4733. The pipeline skips in-band DTMF detection when this is set. |
+| `DTMF_SIGNALING` | DTMF digits are sent and received out-of-band via RFC 4733. The pipeline skips in-band DTMF detection when this is set. |
 | `INTERRUPTION` | Outbound audio playback can be cancelled mid-stream (for barge-in). |
 
 ## Audio flow

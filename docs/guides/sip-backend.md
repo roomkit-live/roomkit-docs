@@ -158,6 +158,8 @@ await backend.disconnect(session)
 
 ## DTMF
 
+### Inbound (receiving)
+
 DTMF works the same as the RTP backend — digits arrive out-of-band via RFC 4733 and integrate with the hook system:
 
 ```python
@@ -166,11 +168,27 @@ async def on_dtmf(event, ctx):
     print(f"DTMF digit: {event.digit}, duration: {event.duration_ms}ms")
 ```
 
+### Outbound (sending)
+
+You can send DTMF digits into an active call via `VoiceChannel.send_dtmf()`. This is essential for AI agents navigating IVR menus, entering PINs, or interacting with phone systems:
+
+```python
+# Send a single digit
+voice.send_dtmf(session, "1")
+
+# Send with custom duration (ms)
+voice.send_dtmf(session, "#", duration_ms=250)
+
+# Valid digits: 0-9, *, #, A-D
+```
+
+Digits are sent as RFC 4733 telephone-events (out-of-band). See the `examples/voice_sip_dtmf.py` example for a complete AI agent that navigates an IVR menu using tool calling.
+
 ## Capabilities
 
 | Capability | Description |
 |---|---|
-| `DTMF_SIGNALING` | DTMF digits received out-of-band via RFC 4733. |
+| `DTMF_SIGNALING` | DTMF digits sent and received out-of-band via RFC 4733. |
 | `INTERRUPTION` | Outbound audio playback can be cancelled mid-stream (barge-in). |
 
 ## Audio flow

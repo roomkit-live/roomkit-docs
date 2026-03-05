@@ -111,6 +111,8 @@ The detector emits `DTMFEvent(digit, duration_ms, confidence)` and fires the `ON
 
 **Inband vs signaling**: Inband DTMF reads tones from the audio stream. SIP backends can also receive DTMF via out-of-band signaling (SIP INFO / RFC 4733). Use `VoiceCapability.DTMF_INBAND` and `DTMF_SIGNALING` to indicate which your backend supports.
 
+**Outbound DTMF**: To *send* DTMF digits to the remote party (e.g., an AI agent navigating an IVR menu), use `VoiceChannel.send_dtmf(session, digit, duration_ms=160)`. This sends RFC 4733 telephone-events via the SIP or RTP backend. See the [SIP backend guide](sip-backend.md#outbound-sending) for details.
+
 ---
 
 ## Stage: AEC (Acoustic Echo Cancellation)
@@ -310,7 +312,7 @@ Backends declare capabilities via `VoiceCapability` flags:
 | `INTERRUPTION` | Backend supports `cancel_audio()` |
 | `BARGE_IN` | Backend handles barge-in detection |
 | `DTMF_INBAND` | DTMF detected from audio stream |
-| `DTMF_SIGNALING` | DTMF received via signaling (SIP INFO) |
+| `DTMF_SIGNALING` | DTMF sent and received via signaling (RFC 4733) |
 
 ```python
 from roomkit.voice.base import VoiceCapability

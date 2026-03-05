@@ -1111,6 +1111,24 @@ Barge-in triggers:
 | `ON_PARTIAL_TRANSCRIPTION` | Async | Real-time transcription UI (requires backend support) |
 | `ON_VAD_SILENCE` | Async | Custom silence handling logic |
 | `ON_VAD_AUDIO_LEVEL` | Async | Audio level UI meters |
+| `ON_DTMF` | Async | IVR navigation, call transfer |
+
+#### DTMF (Touch-Tone Digits)
+
+RoomKit supports both inbound and outbound DTMF:
+
+- **Inbound**: Detected via the pipeline's `DTMFDetector` (in-band) or the backend's signaling layer (RFC 4733). Both fire the `ON_DTMF` hook.
+- **Outbound**: `VoiceChannel.send_dtmf(session, digit, duration_ms=160)` sends an RFC 4733 telephone-event to the remote party. Useful for AI agents navigating IVR menus, entering PINs, or interacting with phone systems. Supported by SIP and RTP backends.
+
+```python
+# Receive DTMF
+@kit.hook(HookTrigger.ON_DTMF, execution=HookExecution.ASYNC)
+async def on_dtmf(event, ctx):
+    logger.info("DTMF digit: %s", event.digit)
+
+# Send DTMF (e.g., from an AI tool handler)
+voice.send_dtmf(session, "1")
+```
 
 #### FastRTC Backend
 
