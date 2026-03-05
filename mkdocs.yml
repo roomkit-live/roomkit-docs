@@ -82,6 +82,7 @@ nav:
           - FastRTC Voice Backend: guides/fastrtc-backend.md
           - RTP Voice Backend: guides/rtp-backend.md
           - SIP Voice Backend: guides/sip-backend.md
+          - WebTransport Backend: guides/webtransport-backend.md
           - Audio Bridging: guides/audio-bridge.md
       - AI & Tools:
           - AI Steering Directives: guides/ai-steering.md

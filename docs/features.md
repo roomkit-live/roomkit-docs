@@ -1061,6 +1061,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | Backend | Transport | VAD | Dependency |
 |---------|-----------|-----|------------|
 | `FastRTCVoiceBackend` | WebSocket | ReplyOnPause (built-in) | `roomkit[fastrtc]` |
+| `WebTransportBackend` | QUIC datagrams (HTTP/3) | External (pipeline) | `roomkit[webtransport]` |
 | `MockVoiceBackend` | In-memory | Simulated | None |
 
 **STT providers:**
@@ -1250,6 +1251,34 @@ The transport:
 | `FastRTCVoiceBackend` | Traditional voice (STT/TTS pipeline) | WebSocket | `ReplyOnPause` | `roomkit[fastrtc]` |
 
 Lazy-loaded via `roomkit.voice.get_fastrtc_realtime_transport()` and `roomkit.voice.get_mount_fastrtc_realtime()`.
+
+#### WebTransport Backend (QUIC Datagrams)
+
+The `WebTransportBackend` uses [WebTransport](https://www.w3.org/TR/webtransport/) (HTTP/3 over QUIC) for low-latency audio transport via **unreliable datagrams** — no head-of-line blocking, no ICE/STUN/TURN negotiation:
+
+```python
+from roomkit.voice.backends.webtransport import WebTransportBackend
+
+backend = WebTransportBackend(
+    host="0.0.0.0",
+    port=4433,
+    certificate="cert.pem",
+    private_key="key.pem",
+    input_sample_rate=16000,
+    output_sample_rate=16000,
+)
+```
+
+The backend:
+
+- Runs a QUIC server (separate UDP port) via `aioquic`
+- Sends/receives audio as QUIC datagrams with a 2-byte sample rate header + PCM-16 LE data
+- Supports `session_factory` for custom session creation on new connections
+- Requires TLS certificates (WebTransport mandates HTTPS)
+
+Wire protocol: `[2 bytes sample_rate/100 LE] [PCM-16 LE audio data]`
+
+Lazy-loaded via `roomkit.voice.get_webtransport_backend()`. Install with `pip install 'roomkit[webtransport]'`.
 
 ---
 
