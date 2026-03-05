@@ -24,6 +24,38 @@ See the [full SIP example](https://github.com/roomkit-live/roomkit/blob/main/exa
 
 ::: roomkit.voice.backends.sip.SIPVoiceBackend
 
+## Codecs
+
+The SIP backend negotiates codecs via SDP. Supported codecs:
+
+| Codec | Payload Type | Audio Rate | Quality |
+|-------|-------------|------------|---------|
+| G.722 | 9 | 16 kHz (wideband) | Best — recommended for voice AI |
+| G.711 µ-law (PCMU) | 0 | 8 kHz (narrowband) | Standard |
+| G.711 A-law (PCMA) | 8 | 8 kHz (narrowband) | Standard |
+
+By default, the backend accepts all three codecs with G.722 preferred. You can restrict codecs via `supported_codecs`:
+
+```python
+from roomkit.voice.backends.sip import SIPVoiceBackend, PT_G722, PT_PCMU, PT_PCMA
+
+# G.722 only (wideband)
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    rtp_port_start=10000,
+    supported_codecs=[PT_G722],
+)
+
+# G.711 only (narrowband)
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    rtp_port_start=10000,
+    supported_codecs=[PT_PCMU, PT_PCMA],
+)
+```
+
 ## Capabilities
 
 The SIP backend declares `DTMF_SIGNALING` (RFC 4733 out-of-band DTMF) and `INTERRUPTION` (cancel outbound audio mid-stream).
