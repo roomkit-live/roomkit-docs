@@ -59,6 +59,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Pluggable STT/TTS providers (Deepgram, ElevenLabs, sherpa-onnx, or custom)
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
+- Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
 - 10 voice-specific hook triggers for fine-grained control
 - The same hook pipeline as text channels (transcription goes through `process_inbound()`)
 
@@ -247,7 +248,7 @@ Filter options:
 | `ON_ERROR` | Async | Error monitoring |
 | `ON_SPEECH_START` | Async | Voice: speech detected |
 | `ON_SPEECH_END` | Async | Voice: speech ended with audio |
-| `ON_TRANSCRIPTION` | Sync | Voice: modify/block transcribed text |
+| `ON_TRANSCRIPTION` | Sync | Voice: modify/block transcription (`TranscriptionEvent`) |
 | `BEFORE_TTS` | Sync | Voice: modify/block text before synthesis |
 | `AFTER_TTS` | Async | Voice: after audio sent |
 | `ON_BARGE_IN` | Async | Voice: user interrupted TTS |
@@ -1103,7 +1104,7 @@ Barge-in triggers:
 |---|---|---|
 | `ON_SPEECH_START` | Async | UI feedback (show recording indicator) |
 | `ON_SPEECH_END` | Async | Analytics (speech duration tracking) |
-| `ON_TRANSCRIPTION` | Sync | Modify or block transcribed text before routing |
+| `ON_TRANSCRIPTION` | Sync | Modify or block transcription — receives `TranscriptionEvent(session, text)` |
 | `BEFORE_TTS` | Sync | Modify or block AI response text before synthesis |
 | `AFTER_TTS` | Async | Analytics (TTS usage tracking) |
 | `ON_BARGE_IN` | Async | Handle user interruption during TTS |
@@ -1112,6 +1113,7 @@ Barge-in triggers:
 | `ON_VAD_SILENCE` | Async | Custom silence handling logic |
 | `ON_VAD_AUDIO_LEVEL` | Async | Audio level UI meters |
 | `ON_DTMF` | Async | IVR navigation, call transfer |
+| `BEFORE_BRIDGE_AUDIO` | Sync | Block or monitor per-frame bridge forwarding |
 
 #### DTMF (Touch-Tone Digits)
 
@@ -1128,6 +1130,63 @@ async def on_dtmf(event, ctx):
 
 # Send DTMF (e.g., from an AI tool handler)
 voice.send_dtmf(session, "1")
+```
+
+#### Audio Bridging (Human-to-Human Voice)
+
+Audio bridging enables direct session-to-session audio forwarding for human-to-human voice calls, bypassing the STT/TTS roundtrip. Audio passes through the full inbound pipeline (AEC, denoiser, AGC) and the outbound pipeline (recorder tap, AEC reference, resampler) before reaching the other participant.
+
+```python
+from roomkit import VoiceChannel
+from roomkit.voice.bridge import AudioBridgeConfig
+
+# Basic 2-party bridge
+voice = VoiceChannel("voice", backend=sip_backend, bridge=True)
+
+# N-party conference with additive mixing
+voice = VoiceChannel(
+    "voice",
+    backend=sip_backend,
+    bridge=AudioBridgeConfig(mixing_strategy="mix", max_participants=10),
+)
+
+# Bridge + live transcription (both run in parallel)
+voice = VoiceChannel("voice", backend=sip_backend, bridge=True, stt=deepgram)
+```
+
+Bridge mode works alongside STT/TTS -- neither blocks the other:
+
+| Configuration | Behavior |
+|---|---|
+| `bridge=True` | Pure audio bridge -- human-to-human only |
+| `bridge=True, stt=provider` | Bridge + live transcription |
+| `bridge=True, stt=provider, tts=provider` | Bridge + AI can speak into the call via `say()` |
+| `bridge=AudioBridgeConfig(mixing_strategy="mix")` | N-party conference with additive mixing |
+
+**N-party mixing**: With `mixing_strategy="mix"`, each participant hears a mix of all other participants (excluding their own audio). Auto-detects NumPy for ~20x faster mixing; falls back to pure Python.
+
+**Cross-rate resampling**: When participants have different sample rates (e.g., SIP at 8kHz + WebRTC at 48kHz), the bridge automatically resamples audio to match each target's native rate.
+
+**Per-frame filtering** allows muting or modifying audio before forwarding:
+
+```python
+# Mute a specific session
+def mute_filter(session, frame):
+    if session.id == muted_session_id:
+        return None  # drop frame
+    return frame
+
+voice.set_bridge_filter(mute_filter)
+```
+
+**BEFORE_BRIDGE_AUDIO hook** fires for each frame before forwarding, with `HookResult.block()` support:
+
+```python
+@kit.hook(HookTrigger.BEFORE_BRIDGE_AUDIO, execution=HookExecution.SYNC)
+async def monitor_bridge(event, ctx):
+    if should_mute(event.session):
+        return HookResult.block(reason="muted")
+    return HookResult.allow()
 ```
 
 #### FastRTC Backend

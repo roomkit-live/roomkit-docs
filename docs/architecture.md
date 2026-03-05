@@ -187,7 +187,7 @@ Client audio ← VoiceBackend ← TTSProvider ← AI response ← Event broadcas
 
 **Voice hook triggers** extend the standard hook system:
 - `ON_SPEECH_START`, `ON_SPEECH_END` -- VAD events
-- `ON_TRANSCRIPTION` -- After STT, sync (can modify or block the text)
+- `ON_TRANSCRIPTION` -- After STT, sync; receives `TranscriptionEvent(session, text)`
 - `BEFORE_TTS`, `AFTER_TTS` -- Around TTS synthesis, sync (can modify text)
 - `ON_BARGE_IN`, `ON_TTS_CANCELLED` -- Interruption events
 - `ON_PARTIAL_TRANSCRIPTION`, `ON_VAD_SILENCE`, `ON_VAD_AUDIO_LEVEL` -- Streaming events
