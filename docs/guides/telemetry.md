@@ -143,6 +143,80 @@ kit = RoomKit(telemetry=OpenTelemetryProvider(tracer_provider=provider))
 
 The provider also supports `meter_provider` for OTel metrics.
 
+### PyroscopeProfiler
+
+Continuous CPU profiling with [Pyroscope](https://pyroscope.io/) / Grafana Pyroscope. Unlike span-based telemetry, Pyroscope captures **CPU flamegraphs** showing where your application spends time. This is essential for identifying performance bottlenecks in voice pipelines, audio processing, and bridge mixing.
+
+```bash
+pip install 'roomkit[pyroscope]'
+```
+
+**Local Pyroscope server:**
+
+```bash
+docker run -p 4040:4040 grafana/pyroscope
+```
+
+**Basic usage:**
+
+```python
+from roomkit import PyroscopeProfiler
+
+profiler = PyroscopeProfiler(
+    application_name="my-voice-app",
+    server_address="http://localhost:4040",
+)
+profiler.start()
+```
+
+**Per-session tagging:**
+
+Tag CPU samples with room/session context so you can filter flamegraphs by session in the Pyroscope UI:
+
+```python
+@kit.hook(HookTrigger.ON_TRANSCRIPTION)
+async def on_transcription(event, ctx):
+    with profiler.tag_session(
+        room_id=event.session.room_id,
+        session_id=event.session.id,
+        backend="sip",
+    ):
+        # CPU samples within this block are tagged
+        process_transcription(event.text)
+    return HookResult.allow()
+```
+
+You can also use the generic `tag()` method for arbitrary labels:
+
+```python
+with profiler.tag(region="eu-west", customer="acme"):
+    do_work()
+```
+
+**Grafana Cloud:**
+
+```python
+profiler = PyroscopeProfiler(
+    application_name="my-voice-app",
+    server_address="https://profiles-prod-001.grafana.net",
+    basic_auth_username="<instance-id>",
+    basic_auth_password="<api-token>",
+    tenant_id="<tenant-id>",
+)
+```
+
+**Configuration options:**
+
+| Parameter | Default | Description |
+|---|---|---|
+| `application_name` | `"roomkit"` | Name shown in Pyroscope UI |
+| `server_address` | `"http://localhost:4040"` | Pyroscope server URL |
+| `sample_rate` | `100` | CPU samples per second |
+| `oncpu` | `True` | Only measure on-CPU time |
+| `gil_only` | `True` | Only profile GIL-holding threads |
+| `tags` | `{}` | Default tags on all samples |
+| `detect_subprocesses` | `False` | Profile child processes |
+
 ## SpanKind Reference
 
 | SpanKind | Where | Description |
