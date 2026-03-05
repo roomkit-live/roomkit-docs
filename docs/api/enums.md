@@ -27,3 +27,7 @@
 ::: roomkit.ParticipantStatus
 
 ::: roomkit.RoomStatus
+
+::: roomkit.TaskStatus
+
+::: roomkit.DeleteType

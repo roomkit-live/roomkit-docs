@@ -118,10 +118,15 @@ nav:
           - Realtime: api/realtime.md
           - Event Sources: api/sources.md
           - Delegation: api/delegation.md
+          - Orchestration: api/orchestration.md
+          - Telemetry: api/telemetry.md
+          - Skills: api/skills.md
+          - Tools: api/tools.md
       - Channels:
           - Channel ABC: api/channel.md
           - Built-in Channels: api/channels.md
           - Voice Channel: api/providers-voice.md
+          - Audio Pipeline: api/voice-pipeline.md
           - RTP Backend: api/rtp-backend.md
           - SIP Backend: api/sip-backend.md
           - Realtime Voice: api/providers-realtime-voice.md
@@ -133,6 +138,8 @@ nav:
           - Delivery: api/delivery.md
           - Hooks & Side Effects: api/hook-models.md
           - Enums: api/enums.md
+          - Steering: api/steering.md
+          - Errors: api/errors.md
       - Providers:
           - AI: api/providers-ai.md
           - SMS: api/providers-sms.md
@@ -141,4 +148,5 @@ nav:
           - WhatsApp: api/providers-whatsapp.md
           - Messenger: api/providers-messenger.md
           - Teams: api/providers-teams.md
+          - Telegram: api/providers-telegram.md
           - HTTP: api/providers-http.md

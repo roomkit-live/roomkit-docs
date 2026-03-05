@@ -292,3 +292,5 @@ assert mock.sent[0]["to"] == "conv-123"
 ::: roomkit.ConversationReferenceStore
 
 ::: roomkit.InMemoryConversationReferenceStore
+
+::: roomkit.parse_teams_reactions

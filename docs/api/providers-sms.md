@@ -243,3 +243,7 @@ kit.hook(
 ::: roomkit.normalize_phone
 
 ::: roomkit.is_valid_phone
+
+### Telnyx Webhook
+
+::: roomkit.parse_telnyx_webhook

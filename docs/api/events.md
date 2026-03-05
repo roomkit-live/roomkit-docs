@@ -29,3 +29,9 @@
 ## Framework Events
 
 ::: roomkit.FrameworkEvent
+
+::: roomkit.SessionStartedEvent
+
+::: roomkit.ProtocolTrace
+
+::: roomkit.RoomContext

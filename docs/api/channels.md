@@ -21,3 +21,21 @@
 ::: roomkit.TeamsChannel
 
 ::: roomkit.HTTPChannel
+
+::: roomkit.TelegramChannel
+
+::: roomkit.WhatsAppPersonalChannel
+
+::: roomkit.TransportChannel
+
+## WebSocket Streaming
+
+::: roomkit.StreamChunk
+
+::: roomkit.StreamEnd
+
+::: roomkit.StreamMessage
+
+::: roomkit.StreamSendFn
+
+::: roomkit.StreamStart

@@ -54,3 +54,13 @@
 ::: roomkit.ChannelNotFoundError
 
 ::: roomkit.ChannelNotRegisteredError
+
+## Infrastructure
+
+::: roomkit.RoomLockManager
+
+::: roomkit.InMemoryLockManager
+
+::: roomkit.AuthCallback
+
+::: roomkit.auth_context

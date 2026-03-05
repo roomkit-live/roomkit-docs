@@ -128,3 +128,109 @@ ai_channel = AIChannel("ai", provider=provider)
 ```
 
 Install with: `pip install roomkit[vllm]`
+
+## Anthropic Provider
+
+::: roomkit.AnthropicAIProvider
+
+::: roomkit.AnthropicConfig
+
+### Usage
+
+```python
+from roomkit import AnthropicAIProvider, AnthropicConfig
+from roomkit.channels.ai import AIChannel
+
+config = AnthropicConfig(api_key="your-api-key")
+provider = AnthropicAIProvider(config)
+
+ai_channel = AIChannel("ai", provider=provider)
+```
+
+Install with: `pip install roomkit[anthropic]`
+
+## OpenAI Provider
+
+::: roomkit.OpenAIAIProvider
+
+::: roomkit.OpenAIConfig
+
+### Usage
+
+```python
+from roomkit import OpenAIAIProvider, OpenAIConfig
+from roomkit.channels.ai import AIChannel
+
+config = OpenAIConfig(api_key="your-api-key")
+provider = OpenAIAIProvider(config)
+
+ai_channel = AIChannel("ai", provider=provider)
+```
+
+Install with: `pip install roomkit[openai]`
+
+## Mistral Provider
+
+::: roomkit.MistralAIProvider
+
+::: roomkit.MistralConfig
+
+### Usage
+
+```python
+from roomkit import MistralAIProvider, MistralConfig
+from roomkit.channels.ai import AIChannel
+
+config = MistralConfig(api_key="your-api-key")
+provider = MistralAIProvider(config)
+
+ai_channel = AIChannel("ai", provider=provider)
+```
+
+Install with: `pip install roomkit[mistral]`
+
+## Azure Provider
+
+::: roomkit.AzureAIProvider
+
+::: roomkit.AzureAIConfig
+
+### Usage
+
+```python
+from roomkit import AzureAIProvider, AzureAIConfig
+from roomkit.channels.ai import AIChannel
+
+config = AzureAIConfig(
+    azure_endpoint="https://your-resource.openai.azure.com/",
+    api_key="your-api-key",
+    deployment="your-deployment-name",
+)
+provider = AzureAIProvider(config)
+
+ai_channel = AIChannel("ai", provider=provider)
+```
+
+Install with: `pip install roomkit[azure]`
+
+## Streaming
+
+::: roomkit.StreamEvent
+
+::: roomkit.StreamTextDelta
+
+::: roomkit.StreamThinkingDelta
+
+::: roomkit.StreamToolCall
+
+::: roomkit.StreamDone
+
+## Response Parts
+
+::: roomkit.AIThinkingPart
+
+::: roomkit.AIToolCallPart
+
+::: roomkit.AIToolResultPart
+
+::: roomkit.ProviderError
