@@ -84,6 +84,8 @@ nav:
           - SIP Voice Backend: guides/sip-backend.md
           - WebTransport Backend: guides/webtransport-backend.md
           - Audio Bridging: guides/audio-bridge.md
+      - Video:
+          - Video & Vision: guides/video-vision.md
       - AI & Tools:
           - AI Steering Directives: guides/ai-steering.md
           - Tool Calling & Policies: guides/tool-calling.md

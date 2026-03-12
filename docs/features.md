@@ -1282,6 +1282,48 @@ Lazy-loaded via `roomkit.voice.get_webtransport_backend()`. Install with `pip in
 
 ---
 
+## Video
+
+### Video Channel
+
+Real-time video capture and AI-powered frame analysis:
+
+```python
+from roomkit import VideoChannel, GeminiVisionConfig, GeminiVisionProvider, setup_video_vision
+from roomkit.video.backends.local import LocalVideoBackend
+
+# Webcam backend
+backend = LocalVideoBackend(device=0, fps=15)
+
+# Vision AI (Gemini, Ollama, or OpenAI)
+vision = GeminiVisionProvider(GeminiVisionConfig(api_key="..."))
+
+# Channel with periodic analysis
+video = VideoChannel("video", backend=backend, vision=vision, vision_interval_ms=3000)
+kit.register_channel(video)
+
+# Wire vision results into AI conversation context
+setup_video_vision(kit, room_id="room", ai_channel_id="ai")
+
+# Connect and start capture
+session = await kit.connect_video("room", "user-1", "video")
+await backend.start_capture(session)
+```
+
+**Vision providers:**
+
+| Provider | API | Install |
+|----------|-----|---------|
+| `GeminiVisionProvider` | Google Gemini 2.5 Flash | `roomkit[gemini]` |
+| `OpenAIVisionProvider` | OpenAI / Ollama / vLLM | `roomkit[openai]` |
+| `MockVisionProvider` | Testing | Built-in |
+
+**Video hooks:** `ON_VIDEO_SESSION_STARTED`, `ON_VIDEO_SESSION_ENDED`, `ON_VIDEO_TRACK_ADDED`, `ON_VIDEO_TRACK_REMOVED`, `ON_SCREEN_SHARE_STARTED`, `ON_SCREEN_SHARE_STOPPED`.
+
+See the [Video & Vision guide](guides/video-vision.md) for full documentation.
+
+---
+
 ## Webhook Handling
 
 ### Generic Webhook Processing
