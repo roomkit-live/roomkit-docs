@@ -157,6 +157,39 @@ setup_video_vision(
 
 The AI's system prompt is automatically updated with the latest vision description every time a frame is analyzed. The base system prompt is preserved.
 
+## Video Recording
+
+Record webcam frames to MP4 files using `OpenCVVideoRecorder`:
+
+```python
+from roomkit.video.recorder.opencv import OpenCVVideoRecorder
+from roomkit.video.recorder import VideoRecordingConfig
+
+recorder = OpenCVVideoRecorder()
+config = VideoRecordingConfig(storage="./recordings", format="mp4")
+
+video = VideoChannel(
+    "video",
+    backend=backend,
+    recorder=recorder,
+    recording_config=config,
+)
+```
+
+Recording starts automatically when a session binds and stops when it unbinds. Every received frame is tapped to the recorder. The MP4 file is finalized on stop.
+
+| Recorder | Output | Install |
+|----------|--------|---------|
+| `OpenCVVideoRecorder` | MP4/AVI via cv2.VideoWriter | `roomkit[local-video]` |
+| `MockVideoRecorder` | In-memory (testing) | Built-in |
+
+Run the recording example:
+
+```bash
+uv run python examples/webcam_recording.py
+uv run python examples/webcam_recording.py --duration 30 --output ./my_recordings
+```
+
 ## Hook Triggers
 
 | Trigger | Fires when |
