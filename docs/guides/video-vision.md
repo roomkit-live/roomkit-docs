@@ -76,6 +76,7 @@ Transport abstraction for video sources. Two implementations:
 | Backend | Use case | Install |
 |---------|----------|---------|
 | `LocalVideoBackend` | Webcam capture for dev/testing | `roomkit[local-video]` |
+| `ScreenCaptureBackend` | Screen/monitor capture | `roomkit[screen-capture]` |
 | `MockVideoBackend` | Unit tests | Built-in |
 
 ```python
@@ -258,3 +259,4 @@ uv run python examples/webcam_vision.py --gemini --lang fr
 | **SIP video interphone** | VideoChannel + VoiceChannel → AI sees and talks |
 | **Quality inspection** | VideoChannel + VisionProvider → defect detection |
 | **Accessibility** | VideoChannel → AI describes visual scene for blind users |
+| **Screen assistant** | [ScreenCaptureBackend](screen-capture.md) + VisionProvider → AI-guided software usage |

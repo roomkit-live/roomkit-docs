@@ -1320,6 +1320,35 @@ await backend.start_capture(session)
 
 **Video hooks:** `ON_VIDEO_SESSION_STARTED`, `ON_VIDEO_SESSION_ENDED`, `ON_VIDEO_TRACK_ADDED`, `ON_VIDEO_TRACK_REMOVED`, `ON_SCREEN_SHARE_STARTED`, `ON_SCREEN_SHARE_STOPPED`.
 
+### Screen Capture
+
+Capture your screen (or a region of it) for AI-powered analysis and recording:
+
+```python
+from roomkit import VideoChannel, setup_video_vision
+from roomkit.video.backends.screen import ScreenCaptureBackend
+
+# Capture primary monitor at 2 FPS, half resolution, skip static frames
+backend = ScreenCaptureBackend(monitor=1, fps=2, scale=0.5, diff_threshold=0.02)
+video = VideoChannel("video-screen", backend=backend, vision=vision, vision_interval_ms=5000)
+kit.register_channel(video)
+
+session = await kit.connect_video("room", "user-1", "video-screen")
+await backend.start_capture(session)
+```
+
+**Video backends:**
+
+| Backend | Source | Install |
+|---------|--------|---------|
+| `LocalVideoBackend` | Webcam (OpenCV) | `roomkit[local-video]` |
+| `ScreenCaptureBackend` | Screen / monitor / region | `roomkit[screen-capture]` |
+| `MockVideoBackend` | Simulated frames | Built-in |
+
+Key features: multi-monitor selection, region cropping, downscaling (saves vision API tokens), and diff-based frame skipping for static screens. Declares `VideoCapability.SCREEN_SHARE`.
+
+See the [Screen Capture guide](guides/screen-capture.md) for full documentation.
+
 ### Video Recording
 
 Record webcam frames to compressed MP4 files. Two recorders available:
@@ -1348,6 +1377,45 @@ video = VideoChannel(
 `codec="auto"` uses NVIDIA NVENC when available, falls back to `libx264`. See the [PyAV Video Recorder guide](guides/pyav-video-recorder.md) for codec options and hardware encoding.
 
 See the [Video & Vision guide](guides/video-vision.md) for full documentation.
+
+### Video Backends (RTP/SIP)
+
+Real-time video transport over RTP, extending the voice backends with parallel video sessions. A single backend handles both audio and video for a call.
+
+```python
+from roomkit.video.backends.sip import SIPVideoBackend
+
+# SIP backend with audio + video
+backend = SIPVideoBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    supported_video_codecs=["H264", "VP8"],
+)
+
+# Receive inbound video frames
+backend.on_video_received(lambda session, frame: print(
+    f"Video: {frame.codec} {'KEY' if frame.keyframe else '   '} seq={frame.sequence}"
+))
+
+# Audio-only calls work transparently
+async def on_call(session):
+    has_video = session.metadata.get("has_video", False)
+    # route to room...
+
+backend.on_call(on_call)
+await backend.start()
+```
+
+**Video backends:**
+
+| Backend | Signaling | Dependencies | Use Case |
+|---------|-----------|-------------|----------|
+| `RTPVideoBackend` | None (direct RTP) | `roomkit[rtp]` | Pre-configured RTP endpoints |
+| `SIPVideoBackend` | Full SIP (INVITE/BYE/SDP) | `roomkit[sip]` | PBX/trunk integration |
+
+Both backends extend their voice counterparts (`RTPVoiceBackend`, `SIPVoiceBackend`) — audio-only calls work without changes. Video is added when the remote party offers it.
+
+See the [Video Backends guide](guides/video-backends.md) for constructor parameters, callbacks, and sending/receiving video.
 
 ### Room-Level Media Recording
 
