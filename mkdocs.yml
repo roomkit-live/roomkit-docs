@@ -86,6 +86,8 @@ nav:
           - Audio Bridging: guides/audio-bridge.md
       - Video:
           - Video & Vision: guides/video-vision.md
+          - PyAV Video Recorder: guides/pyav-video-recorder.md
+          - Room Media Recorder: guides/room-media-recorder.md
       - AI & Tools:
           - AI Steering Directives: guides/ai-steering.md
           - Tool Calling & Policies: guides/tool-calling.md

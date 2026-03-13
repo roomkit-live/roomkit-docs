@@ -159,35 +159,59 @@ The AI's system prompt is automatically updated with the latest vision descripti
 
 ## Video Recording
 
-Record webcam frames to MP4 files using `OpenCVVideoRecorder`:
+Two recorder implementations are available:
+
+| Recorder | Codec | Compression | Install |
+|----------|-------|-------------|---------|
+| `PyAVVideoRecorder` | H.264 / H.265 / NVENC | High (10-50x smaller) | `roomkit[video]` |
+| `OpenCVVideoRecorder` | mp4v (MPEG-4 Part 2) | Low | `roomkit[local-video]` |
+| `MockVideoRecorder` | None | In-memory | Built-in |
+
+**PyAV (recommended for production)** — compressed H.264 MP4 via FFmpeg:
 
 ```python
-from roomkit.video.recorder.opencv import OpenCVVideoRecorder
+from roomkit import VideoPipelineConfig
+from roomkit.video.recorder.pyav import PyAVVideoRecorder
 from roomkit.video.recorder import VideoRecordingConfig
 
-recorder = OpenCVVideoRecorder()
-config = VideoRecordingConfig(storage="./recordings", format="mp4")
+recorder = PyAVVideoRecorder()
+config = VideoRecordingConfig(storage="./recordings", codec="auto")
 
 video = VideoChannel(
     "video",
     backend=backend,
-    recorder=recorder,
-    recording_config=config,
+    pipeline=VideoPipelineConfig(recorder=recorder, recording_config=config),
 )
 ```
 
-Recording starts automatically when a session binds and stops when it unbinds. Every received frame is tapped to the recorder. The MP4 file is finalized on stop.
+**OpenCV** — quick path, larger files:
 
-| Recorder | Output | Install |
-|----------|--------|---------|
-| `OpenCVVideoRecorder` | MP4/AVI via cv2.VideoWriter | `roomkit[local-video]` |
-| `MockVideoRecorder` | In-memory (testing) | Built-in |
+```python
+from roomkit import VideoPipelineConfig
+from roomkit.video.recorder.opencv import OpenCVVideoRecorder
+from roomkit.video.recorder import VideoRecordingConfig
 
-Run the recording example:
+recorder = OpenCVVideoRecorder()
+config = VideoRecordingConfig(storage="./recordings")
+
+video = VideoChannel(
+    "video",
+    backend=backend,
+    pipeline=VideoPipelineConfig(recorder=recorder, recording_config=config),
+)
+```
+
+Recording starts automatically when a session binds and stops when it unbinds. Every received frame is tapped to the recorder and the file is finalized on stop.
+
+See the [PyAV Video Recorder guide](pyav-video-recorder.md) for codec selection, NVENC hardware encoding, and compression details.
 
 ```bash
+# PyAV recorder (H.264)
+uv run python examples/pyav_video_recorder.py
+uv run python examples/pyav_video_recorder.py --codec h264_nvenc --duration 30
+
+# OpenCV recorder (raw)
 uv run python examples/webcam_recording.py
-uv run python examples/webcam_recording.py --duration 30 --output ./my_recordings
 ```
 
 ## Hook Triggers

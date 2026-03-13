@@ -1320,7 +1320,61 @@ await backend.start_capture(session)
 
 **Video hooks:** `ON_VIDEO_SESSION_STARTED`, `ON_VIDEO_SESSION_ENDED`, `ON_VIDEO_TRACK_ADDED`, `ON_VIDEO_TRACK_REMOVED`, `ON_SCREEN_SHARE_STARTED`, `ON_SCREEN_SHARE_STOPPED`.
 
+### Video Recording
+
+Record webcam frames to compressed MP4 files. Two recorders available:
+
+| Recorder | Codec | Compression | Install |
+|----------|-------|-------------|---------|
+| `PyAVVideoRecorder` | H.264 / H.265 / NVENC | 10-50x (production) | `roomkit[video]` |
+| `OpenCVVideoRecorder` | mp4v | Raw (quick dev) | `roomkit[local-video]` |
+| `MockVideoRecorder` | None | In-memory (testing) | Built-in |
+
+```python
+from roomkit import VideoPipelineConfig
+from roomkit.video.recorder.pyav import PyAVVideoRecorder
+from roomkit.video.recorder import VideoRecordingConfig
+
+recorder = PyAVVideoRecorder()
+config = VideoRecordingConfig(storage="./recordings", codec="auto")
+
+video = VideoChannel(
+    "video",
+    backend=backend,
+    pipeline=VideoPipelineConfig(recorder=recorder, recording_config=config),
+)
+```
+
+`codec="auto"` uses NVIDIA NVENC when available, falls back to `libx264`. See the [PyAV Video Recorder guide](guides/pyav-video-recorder.md) for codec options and hardware encoding.
+
 See the [Video & Vision guide](guides/video-vision.md) for full documentation.
+
+### Room-Level Media Recording
+
+Mux audio and video from multiple channels into a single MP4 per room — the production path for recording conversations:
+
+```python
+from roomkit import ChannelRecordingConfig, MediaRecordingConfig, RoomRecorderBinding
+from roomkit.recorder.pyav import PyAVMediaRecorder
+
+# Mark channels that contribute media
+voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(audio=True))
+video = VideoChannel("video", ..., recording=ChannelRecordingConfig(video=True))
+
+# Bind recorder to room at creation time
+room = await kit.create_room(
+    room_id="my-room",
+    recorders=[
+        RoomRecorderBinding(
+            recorder=PyAVMediaRecorder(),
+            config=MediaRecordingConfig(storage="./recordings", video_codec="auto"),
+            name="main",
+        ),
+    ],
+)
+```
+
+Recording starts automatically when all tracks receive their first frame. A/V sync is maintained via a shared monotonic clock. See the [Room Media Recorder guide](guides/room-media-recorder.md) for configuration, custom recorders, and testing patterns.
 
 ---
 
