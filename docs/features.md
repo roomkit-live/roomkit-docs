@@ -1417,6 +1417,38 @@ Both backends extend their voice counterparts (`RTPVoiceBackend`, `SIPVoiceBacke
 
 See the [Video Backends guide](guides/video-backends.md) for constructor parameters, callbacks, and sending/receiving video.
 
+### Anam AI Avatar (Realtime Audio+Video)
+
+Connect to [Anam AI](https://anam.ai) for photorealistic talking-head avatars. Anam handles the full STT → LLM → TTS → face animation pipeline in the cloud, delivering synchronized audio and video over WebRTC:
+
+```python
+from roomkit import (
+    AnamConfig,
+    AnamRealtimeProvider,
+    RealtimeAudioVideoChannel,
+)
+from roomkit.voice.realtime.mock import MockRealtimeTransport
+
+provider = AnamRealtimeProvider(AnamConfig(
+    api_key="your-api-key",
+    avatar_id="your-avatar-id",
+    voice_id="your-voice-id",
+    llm_id="your-llm-id",
+    system_prompt="You are a helpful AI avatar.",
+))
+
+channel = RealtimeAudioVideoChannel(
+    "avatar",
+    provider=provider,
+    transport=MockRealtimeTransport(),
+)
+channel.add_video_media_tap(lambda s, f: print(f"Frame: {f.width}x{f.height}"))
+```
+
+`RealtimeAudioVideoChannel` extends `RealtimeVoiceChannel` with video — the same hooks, tool handling, and session lifecycle apply, plus `ON_VIDEO_SESSION_STARTED` / `ON_VIDEO_SESSION_ENDED` hooks and optional vision analysis.
+
+See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP integration, and testing patterns.
+
 ### Room-Level Media Recording
 
 Mux audio and video from multiple channels into a single MP4 per room — the production path for recording conversations:

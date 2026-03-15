@@ -86,6 +86,8 @@ nav:
           - Audio Bridging: guides/audio-bridge.md
       - Video:
           - Video & Vision: guides/video-vision.md
+          - Avatar (Lip-Synced Talking Head): guides/avatar.md
+          - Anam AI Avatar (Realtime A/V): guides/anam-avatar.md
           - Screen Capture: guides/screen-capture.md
           - Video Backends (RTP/SIP): guides/video-backends.md
           - PyAV Video Recorder: guides/pyav-video-recorder.md
