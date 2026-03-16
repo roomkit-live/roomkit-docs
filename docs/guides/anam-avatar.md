@@ -141,14 +141,48 @@ Generic bridge that wires any `VoiceBackend` to any `RealtimeAudioVideoProvider`
 ```python
 from roomkit.voice.realtime.bridge import RealtimeAVBridge
 from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit.video.utils import make_text_frame
 
 bridge = RealtimeAVBridge(
     provider,                            # Any RealtimeAudioVideoProvider
     backend,                             # Any VoiceBackend (SIP, RTP, local)
     encoder=PyAVVideoEncoder(fps=25),    # None = passthrough (taps only)
     video_pipeline=pipeline_config,      # Optional VideoPipelineConfig
+    connecting_frame=make_text_frame(    # Shown during provider negotiation
+        "Connecting to avatar...\nPlease wait",
+    ),
     provider_sample_rate=48000,          # Anam outputs 48kHz
     on_transcription=my_handler,         # Optional callbacks
+)
+```
+
+### Connecting Placeholder
+
+Anam's WebRTC negotiation takes 3-5 seconds. During this time, the caller sees a black screen by default. Use `connecting_frame` to show a placeholder instead:
+
+```python
+from roomkit.video.utils import make_text_frame
+
+bridge = RealtimeAVBridge(
+    provider, sip,
+    encoder=PyAVVideoEncoder(fps=25),
+    connecting_frame=make_text_frame("Connecting to avatar...\nPlease wait"),
+    connecting_fps=5,  # Low fps is fine for a static image
+)
+```
+
+`make_text_frame()` generates a `VideoFrame` with centered multi-line text on a dark background. The placeholder is sent at `connecting_fps` (default 5) until the provider connects, then real avatar frames take over automatically.
+
+You can customize the frame appearance:
+
+```python
+make_text_frame(
+    "Bienvenue\nConnexion en cours...",
+    width=720, height=480,
+    bg_color=(20, 20, 50),         # Dark blue background
+    text_color=(255, 255, 255),    # White title
+    sub_color=(180, 180, 200),     # Light grey subtitle
+    font_scale=1.0,
 )
 ```
 
@@ -223,6 +257,7 @@ from roomkit import AnamConfig, AnamRealtimeProvider, VideoPipelineConfig
 from roomkit.video.backends.sip import SIPVideoBackend
 from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
 from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+from roomkit.video.utils import make_text_frame
 from roomkit.voice.realtime.bridge import RealtimeAVBridge
 
 sip = SIPVideoBackend(
@@ -245,6 +280,7 @@ bridge = RealtimeAVBridge(
     video_pipeline=VideoPipelineConfig(
         filters=[WatermarkFilter("RoomKit | {timestamp}")],
     ),
+    connecting_frame=make_text_frame("Connexion en cours...\nVeuillez patienter"),
     encoder=PyAVVideoEncoder(fps=25, bitrate=3_000_000),
     on_transcription=lambda role, text, _: print(f"[{role}] {text}"),
 )
