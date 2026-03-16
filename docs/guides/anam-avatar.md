@@ -1,24 +1,43 @@
 # Anam AI Avatar (Realtime Audio+Video)
 
-RoomKit's `RealtimeAudioVideoChannel` connects to [Anam AI](https://anam.ai) to deliver photorealistic talking-head avatars in real-time. Anam handles STT, LLM reasoning, TTS, and face animation in the cloud — delivering synchronized audio and video over WebRTC.
+RoomKit integrates with [Anam AI](https://anam.ai) to deliver photorealistic talking-head avatars in real-time. Anam handles STT, LLM reasoning, TTS, and face animation in the cloud — delivering synchronized audio and video over WebRTC.
 
 ## Architecture
 
+Two integration patterns are available:
+
+### RealtimeAudioVideoChannel (room-based)
+
+For applications that need RoomKit's full room model (hooks, multi-channel, events):
+
 ```
-User audio → Transport (SIP/WS) → RealtimeAudioVideoChannel
-                                         |
-                                   AnamRealtimeProvider
-                                         |  (WebRTC via anam SDK)
-                                     Anam Cloud
-                                  STT → LLM → TTS → Avatar
-                                         |
-                                audio + video frames
-                                         |
-                                on_audio() → transport → user
-                                on_video() → video taps / vision
+User audio → Transport (WS) → RealtimeAudioVideoChannel → hooks/events
+                                       ↕
+                                AnamRealtimeProvider
+                                       ↕  (WebRTC)
+                                   Anam Cloud
+                                STT → LLM → TTS → Avatar
+                                       ↕
+                              audio + video frames
 ```
 
-Unlike `VoiceChannel` (STT → AI → TTS) or `RealtimeVoiceChannel` (audio-only speech-to-speech), `RealtimeAudioVideoChannel` adds a video output modality. The provider delivers both audio and video frames, which the channel routes to taps, vision analysis, and recording.
+### RealtimeAVBridge (direct backend wiring)
+
+For bridging any voice/video backend (SIP, RTP, local mic) directly to Anam — no room model needed:
+
+```
+SIP phone → RTP audio → RealtimeAVBridge → provider.send_audio() → Anam STT
+                              ↕
+                       AnamRealtimeProvider (WebRTC)
+                              ↕
+                         Anam Cloud
+                    STT → LLM → TTS → Avatar
+                              ↕
+              audio → resample → SIP RTP → phone speaker
+              video → pipeline → H.264 encode → SIP RTP → phone screen
+```
+
+The bridge handles audio resampling (48kHz → SIP codec rate), video encoding (raw RGB → H.264), session lifecycle, and graceful cleanup.
 
 ---
 
@@ -26,7 +45,7 @@ Unlike `VoiceChannel` (STT → AI → TTS) or `RealtimeVoiceChannel` (audio-only
 
 ```bash
 pip install roomkit[anam]
-# or with SIP transport:
+# With SIP transport + video encoding:
 pip install roomkit[anam,sip,video]
 ```
 
@@ -35,34 +54,31 @@ pip install roomkit[anam,sip,video]
 ## Quick Start
 
 ```python
-from roomkit import (
-    AnamConfig,
-    AnamRealtimeProvider,
-    RealtimeAudioVideoChannel,
-    RoomKit,
-)
-from roomkit.voice.realtime.mock import MockRealtimeTransport
+from roomkit import AnamConfig, AnamRealtimeProvider
+from roomkit.voice.realtime.bridge import RealtimeAVBridge
+from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
 
-# Configure Anam (ephemeral persona)
-config = AnamConfig(
+sip = SIPVideoBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="0.0.0.0",
+    supported_video_codecs=["H264"],
+)
+
+provider = AnamRealtimeProvider(AnamConfig(
     api_key="your-api-key",
     avatar_id="your-avatar-id",
     voice_id="your-voice-id",
     llm_id="your-llm-id",
-    system_prompt="You are a helpful AI avatar.",
-)
-provider = AnamRealtimeProvider(config)
+))
 
-transport = MockRealtimeTransport()
-
-channel = RealtimeAudioVideoChannel(
-    "avatar",
-    provider=provider,
-    transport=transport,
+bridge = RealtimeAVBridge(
+    provider, sip,
+    encoder=PyAVVideoEncoder(fps=25),
 )
 
-kit = RoomKit()
-kit.register_channel(channel)
+await sip.start()
+# Incoming SIP calls are now connected to Anam automatically.
 ```
 
 ---
@@ -92,7 +108,7 @@ config = AnamConfig(
     voice_id="6bfbe25a-...",          # from lab.anam.ai/voices
     llm_id="0934d97d-...",            # from lab.anam.ai/llms
     system_prompt="You are a concise assistant.",
-    language_code="en",
+    language_code="fr",               # BCP-47 language code
     enable_audio_passthrough=False,    # False = Anam manages TTS context
     timeout=30.0,
 )
@@ -113,73 +129,169 @@ config = AnamConfig(
 
 ---
 
-## RealtimeAudioVideoChannel
+## RealtimeAVBridge
 
-Extends `RealtimeVoiceChannel` with video capabilities:
+Generic bridge that wires any `VoiceBackend` to any `RealtimeAudioVideoProvider`. Handles:
+
+- **Audio in**: Backend → `provider.send_audio()` (user speech → AI)
+- **Audio out**: Provider → resample (48kHz → codec rate) → `backend.send_audio()` (AI speech → user)
+- **Video out**: Provider → pipeline → encode → backend RTP (avatar → user)
+- **Session lifecycle**: Auto-connect on SIP INVITE, auto-disconnect on BYE
 
 ```python
-channel = RealtimeAudioVideoChannel(
-    "avatar",
-    provider=provider,                # RealtimeAudioVideoProvider
-    transport=transport,              # VoiceBackend (audio transport)
-    video_pipeline=None,              # Optional VideoPipelineConfig
-    vision=None,                      # Optional VisionProvider
-    vision_interval_ms=2000,          # Vision analysis throttle
-    system_prompt="...",              # Forwarded to provider
-    voice="...",                      # Forwarded to provider
+from roomkit.voice.realtime.bridge import RealtimeAVBridge
+from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+
+bridge = RealtimeAVBridge(
+    provider,                            # Any RealtimeAudioVideoProvider
+    backend,                             # Any VoiceBackend (SIP, RTP, local)
+    encoder=PyAVVideoEncoder(fps=25),    # None = passthrough (taps only)
+    video_pipeline=pipeline_config,      # Optional VideoPipelineConfig
+    provider_sample_rate=48000,          # Anam outputs 48kHz
+    on_transcription=my_handler,         # Optional callbacks
 )
 ```
+
+### Video Pipeline
+
+Insert processing stages between provider frames and the encoder:
+
+```python
+from roomkit import VideoPipelineConfig
+from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+
+bridge = RealtimeAVBridge(
+    provider, sip,
+    video_pipeline=VideoPipelineConfig(
+        filters=[
+            WatermarkFilter(
+                "RoomKit | {timestamp}",
+                position="bottom-left",
+                color=(255, 255, 255),
+                bg_color=(0, 0, 0),
+            ),
+        ],
+    ),
+    encoder=PyAVVideoEncoder(fps=25, bitrate=3_000_000),
+)
+```
+
+The pipeline supports all standard stages: resizer, filters (watermark, YOLO, censor), transforms, and vision analysis.
+
+### Video Encoder
+
+The encoder converts raw RGB frames to H.264 for SIP/RTP:
+
+```python
+from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+
+# Default: 2.5 Mbps, veryfast preset
+encoder = PyAVVideoEncoder(fps=25)
+
+# Higher quality for LAN
+encoder = PyAVVideoEncoder(fps=25, bitrate=3_000_000, preset="medium")
+```
+
+Without an encoder, video goes to taps only (passthrough mode for local display).
 
 ### Video Taps
 
-Register callbacks that receive every video frame (for recording, display, or custom processing):
+Register callbacks that receive every video frame:
 
 ```python
-def on_video(session, frame):
-    print(f"Frame: {frame.width}x{frame.height}, codec={frame.codec}")
-
-channel.add_video_media_tap(on_video)
+bridge.add_video_tap(lambda session, frame: print(f"{frame.width}x{frame.height}"))
 ```
 
-### Vision Analysis
+### Manual Connect (local mic/webcam)
 
-Attach a vision provider for periodic frame analysis:
+For backends that don't fire `on_call` automatically:
 
 ```python
-from roomkit import OpenAIVisionProvider, OpenAIVisionConfig
-
-channel = RealtimeAudioVideoChannel(
-    "avatar",
-    provider=provider,
-    transport=transport,
-    vision=OpenAIVisionProvider(OpenAIVisionConfig(api_key="sk-...")),
-    vision_interval_ms=3000,  # Analyze every 3 seconds
-)
+session = await bridge.connect(backend_session, participant_id="user-1")
+# ...
+await bridge.disconnect(session.id)
 ```
 
 ---
 
-## Session Lifecycle
+## SIP Integration
+
+Bridge SIP phone calls to Anam — the caller talks to a photorealistic AI avatar:
 
 ```python
-# Start a session (connects transport + Anam provider)
-session = await channel.start_session(
-    room_id="room-1",
-    participant_id="user-1",
-    connection=websocket,   # or SIP session, or mock
+from roomkit import AnamConfig, AnamRealtimeProvider, VideoPipelineConfig
+from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+from roomkit.voice.realtime.bridge import RealtimeAVBridge
+
+sip = SIPVideoBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="0.0.0.0",
+    supported_video_codecs=["H264"],
 )
 
-# Session is now active — Anam streams audio+video
-# Audio goes to transport → user
-# Video goes to registered taps
+provider = AnamRealtimeProvider(AnamConfig(
+    api_key="...",
+    avatar_id="...",
+    voice_id="...",
+    llm_id="...",
+    language_code="fr",
+    system_prompt="Tu es un avatar IA serviable.",
+))
 
-# End the session
-await channel.end_session(session)
+bridge = RealtimeAVBridge(
+    provider, sip,
+    video_pipeline=VideoPipelineConfig(
+        filters=[WatermarkFilter("RoomKit | {timestamp}")],
+    ),
+    encoder=PyAVVideoEncoder(fps=25, bitrate=3_000_000),
+    on_transcription=lambda role, text, _: print(f"[{role}] {text}"),
+)
+
+await sip.start()
+```
+
+See `examples/sip_anam_avatar.py` for a complete runnable example with signal handling and graceful shutdown.
+
+### Known Characteristics
+
+- **Startup delay (~4-5s)**: Anam's WebRTC negotiation (ICE gathering, TURN allocation). The SIP phone answers immediately but the avatar needs time to connect. This is inherent to the Anam SDK.
+- **Video re-encoding**: The Anam SDK decodes WebRTC video to raw pixels before exposing frames. RoomKit re-encodes to H.264 for SIP. This is a limitation of the SDK (no raw H.264 access).
+- **Audio resampling**: Anam outputs 48kHz stereo PCM (WebRTC OPUS decoded). The bridge resamples to the SIP codec rate (8kHz G.711, 16kHz G.722) automatically.
+
+---
+
+## RealtimeAudioVideoChannel (Room-Based)
+
+For applications that need RoomKit's room model:
+
+```python
+from roomkit import (
+    AnamConfig, AnamRealtimeProvider,
+    RealtimeAudioVideoChannel, RoomKit,
+)
+from roomkit.voice.realtime.mock import MockRealtimeTransport
+
+provider = AnamRealtimeProvider(AnamConfig(
+    api_key="...", avatar_id="...", voice_id="...", llm_id="...",
+))
+
+channel = RealtimeAudioVideoChannel(
+    "avatar",
+    provider=provider,
+    transport=MockRealtimeTransport(),
+    vision=my_vision_provider,        # Optional
+    vision_interval_ms=3000,
+)
+
+kit = RoomKit()
+kit.register_channel(channel)
+
+session = await channel.start_session("room-1", "user-1", connection)
 ```
 
 ### Hooks
-
-Video session hooks fire automatically:
 
 ```python
 @kit.hook(HookTrigger.ON_VIDEO_SESSION_STARTED)
@@ -190,54 +302,6 @@ async def on_video_started(event, ctx):
 async def on_video_ended(event, ctx):
     print(f"Avatar video ended: {event.session.id}")
 ```
-
----
-
-## SIP Integration
-
-Bridge SIP phone calls to an Anam avatar — the caller talks to a photorealistic AI over a standard video call:
-
-```python
-from roomkit import AnamConfig, AnamRealtimeProvider, RealtimeAudioVideoChannel, RoomKit
-from roomkit.video.backends.sip import SIPVideoBackend
-from roomkit.voice.realtime.mock import MockRealtimeTransport
-
-# SIP backend for caller transport
-sip = SIPVideoBackend(
-    local_sip_addr=("0.0.0.0", 5060),
-    local_rtp_ip="10.0.0.5",
-    supported_video_codecs=["H264"],
-)
-
-# Anam provider
-provider = AnamRealtimeProvider(AnamConfig(
-    api_key="...",
-    avatar_id="...",
-    voice_id="...",
-    llm_id="...",
-))
-
-channel = RealtimeAudioVideoChannel(
-    "anam-sip",
-    provider=provider,
-    transport=MockRealtimeTransport(),
-)
-
-kit = RoomKit()
-kit.register_channel(channel)
-
-# Route incoming calls
-async def on_call(session):
-    room_id = session.metadata["room_id"]
-    await kit.create_room(room_id=room_id)
-    await kit.attach_channel(room_id, "anam-sip")
-    await channel.start_session(room_id, session.metadata["caller"], session)
-
-sip.on_call(on_call)
-await sip.start()
-```
-
-See `examples/sip_anam_avatar.py` for a complete runnable example.
 
 ---
 
@@ -256,7 +320,8 @@ See `examples/sip_anam_avatar.py` for a complete runnable example.
 
 ### Frame Format
 
-Video frames from Anam arrive as `VideoFrame(codec="raw_rgb24")` — raw RGB pixels converted from PyAV. Audio arrives as PCM int16 bytes.
+- **Video**: `VideoFrame(codec="raw_rgb24")` — raw RGB pixels (720x480 typical)
+- **Audio**: PCM int16 mono at 48kHz (downmixed from stereo by the provider)
 
 ---
 
@@ -280,12 +345,10 @@ channel = RealtimeAudioVideoChannel(
     transport=transport,
 )
 
-# Simulate video from the provider
 frame = VideoFrame(
     data=b"\x00" * (640 * 480 * 3),
     codec="raw_rgb24",
-    width=640,
-    height=480,
+    width=640, height=480,
 )
 await provider.simulate_video(session, frame)
 ```
@@ -297,4 +360,4 @@ await provider.simulate_video(session, frame)
 | Example | Description |
 |---------|-------------|
 | `examples/realtime_av_anam.py` | Basic Anam avatar with mock transport |
-| `examples/sip_anam_avatar.py` | SIP-to-Anam bridge (phone → avatar) |
+| `examples/sip_anam_avatar.py` | SIP-to-Anam bridge with video pipeline and H.264 encoding |

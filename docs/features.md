@@ -1419,35 +1419,35 @@ See the [Video Backends guide](guides/video-backends.md) for constructor paramet
 
 ### Anam AI Avatar (Realtime Audio+Video)
 
-Connect to [Anam AI](https://anam.ai) for photorealistic talking-head avatars. Anam handles the full STT → LLM → TTS → face animation pipeline in the cloud, delivering synchronized audio and video over WebRTC:
+Connect to [Anam AI](https://anam.ai) for photorealistic talking-head avatars. Anam handles the full STT → LLM → TTS → face animation pipeline in the cloud, delivering synchronized audio and video over WebRTC.
+
+Use `RealtimeAVBridge` to wire any voice/video backend (SIP, RTP, local mic) to the avatar, with optional video pipeline (filters, watermark, resize) and H.264 encoding:
 
 ```python
-from roomkit import (
-    AnamConfig,
-    AnamRealtimeProvider,
-    RealtimeAudioVideoChannel,
-)
-from roomkit.voice.realtime.mock import MockRealtimeTransport
+from roomkit import AnamConfig, AnamRealtimeProvider, VideoPipelineConfig
+from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+from roomkit.voice.realtime.bridge import RealtimeAVBridge
 
+sip = SIPVideoBackend(local_sip_addr=("0.0.0.0", 5060), ...)
 provider = AnamRealtimeProvider(AnamConfig(
-    api_key="your-api-key",
-    avatar_id="your-avatar-id",
-    voice_id="your-voice-id",
-    llm_id="your-llm-id",
-    system_prompt="You are a helpful AI avatar.",
+    api_key="...", avatar_id="...", voice_id="...", llm_id="...",
 ))
 
-channel = RealtimeAudioVideoChannel(
-    "avatar",
-    provider=provider,
-    transport=MockRealtimeTransport(),
+bridge = RealtimeAVBridge(
+    provider, sip,
+    video_pipeline=VideoPipelineConfig(
+        filters=[WatermarkFilter("RoomKit | {timestamp}")],
+    ),
+    encoder=PyAVVideoEncoder(fps=25, bitrate=3_000_000),
 )
-channel.add_video_media_tap(lambda s, f: print(f"Frame: {f.width}x{f.height}"))
+await sip.start()
 ```
 
-`RealtimeAudioVideoChannel` extends `RealtimeVoiceChannel` with video — the same hooks, tool handling, and session lifecycle apply, plus `ON_VIDEO_SESSION_STARTED` / `ON_VIDEO_SESSION_ENDED` hooks and optional vision analysis.
+The bridge handles audio resampling (48kHz → SIP codec rate), H.264 encoding, session lifecycle (auto-connect on INVITE, auto-disconnect on BYE), and graceful cleanup. For room-based integration, use `RealtimeAudioVideoChannel` instead.
 
-See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP integration, and testing patterns.
+See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP integration, video pipeline, and testing patterns.
 
 ### Room-Level Media Recording
 
