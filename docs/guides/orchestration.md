@@ -340,6 +340,20 @@ Three orchestration-specific hook triggers are available:
 | `ON_HANDOFF` | Fired when a handoff is accepted |
 | `ON_HANDOFF_REJECTED` | Fired when a handoff is rejected (target not found) |
 
-## Example
+## Related guides
 
-See [`examples/orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) for a runnable demo showing a multi-agent pipeline with handoff between triage, handler, and resolver agents.
+| Guide | Description |
+|-------|-------------|
+| [Agent Delegation](agent-delegation.md) | Delegate tasks to background agents |
+| [Status Bus](status-bus.md) | Share real-time status between agents |
+| [Tool Auditing](tool-audit.md) | Record and inspect tool calls |
+| [Telemetry](telemetry.md) | Span and metric collection |
+
+## Examples
+
+| Example | Description |
+|---------|-------------|
+| [`orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) | Multi-agent pipeline with handoff |
+| [`orchestration_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_loop.py) | Coder/reviewer loop with `can_return_to` |
+| [`orchestration_voice_triage.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_voice_triage.py) | Voice call with delegation to background agent |
+| [`screen_agent_orchestrated.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/screen_agent_orchestrated.py) | Voice + exec agent with OmniView vision |

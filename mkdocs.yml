@@ -68,6 +68,7 @@ nav:
   - AI Assistant Integration: ai-integration.md
   - MCP Integration: mcp.md
   - Guides:
+<<<<<<< HEAD
       - Voice:
           - Voice Interruption & Barge-In: guides/voice-interruption.md
           - Audio Pipeline Stages: guides/audio-pipeline-stages.md
@@ -100,6 +101,8 @@ nav:
           - Streaming with Tools: guides/streaming-tools.md
           - Multi-Agent Orchestration: guides/orchestration.md
           - Agent Delegation: guides/agent-delegation.md
+          - Status Bus: guides/status-bus.md
+          - Tool Auditing: guides/tool-audit.md
           - Agent Skills: guides/agent-skills.md
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
       - Channels & Content:
