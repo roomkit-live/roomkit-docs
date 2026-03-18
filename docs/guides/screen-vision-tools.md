@@ -38,19 +38,17 @@ pip install roomkit[gemini]            # Gemini Vision
 
 ## Quick Start — Webcam Tool
 
-A chat agent that can look through the user's webcam when asked:
+A chat agent that can look through the user's webcam when asked. Tool handlers use the same `(name, args) -> str` signature everywhere — chat, voice, and video — so `.handler` methods plug in directly via `compose_tool_handlers`:
 
 ```python
 import asyncio
-import json
 import os
-from typing import Any
 
 from roomkit import (
     AITool, AnthropicAIProvider, AnthropicConfig,
     ChannelCategory, DescribeWebcamTool, InboundMessage,
     ListWebcamsTool, OpenAIVisionConfig, OpenAIVisionProvider,
-    RoomEvent, RoomKit, TextContent, WebSocketChannel,
+    RoomKit, TextContent, WebSocketChannel, compose_tool_handlers,
 )
 from roomkit.channels.ai import AIChannel
 
@@ -76,20 +74,6 @@ async def main():
         ),
     ]
 
-    async def tool_handler(name: str, arguments: dict[str, Any]) -> str:
-        if name == "describe_webcam":
-            query = arguments.get("query", "Describe what you see.")
-            device = arguments.get("device")
-            save_path = arguments.get("save_path")
-            return await webcam.analyze(
-                query,
-                device=int(device) if device is not None else None,
-                save_path=str(save_path) if save_path else None,
-            )
-        if name == "list_webcams":
-            return lister.list()
-        return json.dumps({"error": f"Unknown tool: {name}"})
-
     kit = RoomKit()
     ws = WebSocketChannel("ws-user")
     ai = AIChannel(
@@ -99,7 +83,7 @@ async def main():
         ),
         system_prompt="You can see through the user's webcam. Use describe_webcam when asked to look.",
         tools=tools,
-        tool_handler=tool_handler,
+        tool_handler=compose_tool_handlers(webcam.handler, lister.handler),
     )
     kit.register_channel(ws)
     kit.register_channel(ai)
