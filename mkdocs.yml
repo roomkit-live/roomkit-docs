@@ -85,6 +85,7 @@ nav:
           - WebTransport Backend: guides/webtransport-backend.md
           - Audio Bridging: guides/audio-bridge.md
       - Video:
+          - Overview: guides/video-overview.md
           - Video & Vision: guides/video-vision.md
           - Screen & Vision Tools: guides/screen-vision-tools.md
           - Avatar (Lip-Synced Talking Head): guides/avatar.md
