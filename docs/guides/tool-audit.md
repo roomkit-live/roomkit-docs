@@ -5,7 +5,7 @@ Record every tool call with input, output, timing, and status. Built-in implemen
 ## Quick start
 
 ```python
-from roomkit import Agent, JSONLToolAuditor, audit_tool_handler
+from roomkit import Agent, JSONLToolAuditor, Tool, audit_tool_handler
 
 # Create an auditor
 auditor = JSONLToolAuditor("/tmp/audit.jsonl")
@@ -16,12 +16,12 @@ async def my_handler(name, args):
 
 audited = audit_tool_handler(my_handler, auditor, agent_id="my-agent")
 
-# Use with an Agent
+# Use with an Agent — pass Tool objects via tools=[], audited handler via tool_handler=
 agent = Agent(
     "my-agent",
     provider=my_provider,
+    tools=[my_tool],
     tool_handler=audited,
-    tools=[...],
 )
 
 # After the session, print summary
@@ -97,7 +97,7 @@ from roomkit import audit_tool_handler
 
 # Wraps async (name, args) -> str
 audited = audit_tool_handler(handler, auditor, agent_id="exec")
-agent = Agent("exec", tool_handler=audited, ...)
+agent = Agent("exec", tools=[my_tool], tool_handler=audited, ...)
 ```
 
 ### For RealtimeVoiceChannel (voice tool handler)
@@ -106,7 +106,7 @@ The same `audit_tool_handler` works for voice — the tool handler signature is 
 
 ```python
 audited = audit_tool_handler(handler, auditor, agent_id="voice")
-voice_channel = RealtimeVoiceChannel("voice", tool_handler=audited, ...)
+voice_channel = RealtimeVoiceChannel("voice", tools=[my_tool], tool_handler=audited, ...)
 ```
 
 ## Print summary

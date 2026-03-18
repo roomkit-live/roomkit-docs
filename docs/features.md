@@ -358,26 +358,46 @@ Tool calls are returned in `AIResponse.tool_calls` for the host application to e
 When tools are configured and the AI provider supports streaming, RoomKit uses a **streaming tool loop** that delivers text progressively while handling tool calls between generation rounds:
 
 ```python
-from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig
+from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig, Tool
 
-async def tool_handler(name: str, arguments: dict) -> str:
-    if name == "lookup_order":
+
+class LookupOrderTool:
+    """Tool protocol: definition + handler in one object."""
+
+    @property
+    def definition(self) -> dict:
+        return {
+            "name": "lookup_order",
+            "description": "Look up an order by ID",
+            "parameters": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}},
+                "required": ["id"],
+            },
+        }
+
+    async def handler(self, name: str, arguments: dict) -> str:
         return '{"status": "shipped", "eta": "2026-02-20"}'
-    return '{"error": "Unknown tool"}'
+
 
 ai = AIChannel(
     "ai-assistant",
     provider=AnthropicAIProvider(AnthropicConfig(api_key="sk-...")),
-    tool_handler=tool_handler,
+    tools=[LookupOrderTool()],  # definitions + handlers extracted automatically
     max_tool_rounds=10,  # default
 )
 ```
+
+Pass `Tool` objects directly via `tools=[]` — each object bundles its JSON schema definition and async handler. The channel extracts definitions for the AI provider and composes handlers automatically.
+
+!!! tip
+    For advanced use cases (MCP integration, auditing, dynamic dispatch), the `tool_handler` parameter is still available. See the [Tool Calling guide](guides/tool-calling.md).
 
 The streaming tool loop works as follows:
 
 1. **Stream generation** -- text deltas are yielded to downstream channels as they arrive
 2. **Collect tool calls** -- any tool calls from the generation are gathered after streaming completes
-3. **Execute tools** -- each tool call is dispatched to the `tool_handler`
+3. **Execute tools** -- each tool call is dispatched to the tool's handler
 4. **Re-generate** -- the loop continues with tool results appended to the conversation context
 
 This means downstream channels (WebSocket, Voice/TTS) receive text in real time during each generation round, with no delay waiting for tool calls to complete. The `max_tool_rounds` parameter controls the maximum number of tool execution rounds (default 10).
@@ -400,6 +420,9 @@ async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
 ```
 
 `compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports both streamable HTTP and SSE transports. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
+
+!!! note
+    MCP tools use the `tool_handler` parameter because `MCPToolProvider` exposes a raw handler via `as_tool_handler()` rather than implementing the `Tool` protocol. For local tools, prefer passing `Tool` objects via `tools=[]` instead.
 
 #### Agent Skills
 

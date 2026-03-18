@@ -7,21 +7,34 @@ When an AI provider supports streaming and tools are configured, `AIChannel` use
 ```python
 from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig
 
-async def tool_handler(name: str, arguments: dict) -> str:
-    if name == "lookup_order":
+
+class LookupOrderTool:
+    @property
+    def definition(self) -> dict:
+        return {
+            "name": "lookup_order",
+            "description": "Look up order status by ID",
+            "parameters": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}},
+                "required": ["id"],
+            },
+        }
+
+    async def handler(self, name: str, arguments: dict) -> str:
         return '{"status": "shipped", "eta": "2026-02-20"}'
-    return '{"error": "Unknown tool"}'
+
 
 provider = AnthropicAIProvider(AnthropicConfig(api_key="sk-..."))
 ai = AIChannel(
     "ai-assistant",
     provider=provider,
     system_prompt="You are a helpful support agent.",
-    tool_handler=tool_handler,
+    tools=[LookupOrderTool()],
 )
 ```
 
-That's it. When the provider supports structured streaming (Anthropic does natively), the streaming tool loop activates automatically whenever tools are present.
+Pass `Tool` objects via `tools=[]` — definitions and handlers are extracted automatically. When the provider supports structured streaming (Anthropic does natively), the streaming tool loop activates automatically whenever tools are present.
 
 ## How it works
 
@@ -31,7 +44,7 @@ Round 1: AI generates
     └── tool_call: lookup_order(id="ORD-42")
          │
          ▼
-    tool_handler("lookup_order", {"id": "ORD-42"})  →  '{"status": "shipped"}'
+    tool handler("lookup_order", {"id": "ORD-42"})  →  '{"status": "shipped"}'
          │
          ▼
 Round 2: AI generates (with tool result in context)
@@ -146,7 +159,7 @@ This matches the non-streaming tool loop semantics and prevents side-effecting t
 
 ### Error handling
 
-Exceptions from `tool_handler` propagate out of the async generator. The framework's streaming delivery infrastructure catches these and logs them, the same as any other streaming error.
+Exceptions from tool handlers propagate out of the async generator. The framework's streaming delivery infrastructure catches these and logs them, the same as any other streaming error.
 
 ## Testing
 
@@ -179,7 +192,7 @@ provider = MockAIProvider(ai_responses=responses, streaming=True)
 async def handler(name, args):
     return '{"status": "shipped"}'
 
-ai = AIChannel("ai", provider=provider, tool_handler=handler)
+ai = AIChannel("ai", provider=provider, tool_handler=handler)  # raw handler for test simplicity
 # ... trigger on_event, consume response_stream
 ```
 

@@ -2,6 +2,9 @@
 
 `MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's `AITool` / `ToolHandler` system. It discovers tools from a remote MCP server and exposes them as standard RoomKit tools that plug directly into `AIChannel`. The companion `compose_tool_handlers` utility chains multiple tool handlers so you can mix MCP tools with local tools in a single channel.
 
+!!! note
+    `MCPToolProvider` uses the `tool_handler` parameter rather than the `Tool` protocol because it exposes a raw handler via `as_tool_handler()` that dispatches dynamically to the MCP server. For local tools that don't need MCP, prefer the simpler `Tool` protocol — see the [Tool Calling guide](tool-calling.md).
+
 ## Quick start
 
 ```python
@@ -141,43 +144,48 @@ This convention lets each handler signal "not my tool" with the standard error f
 
 ## Full example: MCP + local tools
 
+Local tools use the `Tool` protocol; MCP tools use `tool_handler`. Both can be combined:
+
 ```python
-import asyncio
 import json
 from roomkit import (
-    AIChannel, ChannelCategory, InboundMessage, RoomKit,
-    TextContent, WebSocketChannel, compose_tool_handlers,
+    AIChannel, ChannelCategory, RoomKit, compose_tool_handlers,
 )
 from roomkit.tools import MCPToolProvider
 
 
-async def local_handler(name: str, arguments: dict) -> str:
-    if name == "get_time":
+class GetTimeTool:
+    @property
+    def definition(self) -> dict:
+        return {"name": "get_time", "description": "Get current time", "parameters": {}}
+
+    async def handler(self, name: str, arguments: dict) -> str:
         return json.dumps({"time": "2026-02-16T12:00:00"})
-    return json.dumps({"error": f"Unknown tool: {name}"})
 
 
 async def main():
     async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
-        handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
-
         kit = RoomKit()
-        ai = AIChannel("ai", provider=provider, tool_handler=handler)
+        ai = AIChannel(
+            "ai",
+            provider=provider,
+            tools=[GetTimeTool()],                  # local Tool objects
+            tool_handler=mcp.as_tool_handler(),     # MCP handler for remote tools
+        )
         kit.register_channel(ai)
 
         await kit.create_room(room_id="demo")
         await kit.attach_channel("demo", "ai",
             category=ChannelCategory.INTELLIGENCE,
             metadata={
-                "tools": [
-                    {"name": "get_time", "description": "Get current time", "parameters": {}},
-                    *mcp.get_tools_as_dicts(),
-                ],
+                "tools": mcp.get_tools_as_dicts(),  # MCP tool definitions for the AI
             },
         )
         # ... process messages
         await kit.close()
 ```
+
+When both `tools` and `tool_handler` are provided, the channel tries Tool object handlers first, then falls back to the explicit `tool_handler`. For multiple raw handlers (e.g., two MCP servers), use `compose_tool_handlers`.
 
 ## Testing
 

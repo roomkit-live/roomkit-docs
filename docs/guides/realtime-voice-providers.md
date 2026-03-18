@@ -57,13 +57,13 @@ channel = RealtimeVoiceChannel(
     transport=transport,                  # VoiceBackend
     system_prompt="...",                  # AI instructions
     voice="alloy",                        # Provider voice preset
-    tools=[...],                          # Tool definitions (JSON schema)
+    tools=[my_tool],                      # Tool objects — definitions + handlers extracted automatically
     temperature=0.7,                      # Generation temperature
     input_sample_rate=16000,              # Audio from client
     output_sample_rate=24000,             # Audio to provider
     transport_sample_rate=None,           # Transport rate (auto-resamples if different)
     emit_transcription_events=True,       # Emit transcriptions as RoomEvents
-    tool_handler=my_tool_handler,         # Tool execution callback
+    tool_handler=my_tool_handler,         # Optional — for MCP, auditing, or custom dispatch
     mute_on_tool_call=False,              # Mute mic during tool execution
     tool_result_max_length=16384,         # Truncate large tool results
 )
@@ -75,13 +75,13 @@ channel = RealtimeVoiceChannel(
 | `transport` | required | Audio transport backend |
 | `system_prompt` | `None` | AI system instructions |
 | `voice` | `None` | Voice preset name |
-| `tools` | `None` | Tool definitions for function calling |
+| `tools` | `None` | Tool objects or JSON definitions — when Tool objects are passed, definitions and handlers are extracted automatically |
 | `temperature` | `None` | Sampling temperature |
 | `input_sample_rate` | `16000` | Client → provider sample rate |
 | `output_sample_rate` | `24000` | Provider → client sample rate |
 | `transport_sample_rate` | `None` | Transport rate; auto-resamples if mismatched |
 | `emit_transcription_events` | `True` | Create RoomEvents from transcriptions |
-| `tool_handler` | `None` | `async (name: str, args: dict) -> str` |
+| `tool_handler` | `None` | `async (name: str, args: dict) -> str` — optional when Tool objects are passed via `tools` |
 | `mute_on_tool_call` | `False` | Mute mic during tool execution |
 | `tool_result_max_length` | `16384` | Max chars for tool results |
 
@@ -339,22 +339,54 @@ transport = LocalAudioBackend(
 
 ## Tool Calling
 
-### Via tool_handler Callback
+### Via Tool Objects (Recommended)
+
+Pass `Tool` objects directly — the channel extracts definitions and handlers automatically:
 
 ```python
 from __future__ import annotations
 
 import json
 
+from roomkit import Tool
 from roomkit.channels import RealtimeVoiceChannel
 
 
+async def get_weather(city: str) -> str:
+    return json.dumps({"temperature": 72, "condition": "sunny", "city": city})
+
+
+weather_tool = Tool(
+    name="get_weather",
+    description="Get current weather for a city",
+    parameters={
+        "type": "object",
+        "properties": {
+            "city": {"type": "string", "description": "City name"},
+        },
+        "required": ["city"],
+    },
+    handler=get_weather,
+)
+
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tools=[weather_tool],
+    mute_on_tool_call=True,          # Prevent barge-in during tool execution
+)
+```
+
+### Via tool_handler Callback (Advanced)
+
+For MCP integration, auditing wrappers, or custom dispatch logic, use `tool_handler` directly:
+
+```python
 async def handle_tool(name, arguments):
     if name == "get_weather":
         city = arguments.get("city", "Unknown")
         return json.dumps({"temperature": 72, "condition": "sunny", "city": city})
-    elif name == "search_knowledge":
-        return json.dumps({"results": ["Article 1", "Article 2"]})
     return json.dumps({"error": f"Unknown tool: {name}"})
 
 
@@ -377,7 +409,7 @@ channel = RealtimeVoiceChannel(
         },
     ],
     tool_handler=handle_tool,
-    mute_on_tool_call=True,          # Prevent barge-in during tool execution
+    mute_on_tool_call=True,
 )
 ```
 
@@ -495,7 +527,7 @@ import json
 
 from fastapi import FastAPI
 
-from roomkit import RoomKit
+from roomkit import RoomKit, Tool
 from roomkit.channels import RealtimeVoiceChannel
 from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 from roomkit.voice.realtime.providers.gemini import GeminiLiveProvider
@@ -514,11 +546,20 @@ transport = FastRTCRealtimeTransport(
 )
 
 
-async def on_tool(name, arguments):
-    if name == "lookup_order":
-        return json.dumps({"status": "shipped", "eta": "Tomorrow"})
-    return json.dumps({"error": "Unknown tool"})
+async def lookup_order(order_id: str) -> str:
+    return json.dumps({"status": "shipped", "eta": "Tomorrow"})
 
+
+order_tool = Tool(
+    name="lookup_order",
+    description="Look up an order by ID",
+    parameters={
+        "type": "object",
+        "properties": {"order_id": {"type": "string"}},
+        "required": ["order_id"],
+    },
+    handler=lookup_order,
+)
 
 channel = RealtimeVoiceChannel(
     "voice",
@@ -526,19 +567,7 @@ channel = RealtimeVoiceChannel(
     transport=transport,
     system_prompt="You are a customer service agent. Be helpful and concise.",
     voice="Aoede",
-    tools=[
-        {
-            "type": "function",
-            "name": "lookup_order",
-            "description": "Look up an order by ID",
-            "parameters": {
-                "type": "object",
-                "properties": {"order_id": {"type": "string"}},
-                "required": ["order_id"],
-            },
-        },
-    ],
-    tool_handler=on_tool,
+    tools=[order_tool],
     mute_on_tool_call=True,
     emit_transcription_events=True,
 )

@@ -193,7 +193,39 @@ session = await channel.start_session(
 # AI incorporates it into its next spoken response.
 ```
 
-### With Tool Calling (MCP)
+### With Tool Calling
+
+```python
+import json
+
+from roomkit import Tool
+
+async def lookup_order(order_id: str) -> str:
+    return json.dumps({"status": "shipped", "eta": "Tomorrow"})
+
+order_tool = Tool(
+    name="lookup_order",
+    description="Look up an order by ID",
+    parameters={
+        "type": "object",
+        "properties": {"order_id": {"type": "string"}},
+        "required": ["order_id"],
+    },
+    handler=lookup_order,
+)
+
+channel = RealtimeVoiceChannel(
+    "realtime-voice",
+    provider=provider,
+    transport=transport,
+    system_prompt="You are a helpful assistant with access to tools.",
+    tools=[order_tool],
+)
+```
+
+### With MCP (Advanced)
+
+For MCP integration, use `tool_handler` to route calls to the MCP server:
 
 ```python
 import json

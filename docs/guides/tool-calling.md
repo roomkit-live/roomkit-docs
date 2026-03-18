@@ -4,35 +4,25 @@ RoomKit supports AI tool calling (function calling) with per-room tool definitio
 
 ## Quick Start
 
+The recommended way to define tools is with the **Tool protocol** — each tool bundles its JSON schema definition with its handler in a single object. Pass tool objects directly to `AIChannel(tools=[...])` and definitions + handlers are extracted automatically:
+
 ```python
 from __future__ import annotations
 
 import json
 
-from roomkit import RoomKit
+from roomkit import RoomKit, Tool
 from roomkit.channels import AIChannel
 from roomkit.models.enums import ChannelCategory
 from roomkit.providers.ai.anthropic import AnthropicAIProvider
 
 
-async def my_tool_handler(name: str, arguments: dict) -> str:
-    if name == "get_weather":
-        return json.dumps({"temp": 22, "condition": "sunny", "city": arguments["city"]})
-    return json.dumps({"error": f"Unknown tool: {name}"})
+class GetWeatherTool:
+    """Implements the Tool protocol: definition + handler."""
 
-
-kit = RoomKit()
-ai = AIChannel(
-    "ai-assistant",
-    provider=AnthropicAIProvider(model="claude-sonnet-4-20250514", api_key="..."),
-    system_prompt="You are a helpful assistant.",
-    tool_handler=my_tool_handler,
-)
-kit.register_channel(ai)
-
-await kit.attach_channel("room-1", "ai-assistant", category=ChannelCategory.INTELLIGENCE, metadata={
-    "tools": [
-        {
+    @property
+    def definition(self) -> dict:
+        return {
             "name": "get_weather",
             "description": "Get current weather for a city",
             "parameters": {
@@ -43,10 +33,26 @@ await kit.attach_channel("room-1", "ai-assistant", category=ChannelCategory.INTE
                 },
                 "required": ["city"],
             },
-        },
-    ],
-})
+        }
+
+    async def handler(self, name: str, arguments: dict) -> str:
+        city = arguments["city"]
+        return json.dumps({"temp": 22, "condition": "sunny", "city": city})
+
+
+kit = RoomKit()
+ai = AIChannel(
+    "ai-assistant",
+    provider=AnthropicAIProvider(model="claude-sonnet-4-20250514", api_key="..."),
+    system_prompt="You are a helpful assistant.",
+    tools=[GetWeatherTool()],
+)
+kit.register_channel(ai)
+
+await kit.attach_channel("room-1", "ai-assistant", category=ChannelCategory.INTELLIGENCE)
 ```
+
+No separate `tool_handler` or binding metadata `"tools"` list needed — the channel extracts both from the tool objects. When multiple tools are passed, their handlers are composed automatically with first-match-wins dispatch.
 
 ## Defining Tools
 
@@ -82,7 +88,9 @@ await kit.attach_channel("room-1", "ai-assistant", metadata={
 })
 ```
 
-## Tool Handlers
+## Tool Handlers (Advanced)
+
+For most use cases, the `Tool` protocol (shown above) is the recommended approach. The `tool_handler` parameter is available for advanced scenarios: MCP integration, custom auditing/logging wrappers, or dynamic dispatch logic that doesn't fit the per-tool-object model.
 
 A tool handler is an async function that receives the tool name and arguments, and returns a string result:
 
@@ -102,7 +110,12 @@ async def my_handler(name: str, arguments: dict) -> str:
         # Search your knowledge base
         return json.dumps({"results": ["result1", "result2"]})
     return json.dumps({"error": f"Unknown tool: {name}"})
+
+
+ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
 ```
+
+When both `tools` and `tool_handler` are provided, the channel merges them — Tool object handlers are tried first, then the explicit `tool_handler`.
 
 !!! tip
     Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
@@ -162,7 +175,7 @@ policy = ToolPolicy(
     },
 )
 
-ai = AIChannel("ai", provider=provider, tool_handler=handler, tool_policy=policy)
+ai = AIChannel("ai", provider=provider, tools=[weather_tool, search_tool], tool_policy=policy)
 ```
 
 ### Resolution Rules
@@ -219,7 +232,9 @@ MCPToolProvider(
 
 ## Composing Multiple Handlers
 
-Chain local and MCP handlers so the first one that recognizes a tool wins:
+When you pass multiple `Tool` objects to `tools=[...]`, their handlers are composed automatically — no manual composition needed.
+
+For advanced cases where you have raw `ToolHandler` callables (e.g., MCP handlers, custom dispatchers), use `compose_tool_handlers` to chain them with first-match-wins dispatch:
 
 ```python
 from __future__ import annotations
@@ -243,8 +258,8 @@ When `streaming=True` (default), tool calls are processed through the streaming 
 ai = AIChannel(
     "ai",
     provider=provider,
-    tool_handler=handler,
-    streaming=True,  # Default — enables streaming tool loop
+    tools=[my_tool],       # or tool_handler=handler for advanced use
+    streaming=True,        # Default — enables streaming tool loop
 )
 ```
 
@@ -277,7 +292,7 @@ sub_id = await kit.subscribe_room("room-1", on_tool_event)
 ai = AIChannel(
     "ai",
     provider=provider,
-    tool_handler=handler,
+    tools=[my_tool],
     max_tool_rounds=200,            # Max iterations (default: 200)
     tool_loop_timeout_seconds=300,   # Hard timeout in seconds (default: 300)
     tool_loop_warn_after=50,         # Soft warning threshold (default: 50)
@@ -320,5 +335,5 @@ from roomkit.providers.ai.mock import MockAIProvider
 # MockAIProvider can return tool calls and then final responses
 provider = MockAIProvider(responses=["The weather in Paris is 22C and sunny."])
 
-ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
+ai = AIChannel("ai", provider=provider, tools=[GetWeatherTool()])
 ```
