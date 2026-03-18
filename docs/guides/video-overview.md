@@ -17,6 +17,8 @@ VideoPipeline (optional processing)
     │
     ├─ [Decoder] → [Resizer] → [Transforms] → [Filters]
     │
+    ├─ VideoBridge (forward frames to other sessions)
+    │
     ├─ VisionProvider (frame → text description)
     │       │
     │       ▼
@@ -198,6 +200,7 @@ For room-based integration with hooks, use `RealtimeAudioVideoChannel` instead.
 | `ON_VISION_RESULT` | Async | Vision analysis completed |
 | `ON_SCREEN_SHARE_STARTED` | Async | Screen share began |
 | `ON_SCREEN_SHARE_STOPPED` | Async | Screen share ended |
+| `BEFORE_BRIDGE_VIDEO` | Sync | Video frame about to be forwarded via bridge |
 
 ---
 
@@ -211,6 +214,7 @@ For room-based integration with hooks, use `RealtimeAudioVideoChannel` instead.
 | **Record video sessions** | Any backend | `PyAVVideoRecorder` | [PyAV Video Recorder](pyav-video-recorder.md) |
 | **Record full A/V rooms** | Voice + Video | `PyAVMediaRecorder` | [Room Media Recorder](room-media-recorder.md) |
 | **Show an AI avatar** | `SIPVideoBackend` | `AnamRealtimeProvider` | [Anam AI Avatar](anam-avatar.md) |
+| **Bridge two video calls** | `SIPVideoBackend` | `VideoBridge` | [Video Bridging](video-bridge.md) |
 | **Stream via WebRTC** | `FastRTCVideoBackend` | — | — |
 
 ---
@@ -226,6 +230,7 @@ For room-based integration with hooks, use `RealtimeAudioVideoChannel` instead.
 | `screen_describe.py` | Screen capture + vision description |
 | `screen_assistant_ia.py` | Voice + screen AI assistant |
 | `screen_agent_orchestrated.py` | Multi-agent screen automation |
+| `sip_video_bridge.py` | Bridge two SIP A/V calls (audio + video forwarding) |
 | `sip_video_call.py` | Full SIP audio+video call |
 | `rtp_video_call.py` | Direct RTP video |
 | `sip_anam_avatar.py` | SIP → Anam avatar bridge |

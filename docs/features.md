@@ -1172,7 +1172,8 @@ Barge-in triggers:
 | `ON_VAD_SILENCE` | Async | Custom silence handling logic |
 | `ON_VAD_AUDIO_LEVEL` | Async | Audio level UI meters |
 | `ON_DTMF` | Async | IVR navigation, call transfer |
-| `BEFORE_BRIDGE_AUDIO` | Sync | Block or monitor per-frame bridge forwarding |
+| `BEFORE_BRIDGE_AUDIO` | Sync | Block or monitor per-frame audio bridge forwarding |
+| `BEFORE_BRIDGE_VIDEO` | Sync | Block or monitor per-frame video bridge forwarding |
 
 #### DTMF (Touch-Tone Digits)
 
@@ -1247,6 +1248,54 @@ async def monitor_bridge(event, ctx):
         return HookResult.block(reason="muted")
     return HookResult.allow()
 ```
+
+#### Video Bridging (Human-to-Human Video)
+
+Video bridging enables direct session-to-session video forwarding, mirroring audio bridging. Video frames are forwarded without decode/re-encode, preserving native codec quality.
+
+```python
+from roomkit import AudioVideoChannel, VideoBridgeConfig
+
+# Full A/V bridge: audio + video forwarding between participants
+av = AudioVideoChannel(
+    "av",
+    backend=sip_backend,
+    bridge=True,                    # audio bridge
+    video_bridge=VideoBridgeConfig(), # video bridge
+)
+
+# Video-only bridge on a standalone VideoChannel
+video = VideoChannel("video", backend=video_backend, bridge=True)
+```
+
+| Configuration | Behavior |
+|---|---|
+| `video_bridge=True` | Direct video forwarding between participants |
+| `video_bridge=VideoBridgeConfig(max_participants=4)` | Forwarding with participant limit |
+| `bridge=True, video_bridge=True` | Full A/V bridge (audio + video) |
+
+**Per-frame filtering** allows muting or modifying video before forwarding:
+
+```python
+def hide_video(session, frame):
+    if session.id == hidden_id:
+        return None  # drop frame
+    return frame
+
+av.set_bridge_filter(hide_video)  # VideoChannel method
+```
+
+**BEFORE_BRIDGE_VIDEO hook** fires for each frame before forwarding, with `HookResult.block()` support:
+
+```python
+@kit.hook(HookTrigger.BEFORE_BRIDGE_VIDEO)
+async def monitor_video(event, ctx):
+    if should_hide(event.session):
+        return HookResult.block(reason="hidden")
+    return HookResult.allow()
+```
+
+See the [Video Bridging guide](guides/video-bridge.md) for configuration, frame processors, and examples.
 
 #### FastRTC Backend
 

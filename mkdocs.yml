@@ -86,6 +86,7 @@ nav:
           - Audio Bridging: guides/audio-bridge.md
       - Video:
           - Overview: guides/video-overview.md
+          - Video Bridging: guides/video-bridge.md
           - Video & Vision: guides/video-vision.md
           - Screen & Vision Tools: guides/screen-vision-tools.md
           - Avatar (Lip-Synced Talking Head): guides/avatar.md
