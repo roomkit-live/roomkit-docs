@@ -38,17 +38,17 @@ pip install roomkit[gemini]            # Gemini Vision
 
 ## Quick Start — Webcam Tool
 
-A chat agent that can look through the user's webcam when asked. Tool handlers use the same `(name, args) -> str` signature everywhere — chat, voice, and video — so `.handler` methods plug in directly via `compose_tool_handlers`:
+A chat agent that can look through the user's webcam when asked. Just pass tool objects directly — definitions and handlers are extracted automatically:
 
 ```python
 import asyncio
 import os
 
 from roomkit import (
-    AITool, AnthropicAIProvider, AnthropicConfig,
+    AnthropicAIProvider, AnthropicConfig,
     ChannelCategory, DescribeWebcamTool, InboundMessage,
     ListWebcamsTool, OpenAIVisionConfig, OpenAIVisionProvider,
-    RoomKit, TextContent, WebSocketChannel, compose_tool_handlers,
+    RoomKit, TextContent, WebSocketChannel,
 )
 from roomkit.channels.ai import AIChannel
 
@@ -58,21 +58,6 @@ async def main():
         base_url="https://api.openai.com/v1",
         model="gpt-4o",
     ))
-    webcam = DescribeWebcamTool(vision, device=0)
-    lister = ListWebcamsTool()
-
-    tools = [
-        AITool(
-            name=webcam.definition["name"],
-            description=webcam.definition["description"],
-            parameters=webcam.definition["parameters"],
-        ),
-        AITool(
-            name=lister.definition["name"],
-            description=lister.definition["description"],
-            parameters=lister.definition["parameters"],
-        ),
-    ]
 
     kit = RoomKit()
     ws = WebSocketChannel("ws-user")
@@ -82,8 +67,7 @@ async def main():
             AnthropicConfig(api_key=os.environ["ANTHROPIC_API_KEY"]),
         ),
         system_prompt="You can see through the user's webcam. Use describe_webcam when asked to look.",
-        tools=tools,
-        tool_handler=compose_tool_handlers(webcam.handler, lister.handler),
+        tools=[DescribeWebcamTool(vision, device=0), ListWebcamsTool()],
     )
     kit.register_channel(ws)
     kit.register_channel(ai)
@@ -134,8 +118,7 @@ voice = RealtimeVoiceChannel(
     "voice",
     provider=realtime_provider,
     transport=backend,
-    tools=[screen_tool.definition],
-    tool_handler=screen_tool.handler,
+    tools=[screen_tool],
 )
 ```
 
@@ -284,20 +267,11 @@ Requires `pip install roomkit[screen-input]` (`pyautogui`).
 ### Usage with Voice Agent
 
 ```python
-from roomkit import compose_tool_handlers
-
 voice = RealtimeVoiceChannel(
     "voice",
     provider=realtime_provider,
     transport=backend,
-    tools=[
-        screen_tool.definition,
-        *input_tools.definitions,
-    ],
-    tool_handler=compose_tool_handlers(
-        screen_tool.handler,
-        input_tools.handler,
-    ),
+    tools=[screen_tool, input_tools],
 )
 ```
 
@@ -309,7 +283,6 @@ A full screen assistant with all vision tools:
 from roomkit import (
     DescribeScreenTool, DescribeWebcamTool, ListWebcamsTool,
     ScreenInputTools, GeminiVisionConfig, GeminiVisionProvider,
-    compose_tool_handlers,
 )
 
 vision = GeminiVisionProvider(GeminiVisionConfig(api_key="AIza..."))
@@ -319,21 +292,8 @@ webcam = DescribeWebcamTool(vision, device=0)
 lister = ListWebcamsTool()
 inputs = ScreenInputTools(vision=vision, monitor=1)
 
-# All tool definitions
-all_tools = [
-    screen.definition,
-    webcam.definition,
-    lister.definition,
-    *inputs.definitions,
-]
-
-# Combined handler (voice context)
-handler = compose_tool_handlers(
-    screen.handler,
-    webcam.handler,
-    lister.handler,
-    inputs.handler,
-)
+# Just pass all tools — definitions and handlers are extracted automatically
+all_tools = [screen, webcam, lister, inputs]
 ```
 
 ## Vision Providers
