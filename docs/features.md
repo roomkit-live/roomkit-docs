@@ -71,6 +71,10 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
 - Text injection from supervisors or other channels into the AI session
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
+- `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
+- `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
+- Task delivery via `inject_text()` — `ImmediateDelivery` and `WaitForIdleDelivery` auto-detect RealtimeVoiceChannel
+- Gemini schema cleaning — tool schemas auto-stripped of unsupported fields (`$schema`, `additionalProperties`, `default`, `title`)
 - Auto-reconnect on connection drops with exponential backoff
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
@@ -597,11 +601,41 @@ Key features:
 - **Child room isolation** — each task gets its own room, event history, and agent
 - **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`)
 - **Result routing** — system prompt injection on the `notify` channel
-- **Tool integration** — `setup_delegation()` lets the AI decide when to delegate (same pattern as `setup_handoff()`)
+- **Tool integration** — `setup_delegation()` for AIChannel, `setup_realtime_delegation()` for RealtimeVoiceChannel
+- **Delivery strategies** — `ImmediateDelivery`, `WaitForIdleDelivery`, `ContextOnlyDelivery` — all support RealtimeVoiceChannel via `inject_text()`
+- **Dedup** — `CompletedTaskCache` prevents re-delegating recently completed tasks (TTL-based)
+- **Serialization** — `DelegateHandler(serialize_per_room=True)` queues concurrent delegations per room
+- **Context injection** — previous task descriptions automatically injected into new delegations
 - **Pluggable backend** — `TaskRunner` ABC with `InMemoryTaskRunner` default; swap in Redis/Celery for distributed deployments
 - **Hooks** — `ON_TASK_DELEGATED` and `ON_TASK_COMPLETED` for observability
 
 See the [Agent Delegation guide](guides/agent-delegation.md) for the full API, tool integration, and custom task runners.
+
+### Status Bus
+
+Share real-time status updates between agents. When an execution agent completes a task or makes progress, the voice agent is notified immediately — no polling needed.
+
+```python
+# Always available on kit — defaults to in-memory
+kit.status_bus.post("exec", "search_google", "ok", detail="Found 7 results")
+
+# Subscribe via framework events
+@kit.on("status_posted")
+async def on_status(event):
+    entry = event.data  # dict with agent_id, action, status, detail, metadata
+    if entry["status"] == "completed":
+        await voice_channel.inject_text(session, f"Done: {entry['detail']}")
+```
+
+Key features:
+
+- **Framework-wired** — `kit.status_bus` is always available, defaults to `InMemoryStatusBackend`
+- **Sync and async posting** — `post()` (fire-and-forget) and `post_async()` (awaits subscribers)
+- **Framework events** — every post emits `status_posted` via `kit.on("status_posted")`
+- **Pluggable backend** — `StatusBackend` ABC with `InMemoryStatusBackend` default; swap in Redis/NATS for distributed deployments
+- **JSONL persistence** — `StatusBus(persist_path="/tmp/session.jsonl")` for audit trails
+
+See the [Status Bus guide](guides/status-bus.md) for the full API, backend implementation, and voice agent integration patterns.
 
 ### Memory Providers
 

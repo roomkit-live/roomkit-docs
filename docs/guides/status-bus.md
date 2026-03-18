@@ -30,6 +30,35 @@ async def on_status(entry):
 await bus.subscribe(on_status)
 ```
 
+## Framework integration
+
+The `StatusBus` is wired into `RoomKit` automatically — no manual setup needed:
+
+```python
+from roomkit import RoomKit, StatusBus
+
+# Default in-memory bus (always available)
+kit = RoomKit()
+kit.status_bus.post("exec", "search_google", "ok", detail="Found 7 results")
+
+# Custom bus with persistence
+kit = RoomKit(status_bus=StatusBus(persist_path="/tmp/session.jsonl"))
+```
+
+### Framework events
+
+Every status post emits a `status_posted` framework event:
+
+```python
+@kit.on("status_posted")
+async def on_status(event):
+    entry = event.data  # dict with ts, agent_id, action, status, detail, metadata
+    if entry["status"] == "completed":
+        print(f"Task done: {entry['detail']}")
+```
+
+The bus is closed automatically when `kit.close()` is called.
+
 ## How it works
 
 The `StatusBus` is a shared event log with pub/sub. All agents in a room write to it, and any agent can subscribe to be notified when new entries arrive.
