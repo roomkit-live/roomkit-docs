@@ -68,7 +68,6 @@ nav:
   - AI Assistant Integration: ai-integration.md
   - MCP Integration: mcp.md
   - Guides:
-<<<<<<< HEAD
       - Voice:
           - Voice Interruption & Barge-In: guides/voice-interruption.md
           - Audio Pipeline Stages: guides/audio-pipeline-stages.md
@@ -87,6 +86,7 @@ nav:
           - Audio Bridging: guides/audio-bridge.md
       - Video:
           - Video & Vision: guides/video-vision.md
+          - Screen & Vision Tools: guides/screen-vision-tools.md
           - Avatar (Lip-Synced Talking Head): guides/avatar.md
           - Anam AI Avatar (Realtime A/V): guides/anam-avatar.md
           - Screen Capture: guides/screen-capture.md
