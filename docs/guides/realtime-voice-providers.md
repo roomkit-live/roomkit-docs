@@ -81,7 +81,7 @@ channel = RealtimeVoiceChannel(
 | `output_sample_rate` | `24000` | Provider → client sample rate |
 | `transport_sample_rate` | `None` | Transport rate; auto-resamples if mismatched |
 | `emit_transcription_events` | `True` | Create RoomEvents from transcriptions |
-| `tool_handler` | `None` | `async (session, name, args) -> result` |
+| `tool_handler` | `None` | `async (name: str, args: dict) -> str` |
 | `mute_on_tool_call` | `False` | Mute mic during tool execution |
 | `tool_result_max_length` | `16384` | Max chars for tool results |
 
@@ -344,16 +344,18 @@ transport = LocalAudioBackend(
 ```python
 from __future__ import annotations
 
+import json
+
 from roomkit.channels import RealtimeVoiceChannel
 
 
-async def handle_tool(session, name, arguments):
+async def handle_tool(name, arguments):
     if name == "get_weather":
         city = arguments.get("city", "Unknown")
-        return {"temperature": 72, "condition": "sunny", "city": city}
+        return json.dumps({"temperature": 72, "condition": "sunny", "city": city})
     elif name == "search_knowledge":
-        return {"results": ["Article 1", "Article 2"]}
-    return {"error": f"Unknown tool: {name}"}
+        return json.dumps({"results": ["Article 1", "Article 2"]})
+    return json.dumps({"error": f"Unknown tool: {name}"})
 
 
 channel = RealtimeVoiceChannel(
@@ -489,6 +491,8 @@ Permissions are checked on every audio frame — changes take effect immediately
 ```python
 from __future__ import annotations
 
+import json
+
 from fastapi import FastAPI
 
 from roomkit import RoomKit
@@ -510,10 +514,10 @@ transport = FastRTCRealtimeTransport(
 )
 
 
-async def on_tool(session, name, arguments):
+async def on_tool(name, arguments):
     if name == "lookup_order":
-        return {"status": "shipped", "eta": "Tomorrow"}
-    return {"error": "Unknown tool"}
+        return json.dumps({"status": "shipped", "eta": "Tomorrow"})
+    return json.dumps({"error": "Unknown tool"})
 
 
 channel = RealtimeVoiceChannel(

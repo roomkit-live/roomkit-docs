@@ -10,12 +10,12 @@ Speech-to-speech AI conversations using providers like Google Gemini Live and Op
 
 ```python
 ToolHandler = Callable[
-    [RealtimeSession, str, dict[str, Any]],
-    Awaitable[dict[str, Any] | str],
+    [str, dict[str, Any]],
+    Awaitable[str],
 ]
 ```
 
-Async callback for executing tool/function calls from the AI provider. Receives `(session, tool_name, arguments)` and returns a result dict or JSON string.
+Async callback for executing tool/function calls from the AI provider. Receives `(tool_name, arguments)` and returns a JSON string.
 
 ## Provider ABC
 
@@ -196,6 +196,8 @@ session = await channel.start_session(
 ### With Tool Calling (MCP)
 
 ```python
+import json
+
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
@@ -216,9 +218,9 @@ tools = [
 ]
 
 # Tool handler routes calls to MCP
-async def handle_tool(session, name, arguments):
+async def handle_tool(name, arguments):
     result = await mcp.call_tool(name, arguments)
-    return {"result": "\n".join(b.text for b in result.content if hasattr(b, "text"))}
+    return json.dumps({"result": "\n".join(b.text for b in result.content if hasattr(b, "text"))})
 
 channel = RealtimeVoiceChannel(
     "realtime-voice",

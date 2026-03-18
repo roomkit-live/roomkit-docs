@@ -102,11 +102,14 @@ agent = Agent("exec", tool_handler=audited, ...)
 
 ### For RealtimeVoiceChannel (voice tool handler)
 
-```python
-from roomkit.orchestration.tool_audit import audit_realtime_tool_handler
+!!! note "Deprecated"
+    `audit_realtime_tool_handler` is deprecated. Use `audit_tool_handler` instead — the tool handler signature is now unified as `async (name: str, args: dict) -> str` for both `AIChannel` and `RealtimeVoiceChannel`.
 
-# Wraps async (session, name, args) -> dict|str
-audited = audit_realtime_tool_handler(handler, auditor, agent_id="voice")
+```python
+from roomkit import audit_tool_handler
+
+# Wraps async (name, args) -> str
+audited = audit_tool_handler(handler, auditor, agent_id="voice")
 voice_channel = RealtimeVoiceChannel("voice", tool_handler=audited, ...)
 ```
 
