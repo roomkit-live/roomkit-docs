@@ -261,6 +261,7 @@ Filter options:
 | `ON_VAD_SILENCE` | Async | Voice: silence detected |
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
 | `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
+| `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
 
 ### AI Intelligence Layer
 

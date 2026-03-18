@@ -415,19 +415,23 @@ channel = RealtimeVoiceChannel(
 
 ### Via Hooks
 
+The unified `ON_TOOL_CALL` hook fires from both `AIChannel` and `RealtimeVoiceChannel`. Use `event.channel_type` to distinguish the source. Return the result via `HookResult.metadata["result"]`.
+
 ```python
 from __future__ import annotations
 
 from roomkit import HookTrigger, RoomKit
+from roomkit.models.hook import HookResult
 
 kit = RoomKit()
 
 
-@kit.hook(HookTrigger.ON_REALTIME_TOOL_CALL)
+@kit.hook(HookTrigger.ON_TOOL_CALL)
 async def on_tool_call(event, ctx):
-    if event.metadata["name"] == "get_weather":
-        result = await fetch_weather(event.metadata["arguments"]["city"])
-        event.metadata["result"] = result
+    if event.name == "get_weather":
+        result = await fetch_weather(event.arguments["city"])
+        return HookResult(action="allow", metadata={"result": result})
+    return HookResult.allow()
 ```
 
 !!! tip "Mute on Tool Call"
@@ -479,7 +483,7 @@ Realtime-specific hooks fired during voice sessions:
 | Hook | Type | Description |
 |------|------|-------------|
 | `ON_TRANSCRIPTION` | Sync | Transcription received (can block/modify) |
-| `ON_REALTIME_TOOL_CALL` | Sync | Tool call from provider (must return result) |
+| `ON_TOOL_CALL` | Sync | Tool call from any channel (return result via metadata) |
 | `ON_SPEECH_START` | Async | User started speaking |
 | `ON_SPEECH_END` | Async | User stopped speaking |
 | `ON_SESSION_STARTED` | Async | Voice session activated |
