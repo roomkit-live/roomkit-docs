@@ -5,14 +5,9 @@ Route conversations between multiple AI agents with state tracking, rule-based r
 ## Quick start
 
 ```python
-from roomkit import (
-    AIChannel,
-    ConversationPipeline,
-    HandoffMemoryProvider,
-    PipelineStage,
-    RoomKit,
-    SlidingWindowMemory,
-)
+from roomkit import AIChannel, RoomKit
+from roomkit.orchestration import ConversationPipeline, HandoffMemoryProvider, PipelineStage
+from roomkit.memory import SlidingWindowMemory
 
 # 1. Define the pipeline
 pipeline = ConversationPipeline(
@@ -68,7 +63,7 @@ Inbound event
 Tracks conversation progress within a room. Stored in `Room.metadata["_conversation_state"]` and round-trips through JSON cleanly.
 
 ```python
-from roomkit import ConversationState, get_conversation_state, set_conversation_state
+from roomkit.orchestration import ConversationState, get_conversation_state, set_conversation_state
 
 # Read state from a room
 state = get_conversation_state(room)
@@ -123,7 +118,8 @@ Events from intelligence channels are never routed (prevents loops).
 ### RoutingRule and RoutingConditions
 
 ```python
-from roomkit import ConversationRouter, RoutingRule, RoutingConditions, ChannelType
+from roomkit import ChannelType
+from roomkit.orchestration import ConversationRouter, RoutingRule, RoutingConditions
 
 router = ConversationRouter(
     rules=[
@@ -195,7 +191,7 @@ Agents trigger handoffs by calling the `handoff_conversation` tool. The framewor
 ### HandoffHandler
 
 ```python
-from roomkit import HandoffHandler
+from roomkit.orchestration import HandoffHandler
 
 handler = HandoffHandler(
     kit=kit,
@@ -219,7 +215,7 @@ handler = HandoffHandler(
 Wires the handoff tool into an AIChannel:
 
 ```python
-from roomkit import setup_handoff
+from roomkit.orchestration import setup_handoff
 
 setup_handoff(ai_channel, handler)
 ```
@@ -256,7 +252,8 @@ The special target `"human"` sets `active_agent_id` to `None`, allowing all agen
 Wraps an inner `MemoryProvider` to inject handoff context when a conversation has been transferred:
 
 ```python
-from roomkit import HandoffMemoryProvider, SlidingWindowMemory
+from roomkit.orchestration import HandoffMemoryProvider
+from roomkit.memory import SlidingWindowMemory
 
 memory = HandoffMemoryProvider(SlidingWindowMemory(max_events=50))
 ai = AIChannel("agent-handler", provider=provider, memory=memory)
@@ -271,7 +268,7 @@ After a handoff, the receiving agent sees a prepended message like:
 Syntactic sugar for defining sequential multi-agent workflows. Generates a `ConversationRouter` from a list of pipeline stages.
 
 ```python
-from roomkit import ConversationPipeline, PipelineStage
+from roomkit.orchestration import ConversationPipeline, PipelineStage
 
 pipeline = ConversationPipeline(
     stages=[

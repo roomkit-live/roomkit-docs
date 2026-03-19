@@ -19,7 +19,8 @@ Identity hooks (`ON_IDENTITY_AMBIGUOUS`, `ON_IDENTITY_UNKNOWN`) allow custom han
 ### Basic Usage
 
 ```python
-from roomkit import RoomKit, HookTrigger, IdentityHookResult
+from roomkit import RoomKit, HookTrigger
+from roomkit.models.identity import IdentityHookResult
 
 kit = RoomKit(identity_resolver=my_resolver)
 
@@ -36,7 +37,8 @@ async def resolve_ambiguous(event, ctx, id_result):
 Identity hooks support filtering by `channel_types`, `channel_ids`, and `directions`, just like regular hooks. This allows you to target identity resolution logic to specific channels.
 
 ```python
-from roomkit import ChannelType, ChannelDirection, HookTrigger
+from roomkit import ChannelType, HookTrigger
+from roomkit.models.enums import ChannelDirection
 
 # Only run for SMS inbound messages
 @kit.identity_hook(

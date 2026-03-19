@@ -5,7 +5,9 @@ RoomKit provides first-class support for AI thinking (chain-of-thought reasoning
 ## Quick start
 
 ```python
-from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig
+from roomkit import AIChannel
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
 
 provider = AnthropicAIProvider(AnthropicConfig(api_key="sk-..."))
 ai = AIChannel(
@@ -85,7 +87,8 @@ await kit.attach_channel("math-room", "ai-thinker",
 - `AIThinkingPart` is preserved verbatim in conversation history (Anthropic requires this)
 
 ```python
-from roomkit import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
 
 provider = AnthropicAIProvider(AnthropicConfig(
     api_key="sk-...",
@@ -104,7 +107,7 @@ Models served via Ollama or vLLM (DeepSeek-R1, QwQ, etc.) emit reasoning inside 
 - **History**: `AIThinkingPart` is re-wrapped as `<think>` tags when sent back to the model
 
 ```python
-from roomkit import create_vllm_provider
+from roomkit.providers.vllm import create_vllm_provider
 
 provider = create_vllm_provider(
     base_url="http://localhost:11434/v1",
@@ -191,7 +194,7 @@ This ensures the model has full context of its prior reasoning when generating f
 Represents a thinking block in conversation history:
 
 ```python
-from roomkit import AIThinkingPart
+from roomkit.providers.ai.base import AIThinkingPart
 
 part = AIThinkingPart(
     thinking="Let me reason step by step...",
@@ -204,7 +207,7 @@ part = AIThinkingPart(
 A streaming event for thinking content:
 
 ```python
-from roomkit import StreamThinkingDelta
+from roomkit.providers.ai.base import StreamThinkingDelta
 
 delta = StreamThinkingDelta(thinking="Step 1: Consider...")
 ```
@@ -227,7 +230,8 @@ delta = StreamThinkingDelta(thinking="Step 1: Consider...")
 Use `MockAIProvider` with `AIResponse` that includes thinking content:
 
 ```python
-from roomkit import AIChannel, MockAIProvider
+from roomkit import AIChannel
+from roomkit.providers.ai.mock import MockAIProvider
 from roomkit.providers.ai.base import AIResponse
 
 provider = MockAIProvider(

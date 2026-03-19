@@ -251,7 +251,8 @@ async def handle_ambiguous(event, ctx):
 RoomKit uses a **pluggable store** abstraction. The default is `InMemoryStore` (for development). For production, implement the `ConversationStore` interface:
 
 ```python
-from roomkit import ConversationStore, Room, RoomEvent
+from roomkit import Room, RoomEvent
+from roomkit.store.base import ConversationStore
 
 class PostgresStore(ConversationStore):
     def __init__(self, connection_string: str):
@@ -285,7 +286,7 @@ Yes, with the right store backend. For multi-instance deployments:
 Configure retry policies and rate limits when attaching channels:
 
 ```python
-from roomkit import RetryPolicy, RateLimit
+from roomkit.models.channel import RetryPolicy, RateLimit
 
 await kit.attach_channel(
     room_id,
@@ -310,7 +311,7 @@ async def rate_limit(event, ctx):
 Implement a distributed lock manager using `RoomLockManager`:
 
 ```python
-from roomkit import RoomLockManager
+from roomkit.core.locks import RoomLockManager
 from contextlib import asynccontextmanager
 
 class RedisLockManager(RoomLockManager):
@@ -346,7 +347,9 @@ kit = RoomKit(store=my_store, lock_manager=RedisLockManager(redis))
 RoomKit includes mock providers and an in-memory store for testing:
 
 ```python
-from roomkit import RoomKit, MockAIProvider, InMemoryStore
+from roomkit import RoomKit
+from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.store.memory import InMemoryStore
 from roomkit.channels import AIChannel
 
 # Create test kit with in-memory store (default)

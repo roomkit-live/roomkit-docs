@@ -395,7 +395,8 @@ Test identity resolution with predefined mappings:
 ```python
 from __future__ import annotations
 
-from roomkit import Identity, MockIdentityResolver
+from roomkit.identity.base import Identity
+from roomkit.identity.mock import MockIdentityResolver
 from roomkit.models.enums import IdentificationStatus
 
 alice = Identity(id="alice", display_name="Alice")

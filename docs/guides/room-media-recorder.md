@@ -13,12 +13,8 @@ pip install roomkit[local-video]    # opencv (webcam capture)
 ## Quick start
 
 ```python
-from roomkit import (
-    MediaRecordingConfig,
-    RoomKit,
-    VideoChannel,
-    VoiceChannel,
-)
+from roomkit import RoomKit, VideoChannel, VoiceChannel
+from roomkit.recorder import MediaRecordingConfig
 from roomkit.recorder import RoomRecorderBinding
 from roomkit.recorder.pyav import PyAVMediaRecorder
 
@@ -63,7 +59,7 @@ All three can run simultaneously without interference.
 Controls the output file format and encoding:
 
 ```python
-from roomkit import MediaRecordingConfig
+from roomkit.recorder import MediaRecordingConfig
 
 config = MediaRecordingConfig(
     storage="./recordings",    # Output directory (created automatically)
@@ -89,7 +85,7 @@ config = MediaRecordingConfig(
 When a room has recorders, **all channels record automatically** — no per-channel configuration is needed. `ChannelRecordingConfig` is only required to **opt out** of recording specific media types on a channel:
 
 ```python
-from roomkit import ChannelRecordingConfig
+from roomkit.recorder import ChannelRecordingConfig
 
 # Exclude video from this channel (audio still recorded)
 voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(video=False))

@@ -134,7 +134,8 @@ In both cases, the stored event in the conversation history carries the visibili
 Use `_SourceChannel` with `response_visibility` or a BEFORE_BROADCAST hook to test delivery scope:
 
 ```python
-from roomkit import MockAIProvider, RoomKit, HookTrigger
+from roomkit import RoomKit, HookTrigger
+from roomkit.providers.ai.mock import MockAIProvider
 from roomkit.channels.ai import AIChannel
 
 kit = RoomKit()

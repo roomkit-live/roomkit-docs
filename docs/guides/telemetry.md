@@ -160,7 +160,7 @@ docker run -p 4040:4040 grafana/pyroscope
 **Basic usage:**
 
 ```python
-from roomkit import PyroscopeProfiler
+from roomkit.telemetry.pyroscope import PyroscopeProfiler
 
 profiler = PyroscopeProfiler(
     application_name="my-voice-app",

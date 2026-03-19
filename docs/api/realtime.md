@@ -7,7 +7,8 @@ RoomKit's realtime system handles **ephemeral events** - transient signals that 
 Ephemeral events are published to rooms and delivered to subscribers in real-time. Unlike `RoomEvent`s, they are not stored in the conversation history.
 
 ```python
-from roomkit import RoomKit, EphemeralEvent, EphemeralEventType
+from roomkit import RoomKit
+from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
 
 kit = RoomKit()
 
@@ -84,7 +85,7 @@ await kit.publish_read_receipt(
 Subscribe to receive ephemeral events for a room.
 
 ```python
-from roomkit import EphemeralEvent, EphemeralEventType
+from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
 
 async def handle_ephemeral(event: EphemeralEvent):
     match event.type:
@@ -114,7 +115,8 @@ Complete example forwarding ephemeral events to WebSocket clients:
 
 ```python
 from fastapi import FastAPI, WebSocket
-from roomkit import RoomKit, EphemeralEvent, EphemeralEventType
+from roomkit import RoomKit
+from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
 
 app = FastAPI()
 kit = RoomKit()
@@ -169,7 +171,7 @@ async def websocket_endpoint(ws: WebSocket, room_id: str, user_id: str):
 By default, RoomKit uses `InMemoryRealtime` which works for single-process deployments. For distributed systems, implement a custom `RealtimeBackend`:
 
 ```python
-from roomkit import RealtimeBackend, EphemeralEvent, EphemeralCallback
+from roomkit.realtime.base import RealtimeBackend, EphemeralEvent, EphemeralCallback
 import redis.asyncio as redis
 import json
 

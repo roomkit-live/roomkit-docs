@@ -11,7 +11,8 @@ Enable video bridging by passing `bridge=True` to `VideoChannel` or
 `video_bridge=True` to `AudioVideoChannel`:
 
 ```python
-from roomkit import RoomKit, AudioVideoChannel, VideoBridgeConfig
+from roomkit import RoomKit, AudioVideoChannel
+from roomkit.video.bridge import VideoBridgeConfig
 from roomkit.video.backends.sip import SIPVideoBackend
 from roomkit.voice.pipeline import AudioPipelineConfig
 
@@ -61,7 +62,7 @@ Session B camera → Backend → Pipeline → VideoBridge.forward()
 ### VideoBridgeConfig
 
 ```python
-from roomkit import VideoBridgeConfig
+from roomkit.video.bridge import VideoBridgeConfig
 
 config = VideoBridgeConfig(
     max_participants=10,           # Max sessions per room (default: 10)

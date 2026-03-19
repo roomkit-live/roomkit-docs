@@ -91,7 +91,8 @@ for tool_call in response.tool_calls:
 ### Usage
 
 ```python
-from roomkit import GeminiAIProvider, GeminiConfig
+from roomkit.providers.gemini.ai import GeminiAIProvider
+from roomkit.providers.gemini.config import GeminiConfig
 
 config = GeminiConfig(api_key="your-api-key")
 provider = GeminiAIProvider(config)
@@ -111,7 +112,7 @@ Install with: `pip install roomkit[gemini]`
 ### Usage
 
 ```python
-from roomkit import create_vllm_provider, VLLMConfig
+from roomkit.providers.vllm import create_vllm_provider, VLLMConfig
 from roomkit.channels.ai import AIChannel
 
 # Configure connection to a local vLLM server
@@ -138,7 +139,8 @@ Install with: `pip install roomkit[vllm]`
 ### Usage
 
 ```python
-from roomkit import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
 from roomkit.channels.ai import AIChannel
 
 config = AnthropicConfig(api_key="your-api-key")
@@ -158,7 +160,8 @@ Install with: `pip install roomkit[anthropic]`
 ### Usage
 
 ```python
-from roomkit import OpenAIAIProvider, OpenAIConfig
+from roomkit.providers.openai.ai import OpenAIAIProvider
+from roomkit.providers.openai.config import OpenAIConfig
 from roomkit.channels.ai import AIChannel
 
 config = OpenAIConfig(api_key="your-api-key")
@@ -178,7 +181,8 @@ Install with: `pip install roomkit[openai]`
 ### Usage
 
 ```python
-from roomkit import MistralAIProvider, MistralConfig
+from roomkit.providers.mistral.ai import MistralAIProvider
+from roomkit.providers.mistral.config import MistralConfig
 from roomkit.channels.ai import AIChannel
 
 config = MistralConfig(api_key="your-api-key")
@@ -198,7 +202,8 @@ Install with: `pip install roomkit[mistral]`
 ### Usage
 
 ```python
-from roomkit import AzureAIProvider, AzureAIConfig
+from roomkit.providers.azure.ai import AzureAIProvider
+from roomkit.providers.azure.config import AzureAIConfig
 from roomkit.channels.ai import AIChannel
 
 config = AzureAIConfig(

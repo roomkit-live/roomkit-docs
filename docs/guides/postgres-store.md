@@ -15,7 +15,8 @@ This installs `asyncpg>=0.29` as an optional dependency.
 ```python
 from __future__ import annotations
 
-from roomkit import PostgresStore, RoomKit
+from roomkit import RoomKit
+from roomkit.store.postgres import PostgresStore
 
 store = PostgresStore("postgresql://user:pass@localhost/roomkit")
 await store.init(min_size=2, max_size=10)
@@ -163,7 +164,7 @@ PostgresStore supports multi-channel identity resolution:
 ```python
 from __future__ import annotations
 
-from roomkit import Identity
+from roomkit.identity.base import Identity
 
 # Create identity with addresses (single transaction)
 await store.create_identity(Identity(
@@ -222,7 +223,8 @@ All operations are instrumented with `SpanKind.STORE_QUERY` telemetry spans:
 ```python
 from __future__ import annotations
 
-from roomkit import PostgresStore, RoomKit
+from roomkit import RoomKit
+from roomkit.store.postgres import PostgresStore
 from roomkit.telemetry import OpenTelemetryProvider
 
 store = PostgresStore("postgresql://...")
@@ -265,7 +267,8 @@ Since all models are stored as JSONB, standard PostgreSQL backup tools (`pg_dump
 ```python
 from __future__ import annotations
 
-from roomkit import PostgresStore, RoomKit
+from roomkit import RoomKit
+from roomkit.store.postgres import PostgresStore
 
 # Before (development):
 kit = RoomKit()  # Uses InMemoryStore by default

@@ -91,7 +91,9 @@ intermediate steps.
 The mixer is pluggable via the `MixerProvider` ABC:
 
 ```python
-from roomkit import AudioBridgeConfig, NumpyMixerProvider, PythonMixerProvider
+from roomkit.voice.bridge import AudioBridgeConfig
+from roomkit.voice.pipeline.mixer.numpy import NumpyMixerProvider
+from roomkit.voice.pipeline.mixer.python import PythonMixerProvider
 
 # Explicit NumPy mixer (~20x faster than pure Python)
 config = AudioBridgeConfig(

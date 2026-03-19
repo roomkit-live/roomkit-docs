@@ -5,7 +5,9 @@
 The simplest way to handle SMS webhooks from any provider is using `extract_sms_meta()` combined with `kit.process_webhook()`:
 
 ```python
-from roomkit import RoomKit, extract_sms_meta, parse_voicemeup_webhook
+from roomkit import RoomKit
+from roomkit.providers.sms.meta import extract_sms_meta
+from roomkit.providers.voicemeup.sms import parse_voicemeup_webhook
 
 kit = RoomKit()
 
@@ -124,7 +126,7 @@ Both webhooks have **different `sms_hash` values**, making correlation non-trivi
 **Usage example**:
 
 ```python
-from roomkit import parse_voicemeup_webhook, configure_voicemeup_mms
+from roomkit.providers.voicemeup.sms import parse_voicemeup_webhook, configure_voicemeup_mms
 
 # Optional: configure timeout behavior (default: 5s)
 configure_voicemeup_mms(
@@ -168,8 +170,10 @@ import httpx
 from urllib.parse import urlparse
 from roomkit import (
     RoomKit, HookTrigger, HookResult, RoomEvent, RoomContext,
-    ChannelType, ChannelDirection, MediaContent, CompositeContent,
+    ChannelType, TextContent,
 )
+from roomkit.models.enums import ChannelDirection
+from roomkit.models.event import MediaContent, CompositeContent
 
 # Domains that need re-hosting
 REHOST_DOMAINS = {"clients.voicemeup.com", "dev-clients.voicemeup.com"}

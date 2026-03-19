@@ -7,7 +7,8 @@ RoomKit's source system enables **event-driven message ingestion** from persiste
 Unlike webhook-based providers that receive HTTP POST requests, **SourceProviders** maintain persistent connections and push messages into RoomKit as they arrive.
 
 ```python
-from roomkit import RoomKit, SourceProvider, SourceStatus, InboundMessage
+from roomkit import RoomKit, InboundMessage
+from roomkit.sources.base import SourceProvider, SourceStatus
 
 # Attach an event-driven source
 await kit.attach_source("my-channel", my_source)
@@ -115,7 +116,7 @@ This will:
 Check the health of attached sources:
 
 ```python
-from roomkit import SourceStatus
+from roomkit.sources.base import SourceStatus
 
 # Single source health
 health = await kit.source_health("websocket-events")
@@ -573,7 +574,8 @@ Extend `SourceProvider` or `BaseSourceProvider` to create custom sources:
 ### Minimal Implementation
 
 ```python
-from roomkit import SourceProvider, SourceStatus, SourceHealth, InboundMessage, TextContent
+from roomkit import InboundMessage, TextContent
+from roomkit.sources.base import SourceProvider, SourceStatus, SourceHealth
 
 class MySource(SourceProvider):
     def __init__(self, config: str):
@@ -620,7 +622,8 @@ class MySource(SourceProvider):
 For convenience, extend `BaseSourceProvider` which provides built-in status tracking:
 
 ```python
-from roomkit import BaseSourceProvider, InboundMessage, TextContent
+from roomkit import InboundMessage, TextContent
+from roomkit.sources.base import BaseSourceProvider
 import asyncio
 
 class WebSocketSource(BaseSourceProvider):
@@ -678,13 +681,8 @@ class WebSocketSource(BaseSourceProvider):
 ## Complete Example: NATS Source
 
 ```python
-from roomkit import (
-    RoomKit,
-    BaseSourceProvider,
-    SourceStatus,
-    InboundMessage,
-    TextContent,
-)
+from roomkit import RoomKit, InboundMessage, TextContent
+from roomkit.sources.base import BaseSourceProvider, SourceStatus
 import json
 
 class NATSSource(BaseSourceProvider):
@@ -834,7 +832,8 @@ Browser UI ──HTTP──► Your Server ◄──WebSocket──► CLI Clien
 
 ```python
 import json
-from roomkit import Provider, ProviderCapability, DeliveryResult, OutboundMessage
+from roomkit import DeliveryResult
+from roomkit.providers.base import Provider, ProviderCapability, OutboundMessage
 from roomkit.sources import WebSocketSource, SourceStatus
 
 class WebSocketProvider(Provider):

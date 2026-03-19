@@ -5,7 +5,8 @@ Share real-time status updates between agents in a multi-agent setup. When an ex
 ## Quick start
 
 ```python
-from roomkit import RoomKit, StatusBus
+from roomkit import RoomKit
+from roomkit.orchestration.status_bus import StatusBus
 
 # Create a bus (in-memory with optional JSONL persistence)
 bus = StatusBus(persist_path="/tmp/session.jsonl")
@@ -35,7 +36,8 @@ await bus.subscribe(on_status)
 The `StatusBus` is wired into `RoomKit` automatically — no manual setup needed:
 
 ```python
-from roomkit import RoomKit, StatusBus
+from roomkit import RoomKit
+from roomkit.orchestration.status_bus import StatusBus
 
 # Default in-memory bus (always available)
 kit = RoomKit()
@@ -97,7 +99,7 @@ await bus.post_async("exec", "search_google", "ok", detail="Found results")
 The default `InMemoryStatusBackend` works for single-process setups. For distributed deployments, implement the `StatusBackend` ABC:
 
 ```python
-from roomkit import StatusBackend, StatusEntry
+from roomkit.orchestration.status_bus import StatusBackend, StatusEntry
 
 class RedisStatusBackend(StatusBackend):
     async def publish(self, entry: StatusEntry) -> None:

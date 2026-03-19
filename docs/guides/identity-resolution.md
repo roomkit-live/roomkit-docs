@@ -7,13 +7,9 @@ Identity resolution maps inbound message senders to known participants. It runs 
 ```python
 from __future__ import annotations
 
-from roomkit import (
-    Identity,
-    IdentificationStatus,
-    IdentityResolver,
-    IdentityResult,
-    RoomKit,
-)
+from roomkit import RoomKit
+from roomkit.identity.base import Identity, IdentityResolver, IdentityResult
+from roomkit.models.enums import IdentificationStatus
 from roomkit.models.events import InboundMessage
 
 
@@ -57,7 +53,7 @@ The resolver returns one of 6 statuses:
 ## Identity Model
 
 ```python
-from roomkit import Identity
+from roomkit.identity.base import Identity
 
 identity = Identity(
     id="user-123",
@@ -95,7 +91,8 @@ Fires when the resolver returns multiple candidates:
 ```python
 from __future__ import annotations
 
-from roomkit import HookTrigger, IdentityHookResult, RoomKit
+from roomkit import HookTrigger, RoomKit
+from roomkit.models.identity import IdentityHookResult
 
 kit = RoomKit(identity_resolver=my_resolver)
 
@@ -147,7 +144,8 @@ Send a verification challenge and block the original message until the user iden
 ```python
 from __future__ import annotations
 
-from roomkit import HookTrigger, IdentityHookResult
+from roomkit import HookTrigger
+from roomkit.models.identity import IdentityHookResult
 from roomkit.models.events import InjectedEvent, TextContent
 
 
@@ -223,7 +221,8 @@ async def sms_only_handler(event, context, id_result):
 ```python
 from __future__ import annotations
 
-from roomkit import Identity, MockIdentityResolver
+from roomkit.identity.base import Identity
+from roomkit.identity.mock import MockIdentityResolver
 
 alice = Identity(id="alice", display_name="Alice")
 bob = Identity(id="bob", display_name="Bob")

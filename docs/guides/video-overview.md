@@ -89,7 +89,9 @@ AI agents can capture and analyze frames on demand — no continuous streaming r
 These are `Tool` protocol objects — pass them directly to any channel via `tools=[...]`:
 
 ```python
-from roomkit import Agent, DescribeScreenTool, ScreenInputTools
+from roomkit import Agent
+from roomkit.video.vision.screen_tool import DescribeScreenTool
+from roomkit.video.vision.screen_input import ScreenInputTools
 
 screen_tool = DescribeScreenTool(vision=gemini_vision, monitor=1)
 input_tools = ScreenInputTools(vision=gemini_vision, monitor=1)
@@ -118,7 +120,7 @@ Optional processing chain applied to inbound frames:
 | **Encoder** | Raw → compressed (outbound) | `PyAVVideoEncoder` (H.264) |
 
 ```python
-from roomkit import VideoPipelineConfig
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.pipeline.filter.watermark import WatermarkFilter
 
 video = VideoChannel(
@@ -144,7 +146,7 @@ Three recording layers, from per-session to room-wide:
 The room-level recorder muxes audio and video from multiple channels into a single file with A/V sync maintained via a shared monotonic clock:
 
 ```python
-from roomkit import MediaRecordingConfig, RoomRecorderBinding
+from roomkit.recorder import MediaRecordingConfig, RoomRecorderBinding
 from roomkit.recorder.pyav import PyAVMediaRecorder
 
 voice = VoiceChannel("voice", ...)
@@ -176,7 +178,8 @@ Photorealistic talking-head avatars with lip-synced video output.
 `RealtimeAVBridge` wires any voice/video backend to an avatar provider, handling audio resampling, H.264 encoding, video pipeline, and session lifecycle:
 
 ```python
-from roomkit import AnamConfig, AnamRealtimeProvider
+from roomkit.providers.anam.config import AnamConfig
+from roomkit.providers.anam.realtime import AnamRealtimeProvider
 from roomkit.voice.realtime.bridge import RealtimeAVBridge
 
 bridge = RealtimeAVBridge(

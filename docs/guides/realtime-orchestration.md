@@ -95,13 +95,8 @@ Scope: Financial advisory services only
 ## Quick start
 
 ```python
-from roomkit import (
-    Agent,
-    ConversationPipeline,
-    PipelineStage,
-    RealtimeVoiceChannel,
-    RoomKit,
-)
+from roomkit import Agent, RealtimeVoiceChannel, RoomKit
+from roomkit.orchestration import ConversationPipeline, PipelineStage
 from roomkit.providers.gemini.realtime import GeminiLiveProvider
 from roomkit.voice.backends.local import LocalAudioBackend
 

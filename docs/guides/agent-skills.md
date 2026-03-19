@@ -49,7 +49,8 @@ Detailed instructions for the AI on how to use this skill...
 ## Quick start
 
 ```python
-from roomkit import AIChannel, SkillRegistry
+from roomkit import AIChannel
+from roomkit.skills import SkillRegistry
 from roomkit.providers.ai.mock import MockAIProvider
 
 # 1. Discover skills from a directory
@@ -85,7 +86,7 @@ The registry discovers and manages skills. It uses a two-level loading strategy:
 - **Level 2 (get_skill)** — Loads full instructions on demand and caches for subsequent access.
 
 ```python
-from roomkit import SkillRegistry
+from roomkit.skills import SkillRegistry
 
 registry = SkillRegistry()
 
@@ -133,7 +134,8 @@ Content is HTML-escaped to prevent prompt injection.
 Pass the registry (and optionally a script executor) to `AIChannel`:
 
 ```python
-from roomkit import AIChannel, SkillRegistry
+from roomkit import AIChannel
+from roomkit.skills import SkillRegistry
 
 registry = SkillRegistry()
 registry.discover("./skills")
@@ -192,7 +194,7 @@ Script execution is intentionally left to the integrator — there is no default
 
 ```python
 import asyncio
-from roomkit import ScriptExecutor, ScriptResult, Skill
+from roomkit.skills import ScriptExecutor, ScriptResult, Skill
 
 class SubprocessExecutor(ScriptExecutor):
     """Example executor using subprocess — customize for your security needs."""
@@ -267,7 +269,7 @@ Path traversal is blocked — filenames containing `..`, `/`, or `\` are rejecte
 ### Parse and validation errors
 
 ```python
-from roomkit import SkillParseError, SkillValidationError, SkillRegistry
+from roomkit.skills import SkillParseError, SkillValidationError, SkillRegistry
 
 registry = SkillRegistry()
 

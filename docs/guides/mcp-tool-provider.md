@@ -8,8 +8,8 @@
 ## Quick start
 
 ```python
-from roomkit import AIChannel, compose_tool_handlers
-from roomkit.tools import MCPToolProvider
+from roomkit import AIChannel
+from roomkit.tools import MCPToolProvider, compose_tool_handlers
 
 # Connect to an MCP server and discover tools
 async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
@@ -114,7 +114,7 @@ The import is lazy — `mcp` is only required when you actually connect.
 Chains two or more `ToolHandler` callables into a single handler with first-match-wins semantics:
 
 ```python
-from roomkit import compose_tool_handlers
+from roomkit.tools import compose_tool_handlers
 
 async def weather_handler(name: str, arguments: dict) -> str:
     if name == "get_weather":
@@ -148,9 +148,8 @@ Local tools use the `Tool` protocol; MCP tools use `tool_handler`. Both can be c
 
 ```python
 import json
-from roomkit import (
-    AIChannel, ChannelCategory, RoomKit, compose_tool_handlers,
-)
+from roomkit import AIChannel, ChannelCategory, RoomKit
+from roomkit.tools import compose_tool_handlers
 from roomkit.tools import MCPToolProvider
 
 

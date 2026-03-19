@@ -12,7 +12,8 @@ pip install roomkit[local-video]    # opencv for webcam capture
 ## Quick start
 
 ```python
-from roomkit import VideoChannel, VideoPipelineConfig
+from roomkit import VideoChannel
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.backends.local import LocalVideoBackend
 from roomkit.video.recorder import VideoRecordingConfig
 from roomkit.video.recorder.pyav import PyAVVideoRecorder

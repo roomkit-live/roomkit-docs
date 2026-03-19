@@ -37,7 +37,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 from roomkit import RoomKit, VoiceChannel, AIChannel, ChannelCategory
-from roomkit import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
 from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend, mount_fastrtc_voice
 from roomkit.voice.pipeline import AudioPipelineConfig
 from roomkit.voice.pipeline.vad.energy import EnergyVADProvider

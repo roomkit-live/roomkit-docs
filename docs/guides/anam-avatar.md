@@ -54,7 +54,8 @@ pip install roomkit[anam,sip,video]
 ## Quick Start
 
 ```python
-from roomkit import AnamConfig, AnamRealtimeProvider
+from roomkit.providers.anam.config import AnamConfig
+from roomkit.providers.anam.realtime import AnamRealtimeProvider
 from roomkit.voice.realtime.bridge import RealtimeAVBridge
 from roomkit.video.backends.sip import SIPVideoBackend
 from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
@@ -191,7 +192,7 @@ make_text_frame(
 Insert processing stages between provider frames and the encoder:
 
 ```python
-from roomkit import VideoPipelineConfig
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.pipeline.filter.watermark import WatermarkFilter
 
 bridge = RealtimeAVBridge(
@@ -253,7 +254,9 @@ await bridge.disconnect(session.id)
 Bridge SIP phone calls to Anam — the caller talks to a photorealistic AI avatar:
 
 ```python
-from roomkit import AnamConfig, AnamRealtimeProvider, VideoPipelineConfig
+from roomkit.providers.anam.config import AnamConfig
+from roomkit.providers.anam.realtime import AnamRealtimeProvider
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.backends.sip import SIPVideoBackend
 from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
 from roomkit.video.pipeline.filter.watermark import WatermarkFilter
@@ -303,10 +306,9 @@ See `examples/sip_anam_avatar.py` for a complete runnable example with signal ha
 For applications that need RoomKit's room model:
 
 ```python
-from roomkit import (
-    AnamConfig, AnamRealtimeProvider,
-    RealtimeAudioVideoChannel, RoomKit,
-)
+from roomkit import RealtimeAudioVideoChannel, RoomKit
+from roomkit.providers.anam.config import AnamConfig
+from roomkit.providers.anam.realtime import AnamRealtimeProvider
 from roomkit.voice.realtime.mock import MockRealtimeTransport
 
 provider = AnamRealtimeProvider(AnamConfig(

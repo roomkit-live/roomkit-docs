@@ -5,7 +5,9 @@ When an AI provider supports streaming and tools are configured, `AIChannel` use
 ## Quick start
 
 ```python
-from roomkit import AIChannel, AnthropicAIProvider, AnthropicConfig
+from roomkit import AIChannel
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
 
 
 class LookupOrderTool:
@@ -69,7 +71,7 @@ The streaming tool loop is built on three event types emitted by `AIProvider.gen
 These are Pydantic models exported from `roomkit`:
 
 ```python
-from roomkit import StreamTextDelta, StreamToolCall, StreamDone, StreamEvent
+from roomkit.providers.ai.base import StreamTextDelta, StreamToolCall, StreamDone, StreamEvent
 
 # StreamEvent is the union type
 event: StreamEvent = StreamTextDelta(text="Hello")
@@ -97,7 +99,7 @@ This means every provider works with the streaming tool loop without changes, bu
 ### Implementing for a custom provider
 
 ```python
-from roomkit import AIProvider, AIContext
+from roomkit.providers.ai.base import AIProvider, AIContext
 from roomkit.providers.ai.base import (
     StreamTextDelta, StreamToolCall, StreamDone, StreamEvent,
 )
@@ -166,7 +168,8 @@ Exceptions from tool handlers propagate out of the async generator. The framewor
 Use `MockAIProvider` with `ai_responses` and `streaming=True` to test the streaming tool loop:
 
 ```python
-from roomkit import AIChannel, MockAIProvider
+from roomkit import AIChannel
+from roomkit.providers.ai.mock import MockAIProvider
 from roomkit.providers.ai.base import AIResponse, AIToolCall
 
 responses = [

@@ -30,11 +30,10 @@ pip install roomkit[openai]         # OpenAI GPT-4o / Ollama / vLLM
 
 ```python
 import asyncio
-from roomkit import (
-    RoomKit, VideoChannel, AIChannel, ChannelCategory,
-    GeminiVisionConfig, GeminiVisionProvider,
-    MockAIProvider, setup_video_vision,
-)
+from roomkit import RoomKit, VideoChannel, AIChannel, ChannelCategory
+from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.video.ai_integration import setup_video_vision
 from roomkit.video.backends.local import LocalVideoBackend
 
 async def main():
@@ -103,7 +102,7 @@ Analyzes video frames and returns structured descriptions. Three implementations
 #### Gemini (recommended for speed)
 
 ```python
-from roomkit import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
 
 vision = GeminiVisionProvider(GeminiVisionConfig(
     api_key="AIza...",
@@ -114,7 +113,7 @@ vision = GeminiVisionProvider(GeminiVisionConfig(
 #### Ollama (local, free)
 
 ```python
-from roomkit import OpenAIVisionConfig, OpenAIVisionProvider
+from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
 
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     base_url="http://localhost:11434/v1",
@@ -146,7 +145,7 @@ video = VideoChannel(
 `setup_video_vision()` wires vision results into an AIChannel's system prompt:
 
 ```python
-from roomkit import setup_video_vision
+from roomkit.video.ai_integration import setup_video_vision
 
 setup_video_vision(
     kit,
@@ -171,7 +170,7 @@ Two recorder implementations are available:
 **PyAV (recommended for production)** — compressed H.264 MP4 via FFmpeg:
 
 ```python
-from roomkit import VideoPipelineConfig
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.recorder.pyav import PyAVVideoRecorder
 from roomkit.video.recorder import VideoRecordingConfig
 
@@ -188,7 +187,7 @@ video = VideoChannel(
 **OpenCV** — quick path, larger files:
 
 ```python
-from roomkit import VideoPipelineConfig
+from roomkit.video.pipeline.config import VideoPipelineConfig
 from roomkit.video.recorder.opencv import OpenCVVideoRecorder
 from roomkit.video.recorder import VideoRecordingConfig
 

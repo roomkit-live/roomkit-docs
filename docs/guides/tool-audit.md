@@ -5,7 +5,8 @@ Record every tool call with input, output, timing, and status. Built-in implemen
 ## Quick start
 
 ```python
-from roomkit import Agent, JSONLToolAuditor, Tool, audit_tool_handler
+from roomkit import Agent, Tool
+from roomkit.orchestration.tool_audit import JSONLToolAuditor, audit_tool_handler
 
 # Create an auditor
 auditor = JSONLToolAuditor("/tmp/audit.jsonl")
@@ -52,7 +53,7 @@ Status is auto-detected: if the tool returns `{"status": "failed"}`, the entry i
 Writes entries to a JSONL file and keeps them in memory:
 
 ```python
-from roomkit import JSONLToolAuditor
+from roomkit.orchestration.tool_audit import JSONLToolAuditor
 
 auditor = JSONLToolAuditor("/tmp/screen_ai/audit.jsonl")
 ```
@@ -62,7 +63,7 @@ auditor = JSONLToolAuditor("/tmp/screen_ai/audit.jsonl")
 Logs entries in real-time via Python logging:
 
 ```python
-from roomkit import ConsoleToolAuditor
+from roomkit.orchestration.tool_audit import ConsoleToolAuditor
 
 auditor = ConsoleToolAuditor()
 # Logs: [AUDIT] [+] exec.search_google → ok (9333ms) {"status": "ok", ...}
@@ -73,7 +74,7 @@ auditor = ConsoleToolAuditor()
 Implement the `ToolAuditor` ABC:
 
 ```python
-from roomkit import ToolAuditor, ToolAuditEntry
+from roomkit.orchestration.tool_audit import ToolAuditor, ToolAuditEntry
 
 class MyAuditor(ToolAuditor):
     def record(self, entry: ToolAuditEntry) -> None:
@@ -93,7 +94,7 @@ class MyAuditor(ToolAuditor):
 ### For AIChannel (standard tool handler)
 
 ```python
-from roomkit import audit_tool_handler
+from roomkit.orchestration.tool_audit import audit_tool_handler
 
 # Wraps async (name, args) -> str
 audited = audit_tool_handler(handler, auditor, agent_id="exec")
