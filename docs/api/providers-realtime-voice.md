@@ -1,6 +1,6 @@
 # Realtime Voice
 
-Speech-to-speech AI conversations using providers like Google Gemini Live and OpenAI Realtime. Audio flows directly between the client and the AI provider; transcriptions are emitted into the Room so other channels (supervisor dashboards, logging) see the conversation.
+Speech-to-speech AI conversations using providers like Google Gemini Live, OpenAI Realtime, and xAI Grok Realtime. Audio flows directly between the client and the AI provider; transcriptions are emitted into the Room so other channels (supervisor dashboards, logging) see the conversation.
 
 ## RealtimeVoiceChannel
 
@@ -81,6 +81,30 @@ provider = OpenAIRealtimeProvider(
 ```
 
 Install with: `pip install roomkit[realtime-openai]`
+
+### xAI Grok Realtime
+
+```python
+from roomkit.providers.xai.config import XAIRealtimeConfig
+from roomkit.providers.xai.realtime import XAIRealtimeProvider
+
+provider = XAIRealtimeProvider(
+    XAIRealtimeConfig(
+        api_key="...",
+        model="grok-3-fast",
+        voice="eve",
+        transcription_model="grok-2-audio",
+    )
+)
+```
+
+Install with: `pip install websockets`
+
+Supports `provider_config` metadata keys: `turn_detection_type`, `threshold`, `silence_duration_ms`, `prefix_padding_ms`, `transcription_model`, `input_audio_format`, `output_audio_format`, `modalities`.
+
+Native tools: `web_search`, `x_search` (passed as `{"type": "web_search"}`).
+
+Available voices: eve, ara, rex, sal, leo.
 
 ## Transports
 

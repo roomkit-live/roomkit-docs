@@ -71,7 +71,7 @@ channel = RealtimeVoiceChannel(
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `provider` | required | Realtime AI provider (OpenAI, Gemini) |
+| `provider` | required | Realtime AI provider (OpenAI, Gemini, xAI Grok) |
 | `transport` | required | Audio transport backend |
 | `system_prompt` | `None` | AI system instructions |
 | `voice` | `None` | Voice preset name |
@@ -243,6 +243,88 @@ await channel.reconfigure_session(
     voice="Kore",
     tools=billing_tools,
 )
+```
+
+---
+
+## xAI Grok Realtime
+
+WebSocket-based speech-to-speech using xAI's Grok models with server-side VAD, built-in transcription, and native web/X search tools.
+
+```python
+from __future__ import annotations
+
+from roomkit.providers.xai.config import XAIRealtimeConfig
+from roomkit.providers.xai.realtime import XAIRealtimeProvider
+
+provider = XAIRealtimeProvider(
+    XAIRealtimeConfig(
+        api_key="xai-...",
+        model="grok-3-fast",                   # Default model
+        voice="eve",                           # Default voice
+        transcription_model="grok-2-audio",    # Input transcription model
+    )
+)
+
+# Or with keyword arguments:
+provider = XAIRealtimeProvider(
+    api_key="xai-...",
+    model="grok-3-fast",
+)
+```
+
+### VAD Configuration
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    provider_config={
+        "turn_detection_type": "server_vad",    # server_vad (default)
+        "threshold": 0.5,
+        "silence_duration_ms": 800,
+        "prefix_padding_ms": 300,
+    },
+)
+```
+
+### Available Voices
+
+eve, ara, rex, sal, leo
+
+### Native Tools
+
+xAI supports native `web_search` and `x_search` tools alongside standard function tools:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tools=[
+        {"type": "web_search"},                # Search the web
+        {"type": "x_search"},                  # Search X (Twitter)
+        weather_tool,                          # Standard function tool
+    ],
+)
+```
+
+### Input Transcription
+
+```python
+# Override transcription model via provider_config
+provider_config={
+    "transcription_model": "grok-2-audio",
+}
+```
+
+### Environment Variables (Example)
+
+```bash
+XAI_API_KEY=xai-...  uv run python examples/realtime_voice_local_xai.py
+XAI_MODEL=grok-3-fast  # Model override
+XAI_VOICE=ara           # Voice override
 ```
 
 ---
