@@ -190,19 +190,12 @@ Sessions are registered with the bridge when bound to the channel
 and unregistered when unbound:
 
 ```python
-from roomkit import ChannelBinding, ChannelType
+# Join: binds session and adds to bridge
+# Previously av.bind_session() / av.unbind_session()
+await kit.join("room-1", "av", session=session)
 
-binding = ChannelBinding(
-    room_id="room-1",
-    channel_id="av",
-    channel_type=ChannelType.AUDIO_VIDEO,
-)
-
-# Adds session to bridge
-av.bind_session(session, "room-1", binding)
-
-# Removes session from bridge
-av.unbind_session(session)
+# Leave: unbinds session and removes from bridge
+await kit.leave(session)
 ```
 
 ## Thread Safety

@@ -61,7 +61,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Barge-in detection (user interrupts TTS playback)
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
 - 10 voice-specific hook triggers for fine-grained control
-- The same hook pipeline as text channels (transcription goes through `process_inbound()`)
+- The same hook pipeline as text channels (transcription goes through the inbound pipeline)
 
 ### Speech-to-Speech AI (Realtime Voice)
 
@@ -121,8 +121,8 @@ stateDiagram-v2
     [*] --> ACTIVE: create_room()
     ACTIVE --> PAUSED: pause (timer or manual)
     PAUSED --> ACTIVE: (resume on activity)
-    ACTIVE --> CLOSED: close_room() or timer
-    PAUSED --> CLOSED: close_room() or timer
+    ACTIVE --> CLOSED: close_room() / leave() or timer
+    PAUSED --> CLOSED: close_room() / leave() or timer
     CLOSED --> ARCHIVED: (archive)
 ```
 
@@ -902,7 +902,7 @@ from roomkit import parse_voicemeup_webhook, configure_voicemeup_mms
 
 # Configure timeout for split MMS aggregation
 async def handle_orphaned_mms(message):
-    await kit.process_inbound(message)
+    await kit.process_inbound(message)  # still valid for text/SMS inbound
 
 configure_voicemeup_mms(timeout_seconds=5.0, on_timeout=handle_orphaned_mms)
 
@@ -911,7 +911,7 @@ configure_voicemeup_mms(timeout_seconds=5.0, on_timeout=handle_orphaned_mms)
 async def voicemeup_webhook(payload: dict):
     message = parse_voicemeup_webhook(payload, channel_id="sms")
     if message:  # None if buffered (waiting for second part)
-        await kit.process_inbound(message)
+        await kit.process_inbound(message)  # still valid for text/SMS inbound
     return {"ok": True}
 ```
 
@@ -1110,7 +1110,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 2. **VAD detects speech** → `on_speech_start` callback fires
 3. **VAD detects pause** → `on_speech_end` callback fires with accumulated audio
 4. **STT transcribes** the audio → text sent to client UI via `send_transcription()`
-5. **Text routed** through standard `process_inbound()` pipeline (hooks, AI, etc.)
+5. **Text routed** through the standard inbound pipeline (hooks, AI, etc.)
 6. **AI response** delivered back via `deliver()` → TTS synthesizes audio
 7. **Audio streamed** back to client via `send_audio()` (PCM → mu-law encoding)
 
@@ -1413,8 +1413,8 @@ kit.register_channel(video)
 # Wire vision results into AI conversation context
 setup_video_vision(kit, room_id="room", ai_channel_id="ai")
 
-# Connect and start capture
-session = await kit.connect_video("room", "user-1", "video")
+# Connect and start capture (previously connect_video(), now unified as join())
+session = await kit.join("room", "video")
 await backend.start_capture(session)
 ```
 
@@ -1441,7 +1441,7 @@ backend = ScreenCaptureBackend(monitor=1, fps=2, scale=0.5, diff_threshold=0.02)
 video = VideoChannel("video-screen", backend=backend, vision=vision, vision_interval_ms=5000)
 kit.register_channel(video)
 
-session = await kit.connect_video("room", "user-1", "video-screen")
+session = await kit.join("room", "video-screen")
 await backend.start_capture(session)
 ```
 
@@ -1602,7 +1602,7 @@ async def sms_webhook(provider: str, payload: dict):
 ```
 
 The `process_webhook()` method:
-- Detects inbound messages and calls `process_inbound()`
+- Detects inbound messages and calls `process_inbound()` (for text/SMS channels)
 - Detects delivery status updates and calls `process_delivery_status()`
 - Silently acknowledges unknown webhook types
 
@@ -1951,7 +1951,7 @@ sequenceDiagram
     VC->>VC: STT: "What's my account balance?"
     VC->>User: Transcription: "What's my account balance?"
 
-    VC->>AI: process_inbound (text message)
+    VC->>AI: inbound pipeline (text message)
     AI-->>VC: "Your balance is $1,234.56"
     VC->>User: Transcription: "Your balance is $1,234.56"
     VC->>TTS: synthesize_stream("Your balance is...")
@@ -1996,7 +1996,7 @@ sequenceDiagram
 
 ### Inbound Message Ingestion
 
-External systems deliver messages to RoomKit via `process_inbound()`:
+External systems deliver text messages to RoomKit via `process_inbound()`:
 
 ```python
 # From a FastAPI webhook handler

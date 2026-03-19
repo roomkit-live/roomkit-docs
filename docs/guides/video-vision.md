@@ -56,8 +56,8 @@ async def main():
     await kit.attach_channel("demo", "ai", category=ChannelCategory.INTELLIGENCE)
     setup_video_vision(kit, room_id="demo", ai_channel_id="ai")
 
-    # Start capturing
-    session = await kit.connect_video("demo", "user-1", "video")
+    # Start capturing (previously connect_video(), now unified as join())
+    session = await kit.join("demo", "video", participant_id="user-1")
     await backend.start_capture(session)
 
     await asyncio.sleep(30)  # Run for 30 seconds

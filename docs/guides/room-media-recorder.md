@@ -36,9 +36,10 @@ room = await kit.create_room(
     recorders=[RoomRecorderBinding(recorder=recorder, config=config, name="main")],
 )
 
-# 4. Connect participants — recording starts automatically
-voice_session = await kit.connect_voice(room.id, "user-1", "voice")
-video_session = await kit.connect_video(room.id, "user-1", "video")
+# 4. Join participants — recording starts automatically
+# Previously connect_voice() / connect_video(), now unified as join()
+voice_session = await kit.join(room.id, "voice", participant_id="user-1")
+video_session = await kit.join(room.id, "video", participant_id="user-1")
 ```
 
 Recording starts when all registered tracks (audio + video) have received their first frame. It stops when the room is closed or `close_room()` is called.

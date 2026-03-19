@@ -142,7 +142,7 @@ from roomkit.voice.pipeline.base import AudioFrame
 backend = MockVoiceBackend()
 
 # Create a session
-session = await backend.connect("room-1", "user-1", "voice-1")
+session = await backend.connect("room-1", "user-1", "voice-1")  # low-level backend call
 assert session.state.name == "ACTIVE"
 
 # Simulate incoming audio
@@ -337,7 +337,7 @@ channel = VoiceChannel(
     pipeline=pipeline,
 )
 
-# Start session
+# Start session (low-level backend call for unit tests)
 session = await backend.connect("room-1", "user-1", "voice-test")
 await backend.simulate_session_ready(session)
 

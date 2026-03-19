@@ -17,9 +17,10 @@ backend = RTPVoiceBackend(
 pipeline = AudioPipelineConfig(vad=vad)
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
 
-session = await backend.connect("room-1", "user-1", "voice")
+# Pull model: kit.join() creates the session, binds it, and wires recording
+session = await kit.join("room-1", "voice", participant_id="user-1")
 # ... pipeline processes inbound RTP audio, AI responds, TTS sends outbound RTP ...
-await backend.disconnect(session)
+await kit.leave(session)
 ```
 
 Install with:
@@ -67,12 +68,14 @@ When connecting to multiple endpoints (e.g. a multi-tenant PBX), you can omit `r
 backend = RTPVoiceBackend(local_addr=("0.0.0.0", 10000))
 
 # Each session gets its own remote endpoint
-session1 = await backend.connect(
-    "room-1", "caller-1", "voice",
+session1 = await kit.join(
+    "room-1", "voice",
+    participant_id="caller-1",
     metadata={"remote_addr": ("10.0.0.1", 20000)},
 )
-session2 = await backend.connect(
-    "room-2", "caller-2", "voice",
+session2 = await kit.join(
+    "room-2", "voice",
+    participant_id="caller-2",
     metadata={"remote_addr": ("10.0.0.2", 20000)},
 )
 ```

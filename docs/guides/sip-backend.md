@@ -110,7 +110,8 @@ async def handle_call(session: VoiceSession):
     room_id = session.metadata.get("room_id", session.id)
     await kit.create_room(room_id=room_id)
     await kit.attach_channel(room_id, "voice")
-    voice.bind_session(session, room_id, binding)
+    # Push model: pass the SIP-created session to join()
+    await kit.join(room_id, "voice", session=session)
 
 backend.on_call(handle_call)
 ```
@@ -121,7 +122,8 @@ Fired when the remote party sends BYE:
 
 ```python
 async def handle_disconnect(session: VoiceSession):
-    await kit.disconnect_voice(session)
+    # Previously disconnect_voice() + close_room(), now unified as leave()
+    await kit.leave(session)
     await kit.close_room(session.room_id)
 
 backend.on_call_disconnected(handle_disconnect)
@@ -137,14 +139,11 @@ backend.on_call_disconnected(handle_disconnect)
 
 ## Connecting sessions to rooms
 
-Unlike other backends where you call `backend.connect()` to create a session, SIP sessions are created automatically during INVITE handling. Use `connect()` to look up a pre-created session by its ID:
+Unlike other backends where you call `kit.join()` (pull model) to create a session, SIP sessions are created automatically during INVITE handling. Use `kit.join()` with the push model to bind the pre-created session:
 
 ```python
 # In your on_call handler:
-session = await backend.connect(
-    room_id, participant_id, channel_id,
-    metadata={"session_id": session.id},
-)
+await kit.join(room_id, "voice", session=session)
 ```
 
 ## Disconnecting

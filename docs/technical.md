@@ -581,7 +581,12 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     def add_room_hook(self, room_id, trigger, execution, fn, priority=0, name="") -> None
     def remove_room_hook(self, room_id, name) -> bool
 
-    # --- Voice ---
+    # --- Session lifecycle (voice / video) ---
+    async def join(self, room_id, channel_id, *, session=None,
+                   participant_id=None, metadata=None) -> VoiceSession | VideoSession
+    async def leave(self, session: VoiceSession | VideoSession) -> None
+
+    # --- Voice (deprecated, use join/leave) ---
     async def connect_voice(self, room_id, participant_id, channel_id, metadata=None) -> VoiceSession
     async def disconnect_voice(self, session: VoiceSession) -> None
     async def transcribe(self, audio: AudioContent) -> str

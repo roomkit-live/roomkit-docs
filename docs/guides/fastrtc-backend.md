@@ -68,9 +68,9 @@ async def session_factory(websocket_id: str):
     room = await kit.create_room()
     await kit.attach_channel(room.id, "voice")
     await kit.attach_channel(room.id, "ai", category=ChannelCategory.INTELLIGENCE)
-    session = await backend.connect(room.id, "browser-user", "voice")
+    # Pull model: kit.join() creates the session, binds it, and wires recording
+    session = await kit.join(room.id, "voice", participant_id="browser-user")
     session.metadata["websocket_id"] = websocket_id
-    voice.bind_session(session, room.id)
     return session
 
 

@@ -44,7 +44,8 @@ backend = RTPVideoBackend(
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
 
-session = await backend.connect("room-1", "user-1", "voice")
+# Pull model: kit.join() creates the session, binds it, and wires recording
+session = await kit.join("room-1", "voice", participant_id="user-1")
 # Audio + video RTP sessions are now active
 
 video_session = backend.get_video_session(session.id)
@@ -78,8 +79,9 @@ backend = RTPVideoBackend(
     video_local_addr=("0.0.0.0", 10002),
 )
 
-session = await backend.connect(
-    "room-1", "user-1", "voice",
+session = await kit.join(
+    "room-1", "voice",
+    participant_id="user-1",
     metadata={"video_remote_addr": ("10.0.0.1", 20002)},
 )
 ```

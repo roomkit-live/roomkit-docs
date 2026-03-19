@@ -173,7 +173,7 @@ The voice subsystem provides real-time audio support via three pluggable abstrac
 The `VoiceChannel` orchestrates the full pipeline:
 
 ```
-Client audio → VoiceBackend (VAD) → STTProvider → Hook pipeline → process_inbound()
+Client audio → VoiceBackend (VAD) → STTProvider → Hook pipeline → inbound pipeline
                                                                         ↓
 Client audio ← VoiceBackend ← TTSProvider ← AI response ← Event broadcast
 ```
@@ -342,7 +342,7 @@ flowchart TD
     H --> B
 ```
 
-This ensures AI-to-AI conversations complete atomically within a single `process_inbound` call, bounded by the `max_chain_depth` limit.
+This ensures AI-to-AI conversations complete atomically within a single inbound pipeline call, bounded by the `max_chain_depth` limit.
 
 ### Voice Pipeline
 
@@ -355,7 +355,7 @@ sequenceDiagram
     participant VC as VoiceChannel
     participant STT as STTProvider (Deepgram)
     participant HE as Hook Engine
-    participant RK as RoomKit (process_inbound)
+    participant RK as RoomKit (inbound pipeline)
     participant AI as AIChannel
     participant TTS as TTSProvider (ElevenLabs)
 
@@ -373,7 +373,7 @@ sequenceDiagram
     VC->>VB: send_transcription(session, text, "user")
     VC->>HE: ON_TRANSCRIPTION hooks (sync, can block/modify)
 
-    VC->>RK: process_inbound(InboundMessage)
+    VC->>RK: inbound pipeline (InboundMessage)
     RK->>AI: Event broadcast
     AI-->>RK: AI response text
 

@@ -28,6 +28,8 @@
         - get_timeline
         - list_tasks
         - list_observations
+        - join
+        - leave
         - process_inbound
         - send_event
         - ensure_participant

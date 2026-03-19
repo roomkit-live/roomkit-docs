@@ -88,13 +88,12 @@ When a new WebTransport client connects, the backend needs to create a `VoiceSes
 
 ```python
 async def session_factory(connection_id: str):
-    session = await backend.connect(
-        room_id="my-room",
+    # Pull model: kit.join() creates the session, binds it, and wires recording
+    session = await kit.join(
+        "my-room",
+        "voice",
         participant_id=f"user-{connection_id}",
-        channel_id="voice",
     )
-    # Bind to voice channel for bridge/pipeline
-    voice.bind_session(session, "my-room", binding)
     return session
 
 backend.set_session_factory(session_factory)
