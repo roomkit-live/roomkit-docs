@@ -391,6 +391,51 @@ await tts.warmup()
 
 ---
 
+## Grok TTS (Cloud API)
+
+xAI Grok TTS with REST and bidirectional WebSocket streaming. 5 voices, 20 languages, expressive speech tags.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.tts.grok import GrokTTSConfig, GrokTTSProvider
+
+tts = GrokTTSProvider(
+    config=GrokTTSConfig(
+        api_key="your-xai-api-key",
+        voice_id="eve",             # eve, ara, rex, sal, leo
+        language="en",              # BCP-47 code or "auto"
+        codec="pcm",               # pcm, wav, mp3, mulaw, alaw
+        sample_rate=24000,          # 8000–48000
+    )
+)
+```
+
+### Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `api_key` | *(required)* | xAI API key |
+| `voice_id` | `"eve"` | Voice — `eve`, `ara`, `rex`, `sal`, `leo` |
+| `language` | `"en"` | BCP-47 language code or `"auto"` |
+| `codec` | `"pcm"` | Output codec: `pcm`, `wav`, `mp3`, `mulaw`, `alaw` |
+| `sample_rate` | `24000` | Sample rate in Hz |
+| `bit_rate` | `128000` | MP3 bit rate (only used with `codec="mp3"`) |
+| `base_url` | `"https://api.x.ai/v1"` | REST API base URL |
+| `ws_url` | `"wss://api.x.ai/v1/tts"` | WebSocket streaming URL |
+| `timeout` | `60.0` | HTTP request timeout in seconds |
+
+### Streaming modes
+
+- **`synthesize_stream()`** — HTTP chunked streaming from the REST endpoint
+- **`synthesize_stream_input()`** — Bidirectional WebSocket: send `text.delta`/`text.done`, receive `audio.delta`/`audio.done`. Starts speaking while the AI is still generating text.
+
+### Expressive speech tags
+
+Grok TTS supports inline tags like `[pause]`, `[laugh]`, `[sigh]` and wrapping tags like `<whisper>`, `<soft>`, `<loud>`, `<slow>`, `<fast>`, `<high-pitch>`, `<low-pitch>`.
+
+---
+
 ## Gradium TTS (Cloud API)
 
 Cloud TTS with streaming input support and fine-grained voice control.
@@ -538,6 +583,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
 | **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
+| **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
 | **SherpaOnnx** | Local TTS | Yes | Medium | Free | Privacy, offline, VITS/Piper |
 | **Qwen3 TTS** | Local TTS | Post-gen | Medium | Free | Voice cloning, GPU |

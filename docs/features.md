@@ -56,7 +56,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 
 Voice isn't bolted on -- it's a full `Channel` implementation with:
 
-- Pluggable STT/TTS providers (Deepgram, ElevenLabs, sherpa-onnx, or custom)
+- Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, sherpa-onnx, or custom)
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
@@ -1135,6 +1135,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | Provider | Features | Dependency |
 |----------|----------|------------|
 | `ElevenLabsTTSProvider` | Streaming synthesis, voice listing, configurable stability | `roomkit[httpx,websocket]` |
+| `GrokTTSProvider` | REST + WebSocket streaming, 5 voices, 20 languages, expressive tags | `httpx`, `websockets` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `MockTTSProvider` | Simulated audio content | None |
 

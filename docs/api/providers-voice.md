@@ -81,6 +81,27 @@ tts = SherpaOnnxTTSProvider(SherpaOnnxTTSConfig(
 
 Install with: `pip install roomkit[sherpa-onnx]`
 
+### Grok TTS (xAI)
+
+::: roomkit.voice.tts.grok.GrokTTSProvider
+
+::: roomkit.voice.tts.grok.GrokTTSConfig
+
+#### Usage
+
+```python
+from roomkit.voice.tts.grok import GrokTTSProvider, GrokTTSConfig
+
+tts = GrokTTSProvider(GrokTTSConfig(
+    api_key="your-xai-api-key",
+    voice_id="eve",
+    codec="pcm",
+    sample_rate=24000,
+))
+```
+
+Install with: `pip install httpx websockets`
+
 ## RTP Backend
 
 ::: roomkit.voice.backends.rtp.RTPVoiceBackend
