@@ -14,7 +14,6 @@ pip install roomkit[local-video]    # opencv (webcam capture)
 
 ```python
 from roomkit import (
-    ChannelRecordingConfig,
     MediaRecordingConfig,
     RoomKit,
     VideoChannel,
@@ -27,11 +26,9 @@ from roomkit.recorder.pyav import PyAVMediaRecorder
 recorder = PyAVMediaRecorder()
 config = MediaRecordingConfig(storage="./recordings", video_codec="auto")
 
-# 2. Mark which channels contribute audio/video
-voice = VoiceChannel("voice", backend=audio_backend, pipeline=pipeline,
-                     recording=ChannelRecordingConfig(audio=True))
-video = VideoChannel("video", backend=video_backend,
-                     recording=ChannelRecordingConfig(video=True))
+# 2. Create channels — recording is automatic when the room has recorders
+voice = VoiceChannel("voice", backend=audio_backend, pipeline=pipeline)
+video = VideoChannel("video", backend=video_backend)
 
 # 3. Create room with recorder binding
 room = await kit.create_room(
@@ -88,20 +85,16 @@ config = MediaRecordingConfig(
 
 ### ChannelRecordingConfig
 
-Controls which media types from a channel are fed to room recorders:
+When a room has recorders, **all channels record automatically** — no per-channel configuration is needed. `ChannelRecordingConfig` is only required to **opt out** of recording specific media types on a channel:
 
 ```python
 from roomkit import ChannelRecordingConfig
 
-# Audio only
-voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(audio=True))
+# Exclude video from this channel (audio still recorded)
+voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(video=False))
 
-# Video only
-video = VideoChannel("video", ..., recording=ChannelRecordingConfig(video=True))
-
-# Both (future: screen share)
-video = VideoChannel("video", ...,
-    recording=ChannelRecordingConfig(video=True, screen_share=True))
+# Exclude screen share from recording
+video = VideoChannel("video", ..., recording=ChannelRecordingConfig(screen_share=False))
 ```
 
 ## A/V sync

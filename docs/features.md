@@ -1562,14 +1562,13 @@ See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP int
 Mux audio and video from multiple channels into a single MP4 per room — the production path for recording conversations:
 
 ```python
-from roomkit import ChannelRecordingConfig, MediaRecordingConfig, RoomRecorderBinding
+from roomkit import MediaRecordingConfig, RoomRecorderBinding
 from roomkit.recorder.pyav import PyAVMediaRecorder
 
-# Mark channels that contribute media
-voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(audio=True))
-video = VideoChannel("video", ..., recording=ChannelRecordingConfig(video=True))
+voice = VoiceChannel("voice", ...)
+video = VideoChannel("video", ...)
 
-# Bind recorder to room at creation time
+# Bind recorder to room — all channels record automatically
 room = await kit.create_room(
     room_id="my-room",
     recorders=[

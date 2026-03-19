@@ -144,11 +144,11 @@ Three recording layers, from per-session to room-wide:
 The room-level recorder muxes audio and video from multiple channels into a single file with A/V sync maintained via a shared monotonic clock:
 
 ```python
-from roomkit import ChannelRecordingConfig, MediaRecordingConfig, RoomRecorderBinding
+from roomkit import MediaRecordingConfig, RoomRecorderBinding
 from roomkit.recorder.pyav import PyAVMediaRecorder
 
-voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(audio=True))
-video = VideoChannel("video", ..., recording=ChannelRecordingConfig(video=True))
+voice = VoiceChannel("voice", ...)
+video = VideoChannel("video", ...)
 
 room = await kit.create_room(
     room_id="my-room",
