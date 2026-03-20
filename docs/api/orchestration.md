@@ -18,42 +18,42 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ::: roomkit.Agent
 
-::: roomkit.ConversationRouter
+::: roomkit.orchestration.ConversationRouter
 
-::: roomkit.RoutingRule
+::: roomkit.orchestration.RoutingRule
 
-::: roomkit.RoutingConditions
+::: roomkit.orchestration.RoutingConditions
 
 ## Conversation State
 
-::: roomkit.ConversationState
+::: roomkit.orchestration.ConversationState
 
-::: roomkit.ConversationPhase
+::: roomkit.orchestration.ConversationPhase
 
-::: roomkit.PhaseTransition
+::: roomkit.orchestration.PhaseTransition
 
-::: roomkit.get_conversation_state
+::: roomkit.orchestration.get_conversation_state
 
-::: roomkit.set_conversation_state
+::: roomkit.orchestration.set_conversation_state
 
 ## Pipeline
 
-::: roomkit.ConversationPipeline
+::: roomkit.orchestration.ConversationPipeline
 
-::: roomkit.PipelineStage
+::: roomkit.orchestration.PipelineStage
 
 ## Handoff
 
-::: roomkit.HANDOFF_TOOL
+::: roomkit.orchestration.HANDOFF_TOOL
 
-::: roomkit.build_handoff_tool
+::: roomkit.orchestration.handoff.build_handoff_tool
 
-::: roomkit.HandoffHandler
+::: roomkit.orchestration.HandoffHandler
 
-::: roomkit.HandoffRequest
+::: roomkit.orchestration.HandoffRequest
 
-::: roomkit.HandoffResult
+::: roomkit.orchestration.HandoffResult
 
-::: roomkit.HandoffMemoryProvider
+::: roomkit.orchestration.HandoffMemoryProvider
 
-::: roomkit.setup_handoff
+::: roomkit.orchestration.setup_handoff

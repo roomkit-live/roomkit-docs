@@ -7,6 +7,7 @@ Full auto-generated reference for the `roomkit` public API.
 - **[RoomKit](roomkit.md)** — Central orchestrator for rooms, channels, hooks, and storage
 - **[Hooks](hooks.md)** — Hook engine, registrations, and pipeline results
 - **[Routing](routing.md)** — Inbound room routing
+- **[Orchestration](orchestration.md)** — Multi-agent strategies (Pipeline, Swarm, Supervisor, Loop), conversation state, routing, and handoff
 - **[Store](store.md)** — Conversation storage ABC and in-memory implementation
 - **[Realtime](realtime.md)** — Ephemeral events (typing, presence, read receipts)
 - **[Sources](sources.md)** — Event-driven message ingestion (WebSocket, NATS, etc.)
