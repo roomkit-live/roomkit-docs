@@ -26,6 +26,10 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ::: roomkit.DenoiserProvider
 
+::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserConfig
+
+::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserProvider
+
 ::: roomkit.MockDenoiserProvider
 
 ## Diarization

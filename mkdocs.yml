@@ -74,6 +74,7 @@ nav:
           - STT & TTS Providers: guides/stt-tts-providers.md
           - Realtime Voice (Speech-to-Speech): guides/realtime-voice-providers.md
           - Audio Resampler: guides/resampler.md
+          - ai|coustics Denoiser: guides/aicoustics-denoiser.md
           - sherpa-onnx Providers: guides/sherpa-onnx.md
           - NeuTTS Provider: guides/neutts.md
           - Smart Turn Detection: guides/smart-turn.md

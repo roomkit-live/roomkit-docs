@@ -185,8 +185,9 @@ denoiser = RNNoiseDenoiserProvider()
 |----------|---------|-------|
 | `RNNoiseDenoiserProvider` | librnnoise (system) | CPU-based, low latency |
 | `SherpaOnnxDenoiserProvider` | sherpa-onnx (pip) | ONNX models, configurable context and silence threshold |
+| `AICousticsDenoiserProvider` | aic-sdk (pip) | Quail neural enhancement, Voice Focus, ~2 ms/frame |
 
-For SherpaOnnx denoiser tuning, see the [sherpa-onnx guide](sherpa-onnx.md).
+For SherpaOnnx denoiser tuning, see the [sherpa-onnx guide](sherpa-onnx.md). For ai|coustics Quail setup, see the [ai|coustics denoiser guide](aicoustics-denoiser.md).
 
 ---
 
