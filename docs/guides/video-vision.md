@@ -157,6 +157,27 @@ setup_video_vision(
 
 The AI's system prompt is automatically updated with the latest vision description every time a frame is analyzed. The base system prompt is preserved.
 
+### Realtime Voice Integration
+
+For `RealtimeVoiceChannel` (Gemini Live, OpenAI Realtime), use `setup_realtime_vision()` instead. It injects vision descriptions via `inject_text(silent=True)` on active voice sessions:
+
+```python
+from roomkit import setup_realtime_vision
+
+setup_realtime_vision(
+    kit,
+    room_id="my-room",
+    voice_channel_id="voice",
+    context_prefix="You can see the screen. Current view:",
+)
+```
+
+Key differences from `setup_video_vision()`:
+
+- Delivers via `inject_text(silent=True)` — adds context without triggering a response
+- **Dedup built in** — unchanged descriptions are not re-injected
+- Works with all active sessions in the room (multi-participant)
+
 ## Video Recording
 
 Two recorder implementations are available:

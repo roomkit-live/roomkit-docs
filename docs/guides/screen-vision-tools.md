@@ -256,6 +256,10 @@ input_tools = ScreenInputTools(vision=vision, monitor=1)
 
 Requires `pip install roomkit[screen-input]` (`pyautogui`).
 
+### Keyboard layout support
+
+`type_text` uses **clipboard paste** instead of raw keystrokes, so it works with all keyboard layouts (AZERTY, QWERTZ, etc.). On macOS it uses `pbcopy` + `Cmd+V`, on Linux `xclip` + `Ctrl+V`, on Windows `clip` + `Ctrl+V`. Falls back to `pyautogui.typewrite()` if clipboard tools aren't available.
+
 ### Available Actions
 
 | Tool | Description |

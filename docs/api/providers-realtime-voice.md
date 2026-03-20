@@ -288,6 +288,34 @@ channel = RealtimeVoiceChannel(
 )
 ```
 
+### With Delegation
+
+Wire the `delegate_task` tool into a voice agent:
+
+```python
+from roomkit.tasks import DelegateHandler, setup_realtime_delegation, build_delegate_tool
+
+handler = DelegateHandler(kit, notify="realtime-voice")
+tool = build_delegate_tool([("exec-agent", "Runs background tasks")])
+setup_realtime_delegation(channel, handler, tool=tool)
+```
+
+See [`setup_realtime_delegation()`](delegation.md) for details.
+
+### With Vision Injection
+
+Wire screen/camera vision into the voice session:
+
+```python
+from roomkit import setup_realtime_vision
+
+setup_realtime_vision(kit, room_id="room-1", voice_channel_id="realtime-voice")
+```
+
+Vision descriptions are injected via `inject_text(silent=True)` — the agent sees the context on its next turn without interrupting the conversation. Unchanged descriptions are automatically deduplicated.
+
+See [`setup_realtime_vision()`](../guides/video-vision.md#realtime-voice-integration) for details.
+
 ### With FastRTC (WebRTC)
 
 ```python

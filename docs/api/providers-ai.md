@@ -103,6 +103,12 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[gemini]`
 
+### Schema Cleaning
+
+Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. RoomKit auto-cleans schemas when building `FunctionDeclaration` objects:
+
+::: roomkit.providers.gemini.schema.clean_gemini_schema
+
 ## vLLM Provider (Local LLM)
 
 ::: roomkit.providers.vllm.VLLMConfig

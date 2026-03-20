@@ -128,6 +128,46 @@ The AI will see a `delegate_task` tool and can call it naturally:
 }
 ```
 
+## Delegation for RealtimeVoiceChannel
+
+For realtime voice agents (Gemini Live, OpenAI Realtime), use `setup_realtime_delegation()` instead. It resolves the room ID from the current voice session context:
+
+```python
+from roomkit.tasks import DelegateHandler, setup_realtime_delegation, build_delegate_tool
+from roomkit.channels.realtime_voice import RealtimeVoiceChannel
+
+voice = RealtimeVoiceChannel("voice", provider=realtime_provider, transport=backend)
+
+handler = DelegateHandler(kit, notify="voice")
+tool = build_delegate_tool([("exec-agent", "Runs tasks on screen")])
+
+setup_realtime_delegation(voice, handler, tool=tool)
+```
+
+Under the hood, this injects the delegate tool dict into `channel._tools` and wraps `_tool_handler` to intercept `delegate_task` calls. Room ID is resolved via `get_current_voice_session()` + `channel.session_rooms`.
+
+## Preventing re-delegation (dedup)
+
+When a task completes and the result is delivered back, the AI may try to delegate the same task again. Use `CompletedTaskCache` to prevent this:
+
+```python
+from roomkit.tasks import DelegateHandler, CompletedTaskCache
+
+cache = CompletedTaskCache(ttl_seconds=300)  # 5 min TTL
+
+handler = DelegateHandler(
+    kit,
+    cache=cache,              # dedup: return cached result instead of re-delegating
+    serialize_per_room=True,  # only one delegation at a time per room
+)
+```
+
+This enables three features:
+
+- **Gap 13 — Dedup**: If a matching `(room_id, agent_id, task_hash)` was recently completed, the cached result is returned with `"from_cache": True` instead of spawning a new agent.
+- **Gap 14 — Serialization**: With `serialize_per_room=True`, concurrent delegation attempts for the same room are queued. Only one runs at a time, preventing screen/resource conflicts.
+- **Gap 15 — Context injection**: Recent task descriptions are automatically injected into the new delegation's `context["previous_tasks"]` so the background agent knows what was already done.
+
 ## Shared channels
 
 Channels shared from the parent use the **same provider instance** with a different binding:
@@ -178,6 +218,28 @@ task = await kit.delegate(
     on_complete=handle_result,
 )
 ```
+
+## Delivery strategies
+
+Control how task results are delivered back to the parent conversation:
+
+```python
+from roomkit.tasks import WaitForIdleDelivery, ImmediateDelivery
+
+# Wait for TTS playback to finish, then deliver
+kit = RoomKit(delivery_strategy=WaitForIdleDelivery())
+
+# Deliver immediately (may interrupt)
+kit = RoomKit(delivery_strategy=ImmediateDelivery(prompt="Task done!"))
+```
+
+| Strategy | Behavior |
+|----------|----------|
+| `ContextOnlyDelivery` | Inject into system prompt, wait for next user turn (default) |
+| `ImmediateDelivery` | Send synthetic inbound message immediately |
+| `WaitForIdleDelivery` | Wait for TTS playback to finish, then send |
+
+All strategies support `RealtimeVoiceChannel` — they detect the channel type and deliver via `inject_text()` instead of `process_inbound()`. For `WaitForIdleDelivery`, realtime voice delivery is immediate since there's no playback queue to wait for.
 
 ## Configuration reference
 
