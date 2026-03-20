@@ -2,6 +2,18 @@
 
 Multi-agent orchestration for complex conversational workflows. See the [Multi-Agent Orchestration guide](../guides/orchestration.md) for usage examples.
 
+## Strategies
+
+::: roomkit.Orchestration
+
+::: roomkit.Pipeline
+
+::: roomkit.Swarm
+
+::: roomkit.Supervisor
+
+::: roomkit.Loop
+
 ## Agents
 
 ::: roomkit.Agent

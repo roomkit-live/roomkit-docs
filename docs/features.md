@@ -540,52 +540,39 @@ assert gemini.supports_vision is True  # All Gemini models support vision
 
 ### Multi-Agent Orchestration
 
-Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. A `ConversationRouter` (installed as a BEFORE_BROADCAST hook) directs events to the right agent based on conversation phase, rules, and affinity. Agents transfer conversations via the `handoff_conversation` tool.
+Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. Four declarative **orchestration strategies** handle the common patterns — pass one to `RoomKit` or `create_room` and all wiring is automatic:
 
 ```python
-from roomkit import HookExecution, HookTrigger
-from roomkit.orchestration import (
-    ConversationPipeline,
-    HandoffHandler,
-    HandoffMemoryProvider,
-    PipelineStage,
-    setup_handoff,
-)
-from roomkit.memory import SlidingWindowMemory
+from roomkit import Agent, Pipeline, RoomKit, Swarm, Supervisor, Loop
 
-# Define a pipeline: triage -> handler -> resolver
-pipeline = ConversationPipeline(
-    stages=[
-        PipelineStage(phase="triage", agent_id="agent-triage", next="handling"),
-        PipelineStage(phase="handling", agent_id="agent-handler", next="resolution"),
-        PipelineStage(phase="resolution", agent_id="agent-resolver", next=None),
-    ],
-    supervisor_id="agent-supervisor",
-)
+# Linear pipeline: triage -> handler -> resolver
+kit = RoomKit(orchestration=Pipeline(agents=[triage, handler, resolver]))
 
-# Generate router and install as a hook
-router = pipeline.to_router()
-kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
-    router.as_hook()
-)
+# Swarm: every agent can hand off to every other
+kit = RoomKit(orchestration=Swarm(agents=[sales, support, billing], entry="sales"))
 
-# Wire handoff into each agent
-handler = HandoffHandler(kit=kit, router=router, phase_map=pipeline.get_phase_map())
-for channel in [ai_triage, ai_handler, ai_resolver]:
-    channel._memory = HandoffMemoryProvider(channel._memory)
-    setup_handoff(channel, handler)
+# Supervisor: delegates tasks to workers in child rooms
+kit = RoomKit(orchestration=Supervisor(supervisor=manager, workers=[researcher, coder]))
+
+# Loop: produce/review cycle with approval tool
+kit = RoomKit(orchestration=Loop(agent=writer, reviewer=editor, max_iterations=3))
+
+room = await kit.create_room()
+# Agents registered, attached, routing + handoff tools wired, state initialised.
 ```
 
 Key features:
 
+- **Orchestration strategies** — `Pipeline`, `Swarm`, `Supervisor`, `Loop` — declarative, zero-boilerplate setup
+- **Per-room override** — `create_room(orchestration=...)` overrides or disables the kit default
 - **ConversationState** — Immutable state model tracking phase, active agent, handoff count, and transition history
 - **ConversationRouter** — Three-tier agent selection: affinity, rule matching, default fallback
 - **HandoffHandler** — Validates targets, updates state, persists, emits system events
 - **HandoffMemoryProvider** — Injects handoff context (summary, reason) into the receiving agent's prompt
-- **ConversationPipeline** — Syntactic sugar for sequential workflows with optional loops (`can_return_to`)
-- **Supervisor** — A designated agent that always receives events regardless of routing
+- **ConversationPipeline** — Lower-level API for complex workflows with loops (`can_return_to`) and custom stages
+- **Custom strategies** — Subclass `Orchestration` ABC to build your own
 
-See the [Orchestration guide](guides/orchestration.md) for details on state management, routing rules, and handoff configuration.
+See the [Orchestration guide](guides/orchestration.md) for strategies, state management, routing rules, and handoff configuration.
 
 ### Agent Delegation
 

@@ -4,36 +4,133 @@ Route conversations between multiple AI agents with state tracking, rule-based r
 
 ## Quick start
 
+The fastest way to set up multi-agent orchestration is with a **strategy** passed to `RoomKit` or `create_room`:
+
 ```python
-from roomkit import AIChannel, RoomKit
-from roomkit.orchestration import ConversationPipeline, HandoffMemoryProvider, PipelineStage
-from roomkit.memory import SlidingWindowMemory
+from roomkit import Agent, Pipeline, RoomKit
 
-# 1. Define the pipeline
-pipeline = ConversationPipeline(
-    stages=[
-        PipelineStage(phase="intake", agent_id="agent-triage", next="handling"),
-        PipelineStage(phase="handling", agent_id="agent-handler", next="review"),
-        PipelineStage(
-            phase="review",
-            agent_id="agent-reviewer",
-            next="resolution",
-            can_return_to={"handling"},
-        ),
-        PipelineStage(phase="resolution", agent_id="agent-resolver", next=None),
-    ],
-    supervisor_id="agent-supervisor",
+triage = Agent("triage", provider=provider, role="Triage", description="Routes requests")
+handler = Agent("handler", provider=provider, role="Handler", description="Resolves issues")
+closer  = Agent("closer",  provider=provider, role="Closer",  description="Confirms resolution")
+
+kit = RoomKit(orchestration=Pipeline(agents=[triage, handler, closer]))
+room = await kit.create_room()
+# All agents registered, attached, routing + handoff tools wired, state initialised.
+```
+
+For more control, use the lower-level primitives directly (see [ConversationPipeline](#conversationpipeline) and [ConversationRouter](#conversationrouter) below).
+
+## Orchestration strategies
+
+Four declarative strategies compose the existing primitives (`ConversationRouter`, `HandoffHandler`, `ConversationPipeline`) into common patterns. Pass them via `RoomKit(orchestration=...)` to apply to all rooms, or `create_room(orchestration=...)` to apply per-room.
+
+### Pipeline
+
+Agents are chained linearly. The first agent is the entry point; each agent can hand off to the next.
+
+```python
+from roomkit import Agent, Pipeline, RoomKit
+
+kit = RoomKit(
+    orchestration=Pipeline(
+        agents=[triage, handler, resolver],
+        supervisor_id="agent-supervisor",  # optional: receives all events
+    ),
 )
+room = await kit.create_room()
+```
 
-# 2. Create the framework and register channels
-kit = RoomKit()
-memory = HandoffMemoryProvider(SlidingWindowMemory(max_events=50))
-ai_triage = AIChannel("agent-triage", provider=provider, system_prompt="You triage.", memory=memory)
-ai_handler = AIChannel("agent-handler", provider=provider, system_prompt="You handle.", memory=memory)
-# ... register all channels
+Internally, `Pipeline` builds `PipelineStage` objects from the agent list, creates a `ConversationRouter` and `HandoffHandler`, installs room-scoped hooks, and sets the initial `ConversationState`. Each agent gets a constrained `handoff_conversation` tool whose `target` enum only includes reachable agents.
 
-# 3. One-liner: routing hook + handoff wiring on all agents
-router, handler = pipeline.install(kit, [ai_triage, ai_handler])
+For pipelines with loops (e.g., `can_return_to`) or custom stage definitions, use `ConversationPipeline` directly — see [ConversationPipeline](#conversationpipeline).
+
+### Swarm
+
+Every agent can hand off to every other agent — no linear ordering. Routing relies on sticky agent affinity.
+
+```python
+from roomkit import Agent, RoomKit, Swarm
+
+kit = RoomKit(
+    orchestration=Swarm(
+        agents=[sales, support, billing],
+        entry="agent-sales",  # optional: defaults to first agent
+    ),
+)
+room = await kit.create_room()
+```
+
+Each agent's `handoff_conversation` tool lists all other agents as targets. There are no phase constraints — the `HandoffHandler` allows any agent-to-agent transition.
+
+### Supervisor
+
+A supervisor agent talks to the user and delegates tasks to worker agents. Workers run in isolated child rooms (via `kit.delegate()`) and are NOT attached to the parent room.
+
+```python
+from roomkit import Agent, RoomKit, Supervisor
+
+kit = RoomKit(
+    orchestration=Supervisor(
+        supervisor=manager,
+        workers=[researcher, coder],
+    ),
+)
+room = await kit.create_room()
+```
+
+The supervisor receives `delegate_to_<worker>` tools (one per worker). When called, the tool creates a child room, attaches the worker, and runs the task. Results are injected back into the supervisor's system prompt via the `notify` mechanism.
+
+### Loop
+
+A producing agent generates output, a reviewer evaluates it, and the cycle repeats until the reviewer calls `approve_output` or `max_iterations` is reached.
+
+```python
+from roomkit import Agent, Loop, RoomKit
+
+kit = RoomKit(
+    orchestration=Loop(
+        agent=writer,
+        reviewer=editor,
+        max_iterations=3,
+    ),
+)
+room = await kit.create_room()
+```
+
+The reviewer gets an `approve_output` tool that sets `_loop_approved` in room metadata. An `AFTER_BROADCAST` hook drives the cycle: producer output → reviewer, reviewer feedback → producer. Loop state (`_loop_iteration`, `_loop_approved`) is tracked in `ConversationState.context`.
+
+### Per-room override
+
+The kit-level default can be overridden (or disabled) per room:
+
+```python
+kit = RoomKit(orchestration=Pipeline(agents=[a, b]))
+
+# Uses kit default
+room1 = await kit.create_room()
+
+# Overrides with a different strategy
+room2 = await kit.create_room(orchestration=Swarm(agents=[x, y, z]))
+
+# Disables orchestration for this room
+room3 = await kit.create_room(orchestration=None)
+```
+
+### Custom strategies
+
+Subclass `Orchestration` to build your own:
+
+```python
+from roomkit.orchestration.base import Orchestration
+
+class MyStrategy(Orchestration):
+    def agents(self) -> list[Agent]:
+        """Agents to register and attach to the room."""
+        return [...]
+
+    async def install(self, kit: RoomKit, room_id: str) -> None:
+        """Wire hooks, tools, and state into the room."""
+        ...
 ```
 
 ## How it works
@@ -348,9 +445,20 @@ Three orchestration-specific hook triggers are available:
 
 ## Examples
 
+### Strategies
+
 | Example | Description |
 |---------|-------------|
-| [`orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) | Multi-agent pipeline with handoff |
-| [`orchestration_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_loop.py) | Coder/reviewer loop with `can_return_to` |
+| [`orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) | Pipeline strategy: linear agent chain with handoff |
+| [`orchestration_swarm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_swarm.py) | Swarm strategy: bidirectional handoff between agents |
+| [`orchestration_supervisor.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor.py) | Supervisor strategy: delegation to workers in child rooms |
+| [`orchestration_approval_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_approval_loop.py) | Loop strategy: producer/reviewer approval cycle |
+
+### Advanced (lower-level primitives)
+
+| Example | Description |
+|---------|-------------|
+| [`orchestration_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_loop.py) | ConversationPipeline with `can_return_to` loops |
+| [`orchestration_routing.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_routing.py) | ConversationRouter with custom rules and supervisor |
 | [`orchestration_voice_triage.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_voice_triage.py) | Voice call with delegation to background agent |
 | [`screen_agent_orchestrated.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/screen_agent_orchestrated.py) | Voice + exec agent with OmniView vision |
