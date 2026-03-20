@@ -633,6 +633,36 @@ Key features:
 
 See the [Status Bus guide](guides/status-bus.md) for the full API, backend implementation, and voice agent integration patterns.
 
+### Session Auditing
+
+`JSONLSessionAuditor` captures the complete conversation timeline — speech turns, tool calls, vision events, and interruptions — in a unified JSONL file with a human-readable transcript summary:
+
+```python
+from roomkit.orchestration.session_audit import JSONLSessionAuditor
+
+auditor = JSONLSessionAuditor("/tmp/session.jsonl")
+auditor.attach(kit)  # auto-capture via hooks
+
+# Tool calls recorded manually from your handler
+auditor.record_tool(tool_entry)
+
+# After session
+auditor.print_summary()
+```
+
+```
+  [11:56:05] USER: "Open Chrome and search for roomkit"
+  [11:56:07] ASSISTANT: "Let me check your screen first."
+  [11:56:08] TOOL describe_screen → OK (5886ms)
+  [11:56:14] VISION Chrome browser showing search results
+  [11:56:30] BARGE-IN User interrupted
+
+  Duration: 1m 40s | Turns: 2 user, 1 assistant
+  Tool calls: 1 (5886ms) | Vision: 1 | Interruptions: 1
+```
+
+For tool-only auditing, `JSONLToolAuditor` and `ConsoleToolAuditor` are also available. See the [Auditing guide](guides/tool-audit.md).
+
 ### Memory Providers
 
 The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:

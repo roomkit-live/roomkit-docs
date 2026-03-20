@@ -1,8 +1,107 @@
-# Tool Auditing
+# Auditing
 
-Record every tool call with input, output, timing, and status. Built-in implementations write to JSONL files or log to the console. Plugs into `AIChannel` and `RealtimeVoiceChannel` automatically.
+RoomKit provides two levels of auditing: **tool auditing** for recording individual tool calls, and **session auditing** for capturing the full conversation timeline including speech turns, tool calls, vision events, and interruptions.
 
-## Quick start
+## Session Auditing
+
+`JSONLSessionAuditor` captures the complete conversation flow — not just tools.
+
+### Quick start
+
+```python
+from roomkit import RoomKit
+from roomkit.orchestration.session_audit import JSONLSessionAuditor
+
+auditor = JSONLSessionAuditor("/tmp/session.jsonl")
+kit = RoomKit()
+
+# Auto-capture speech, vision, barge-in, session events
+auditor.attach(kit)
+
+# ... set up channels, rooms, sessions ...
+
+# Tool calls are recorded manually from your handler:
+from roomkit.orchestration.tool_audit import ToolAuditEntry
+
+auditor.record_tool(ToolAuditEntry(
+    ts=datetime.now().isoformat(),
+    agent_id="my-agent",
+    tool_name="search",
+    arguments={"q": "roomkit"},
+    result="Found 3 results",
+    status="ok",
+    duration_ms=1500,
+))
+
+# After the session
+auditor.print_summary()
+```
+
+### What gets captured
+
+| Event type | Hook trigger | What it records |
+|---|---|---|
+| `speech` | `ON_TRANSCRIPTION` | User and assistant voice turns (final only) |
+| `tool_call` | Manual `record_tool()` | Tool name, args, result, duration, status |
+| `vision` | `ON_VISION_RESULT` | Periodic screen/camera descriptions |
+| `barge_in` | `ON_BARGE_IN` | User interruptions |
+| `session` | `ON_SESSION_STARTED` | Voice session lifecycle |
+
+### Transcript output
+
+```
+Session Audit (/tmp/session.jsonl)
+============================================================
+  [11:56:02] SESSION Session started
+  [11:56:05] USER: "Open Google Chrome and search for roomkit"
+  [11:56:07] ASSISTANT: "Sure, let me check your screen first."
+  [11:56:08] TOOL describe_screen → OK (5886ms)
+           Chrome with Google search page open
+  [11:56:14] VISION Chrome browser showing search results
+  [11:56:30] BARGE-IN User interrupted
+  [11:57:42] ASSISTANT: "Done! The roomkit.live website is open."
+
+  Duration: 1m 40s | Turns: 2 user, 2 assistant
+  Tool calls: 1 (5886ms) | Vision: 1 | Interruptions: 1
+  Tools: describe_screen(1)
+```
+
+### ToolAuditor compatibility
+
+`SessionAuditor` works as a drop-in for APIs that expect a `ToolAuditor`:
+
+```python
+# Use the bridge property
+bridge = auditor.tool_auditor
+audited = audit_tool_handler(handler, bridge, agent_id="my-agent")
+```
+
+### Custom session auditor
+
+Implement the `SessionAuditor` ABC:
+
+```python
+from roomkit.orchestration.session_audit import SessionAuditor, SessionAuditEntry
+
+class MySessionAuditor(SessionAuditor):
+    def record(self, entry: SessionAuditEntry) -> None:
+        send_to_monitoring(entry.model_dump())
+
+    @property
+    def entries(self) -> list[SessionAuditEntry]:
+        return []
+
+    def summary(self) -> str:
+        return "See monitoring dashboard"
+```
+
+---
+
+## Tool Auditing
+
+For simpler use cases that only need tool call recording, use `JSONLToolAuditor` directly.
+
+### Quick start
 
 ```python
 from roomkit import Agent, Tool
@@ -29,7 +128,7 @@ agent = Agent(
 auditor.print_summary()
 ```
 
-## What gets recorded
+### What gets recorded
 
 Every tool call produces a `ToolAuditEntry`:
 
@@ -46,9 +145,9 @@ Every tool call produces a `ToolAuditEntry`:
 
 Status is auto-detected: if the tool returns `{"status": "failed"}`, the entry is marked as failed.
 
-## Implementations
+### Implementations
 
-### JSONLToolAuditor
+#### JSONLToolAuditor
 
 Writes entries to a JSONL file and keeps them in memory:
 
@@ -58,7 +157,7 @@ from roomkit.orchestration.tool_audit import JSONLToolAuditor
 auditor = JSONLToolAuditor("/tmp/screen_ai/audit.jsonl")
 ```
 
-### ConsoleToolAuditor
+#### ConsoleToolAuditor
 
 Logs entries in real-time via Python logging:
 
@@ -69,7 +168,7 @@ auditor = ConsoleToolAuditor()
 # Logs: [AUDIT] [+] exec.search_google → ok (9333ms) {"status": "ok", ...}
 ```
 
-### Custom auditor
+#### Custom auditor
 
 Implement the `ToolAuditor` ABC:
 
@@ -89,9 +188,9 @@ class MyAuditor(ToolAuditor):
         return "See Datadog dashboard"
 ```
 
-## Two handler wrappers
+### Handler wrappers
 
-### For AIChannel (standard tool handler)
+#### For AIChannel (standard tool handler)
 
 ```python
 from roomkit.orchestration.tool_audit import audit_tool_handler
@@ -101,7 +200,7 @@ audited = audit_tool_handler(handler, auditor, agent_id="exec")
 agent = Agent("exec", tools=[my_tool], tool_handler=audited, ...)
 ```
 
-### For RealtimeVoiceChannel (voice tool handler)
+#### For RealtimeVoiceChannel (voice tool handler)
 
 The same `audit_tool_handler` works for voice — the tool handler signature is unified as `async (name: str, args: dict) -> str` across all channels.
 
@@ -110,7 +209,7 @@ audited = audit_tool_handler(handler, auditor, agent_id="voice")
 voice_channel = RealtimeVoiceChannel("voice", tools=[my_tool], tool_handler=audited, ...)
 ```
 
-## Print summary
+### Print summary
 
 ```python
 auditor.print_summary()

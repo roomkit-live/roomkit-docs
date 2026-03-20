@@ -105,7 +105,7 @@ nav:
           - Multi-Agent Orchestration: guides/orchestration.md
           - Agent Delegation: guides/agent-delegation.md
           - Status Bus: guides/status-bus.md
-          - Tool Auditing: guides/tool-audit.md
+          - Auditing (Session & Tool): guides/tool-audit.md
           - Agent Skills: guides/agent-skills.md
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
       - Channels & Content:
