@@ -4,15 +4,15 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ## Strategies
 
-::: roomkit.Orchestration
+::: roomkit.orchestration.base.Orchestration
 
-::: roomkit.Pipeline
+::: roomkit.orchestration.strategies.pipeline.Pipeline
 
-::: roomkit.Swarm
+::: roomkit.orchestration.strategies.swarm.Swarm
 
-::: roomkit.Supervisor
+::: roomkit.orchestration.strategies.supervisor.Supervisor
 
-::: roomkit.Loop
+::: roomkit.orchestration.strategies.loop.Loop
 
 ## Agents
 

@@ -6,8 +6,8 @@
 
 ::: roomkit.SlidingWindowMemory
 
-::: roomkit.SummarizingMemory
+::: roomkit.memory.summarizing.SummarizingMemory
 
-::: roomkit.RetrievalMemory
+::: roomkit.memory.retrieval.RetrievalMemory
 
 ::: roomkit.MockMemoryProvider
