@@ -30,12 +30,12 @@
 
 ## WebSocket Streaming
 
-::: roomkit.StreamChunk
+::: roomkit.channels.websocket.StreamStart
 
-::: roomkit.StreamEnd
+::: roomkit.channels.websocket.StreamChunk
 
-::: roomkit.StreamMessage
+::: roomkit.channels.websocket.StreamEnd
 
-::: roomkit.StreamSendFn
+::: roomkit.channels.websocket.StreamMessage
 
-::: roomkit.StreamStart
+::: roomkit.channels.websocket.StreamSendFn
