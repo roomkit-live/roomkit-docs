@@ -698,6 +698,9 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Dangling tool call recovery** — automatically patches orphaned tool calls from barge-in interruptions
 - **Large output eviction** — oversized tool results are stored externally and replaced with previews; the AI can paginate back via `_read_tool_result` (configure with `evict_threshold_tokens`)
 - **Planning tools** — opt-in `enable_planning=True` gives the AI a `_plan_tasks` tool for structured task tracking with real-time UI updates via ephemeral events
+- **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
+- **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `AFTER_AI_RESPONSE` hook. Scores stored as Observations
+- **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
 
 ### Realtime Events (Typing, Presence, Read Receipts)
 
