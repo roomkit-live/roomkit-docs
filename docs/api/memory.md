@@ -6,4 +6,6 @@
 
 ::: roomkit.SlidingWindowMemory
 
+::: roomkit.SummarizingMemory
+
 ::: roomkit.MockMemoryProvider

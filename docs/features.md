@@ -689,6 +689,16 @@ ai = AIChannel("ai", provider=provider, memory=SummaryMemory())
 
 `MemoryResult` has two fields: `messages` (pre-built `AIMessage` objects prepended to context) and `events` (raw `RoomEvent` objects converted by `AIChannel` with vision support preserved). See the [Memory Provider guide](guides/memory-provider.md) for details.
 
+Built-in providers: `SlidingWindowMemory` (last N events), `BudgetAwareMemory` (token-budget trimming), `CompactingMemory` (LLM summarization), and `SummarizingMemory` (two-tier proactive budget management with truncation + summarization). See the [Advanced Memory guide](guides/advanced-memory.md) for details.
+
+### Agentic AI Features
+
+AIChannel includes built-in agentic capabilities for complex, multi-step AI workflows:
+
+- **Dangling tool call recovery** — automatically patches orphaned tool calls from barge-in interruptions
+- **Large output eviction** — oversized tool results are stored externally and replaced with previews; the AI can paginate back via `_read_tool_result` (configure with `evict_threshold_tokens`)
+- **Planning tools** — opt-in `enable_planning=True` gives the AI a `_plan_tasks` tool for structured task tracking with real-time UI updates via ephemeral events
+
 ### Realtime Events (Typing, Presence, Read Receipts)
 
 RoomKit provides a pluggable realtime backend for ephemeral events that don't require persistence:

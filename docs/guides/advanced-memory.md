@@ -48,6 +48,7 @@ class MemoryResult:
 | `SlidingWindowMemory` | < 50 messages | None | Simple chatbots, short conversations |
 | `BudgetAwareMemory` | 50-500 messages | None | Medium conversations, no AI cost for memory |
 | `CompactingMemory` | 500+ messages | LLM calls | Long conversations, full context retention |
+| `SummarizingMemory` | Any length | LLM calls | Agentic workloads with large tool results and proactive budget management |
 
 ---
 
@@ -172,6 +173,63 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 
 !!! tip "Choosing a Summarizer"
     Use a fast, inexpensive model (e.g., Claude Haiku) for summarization. The summary prompt focuses on decisions made, key findings, tool results, and errors.
+
+---
+
+## SummarizingMemory (Two-Tier)
+
+`SummarizingMemory` proactively manages context budget with two tiers. Unlike `CompactingMemory` (which only fires when the budget is exceeded), `SummarizingMemory` starts truncating early and summarizes before hitting the limit. Designed for agentic workloads where tool results can be very large.
+
+```python
+from roomkit.channels.ai import AIChannel
+from roomkit.memory import SlidingWindowMemory, SummarizingMemory
+from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic.config import AnthropicConfig
+
+# Lightweight model for summaries
+summarizer = AnthropicAIProvider(AnthropicConfig(
+    api_key="...", model="claude-haiku-4-5-20251001",
+))
+
+memory = SummarizingMemory(
+    inner=SlidingWindowMemory(max_events=100),
+    provider=summarizer,
+    max_context_tokens=128_000,
+    tier1_ratio=0.50,                # Truncate old events at 50% capacity
+    tier2_ratio=0.85,                # Summarize at 85% capacity
+    truncate_chars=2000,             # Max chars per old event in tier 1
+    summary_max_tokens=1000,         # Max tokens for summaries
+    min_events=5,                    # Always keep at least 5 recent events
+    summary_cache_ttl_seconds=300.0, # Cache summaries for 5 minutes
+)
+
+ai = AIChannel("ai-agent", provider=main_provider, memory=memory)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `inner` | required | Wrapped memory provider |
+| `provider` | required | AI provider for summarization |
+| `max_context_tokens` | required | Total token budget |
+| `tier1_ratio` | `0.50` | Fraction of budget that triggers tier-1 truncation |
+| `tier2_ratio` | `0.85` | Fraction of budget that triggers tier-2 summarization |
+| `truncate_chars` | `2000` | Max characters per old event body in tier 1 |
+| `summary_max_tokens` | `1000` | Max output tokens for the LLM summary |
+| `min_events` | `5` | Minimum events to keep before summarizing |
+| `summary_cache_ttl_seconds` | `300.0` | TTL for cached summaries |
+
+**How it works**:
+
+1. Calls `inner.retrieve()` to get events and pre-built messages
+2. Estimates total tokens (events + prior messages)
+3. **Tier 1** (at ~50% capacity): Truncates large text bodies in the older half of events to `truncate_chars`. No LLM call — cheap and fast.
+4. **Tier 2** (at ~85% capacity): Calls the summary provider to summarize older events into a concise paragraph. Keeps recent events at full fidelity. Supports chained summaries — if a prior summary exists, it is incorporated into the new one.
+5. Summaries are cached using a content-derived key with TTL
+
+**Graceful degradation**: If tier-2 summarization fails (provider error), the events are returned un-summarized with a placeholder.
+
+!!! tip "SummarizingMemory vs CompactingMemory"
+    Use `CompactingMemory` for simple long conversations. Use `SummarizingMemory` for agentic workloads where tool results are large and you want proactive budget management before hitting the context limit.
 
 ---
 
