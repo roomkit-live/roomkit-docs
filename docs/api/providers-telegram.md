@@ -1,9 +1,9 @@
 # Telegram Provider
 
-::: roomkit.TelegramBotProvider
+::: roomkit.providers.telegram.bot.TelegramBotProvider
 
-::: roomkit.TelegramConfig
+::: roomkit.providers.telegram.config.TelegramConfig
 
-::: roomkit.MockTelegramProvider
+::: roomkit.providers.telegram.mock.MockTelegramProvider
 
 ::: roomkit.parse_telegram_webhook

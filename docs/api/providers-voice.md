@@ -4,15 +4,15 @@
 
 ::: roomkit.voice.backends.base.VoiceBackend
 
-::: roomkit.VoiceCapability
+::: roomkit.voice.base.VoiceCapability
 
-::: roomkit.VoiceSession
+::: roomkit.voice.base.VoiceSession
 
-::: roomkit.VoiceSessionState
+::: roomkit.voice.base.VoiceSessionState
 
-::: roomkit.AudioChunk
+::: roomkit.voice.base.AudioChunk
 
-::: roomkit.TranscriptionResult
+::: roomkit.voice.base.TranscriptionResult
 
 ## STT (Speech-to-Text)
 
@@ -116,15 +116,15 @@ Install with: `pip install roomkit[rtp]`
 
 ## Voice Events
 
-::: roomkit.BargeInEvent
+::: roomkit.voice.events.BargeInEvent
 
-::: roomkit.TTSCancelledEvent
+::: roomkit.voice.events.TTSCancelledEvent
 
-::: roomkit.PartialTranscriptionEvent
+::: roomkit.voice.events.PartialTranscriptionEvent
 
-::: roomkit.VADSilenceEvent
+::: roomkit.voice.events.VADSilenceEvent
 
-::: roomkit.VADAudioLevelEvent
+::: roomkit.voice.events.VADAudioLevelEvent
 
 ## Callback Types
 

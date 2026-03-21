@@ -1,13 +1,13 @@
 # Memory
 
-::: roomkit.MemoryProvider
+::: roomkit.memory.base.MemoryProvider
 
-::: roomkit.MemoryResult
+::: roomkit.memory.base.MemoryResult
 
-::: roomkit.SlidingWindowMemory
+::: roomkit.memory.sliding_window.SlidingWindowMemory
 
 ::: roomkit.memory.summarizing.SummarizingMemory
 
 ::: roomkit.memory.retrieval.RetrievalMemory
 
-::: roomkit.MockMemoryProvider
+::: roomkit.memory.mock.MockMemoryProvider

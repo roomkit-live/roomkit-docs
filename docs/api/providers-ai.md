@@ -1,22 +1,22 @@
 # AI Providers
 
-::: roomkit.AIProvider
+::: roomkit.providers.ai.base.AIProvider
 
-::: roomkit.AIContext
+::: roomkit.providers.ai.base.AIContext
 
-::: roomkit.AIMessage
+::: roomkit.providers.ai.base.AIMessage
 
-::: roomkit.AITextPart
+::: roomkit.providers.ai.base.AITextPart
 
-::: roomkit.AIImagePart
+::: roomkit.providers.ai.base.AIImagePart
 
-::: roomkit.AITool
+::: roomkit.providers.ai.base.AITool
 
-::: roomkit.AIToolCall
+::: roomkit.providers.ai.base.AIToolCall
 
-::: roomkit.AIResponse
+::: roomkit.providers.ai.base.AIResponse
 
-::: roomkit.MockAIProvider
+::: roomkit.providers.ai.mock.MockAIProvider
 
 ## Per-Room AI Configuration
 
@@ -84,9 +84,9 @@ for tool_call in response.tool_calls:
 
 ## Gemini Provider
 
-::: roomkit.GeminiAIProvider
+::: roomkit.providers.gemini.ai.GeminiAIProvider
 
-::: roomkit.GeminiConfig
+::: roomkit.providers.gemini.config.GeminiConfig
 
 ### Usage
 
@@ -138,9 +138,9 @@ Install with: `pip install roomkit[vllm]`
 
 ## Anthropic Provider
 
-::: roomkit.AnthropicAIProvider
+::: roomkit.providers.anthropic.ai.AnthropicAIProvider
 
-::: roomkit.AnthropicConfig
+::: roomkit.providers.anthropic.config.AnthropicConfig
 
 ### Usage
 
@@ -159,9 +159,9 @@ Install with: `pip install roomkit[anthropic]`
 
 ## OpenAI Provider
 
-::: roomkit.OpenAIAIProvider
+::: roomkit.providers.openai.ai.OpenAIAIProvider
 
-::: roomkit.OpenAIConfig
+::: roomkit.providers.openai.config.OpenAIConfig
 
 ### Usage
 
@@ -180,9 +180,9 @@ Install with: `pip install roomkit[openai]`
 
 ## Mistral Provider
 
-::: roomkit.MistralAIProvider
+::: roomkit.providers.mistral.ai.MistralAIProvider
 
-::: roomkit.MistralConfig
+::: roomkit.providers.mistral.config.MistralConfig
 
 ### Usage
 
@@ -201,9 +201,9 @@ Install with: `pip install roomkit[mistral]`
 
 ## Azure Provider
 
-::: roomkit.AzureAIProvider
+::: roomkit.providers.azure.ai.AzureAIProvider
 
-::: roomkit.AzureAIConfig
+::: roomkit.providers.azure.config.AzureAIConfig
 
 ### Usage
 
@@ -226,22 +226,22 @@ Install with: `pip install roomkit[azure]`
 
 ## Streaming
 
-::: roomkit.StreamEvent
+::: roomkit.providers.ai.base.StreamEvent
 
-::: roomkit.StreamTextDelta
+::: roomkit.providers.ai.base.StreamTextDelta
 
-::: roomkit.StreamThinkingDelta
+::: roomkit.providers.ai.base.StreamThinkingDelta
 
-::: roomkit.StreamToolCall
+::: roomkit.providers.ai.base.StreamToolCall
 
-::: roomkit.StreamDone
+::: roomkit.providers.ai.base.StreamDone
 
 ## Response Parts
 
-::: roomkit.AIThinkingPart
+::: roomkit.providers.ai.base.AIThinkingPart
 
-::: roomkit.AIToolCallPart
+::: roomkit.providers.ai.base.AIToolCallPart
 
-::: roomkit.AIToolResultPart
+::: roomkit.providers.ai.base.AIToolResultPart
 
-::: roomkit.ProviderError
+::: roomkit.providers.ai.base.ProviderError

@@ -4,18 +4,18 @@ Agent skills framework for structured tool definitions. See the [Agent Skills gu
 
 ## Core
 
-::: roomkit.Skill
+::: roomkit.skills.models.Skill
 
-::: roomkit.SkillMetadata
+::: roomkit.skills.models.SkillMetadata
 
-::: roomkit.ScriptResult
+::: roomkit.skills.models.ScriptResult
 
-::: roomkit.SkillRegistry
+::: roomkit.skills.registry.SkillRegistry
 
-::: roomkit.ScriptExecutor
+::: roomkit.skills.executor.ScriptExecutor
 
 ## Exceptions
 
-::: roomkit.SkillParseError
+::: roomkit.skills.parser.SkillParseError
 
-::: roomkit.SkillValidationError
+::: roomkit.skills.parser.SkillValidationError

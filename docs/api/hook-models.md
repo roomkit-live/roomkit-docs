@@ -4,6 +4,6 @@
 
 ::: roomkit.InjectedEvent
 
-::: roomkit.Task
+::: roomkit.models.task.Task
 
-::: roomkit.Observation
+::: roomkit.models.task.Observation

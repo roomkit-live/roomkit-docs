@@ -2,14 +2,14 @@
 
 AI steering directives for dynamic control of AI behavior. See the [AI Steering Directives guide](../guides/ai-steering.md) for usage examples.
 
-::: roomkit.SteeringDirective
+::: roomkit.models.steering.SteeringDirective
 
-::: roomkit.Cancel
+::: roomkit.models.steering.Cancel
 
-::: roomkit.UpdateSystemPrompt
+::: roomkit.models.steering.UpdateSystemPrompt
 
-::: roomkit.InjectMessage
+::: roomkit.models.steering.InjectMessage
 
-::: roomkit.DeleteContent
+::: roomkit.models.event.DeleteContent
 
-::: roomkit.EditContent
+::: roomkit.models.event.EditContent

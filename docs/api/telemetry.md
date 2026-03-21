@@ -4,22 +4,22 @@ Observability and tracing for RoomKit applications. See the [Telemetry guide](..
 
 ## Core
 
-::: roomkit.TelemetryProvider
+::: roomkit.telemetry.base.TelemetryProvider
 
-::: roomkit.TelemetryConfig
+::: roomkit.telemetry.config.TelemetryConfig
 
-::: roomkit.Span
+::: roomkit.telemetry.base.Span
 
-::: roomkit.Attr
+::: roomkit.telemetry.base.Attr
 
-::: roomkit.SpanKind
+::: roomkit.telemetry.base.SpanKind
 
 ## Built-in Providers
 
-::: roomkit.ConsoleTelemetryProvider
+::: roomkit.telemetry.console.ConsoleTelemetryProvider
 
 ::: roomkit.telemetry.opentelemetry.OpenTelemetryProvider
 
-::: roomkit.NoopTelemetryProvider
+::: roomkit.telemetry.noop.NoopTelemetryProvider
 
-::: roomkit.MockTelemetryProvider
+::: roomkit.telemetry.mock.MockTelemetryProvider

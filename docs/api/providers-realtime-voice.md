@@ -31,13 +31,13 @@ See [`VoiceSession`](providers-voice.md#roomkit.VoiceSession) and [`VoiceSession
 
 ## Events
 
-::: roomkit.RealtimeTranscriptionEvent
+::: roomkit.voice.realtime.events.RealtimeTranscriptionEvent
 
-::: roomkit.RealtimeSpeechEvent
+::: roomkit.voice.realtime.events.RealtimeSpeechEvent
 
-::: roomkit.RealtimeToolCallEvent
+::: roomkit.voice.realtime.events.RealtimeToolCallEvent
 
-::: roomkit.RealtimeErrorEvent
+::: roomkit.voice.realtime.events.RealtimeErrorEvent
 
 ## Callback Types
 
@@ -173,9 +173,9 @@ Lazy-loaded via `roomkit.voice.get_fastrtc_realtime_transport()` and `roomkit.vo
 
 ## Mock Classes
 
-::: roomkit.MockRealtimeProvider
+::: roomkit.voice.realtime.mock.MockRealtimeProvider
 
-::: roomkit.MockRealtimeTransport
+::: roomkit.voice.realtime.mock.MockRealtimeTransport
 
 ## Usage Example
 

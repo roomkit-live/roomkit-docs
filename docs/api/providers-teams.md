@@ -273,13 +273,13 @@ assert mock.sent[0]["to"] == "conv-123"
 
 ## API reference
 
-::: roomkit.TeamsProvider
+::: roomkit.providers.teams.base.TeamsProvider
 
-::: roomkit.BotFrameworkTeamsProvider
+::: roomkit.providers.teams.bot_framework.BotFrameworkTeamsProvider
 
-::: roomkit.MockTeamsProvider
+::: roomkit.providers.teams.mock.MockTeamsProvider
 
-::: roomkit.TeamsConfig
+::: roomkit.providers.teams.config.TeamsConfig
 
 ::: roomkit.parse_teams_webhook
 
@@ -287,8 +287,8 @@ assert mock.sent[0]["to"] == "conv-123"
 
 ::: roomkit.is_bot_added
 
-::: roomkit.ConversationReferenceStore
+::: roomkit.providers.teams.conversation_store.ConversationReferenceStore
 
-::: roomkit.InMemoryConversationReferenceStore
+::: roomkit.providers.teams.conversation_store.InMemoryConversationReferenceStore
 
 ::: roomkit.parse_teams_reactions

@@ -1039,15 +1039,15 @@ The **Source + Provider pair** pattern:
 
 ## API Reference
 
-::: roomkit.SourceStatus
+::: roomkit.sources.base.SourceStatus
 
-::: roomkit.SourceHealth
+::: roomkit.sources.base.SourceHealth
 
-::: roomkit.SourceProvider
+::: roomkit.sources.base.SourceProvider
 
-::: roomkit.BaseSourceProvider
+::: roomkit.sources.base.BaseSourceProvider
 
-::: roomkit.EmitCallback
+::: roomkit.sources.base.EmitCallback
 
 ::: roomkit.SourceAlreadyAttachedError
 

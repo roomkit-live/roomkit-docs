@@ -4,54 +4,54 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ## Pipeline
 
-::: roomkit.AudioPipeline
+::: roomkit.voice.pipeline.engine.AudioPipeline
 
-::: roomkit.AudioPipelineConfig
+::: roomkit.voice.pipeline.config.AudioPipelineConfig
 
-::: roomkit.AudioFrame
+::: roomkit.voice.audio_frame.AudioFrame
 
 ## VAD (Voice Activity Detection)
 
-::: roomkit.VADProvider
+::: roomkit.voice.pipeline.vad.base.VADProvider
 
-::: roomkit.VADConfig
+::: roomkit.voice.pipeline.vad.base.VADConfig
 
-::: roomkit.VADEvent
+::: roomkit.voice.pipeline.vad.base.VADEvent
 
-::: roomkit.VADEventType
+::: roomkit.voice.pipeline.vad.base.VADEventType
 
-::: roomkit.MockVADProvider
+::: roomkit.voice.pipeline.vad.mock.MockVADProvider
 
 ## Denoiser
 
-::: roomkit.DenoiserProvider
+::: roomkit.voice.pipeline.denoiser.base.DenoiserProvider
 
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserConfig
 
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserProvider
 
-::: roomkit.MockDenoiserProvider
+::: roomkit.voice.pipeline.denoiser.mock.MockDenoiserProvider
 
 ## Diarization
 
-::: roomkit.DiarizationProvider
+::: roomkit.voice.pipeline.diarization.base.DiarizationProvider
 
-::: roomkit.DiarizationResult
+::: roomkit.voice.pipeline.diarization.base.DiarizationResult
 
-::: roomkit.MockDiarizationProvider
+::: roomkit.voice.pipeline.diarization.mock.MockDiarizationProvider
 
 ## TTS Stream Filters
 
-::: roomkit.TTSStreamFilter
+::: roomkit.voice.tts.filters.TTSStreamFilter
 
-::: roomkit.StripBrackets
+::: roomkit.voice.tts.filters.StripBrackets
 
-::: roomkit.StripInternalTags
+::: roomkit.voice.tts.filters.StripInternalTags
 
 ## Events & Callbacks
 
-::: roomkit.SpeakerChangeEvent
+::: roomkit.voice.events.SpeakerChangeEvent
 
-::: roomkit.BargeInCallback
+::: roomkit.voice.base.BargeInCallback
 
-::: roomkit.AudioReceivedCallback
+::: roomkit.voice.backends.base.AudioReceivedCallback

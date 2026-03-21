@@ -51,9 +51,9 @@ async def track_delivery(status: DeliveryStatus):
 
 ## Base Classes
 
-::: roomkit.SMSProvider
+::: roomkit.providers.sms.base.SMSProvider
 
-::: roomkit.MockSMSProvider
+::: roomkit.providers.sms.mock.MockSMSProvider
 
 ## MMS Handling
 
@@ -80,31 +80,31 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ## Sinch
 
-::: roomkit.SinchSMSProvider
+::: roomkit.providers.sinch.sms.SinchSMSProvider
 
-::: roomkit.SinchConfig
+::: roomkit.providers.sinch.config.SinchConfig
 
 ::: roomkit.parse_sinch_webhook
 
 ## Telnyx
 
-::: roomkit.TelnyxSMSProvider
+::: roomkit.providers.telnyx.sms.TelnyxSMSProvider
 
-::: roomkit.TelnyxConfig
+::: roomkit.providers.telnyx.config.TelnyxConfig
 
 ## Twilio
 
-::: roomkit.TwilioSMSProvider
+::: roomkit.providers.twilio.sms.TwilioSMSProvider
 
-::: roomkit.TwilioConfig
+::: roomkit.providers.twilio.config.TwilioConfig
 
 ::: roomkit.parse_twilio_webhook
 
 ## VoiceMeUp
 
-::: roomkit.VoiceMeUpSMSProvider
+::: roomkit.providers.voicemeup.sms.VoiceMeUpSMSProvider
 
-::: roomkit.VoiceMeUpConfig
+::: roomkit.providers.voicemeup.config.VoiceMeUpConfig
 
 ::: roomkit.parse_voicemeup_webhook
 
@@ -234,7 +234,7 @@ kit.hook(
 
 ### Webhook Metadata
 
-::: roomkit.WebhookMeta
+::: roomkit.providers.sms.meta.WebhookMeta
 
 ::: roomkit.extract_sms_meta
 

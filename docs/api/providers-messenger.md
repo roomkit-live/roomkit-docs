@@ -1,5 +1,5 @@
 # Messenger Providers
 
-::: roomkit.MessengerProvider
+::: roomkit.providers.messenger.base.MessengerProvider
 
-::: roomkit.MockMessengerProvider
+::: roomkit.providers.messenger.mock.MockMessengerProvider

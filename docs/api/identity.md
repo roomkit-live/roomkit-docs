@@ -2,15 +2,15 @@
 
 ::: roomkit.Participant
 
-::: roomkit.Identity
+::: roomkit.models.identity.Identity
 
-::: roomkit.IdentityResult
+::: roomkit.models.identity.IdentityResult
 
-::: roomkit.IdentityHookResult
+::: roomkit.models.identity.IdentityHookResult
 
-::: roomkit.IdentityResolver
+::: roomkit.identity.base.IdentityResolver
 
-::: roomkit.MockIdentityResolver
+::: roomkit.identity.mock.MockIdentityResolver
 
 ## Identity Hooks
 

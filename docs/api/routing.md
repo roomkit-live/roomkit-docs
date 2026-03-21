@@ -1,5 +1,5 @@
 # Routing
 
-::: roomkit.InboundRoomRouter
+::: roomkit.core.inbound_router.InboundRoomRouter
 
-::: roomkit.DefaultInboundRoomRouter
+::: roomkit.core.inbound_router.DefaultInboundRoomRouter

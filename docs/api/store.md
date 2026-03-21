@@ -1,7 +1,7 @@
 # Store
 
-::: roomkit.ConversationStore
+::: roomkit.store.base.ConversationStore
 
-::: roomkit.InMemoryStore
+::: roomkit.store.memory.InMemoryStore
 
 ::: roomkit.store.postgres.PostgresStore

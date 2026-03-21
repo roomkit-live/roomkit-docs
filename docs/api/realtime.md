@@ -219,12 +219,12 @@ kit = RoomKit(realtime=RedisRealtime("redis://localhost:6379"))
 
 ## API Reference
 
-::: roomkit.EphemeralEventType
+::: roomkit.realtime.base.EphemeralEventType
 
-::: roomkit.EphemeralEvent
+::: roomkit.realtime.base.EphemeralEvent
 
-::: roomkit.EphemeralCallback
+::: roomkit.realtime.base.EphemeralCallback
 
-::: roomkit.RealtimeBackend
+::: roomkit.realtime.base.RealtimeBackend
 
-::: roomkit.InMemoryRealtime
+::: roomkit.realtime.memory.InMemoryRealtime

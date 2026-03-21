@@ -2,9 +2,9 @@
 
 ## Business API (Webhook-based)
 
-::: roomkit.WhatsAppProvider
+::: roomkit.providers.whatsapp.base.WhatsAppProvider
 
-::: roomkit.MockWhatsAppProvider
+::: roomkit.providers.whatsapp.mock.MockWhatsAppProvider
 
 ## Personal Account (Neonize)
 
@@ -141,4 +141,4 @@ pip install roomkit[whatsapp-personal]
 
 ### API reference
 
-::: roomkit.WhatsAppPersonalProvider
+::: roomkit.providers.whatsapp.personal.WhatsAppPersonalProvider

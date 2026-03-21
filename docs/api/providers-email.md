@@ -1,5 +1,5 @@
 # Email Providers
 
-::: roomkit.EmailProvider
+::: roomkit.providers.email.base.EmailProvider
 
-::: roomkit.MockEmailProvider
+::: roomkit.providers.email.mock.MockEmailProvider
