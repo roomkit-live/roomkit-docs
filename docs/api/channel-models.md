@@ -8,4 +8,4 @@
 
 ::: roomkit.models.channel.RateLimit
 
-::: roomkit.RetryPolicy
+::: roomkit.models.channel.RetryPolicy
