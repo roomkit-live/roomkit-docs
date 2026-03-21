@@ -8,4 +8,6 @@
 
 ::: roomkit.SummarizingMemory
 
+::: roomkit.RetrievalMemory
+
 ::: roomkit.MockMemoryProvider

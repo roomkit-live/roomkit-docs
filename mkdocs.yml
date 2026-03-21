@@ -138,6 +138,8 @@ nav:
           - Telemetry: api/telemetry.md
           - Skills: api/skills.md
           - Tools: api/tools.md
+          - Knowledge: api/knowledge.md
+          - Scoring: api/scoring.md
       - Channels:
           - Channel ABC: api/channel.md
           - Built-in Channels: api/channels.md

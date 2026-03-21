@@ -233,6 +233,72 @@ ai = AIChannel("ai-agent", provider=main_provider, memory=memory)
 
 ---
 
+## RetrievalMemory (RAG)
+
+`RetrievalMemory` enriches AI context with knowledge from external sources — vector stores, search engines, document indexes, or any system that can answer relevance queries.
+
+```python
+from roomkit.channels.ai import AIChannel
+from roomkit.knowledge import KnowledgeSource, KnowledgeResult
+from roomkit.memory import RetrievalMemory, SlidingWindowMemory
+
+
+class FAQSource(KnowledgeSource):
+    """Example: retrieve from a vector database."""
+
+    async def search(self, query, *, room_id=None, limit=5):
+        results = await my_vector_db.search(query, top_k=limit)
+        return [
+            KnowledgeResult(content=r.text, score=r.score, source="faq")
+            for r in results
+        ]
+
+    async def index(self, content, metadata=None):
+        await my_vector_db.upsert(content, metadata=metadata)
+
+
+memory = RetrievalMemory(
+    sources=[FAQSource()],
+    inner=SlidingWindowMemory(max_events=50),
+    max_results=5,           # Max knowledge results in context
+    min_query_length=3,      # Skip search for very short queries
+)
+
+ai = AIChannel("ai-agent", provider=provider, memory=memory)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `sources` | required | List of `KnowledgeSource` implementations |
+| `inner` | required | Wrapped memory provider for conversation history |
+| `max_results` | `5` | Maximum knowledge results to include in context |
+| `min_query_length` | `3` | Minimum query length to trigger search |
+
+**How it works**:
+
+1. Calls `inner.retrieve()` for conversation history
+2. Extracts query text from the current event
+3. Searches all sources concurrently (fault-tolerant — one failure doesn't break others)
+4. Deduplicates results by content (keeps highest score)
+5. Prepends a `[Relevant context from knowledge sources]` message before the conversation history
+
+**Automatic indexing**: When `AIChannel` calls `ingest()` on every inbound event, `RetrievalMemory` forwards to both the inner provider and all knowledge sources — enabling auto-indexing of conversation content.
+
+!!! tip "Composing Providers"
+    `RetrievalMemory` composes with other providers. For both RAG and summarization:
+    ```python
+    memory = RetrievalMemory(
+        sources=[FAQSource()],
+        inner=SummarizingMemory(
+            inner=SlidingWindowMemory(max_events=100),
+            provider=haiku,
+            max_context_tokens=128_000,
+        ),
+    )
+    ```
+
+---
+
 ## Custom Memory Provider
 
 Implement `MemoryProvider` for custom logic (e.g., vector store retrieval):
