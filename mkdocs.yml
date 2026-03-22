@@ -103,6 +103,7 @@ nav:
           - AI Thinking: guides/ai-thinking.md
           - Streaming with Tools: guides/streaming-tools.md
           - Multi-Agent Orchestration: guides/orchestration.md
+          - Delivery Service: guides/delivery.md
           - Agent Delegation: guides/agent-delegation.md
           - Status Bus: guides/status-bus.md
           - Auditing (Session & Tool): guides/tool-audit.md
