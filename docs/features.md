@@ -551,8 +551,17 @@ kit = RoomKit(orchestration=Pipeline(agents=[triage, handler, resolver]))
 # Swarm: every agent can hand off to every other
 kit = RoomKit(orchestration=Swarm(agents=[sales, support, billing], entry="sales"))
 
-# Supervisor: delegates tasks to workers in child rooms
-kit = RoomKit(orchestration=Supervisor(supervisor=manager, workers=[researcher, coder]))
+# Supervisor: sequential chain (framework-driven, no tools)
+kit = RoomKit(orchestration=Supervisor(
+    supervisor=manager, workers=[researcher, writer],
+    strategy="sequential", auto_delegate=True,
+))
+
+# Supervisor: parallel fan-out (framework-driven, no tools)
+kit = RoomKit(orchestration=Supervisor(
+    supervisor=manager, workers=[technical, business],
+    strategy="parallel", auto_delegate=True,
+))
 
 # Loop: produce/review cycle with approval tool
 kit = RoomKit(orchestration=Loop(agent=writer, reviewer=editor, max_iterations=3))

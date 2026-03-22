@@ -64,21 +64,79 @@ Each agent's `handoff_conversation` tool lists all other agents as targets. Ther
 
 ### Supervisor
 
-A supervisor agent talks to the user and delegates tasks to worker agents. Workers run in isolated child rooms (via `kit.delegate()`) and are NOT attached to the parent room.
+A supervisor agent talks to the user and delegates tasks to worker agents. Workers run in isolated child rooms (via `kit.delegate()`) and are NOT attached to the parent room. The framework controls the execution flow — agents only need to know their role, not how orchestration works.
+
+> **Principle**: The agent decides the content. The framework decides the flow.
+
+#### Framework-driven mode (`auto_delegate=True`)
+
+The recommended mode. The framework triggers workers automatically on every user message — no tools, no AI orchestration choices:
 
 ```python
 from roomkit import Agent, RoomKit, Supervisor
 
+# Sequential: researcher runs first, writer receives researcher's output
+kit = RoomKit(
+    orchestration=Supervisor(
+        supervisor=coordinator,
+        workers=[researcher, writer],
+        strategy="sequential",
+        auto_delegate=True,
+    ),
+)
+
+# Parallel: both analysts run concurrently, supervisor gets combined results
+kit = RoomKit(
+    orchestration=Supervisor(
+        supervisor=coordinator,
+        workers=[technical_analyst, business_analyst],
+        strategy="parallel",
+        auto_delegate=True,
+    ),
+)
+```
+
+With `auto_delegate=True` and `refine_task=True` (default), the flow is:
+
+1. User sends message
+2. Supervisor extracts the core topic (pass 1 — framework-injected instruction)
+3. Framework runs workers with the topic (sequential or parallel)
+4. Supervisor presents combined results to user (pass 2)
+
+Agent prompts describe only **what the agent does** — no orchestration instructions needed:
+
+```python
+coordinator = Agent("coordinator", system_prompt="You coordinate analysis.")
+researcher = Agent("researcher", system_prompt="You research topics thoroughly.")
+writer = Agent("writer", system_prompt="You write clear articles.")
+```
+
+#### Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `strategy` | `None` | `"sequential"` / `"parallel"` / `None` — how workers execute |
+| `auto_delegate` | `False` | `True` = framework triggers workers automatically, `False` = AI decides via tools |
+| `refine_task` | `True` | When `auto_delegate=True`: `True` = supervisor extracts topic first (two-pass), `False` = workers get raw user message |
+| `refine_instruction` | `None` | Custom pass-1 instruction (overrides default topic extraction) |
+| `wait_for_result` | `True` | When `auto_delegate=False`: inline (`True`) or background (`False`) execution |
+
+#### Tool-based mode (no `auto_delegate`)
+
+When `auto_delegate=False` (default), the AI decides when to delegate:
+
+- With `strategy` set: a single `delegate_workers` tool is injected
+- Without `strategy`: per-worker `delegate_to_<id>` tools are injected
+
+```python
+# AI decides via per-worker tools
 kit = RoomKit(
     orchestration=Supervisor(
         supervisor=manager,
         workers=[researcher, coder],
     ),
 )
-room = await kit.create_room()
 ```
-
-The supervisor receives `delegate_to_<worker>` tools (one per worker). When called, the tool creates a child room, attaches the worker, and runs the task. Results are injected back into the supervisor's system prompt via the `notify` mechanism.
 
 ### Loop
 
