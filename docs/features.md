@@ -563,6 +563,15 @@ kit = RoomKit(orchestration=Supervisor(
     strategy="parallel", auto_delegate=True,
 ))
 
+# Supervisor: voice + async delivery (background workers, deliver when idle)
+kit = RoomKit(
+    delivery_strategy=WaitForIdle(buffer=3.0),
+    orchestration=Supervisor(
+        supervisor=coordinator, workers=[technical, business],
+        strategy="parallel", auto_delegate=True, async_delivery=True,
+    ),
+)
+
 # Loop: produce/review cycle with approval tool
 kit = RoomKit(orchestration=Loop(agent=writer, reviewer=editor, max_iterations=3))
 
@@ -580,6 +589,8 @@ Key features:
 - **HandoffMemoryProvider** — Injects handoff context (summary, reason) into the receiving agent's prompt
 - **ConversationPipeline** — Lower-level API for complex workflows with loops (`can_return_to`) and custom stages
 - **Custom strategies** — Subclass `Orchestration` ABC to build your own
+- **Delivery service** — `kit.deliver()` with `WaitForIdle`, `Immediate`, `Queued` strategies
+- **Delivery hooks** — `BEFORE_DELIVER` / `AFTER_DELIVER` for observability
 
 See the [Orchestration guide](guides/orchestration.md) for strategies, state management, routing rules, and handoff configuration.
 

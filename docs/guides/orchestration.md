@@ -111,15 +111,84 @@ researcher = Agent("researcher", system_prompt="You research topics thoroughly."
 writer = Agent("writer", system_prompt="You write clear articles.")
 ```
 
+#### Voice / real-time mode (`async_delivery=True`)
+
+For voice and real-time channels, workers run in the background while the conversation continues. The framework injects a `delegate_workers` tool into the voice channel — the AI decides when to call it naturally:
+
+```python
+from roomkit import Agent, RoomKit, Supervisor, WaitForIdle, RealtimeVoiceChannel
+
+kit = RoomKit(
+    delivery_strategy=WaitForIdle(buffer=3.0),
+    orchestration=Supervisor(
+        supervisor=coordinator,
+        workers=[technical, business],
+        strategy="parallel",
+        auto_delegate=True,
+        async_delivery=True,
+    ),
+)
+```
+
+Flow:
+
+1. User speaks → voice AI responds normally
+2. User asks for analysis → AI calls `delegate_workers` tool
+3. AI says "I'm dispatching my analysts" (natural response)
+4. Workers run in background — conversation continues uninterrupted
+5. Results delivered via `kit.deliver()` when both AI and user are idle
+
+The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user to stop talking before injecting results.
+
 #### Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `strategy` | `None` | `"sequential"` / `"parallel"` / `None` — how workers execute |
-| `auto_delegate` | `False` | `True` = framework triggers workers automatically, `False` = AI decides via tools |
-| `refine_task` | `True` | When `auto_delegate=True`: `True` = supervisor extracts topic first (two-pass), `False` = workers get raw user message |
-| `refine_instruction` | `None` | Custom pass-1 instruction (overrides default topic extraction) |
-| `wait_for_result` | `True` | When `auto_delegate=False`: inline (`True`) or background (`False`) execution |
+| `auto_delegate` | `False` | `True` = framework triggers workers automatically |
+| `async_delivery` | `False` | `True` = workers run in background, results delivered via `kit.deliver()` |
+| `refine_task` | `True` | Supervisor extracts topic before sending to workers (sync mode) |
+| `refine_instruction` | `None` | Custom topic extraction instruction |
+| `delegation_message` | `"I'm dispatching..."` | Message injected when workers start (async mode) |
+| `wait_for_result` | `True` | Inline or background execution (manual mode) |
+
+#### Delivery strategies
+
+Control **when** results are delivered to the channel:
+
+```python
+from roomkit import Immediate, WaitForIdle, Queued
+
+# Send immediately (may interrupt voice)
+kit = RoomKit(delivery_strategy=Immediate())
+
+# Wait for voice idle + buffer
+kit = RoomKit(delivery_strategy=WaitForIdle(buffer=3.0))
+
+# Batch multiple deliveries
+kit = RoomKit(delivery_strategy=Queued(buffer=2.0))
+```
+
+| Strategy | Behavior |
+|----------|----------|
+| `Immediate()` | Deliver now, may interrupt TTS |
+| `WaitForIdle(buffer)` | Wait for AI + user silence, then deliver |
+| `Queued(buffer)` | Batch multiple results, deliver at next idle |
+
+String shorthand: `strategy="wait_for_idle"`, `strategy="immediate"`, `strategy="queued"`.
+
+#### Delivery hooks
+
+```python
+@kit.hook(HookTrigger.BEFORE_DELIVER, execution=HookExecution.ASYNC)
+async def before(event, ctx):
+    print(f"Delivering: {event.metadata['strategy']}")
+
+@kit.hook(HookTrigger.AFTER_DELIVER, execution=HookExecution.ASYNC)
+async def after(event, ctx):
+    error = event.metadata.get("error")
+    print(f"Delivered: {'failed' if error else 'ok'}")
+```
 
 #### Tool-based mode (no `auto_delegate`)
 
