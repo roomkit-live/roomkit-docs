@@ -8,4 +8,4 @@ Tool system for AI function calling. See the [Tool Calling & Policies guide](../
 
 ::: roomkit.tools.mcp.MCPToolProvider
 
-::: roomkit.compose_tool_handlers
+::: roomkit.tools.compose.compose_tool_handlers

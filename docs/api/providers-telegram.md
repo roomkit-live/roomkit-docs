@@ -6,4 +6,4 @@
 
 ::: roomkit.providers.telegram.mock.MockTelegramProvider
 
-::: roomkit.parse_telegram_webhook
+::: roomkit.providers.telegram.webhook.parse_telegram_webhook

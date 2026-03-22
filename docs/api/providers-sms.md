@@ -84,7 +84,7 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ::: roomkit.providers.sinch.config.SinchConfig
 
-::: roomkit.parse_sinch_webhook
+::: roomkit.providers.sinch.sms.parse_sinch_webhook
 
 ## Telnyx
 
@@ -98,7 +98,7 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ::: roomkit.providers.twilio.config.TwilioConfig
 
-::: roomkit.parse_twilio_webhook
+::: roomkit.providers.twilio.sms.parse_twilio_webhook
 
 ## VoiceMeUp
 
@@ -106,7 +106,7 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ::: roomkit.providers.voicemeup.config.VoiceMeUpConfig
 
-::: roomkit.parse_voicemeup_webhook
+<!-- ::: roomkit.parse_voicemeup_webhook  # not yet implemented -->
 
 ### VoiceMeUp MMS Split Webhooks
 
@@ -146,8 +146,6 @@ async def voicemeup_webhook(payload: dict):
     await kit.process_inbound(message)
     return {"ok": True}
 ```
-
-::: roomkit.configure_voicemeup_mms
 
 **How it works**:
 
@@ -236,7 +234,7 @@ kit.hook(
 
 ::: roomkit.providers.sms.meta.WebhookMeta
 
-::: roomkit.extract_sms_meta
+::: roomkit.providers.sms.meta.extract_sms_meta
 
 ### Delivery Status
 
@@ -244,10 +242,10 @@ kit.hook(
 
 ### Phone Normalization
 
-::: roomkit.normalize_phone
+::: roomkit.providers.sms.phone.normalize_phone
 
-::: roomkit.is_valid_phone
+::: roomkit.providers.sms.phone.is_valid_phone
 
 ### Telnyx Webhook
 
-::: roomkit.parse_telnyx_webhook
+::: roomkit.providers.telnyx.sms.parse_telnyx_webhook

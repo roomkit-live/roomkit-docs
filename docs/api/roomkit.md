@@ -65,4 +65,3 @@
 
 ::: roomkit.voice.auth.AuthCallback
 
-::: roomkit.auth_context
