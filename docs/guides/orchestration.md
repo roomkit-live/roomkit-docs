@@ -286,6 +286,24 @@ kit = RoomKit(
 )
 ```
 
+#### Result metadata
+
+The result event carries loop status in `event.metadata`:
+
+- `approved` — `True` if all reviewers approved, `False` if max iterations reached
+- `iteration` — number of iterations completed
+
+```python
+@kit.hook(HookTrigger.AFTER_BROADCAST, execution=HookExecution.ASYNC)
+async def on_loop_result(event, ctx):
+    if "approved" not in (event.metadata or {}):
+        return
+    if event.metadata["approved"]:
+        print(f"Approved after {event.metadata['iteration']} iteration(s)")
+    else:
+        print(f"Not approved after {event.metadata['iteration']} iteration(s)")
+```
+
 ### Per-room override
 
 The kit-level default can be overridden (or disabled) per room:
