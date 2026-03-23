@@ -643,6 +643,7 @@ Three orchestration-specific hook triggers are available:
 
 | Guide | Description |
 |-------|-------------|
+| [Delivery Service](delivery.md) | `kit.deliver()` with WaitForIdle, Immediate, Queued strategies |
 | [Agent Delegation](agent-delegation.md) | Delegate tasks to background agents |
 | [Status Bus](status-bus.md) | Share real-time status between agents |
 | [Tool Auditing](tool-audit.md) | Record and inspect tool calls |
@@ -654,16 +655,26 @@ Three orchestration-specific hook triggers are available:
 
 | Example | Description |
 |---------|-------------|
-| [`orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) | Pipeline strategy: linear agent chain with handoff |
-| [`orchestration_swarm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_swarm.py) | Swarm strategy: bidirectional handoff between agents |
-| [`orchestration_supervisor.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor.py) | Supervisor strategy: delegation to workers in child rooms |
-| [`orchestration_approval_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_approval_loop.py) | Loop strategy: producer/reviewer approval cycle |
+| [`orchestration_pipeline_cli.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline_cli.py) | Pipeline: triage → handler → resolver (CLI + Anthropic) |
+| [`orchestration_swarm_cli.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_swarm_cli.py) | Swarm: sales ↔ support ↔ billing (CLI + Anthropic) |
+| [`orchestration_supervisor_sequential_content_workflow.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor_sequential_content_workflow.py) | Supervisor: researcher → writer sequential (CLI) |
+| [`orchestration_supervisor_parallel_tasks.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor_parallel_tasks.py) | Supervisor: technical + business parallel (CLI) |
+| [`orchestration_supervisor_voice_parallel.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor_voice_parallel.py) | Supervisor: parallel + async_delivery (Grok voice) |
+| [`orchestration_loop_cli.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_loop_cli.py) | Loop: writer + 3 parallel reviewers (CLI) |
+| [`orchestration_approval_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_approval_loop.py) | Loop: mock produce/review cycle |
 
-### Advanced (lower-level primitives)
+### Mock examples (no API key needed)
+
+| Example | Description |
+|---------|-------------|
+| [`orchestration_pipeline.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_pipeline.py) | Pipeline with MockAIProvider |
+| [`orchestration_swarm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_swarm.py) | Swarm with MockAIProvider |
+| [`orchestration_supervisor.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_supervisor.py) | Supervisor manual mode with MockAIProvider |
+
+### Advanced
 
 | Example | Description |
 |---------|-------------|
 | [`orchestration_loop.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_loop.py) | ConversationPipeline with `can_return_to` loops |
 | [`orchestration_routing.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_routing.py) | ConversationRouter with custom rules and supervisor |
 | [`orchestration_voice_triage.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/orchestration_voice_triage.py) | Voice call with delegation to background agent |
-| [`screen_agent_orchestrated.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/screen_agent_orchestrated.py) | Voice + exec agent with OmniView vision |
