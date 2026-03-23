@@ -572,8 +572,13 @@ kit = RoomKit(
     ),
 )
 
-# Loop: produce/review cycle with approval tool
-kit = RoomKit(orchestration=Loop(agent=writer, reviewer=editor, max_iterations=3))
+# Loop: single reviewer
+kit = RoomKit(orchestration=Loop(agent=writer, reviewers=[editor], max_iterations=3))
+
+# Loop: multi-reviewer parallel (all must approve)
+kit = RoomKit(orchestration=Loop(
+    agent=coder, reviewers=[security, perf, style], strategy="parallel",
+))
 
 room = await kit.create_room()
 # Agents registered, attached, routing + handoff tools wired, state initialised.

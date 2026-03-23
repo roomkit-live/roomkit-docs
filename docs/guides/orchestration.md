@@ -209,22 +209,82 @@ kit = RoomKit(
 
 ### Loop
 
-A producing agent generates output, a reviewer evaluates it, and the cycle repeats until the reviewer calls `approve_output` or `max_iterations` is reached.
+A producing agent generates output, reviewers evaluate it, and the cycle repeats until all reviewers approve or `max_iterations` is reached. The framework controls the flow — agents just produce content.
 
 ```python
 from roomkit import Agent, Loop, RoomKit
 
+# Single reviewer
 kit = RoomKit(
     orchestration=Loop(
         agent=writer,
-        reviewer=editor,
+        reviewers=[editor],
         max_iterations=3,
     ),
 )
-room = await kit.create_room()
+
+# Multiple reviewers — parallel (fan-out)
+kit = RoomKit(
+    orchestration=Loop(
+        agent=coder,
+        reviewers=[security_reviewer, perf_reviewer, style_reviewer],
+        strategy="parallel",
+        max_iterations=3,
+    ),
+)
+
+# Multiple reviewers — sequential (chained)
+kit = RoomKit(
+    orchestration=Loop(
+        agent=coder,
+        reviewers=[security_reviewer, perf_reviewer, style_reviewer],
+        strategy="sequential",
+        max_iterations=3,
+    ),
+)
 ```
 
-The reviewer gets an `approve_output` tool that sets `_loop_approved` in room metadata. An `AFTER_BROADCAST` hook drives the cycle: producer output → reviewer, reviewer feedback → producer. Loop state (`_loop_iteration`, `_loop_approved`) is tracked in `ConversationState.context`.
+Each iteration:
+
+1. Producer generates content in a child room
+2. Reviewers evaluate (sequential or parallel) in child rooms
+3. If **all** reviewers approve (response contains "APPROVED") → loop ends
+4. Otherwise → combined feedback sent back to producer for revision
+
+Agent prompts describe only their role — no orchestration instructions:
+
+```python
+coder = Agent("coder", system_prompt="You write clean Python code.")
+security = Agent("security", system_prompt="You review code for security issues.")
+perf = Agent("perf", system_prompt="You review code for performance.")
+```
+
+#### Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `agent` | — | The producing agent |
+| `reviewers` | — | List of reviewing agents |
+| `reviewer` | — | Single reviewer (convenience shorthand) |
+| `max_iterations` | `3` | Maximum produce-review cycles |
+| `strategy` | `None` | `"sequential"` / `"parallel"` for multiple reviewers |
+| `async_delivery` | `False` | `True` = background loop, results via `kit.deliver()` |
+
+#### Voice / real-time mode
+
+For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues:
+
+```python
+kit = RoomKit(
+    delivery_strategy=WaitForIdle(buffer=3.0),
+    orchestration=Loop(
+        agent=coder,
+        reviewers=[security, perf],
+        strategy="parallel",
+        async_delivery=True,
+    ),
+)
+```
 
 ### Per-room override
 
