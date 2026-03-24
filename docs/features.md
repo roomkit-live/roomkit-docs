@@ -65,7 +65,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 ### Speech-to-Speech AI (Realtime Voice)
 
-`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, xAI Grok Realtime) as a first-class channel:
+`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, xAI Grok Realtime, ElevenLabs Conversational AI) as a first-class channel:
 
 - Audio flows directly between the user and the AI provider -- no intermediate STT/TTS
 - Transcriptions are emitted as RoomEvents so other channels see the conversation

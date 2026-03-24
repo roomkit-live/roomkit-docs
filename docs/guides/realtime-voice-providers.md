@@ -1,6 +1,6 @@
 # Realtime Voice (Speech-to-Speech)
 
-RoomKit's `RealtimeVoiceChannel` enables speech-to-speech AI conversations using providers like OpenAI Realtime API and Google Gemini Live. Audio flows directly between the client and the AI provider — no separate STT/TTS stages.
+RoomKit's `RealtimeVoiceChannel` enables speech-to-speech AI conversations using providers like OpenAI Realtime API, Google Gemini Live, xAI Grok Realtime, and ElevenLabs Conversational AI. Audio flows directly between the client and the AI provider — no separate STT/TTS stages.
 
 ## How It Differs from VoiceChannel
 
@@ -71,7 +71,7 @@ channel = RealtimeVoiceChannel(
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `provider` | required | Realtime AI provider (OpenAI, Gemini, xAI Grok) |
+| `provider` | required | Realtime AI provider (OpenAI, Gemini, xAI Grok, ElevenLabs) |
 | `transport` | required | Audio transport backend |
 | `system_prompt` | `None` | AI system instructions |
 | `voice` | `None` | Voice preset name |
@@ -325,6 +325,132 @@ provider_config={
 XAI_API_KEY=xai-...  uv run python examples/realtime_voice_local_xai.py
 XAI_MODEL=grok-3-fast  # Model override
 XAI_VOICE=ara           # Voice override
+```
+
+---
+
+## ElevenLabs Conversational AI
+
+Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider just sends/receives audio and handles client tool calls.
+
+```python
+from __future__ import annotations
+
+from roomkit.providers.elevenlabs.config import ElevenLabsRealtimeConfig
+from roomkit.providers.elevenlabs.realtime import ElevenLabsRealtimeProvider
+
+config = ElevenLabsRealtimeConfig(
+    api_key="xi-...",
+    agent_id="agent_abc123",           # From ElevenLabs dashboard
+)
+provider = ElevenLabsRealtimeProvider(config)
+```
+
+### Agent Setup
+
+ElevenLabs agents are pre-configured on the [ElevenLabs dashboard](https://elevenlabs.io/conversational-ai) with an LLM, voice, knowledge base, and tools. The `agent_id` identifies which agent to connect to. Runtime overrides for system prompt, voice, and temperature are applied at connection time.
+
+### Configuration Overrides
+
+Override agent defaults via channel parameters and `provider_config`:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    system_prompt="You are a helpful assistant.",   # Override agent prompt
+    voice="voice-id-from-elevenlabs",               # Override agent voice
+    temperature=0.7,                                # Override LLM temperature
+    provider_config={
+        "language": "fr",                           # Language code
+        "first_message": "Bonjour!",                # Agent's opening message
+        "dynamic_variables": {                      # Template variables for the prompt
+            "user_name": "Alice",
+            "account_id": "12345",
+        },
+    },
+)
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `system_prompt` | Override the agent's system prompt |
+| `voice` | ElevenLabs voice ID (overrides agent default) |
+| `temperature` | LLM sampling temperature |
+| `language` | Language code (e.g. `en`, `fr`, `ja`, `es`) — via `provider_config` |
+| `first_message` | Agent greeting message — via `provider_config` |
+| `dynamic_variables` | Dict of variables for prompt templates — via `provider_config` |
+
+### Authentication
+
+Two authentication modes:
+
+```python
+# Direct API key (server-to-server) — default
+config = ElevenLabsRealtimeConfig(
+    api_key="xi-...",
+    agent_id="agent_abc123",
+    requires_auth=False,              # API key sent as header
+)
+
+# Signed URL (client-facing deployments)
+config = ElevenLabsRealtimeConfig(
+    api_key="xi-...",
+    agent_id="agent_abc123",
+    requires_auth=True,               # Fetches signed URL via SDK
+)
+```
+
+### Regional Endpoints
+
+```python
+# EU (GDPR)
+config = ElevenLabsRealtimeConfig(
+    api_key="xi-...",
+    agent_id="agent_abc123",
+    base_url="wss://api.eu.residency.elevenlabs.io",
+)
+```
+
+### Tool Calling
+
+Tools are configured on the ElevenLabs dashboard as **client tools**. The agent invokes them, and the provider dispatches via the standard `on_tool_call` callback:
+
+```python
+async def handle_tool(name: str, arguments: dict) -> str:
+    if name == "check_order":
+        return json.dumps({"status": "shipped", "eta": "Tomorrow"})
+    return json.dumps({"error": f"Unknown tool: {name}"})
+
+
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tool_handler=handle_tool,
+)
+```
+
+!!! tip "Tools are dashboard-configured"
+    Unlike OpenAI and Gemini, ElevenLabs tool definitions are set on the agent dashboard — not passed at connection time. The `tools` parameter on `RealtimeVoiceChannel` is ignored for ElevenLabs. Only the `tool_handler` callback matters.
+
+### Audio Format
+
+ElevenLabs uses 16-bit PCM mono at **16 kHz** by default. The format is negotiated at connection time and reported in the server's init metadata.
+
+Supported formats: `pcm_8000`, `pcm_16000`, `pcm_22050`, `pcm_24000`, `pcm_44100`, `pcm_48000`, `ulaw_8000`.
+
+### Environment Variables (Example)
+
+```bash
+ELEVENLABS_API_KEY=xi-...  ELEVENLABS_AGENT_ID=agent_abc123 \
+    uv run python examples/realtime_voice_local_elevenlabs.py
+
+# Optional overrides
+ELEVENLABS_VOICE_ID=voice-id    # Voice override
+SYSTEM_PROMPT="Be concise."     # System prompt override
+LANGUAGE=fr                     # Language code
 ```
 
 ---
