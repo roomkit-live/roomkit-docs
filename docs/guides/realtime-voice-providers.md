@@ -352,7 +352,7 @@ ElevenLabs agents are pre-configured on the [ElevenLabs dashboard](https://eleve
 
 ### Configuration Overrides
 
-Override agent defaults via channel parameters and `provider_config`:
+Override agent defaults via channel parameters. Provider-specific settings (language, first message, dynamic variables) are passed via session `metadata["provider_config"]`:
 
 ```python
 channel = RealtimeVoiceChannel(
@@ -362,25 +362,33 @@ channel = RealtimeVoiceChannel(
     system_prompt="You are a helpful assistant.",   # Override agent prompt
     voice="voice-id-from-elevenlabs",               # Override agent voice
     temperature=0.7,                                # Override LLM temperature
-    provider_config={
-        "language": "fr",                           # Language code
-        "first_message": "Bonjour!",                # Agent's opening message
-        "dynamic_variables": {                      # Template variables for the prompt
-            "user_name": "Alice",
-            "account_id": "12345",
+)
+
+# Provider-specific overrides via session metadata
+session = await channel.start_session(
+    room_id="room-1",
+    participant_id="user-1",
+    metadata={
+        "provider_config": {
+            "language": "fr",                       # Language code
+            "first_message": "Bonjour!",            # Agent's opening message
+            "dynamic_variables": {                  # Template variables for the prompt
+                "user_name": "Alice",
+                "account_id": "12345",
+            },
         },
     },
 )
 ```
 
-| Parameter | Description |
-|-----------|-------------|
-| `system_prompt` | Override the agent's system prompt |
-| `voice` | ElevenLabs voice ID (overrides agent default) |
-| `temperature` | LLM sampling temperature |
-| `language` | Language code (e.g. `en`, `fr`, `ja`, `es`) — via `provider_config` |
-| `first_message` | Agent greeting message — via `provider_config` |
-| `dynamic_variables` | Dict of variables for prompt templates — via `provider_config` |
+| Parameter | Where | Description |
+|-----------|-------|-------------|
+| `system_prompt` | Channel | Override the agent's system prompt |
+| `voice` | Channel | ElevenLabs voice ID (overrides agent default) |
+| `temperature` | Channel | LLM sampling temperature |
+| `language` | `metadata["provider_config"]` | Language code (e.g. `en`, `fr`, `ja`, `es`) |
+| `first_message` | `metadata["provider_config"]` | Agent greeting message |
+| `dynamic_variables` | `metadata["provider_config"]` | Dict of variables for prompt templates |
 
 ### Authentication
 
