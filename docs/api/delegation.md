@@ -30,14 +30,14 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ::: roomkit.tasks.cache.CompletedTaskCache
 
-## Task Delivery Strategies
+## Delivery Strategies
 
-::: roomkit.tasks.delivery.BackgroundTaskDeliveryStrategy
+::: roomkit.core.delivery.DeliveryStrategy
 
-::: roomkit.tasks.delivery.ImmediateDelivery
+::: roomkit.core.delivery.Immediate
 
-::: roomkit.tasks.delivery.WaitForIdleDelivery
+::: roomkit.core.delivery.WaitForIdle
 
-::: roomkit.tasks.delivery.ContextOnlyDelivery
+::: roomkit.core.delivery.Queued
 
-::: roomkit.tasks.delivery.TaskDeliveryContext
+::: roomkit.core.delivery.DeliveryContext
