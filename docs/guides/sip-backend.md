@@ -71,8 +71,12 @@ PBX/SIP Trunk                    SIPVoiceBackend
 | `local_rtp_ip` | `str` | `"0.0.0.0"` | IP address for RTP media binding. Use your server's actual IP in production. |
 | `rtp_port_start` | `int` | `10000` | First port in the RTP allocation range. |
 | `rtp_port_end` | `int` | `20000` | Last port in the RTP allocation range. |
-| `supported_codecs` | `list[int] \| None` | `[0, 8]` | Codec payload types to accept (PCMU, PCMA). |
+| `supported_codecs` | `list[int] \| None` | `[9, 0, 8]` | Codec payload types to accept (G.722, PCMU, PCMA). |
 | `dtmf_payload_type` | `int` | `101` | RTP payload type for RFC 4733 DTMF events. |
+| `jitter_capacity` | `int` | `32` | Max packets the RTP jitter buffer can hold (~640 ms at 20 ms/packet). |
+| `jitter_prefetch` | `int` | `0` | Packets to accumulate before starting playout. 0 = start immediately. |
+| `skip_audio_gaps` | `bool` | `True` | Skip gaps in the RTP stream rather than filling with silence. |
+| `rtp_inactivity_timeout` | `float` | `30.0` | Seconds of RTP silence before forcing session disconnect (0 to disable). |
 
 ## X-header routing
 
@@ -213,6 +217,37 @@ TTS → AudioChunk stream or bytes → PCM-16 LE
 The backend allocates RTP ports sequentially in pairs (RTP + RTCP) starting at `rtp_port_start`. When the range is exhausted, it wraps around to the start. Each call uses one port pair.
 
 For production, ensure your firewall allows UDP traffic on the configured port range.
+
+## Jitter buffer tuning
+
+The SIP backend uses a packet-level jitter buffer in the RTP bridge to smooth out network timing variations. The defaults are tuned for low-latency voice AI (start playout immediately, tolerate small jitter), but you can adjust them for different network conditions:
+
+```python
+# Lossy / high-jitter network — larger buffer, pre-fill before playout
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    rtp_port_start=10000,
+    jitter_capacity=64,     # ~1.3 s buffer
+    jitter_prefetch=4,      # wait for 4 packets (~80 ms) before playout
+    skip_audio_gaps=False,  # fill gaps with silence for continuous playout
+)
+
+# Ultra-low latency (LAN / localhost)
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    rtp_port_start=10000,
+    jitter_capacity=8,   # minimal buffer
+    jitter_prefetch=0,   # start immediately
+)
+```
+
+| Parameter | Effect of increasing | Trade-off |
+|---|---|---|
+| `jitter_capacity` | Absorbs larger bursts of delayed packets | Higher memory usage; stale packets stay buffered longer |
+| `jitter_prefetch` | Smoother playout start, fewer underruns | Adds fixed latency before audio begins |
+| `skip_audio_gaps` (off) | Continuous audio stream with silence fill | May mask packet loss from downstream processing |
 
 ## SIP vs RTP backend
 
