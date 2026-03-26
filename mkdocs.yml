@@ -94,6 +94,7 @@ nav:
           - Anam AI Avatar (Realtime A/V): guides/anam-avatar.md
           - Screen Capture: guides/screen-capture.md
           - Video Backends (RTP/SIP): guides/video-backends.md
+          - Video Overlays: guides/video-overlays.md
           - PyAV Video Recorder: guides/pyav-video-recorder.md
           - Room Media Recorder: guides/room-media-recorder.md
       - AI & Tools:
