@@ -143,3 +143,106 @@ kit = RoomKit(
 ```
 
 See the [Orchestration guide](orchestration.md) for full Supervisor documentation.
+
+## Persistent delivery backends
+
+By default, `kit.deliver()` executes in-process — if the process crashes, pending deliveries are lost. For production deployments, configure a **delivery backend** to decouple enqueue from execution:
+
+```python
+from roomkit import RoomKit, InMemoryDeliveryBackend, WaitForIdle
+
+# In-memory backend (single process, no persistence)
+kit = RoomKit(
+    delivery_strategy=WaitForIdle(buffer=3.0),
+    delivery_backend=InMemoryDeliveryBackend(),
+)
+
+async with kit:
+    await kit.deliver("room", content="Background result ready.")
+    # Item is enqueued → worker loop executes delivery asynchronously
+```
+
+### How it works
+
+When a `delivery_backend` is configured:
+
+1. `kit.deliver()` serializes the request into a `DeliveryItem` and calls `backend.enqueue()`
+2. A background worker loop calls `backend.dequeue()` to claim items
+3. The worker deserializes the strategy and executes `strategy.deliver()`
+4. On success → `backend.ack()`; on failure → `backend.nack()` (retries or dead-letters)
+
+```
+kit.deliver()
+  → serialize strategy + content → DeliveryItem
+  → backend.enqueue(item)
+  → return (non-blocking)
+
+Worker loop (background):
+  → backend.dequeue() → claim items
+  → BEFORE_DELIVER hook
+  → strategy.deliver(ctx)
+  → AFTER_DELIVER hook
+  → backend.ack() or backend.nack()
+```
+
+### Redis backend
+
+For multi-worker deployments, use `RedisDeliveryBackend` with Redis Streams:
+
+```python
+from roomkit import RoomKit, WaitForIdle
+from roomkit.delivery import RedisDeliveryBackend
+
+kit = RoomKit(
+    delivery_strategy=WaitForIdle(buffer=3.0),
+    delivery_backend=RedisDeliveryBackend("redis://localhost:6379"),
+)
+```
+
+Requires `pip install roomkit[redis]`.
+
+Features:
+
+- **Consumer groups** distribute items across workers automatically
+- **At-least-once delivery** via Redis Streams PEL (Pending Entries List)
+- **Bounded dead-letter stream** for items that exhaust retries
+- **Injected client support** for connection pooling
+
+```python
+import redis.asyncio as redis
+
+pool = redis.ConnectionPool.from_url("redis://localhost:6379")
+client = redis.Redis(connection_pool=pool)
+
+backend = RedisDeliveryBackend(
+    client=client,
+    stream_prefix="myapp:delivery",
+    group_name="myapp-workers",
+    max_dead_letter_size=10_000,
+)
+```
+
+### Available backends
+
+| Backend | Persistence | Multi-worker | Install |
+|---------|------------|-------------|---------|
+| `InMemoryDeliveryBackend` | No | No | Built-in |
+| `RedisDeliveryBackend` | Yes | Yes | `roomkit[redis]` |
+
+### Retry and dead-letter
+
+Failed deliveries are retried up to `max_retries` (default 3). After exhaustion, items move to the dead-letter queue:
+
+```python
+# Inspect dead-lettered items
+dead = await backend.get_dead_letter_items(limit=50)
+for item in dead:
+    print(f"{item.id}: {item.error}")
+
+# Check queue depth
+depth = await backend.get_queue_depth()
+```
+
+### Backward compatibility
+
+If no `delivery_backend` is configured, `kit.deliver()` works exactly as before — in-process with `BEFORE_DELIVER`/`AFTER_DELIVER` hooks.
