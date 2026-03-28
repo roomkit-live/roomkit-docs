@@ -263,6 +263,9 @@ Filter options:
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
 | `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
+| `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
+| `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking) |
+| `ON_AI_RESPONSE` | Async | AI generation completed — scoring, analytics, job tracking |
 
 ### AI Intelligence Layer
 
@@ -726,6 +729,35 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
+- **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely:
+
+```python
+from roomkit.models.enums import HookTrigger
+from roomkit.models.hook import HookResult
+
+# Budget gating — block expensive generation before tokens are spent
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+async def check_budget(event, ctx):
+    if await is_over_budget(ctx.room.metadata.get("tenant_id")):
+        return HookResult.block(reason="Monthly token budget exceeded")
+    return HookResult.allow()
+
+# PII redaction — strip sensitive data before it leaves your infrastructure
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+async def redact_pii(event, ctx):
+    for msg in event.ai_context.messages:
+        if msg.role == "user" and isinstance(msg.content, str):
+            msg.content = await pii_redactor.redact(msg.content)
+    return HookResult.allow()
+
+# Knowledge injection — enrich context with external data
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+async def inject_knowledge(event, ctx):
+    docs = await knowledge_base.search(event.ai_context.messages[-1].content)
+    if docs:
+        event.ai_context.system_prompt += f"\n\nRelevant context:\n{docs}"
+    return HookResult.allow()
+```
 
 ### Realtime Events (Typing, Presence, Read Receipts)
 
