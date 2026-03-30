@@ -609,7 +609,7 @@ class MySource(SourceProvider):
 
             # Emit into RoomKit pipeline
             result = await emit(message)
-            if result.blocked:
+            if result.action == "block":
                 print(f"Message blocked: {result.reason}")
 
     async def stop(self) -> None:
@@ -903,8 +903,8 @@ from roomkit import HookTrigger, HookResult
 async def prevent_echo(event, context):
     # Don't send back to the channel that originated the message
     if event.channel_id == context.target_channel_id:
-        return HookResult(blocked=True, reason="echo prevention")
-    return HookResult()
+        return HookResult.block("echo prevention")
+    return HookResult.allow()
 ```
 
 Or use room-level channel filtering if you want more control:
@@ -914,14 +914,14 @@ Or use room-level channel filtering if you want more control:
 @kit.hook(HookTrigger.BEFORE_INBOUND)
 async def tag_source(event, context):
     context.metadata["source_channel"] = event.channel_id
-    return HookResult()
+    return HookResult.allow()
 
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
 async def skip_source_channel(event, context):
     source_channel = context.metadata.get("source_channel")
     if source_channel == context.target_channel_id:
-        return HookResult(blocked=True)
-    return HookResult()
+        return HookResult.block()
+    return HookResult.allow()
 ```
 
 ### Complete Example: Browser + CLI Chat
@@ -947,8 +947,8 @@ kit.register_provider("cli", cli_provider)
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
 async def prevent_echo(event, context):
     if event.channel_id == context.target_channel_id:
-        return HookResult(blocked=True, reason="echo")
-    return HookResult()
+        return HookResult.block("echo")
+    return HookResult.allow()
 
 # --- Browser WebSocket Endpoint ---
 @app.websocket("/chat/{room_id}/{user_id}")
@@ -1004,8 +1004,8 @@ CLI sends "Hello":
                     ┌─────┴─────┐
                     ▼           ▼
               cli channel   browser channel
-              (blocked:     (delivered via
-               echo)         HTTP/WS)
+              (action:      (delivered via
+               block, echo)  HTTP/WS)
 
 Browser sends "Hi":
   Browser ──HTTP──► kit.process_inbound()
@@ -1016,8 +1016,8 @@ Browser sends "Hi":
                     ┌─────┴─────┐
                     ▼           ▼
               cli channel   browser channel
-              (delivered    (blocked:
-               via WS        echo)
+              (delivered    (action:
+               via WS        block, echo)
                Provider)
 ```
 
