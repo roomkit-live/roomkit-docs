@@ -1,6 +1,6 @@
 # PostgreSQL Storage
 
-`PostgresStore` is the production-ready `ConversationStore` backend for RoomKit. It uses asyncpg for connection pooling and JSONB for flexible model storage with full transaction support.
+`PostgresStore` is the production-ready `ConversationStore` backend for RoomKit. It uses asyncpg for connection pooling, a fully relational schema with indexed columns for frequently queried fields, and JSONB only for extensible data (metadata, content, capabilities).
 
 ## Installation
 
@@ -72,24 +72,30 @@ store = PostgresStore(pool=pool)
 
 PostgresStore creates 10 tables on first `init()`:
 
-| Table | Purpose | Key Indexes |
-|-------|---------|-------------|
-| `rooms` | Room state and metadata | status, org_id, metadata (GIN) |
-| `events` | Conversation events (JSONB) | room_id+created_at, idempotency_key |
-| `bindings` | Channel attachments | channel_id |
-| `participants` | Room participants | (room_id, id) PK |
-| `identities` | User identities | id PK |
-| `identity_addresses` | Multi-channel address lookup | (channel_type, address) unique |
-| `tasks` | Background tasks | room_id |
-| `observations` | AI/ML observations | room_id |
-| `read_markers` | Read state tracking | (room_id, channel_id) PK |
-| `schema_version` | Migration tracking | version |
+| Table | Purpose | Key Columns | Indexes |
+|-------|---------|-------------|---------|
+| `rooms` | Room state and metadata | `id`, `organization_id`, `status`, `event_count`, `metadata` (JSONB) | status, org_id, updated_at |
+| `events` | Conversation events | `type`, `source_channel_id`, `source_channel_type`, `index`, `correlation_id`, `visibility`, `content` (JSONB) | room+index, room+type, room+created_at, correlation_id, source, idempotency |
+| `bindings` | Channel attachments | `channel_type`, `category`, `direction`, `access`, `muted` | channel_id |
+| `participants` | Room participants | `channel_id`, `role`, `status`, `identification`, `identity_id` | room+channel_id unique |
+| `identities` | User identities | `organization_id`, `display_name`, `email`, `channel_addresses` (JSONB) | id PK |
+| `identity_addresses` | Multi-channel address lookup | `channel_type`, `address`, `identity_id` | (channel_type, address) unique |
+| `tasks` | Background tasks | `title`, `status`, `assigned_to` | room_id |
+| `observations` | AI/ML observations | `channel_id`, `content`, `category`, `confidence` | room_id |
+| `read_markers` | Read state tracking | `event_index` (integer) | (room_id, channel_id) PK |
+| `schema_version` | Migration tracking | `version` | -- |
 
-All Pydantic models are stored as JSONB in a `data` column — flexible and queryable. Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are deleted.
+The schema uses **real relational columns** for all frequently queried fields — `type`, `source_channel_id`, `index`, `correlation_id`, `visibility`, `status`. JSONB is used only for extensible data: `content` (message body, tool call payload), `metadata` (application-specific), and `capabilities`. This enables efficient B-tree indexed queries instead of JSONB path extraction.
+
+Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are deleted.
 
 ### Schema Initialization
 
 The schema is idempotent — `CREATE TABLE IF NOT EXISTS` and `INSERT ... WHERE NOT EXISTS` patterns ensure safe re-runs. Version tracking via `schema_version` table enables future migrations.
+
+### Extending the Schema
+
+Applications can add custom columns to RoomKit's tables for business-specific needs. RoomKit reads `SELECT *` and maps known columns — extra columns are ignored by the row-to-model converters. Use RoomKit's `metadata` JSONB fields for application-specific data that doesn't need its own column, or add columns via your own migrations for data that benefits from indexing.
 
 ## Room Operations
 
@@ -150,12 +156,54 @@ events = await store.list_events("room-1", offset=0, limit=50)
 # With visibility filter
 events = await store.list_events("room-1", visibility_filter="all")
 
+# Cursor-based pagination (efficient for large rooms)
+events = await store.list_events("room-1", after_index=42, limit=20)
+
 # Idempotency check (prevent duplicate processing)
 exists = await store.check_idempotency("room-1", "msg-unique-key")
 
 # Event count
 count = await store.get_event_count("room-1")
 ```
+
+### EventFilter Queries
+
+`EventFilter` enables rich filtering with indexed column lookups:
+
+```python
+from roomkit import EventFilter, EventType
+
+# Messages only (for AI context)
+messages = await store.get_conversation("room-1", limit=50)
+
+# Full activity timeline (messages + tool calls + everything)
+timeline = await store.get_timeline("room-1")
+
+# Filter by event type
+tools = await store.list_events("room-1", event_filter=EventFilter(
+    event_types=[EventType.TOOL_CALL_START, EventType.TOOL_CALL_END],
+))
+
+# Filter by correlation ID (all segments of one AI response)
+segments = await store.list_events("room-1", event_filter=EventFilter(
+    correlation_id="abc123",
+))
+
+# Filter by source channel
+ai_events = await store.list_events("room-1", event_filter=EventFilter(
+    source_channel_id="ai-assistant",
+))
+
+# Combine multiple filters
+from datetime import datetime, UTC, timedelta
+recent_tools = await store.list_events("room-1", event_filter=EventFilter(
+    event_types=[EventType.TOOL_CALL_END],
+    source_channel_id="ai-assistant",
+    after_time=datetime.now(UTC) - timedelta(hours=1),
+))
+```
+
+All `EventFilter` fields map to indexed columns — no JSONB path extraction at query time. See the [Activity Persistence guide](activity-persistence.md) for details on tool call persistence and the full event model.
 
 ## Identity Storage
 
