@@ -89,6 +89,7 @@ nav:
           - Overview: guides/video-overview.md
           - Video Bridging: guides/video-bridge.md
           - Video & Vision: guides/video-vision.md
+          - Face Touch Guard: guides/face-touch-guard.md
           - Screen & Vision Tools: guides/screen-vision-tools.md
           - Avatar (Lip-Synced Talking Head): guides/avatar.md
           - Anam AI Avatar (Realtime A/V): guides/anam-avatar.md
@@ -101,6 +102,7 @@ nav:
           - Guardrails: guides/guardrails.md
           - AI Steering Directives: guides/ai-steering.md
           - Tool Calling & Policies: guides/tool-calling.md
+          - Human-in-the-Loop: guides/human-in-the-loop.md
           - MCP Tool Provider: guides/mcp-tool-provider.md
           - AI Thinking: guides/ai-thinking.md
           - Streaming with Tools: guides/streaming-tools.md
@@ -116,6 +118,7 @@ nav:
           - Content Transcoding: guides/content-transcoding.md
           - Response Visibility: guides/response-visibility.md
       - Data & Infrastructure:
+          - Activity Persistence: guides/activity-persistence.md
           - Advanced Memory Providers: guides/advanced-memory.md
           - Memory Provider: guides/memory-provider.md
           - Identity Resolution: guides/identity-resolution.md
