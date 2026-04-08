@@ -151,6 +151,27 @@ The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user
 | `refine_instruction` | `None` | Custom topic extraction instruction |
 | `delegation_message` | `"I'm dispatching..."` | Message injected when workers start (async mode) |
 | `wait_for_result` | `True` | Inline or background execution (manual mode) |
+| `share_channels` | `None` | Channel IDs from parent room to share with worker child rooms |
+
+#### Sharing channels with workers
+
+By default, worker child rooms only have the worker agent attached. If workers need access to channels from the parent room (e.g., a WebSocket status channel, an email channel, or a system channel for observability), use `share_channels`:
+
+```python
+kit = RoomKit(
+    orchestration=Supervisor(
+        supervisor=coordinator,
+        workers=[researcher, writer],
+        strategy="parallel",
+        auto_delegate=True,
+        share_channels=["system", "ws-status"],
+    ),
+)
+```
+
+Each channel ID listed in `share_channels` is copied from the parent room's bindings into every child room created during delegation. The child room uses the same provider instance with its own binding — events emitted through a shared channel in a child room are visible on that channel (e.g., real-time tool call status sent via a WebSocket channel).
+
+This is passed through to `kit.delegate(share_channels=...)` on every delegation call the Supervisor makes, regardless of mode (auto-delegate, strategy-based, or per-worker tools).
 
 #### Delivery strategies
 

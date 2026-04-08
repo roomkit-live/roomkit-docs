@@ -263,6 +263,7 @@ Filter options:
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
 | `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
+| `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking) |
 | `ON_AI_RESPONSE` | Async | AI generation completed — scoring, analytics, job tracking |
@@ -729,6 +730,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
+- **Human-in-the-loop** — pause the AI tool loop to request user input via `HumanInputToolHandler`. The tool blocks until the user responds, then resumes with the answer. Works with any tool name (`AskUserQuestion`, confirmations, data collection). Uses `ON_USER_INPUT_REQUIRED` sync hook for notifications. See the [Human-in-the-Loop guide](guides/human-in-the-loop.md)
 - **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely:
 
 ```python
@@ -1544,7 +1546,40 @@ await backend.start_capture(session)
 | `OpenAIVisionProvider` | OpenAI / Ollama / vLLM | `roomkit[openai]` |
 | `MockVisionProvider` | Testing | Built-in |
 
-**Video hooks:** `ON_VIDEO_SESSION_STARTED`, `ON_VIDEO_SESSION_ENDED`, `ON_VIDEO_TRACK_ADDED`, `ON_VIDEO_TRACK_REMOVED`, `ON_SCREEN_SHARE_STARTED`, `ON_SCREEN_SHARE_STOPPED`.
+**Video hooks:** `ON_VIDEO_SESSION_STARTED`, `ON_VIDEO_SESSION_ENDED`, `ON_VIDEO_TRACK_ADDED`, `ON_VIDEO_TRACK_REMOVED`, `ON_SCREEN_SHARE_STARTED`, `ON_SCREEN_SHARE_STOPPED`, `ON_VIDEO_DETECTION`.
+
+### Video Detection Filters
+
+Pipeline filters can emit detection events via `ON_VIDEO_DETECTION` — a generic hook trigger for all filter-originated detections (face touch, object detection, etc.):
+
+```python
+from roomkit import RoomKit, HookTrigger, HookExecution, VideoDetectionEvent
+from roomkit.channels.video import VideoChannel
+from roomkit.video.pipeline.config import VideoPipelineConfig
+from roomkit.video.pipeline.filter.mediapipe_face_touch import (
+    FaceTouchConfig, FaceTouchFilter, FaceTouchSensitivity,
+)
+
+pipeline = VideoPipelineConfig(
+    filters=[FaceTouchFilter(FaceTouchConfig(sensitivity=FaceTouchSensitivity.HIGH))],
+)
+video = VideoChannel("video", backend=backend, pipeline=pipeline)
+
+@kit.hook(HookTrigger.ON_VIDEO_DETECTION, execution=HookExecution.ASYNC)
+async def on_detection(event: VideoDetectionEvent, ctx):
+    if event.kind == "face_touch":
+        print(f"Touch on {event.metadata['zone']}!")
+```
+
+**Detection filters:**
+
+| Filter | Detection | Install |
+|--------|-----------|---------|
+| `FaceTouchFilter` | Hand-to-face contact (MediaPipe) | `roomkit[mediapipe]` |
+| `YOLODetectorFilter` | Object detection (YOLO) | `roomkit[yolo]` |
+| `MockFaceTouchFilter` | Testing | Built-in |
+
+See the [Face Touch Guard guide](guides/face-touch-guard.md) for configuration, sensitivity presets, and zone setup.
 
 ### Screen Capture
 

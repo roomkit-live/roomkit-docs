@@ -9,3 +9,15 @@ Tool system for AI function calling. See the [Tool Calling & Policies guide](../
 ::: roomkit.tools.mcp.MCPToolProvider
 
 ::: roomkit.tools.compose.compose_tool_handlers
+
+## Human-in-the-Loop
+
+::: roomkit.tools.human_input.HumanInputHandler
+
+::: roomkit.tools.human_input.HumanInputToolHandler
+
+::: roomkit.models.pending_input.PendingInput
+
+::: roomkit.models.pending_input.PendingInputEvent
+
+::: roomkit.models.pending_input.PendingInputStatus
