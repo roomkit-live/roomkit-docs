@@ -70,3 +70,7 @@ In addition to the standard `VoiceBackend` callbacks, the SIP backend provides:
 
 - `on_call(callback)` — fired when an incoming INVITE is accepted
 - `on_call_disconnected(callback)` — fired when the remote party sends BYE
+
+## Authentication
+
+Inbound INVITEs can be challenged with RFC 2617 digest auth via either a static `auth_users={"user": "pass"}` dict (constructor) or a runtime `set_auth_resolver(fn)` callback. The resolver pattern is the right choice for multi-tenant deployments where credentials live in a database and change without a restart. See the [Authentication section in the SIP Voice Backend guide](../guides/sip-backend.md#authentication) for examples and the multi-tenant pattern.

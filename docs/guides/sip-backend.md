@@ -101,6 +101,92 @@ route[FORWARD_TO_ROOMKIT] {
 }
 ```
 
+## Authentication
+
+Inbound INVITEs can be challenged with RFC 2617 digest authentication. The backend supports two ways to configure credentials, and they can be combined.
+
+### Static `auth_users` dict
+
+Pass a `username → password` mapping at construction. Every INVITE without valid credentials gets a 401 challenge; on retry, the response is validated against the dict.
+
+```python
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    rtp_port_start=10000,
+    auth_users={"6001": "secret123", "agent": "s3cret"},
+    auth_realm="mycompany.com",   # appears in the WWW-Authenticate header
+)
+```
+
+Best for single-tenant deployments where the credential set is small and known at startup.
+
+### Runtime resolver — `set_auth_resolver()`
+
+For multi-tenant or large credential stores, install a callback that looks up the password on demand. The resolver is consulted on every authenticated INVITE, so credentials can be added, rotated, or revoked without restarting the backend.
+
+```python
+def lookup_password(username: str) -> str | None:
+    """Look up the password for a SIP username — None denies the call."""
+    row = inbound_credentials_cache.get(username)  # in-memory cache populated from DB
+    return row["password"] if row else None
+
+backend.set_auth_resolver(lookup_password)
+```
+
+Key properties:
+
+- **Resolver wins over the static dict.** When both are configured, the resolver is consulted first; the dict is only used as fallback when the resolver returns `None`.
+- **Synchronous.** The resolver runs inside the SIP message loop, so back it with an in-memory cache when the source of truth is remote (database, secret manager). Refresh the cache on credential changes.
+- **Exceptions are caught.** A raising resolver is treated as denial — the call is rejected with 403, not propagated up. A buggy lookup callback can't crash the SIP message loop.
+- **`set_auth_resolver(None)`** removes a previously installed resolver and falls back to the dict (or disables auth entirely if `auth_users` is also unset).
+
+Pair the resolver with `set_auth_resolver(None)` + `auth_users=None` to dynamically enable/disable auth at runtime.
+
+### Multi-tenant pattern
+
+In a SaaS deployment where each tenant has their own SIP trunk credentials, the resolver becomes the routing primitive — once a username authenticates, it tells you which tenant owns the call:
+
+```python
+# At startup: build a per-process credential cache from the DB.
+credentials: dict[str, str] = {}     # username → password
+tenant_by_username: dict[str, str] = {}  # username → tenant_id
+
+async def refresh_credentials() -> None:
+    rows = await db.fetch(
+        "SELECT username, password, tenant_id FROM sip_trunks WHERE auth_enabled"
+    )
+    credentials.clear()
+    tenant_by_username.clear()
+    for row in rows:
+        credentials[row["username"]] = row["password"]
+        tenant_by_username[row["username"]] = row["tenant_id"]
+
+await refresh_credentials()
+backend.set_auth_resolver(lambda u: credentials.get(u))
+
+# Re-call refresh_credentials() after any DB write that changes credentials —
+# the next INVITE picks up the new state.
+
+@backend.on_call
+async def handle_call(session):
+    # Once authenticated, session.metadata["caller_user"] is the username
+    # that just satisfied the digest challenge — look up the tenant.
+    username = session.metadata.get("caller_user")
+    tenant_id = tenant_by_username.get(username)
+    await route_to_tenant(tenant_id, session)
+```
+
+This pattern lets the application own credential storage entirely — no need to hold every tenant's secrets in `SIPVoiceBackend`'s constructor argument, and no restart required when a tenant onboards.
+
+### Empty-dict gotcha (fixed in this release)
+
+If you want to start with no credentials and add them later (via mutation or a resolver), pass `auth_users=None` (the default) — not `auth_users={}`. The auth gate (`backend.has_auth()`) returns `False` for both `None` and `{}` until a credential source is actually populated. This guards against accidentally enabling auth challenges before any credentials exist.
+
+### Realm
+
+`auth_realm` (default `"roomkit"`) is the value sent in the `WWW-Authenticate` header. Most carriers don't care what it says — they sign the digest with whatever realm they receive — so a single global realm is usually fine. Use a per-deployment realm only when your carrier requires it.
+
 ## Callbacks
 
 The SIP backend provides two additional callbacks beyond the standard `VoiceBackend` interface:
