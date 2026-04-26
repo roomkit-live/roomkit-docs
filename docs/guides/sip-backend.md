@@ -187,6 +187,35 @@ If you want to start with no credentials and add them later (via mutation or a r
 
 `auth_realm` (default `"roomkit"`) is the value sent in the `WWW-Authenticate` header. Most carriers don't care what it says — they sign the digest with whatever realm they receive — so a single global realm is usually fine. Use a per-deployment realm only when your carrier requires it.
 
+## Pre-accept rejection — `set_invite_filter()`
+
+By default the SIP backend auto-accepts any INVITE that passes auth, sends `200 OK`, and then fires the `on_call` callback. Applications that want to reject calls based on routing rules (DID not provisioned, tenant not authorized, outside business hours, etc.) can do so from `on_call` by calling `backend.disconnect(session)` — but the carrier will already have seen `200 OK` and the call appears in CDRs as briefly answered.
+
+`set_invite_filter` installs a hook that runs inside `_handle_invite` *before* `200 OK`. The filter receives the `IncomingCall`, returns `None` to accept (proceed to SDP and `200 OK`) or a `(status, reason)` tuple to reject with that 4xx/5xx response. The carrier never sees `200 OK` on a rejection.
+
+```python
+async def my_invite_filter(call) -> tuple[int, str] | None:
+    """Accept calls only for provisioned DIDs."""
+    callee = call.callee  # e.g. "sip:8888@my.host"
+    did = callee.split("@", 1)[0].split(":", 1)[-1]
+    route = await db.find_did_route(did)
+    if route is None:
+        return (404, f"Number {did} Not Found")
+    if route.tenant_disabled:
+        return (403, "Forbidden")
+    return None  # accept
+
+backend.set_invite_filter(my_invite_filter)
+```
+
+Key properties:
+
+- **Runs after auth.** A filter receiving the call can trust that any digest authentication has already succeeded. The authenticated SIP username is available via `call.invite.get_header("Authorization")` (parse with `aiosipua.parse_auth`) or, less safely, via `call.invite.from_addr.uri.user`.
+- **Sync or async.** The dispatcher detects coroutine functions and awaits them. Async filters run inside the SIP message dispatch task — keep DB / network calls fast (the dialog is half-set-up while the filter runs).
+- **Exception-safe.** A raising filter is caught and treated as a `500 Server Internal Error` rejection. A buggy lookup callback can't crash the SIP message loop or affect other in-flight INVITEs.
+- **Choose appropriate status codes** for the rejection: `403 Forbidden` (no permission), `404 Not Found` (no route), `488 Not Acceptable Here` (codec/SDP), `486 Busy Here`, etc. The reason phrase appears in the `SIP/2.0 4xx <reason>` line so keep it generic — carrier and CDR fields can see it. Internal identifiers (tenant UUIDs, agent IDs) should not appear in the reason text.
+- **`set_invite_filter(None)`** removes a previously installed filter and reverts to the default auto-accept behavior.
+
 ## Callbacks
 
 The SIP backend provides two additional callbacks beyond the standard `VoiceBackend` interface:
