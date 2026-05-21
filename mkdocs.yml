@@ -113,6 +113,7 @@ nav:
           - Auditing (Session & Tool): guides/tool-audit.md
           - Agent Skills: guides/agent-skills.md
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
+          - PolarGrid Provider: guides/polargrid.md
       - Channels & Content:
           - SMS & RCS Providers: guides/sms-providers.md
           - Content Transcoding: guides/content-transcoding.md
