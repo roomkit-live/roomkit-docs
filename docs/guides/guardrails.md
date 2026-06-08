@@ -456,6 +456,8 @@ await kit.attach_channel("room-1", "ws-audit", access=Access.WRITE_ONLY)
 | `WRITE_ONLY` | Yes | No |
 | `NONE` | No | No |
 
+A source whose binding cannot write -- `READ_ONLY`, `NONE`, or a `muted` channel -- does not inject a delivered message. Its inbound event is stored with status `BLOCKED` (`blocked_by: "source_read_only"` or `"source_muted"`) for audit and is never broadcast. Tasks and observations produced by hooks are still collected -- muting silences the voice, not the brain.
+
 ### Visibility
 
 Control which channels see which responses:

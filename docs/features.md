@@ -158,13 +158,15 @@ Every message passes through a deterministic processing pipeline:
 4. **Identity resolution** -- Identify the sender (optional, with timeout and channel filtering)
 5. **Room lock** -- Acquire per-room lock for atomic processing
 6. **Idempotency check** -- Reject duplicate messages by `idempotency_key`
-7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST)
-8. **Event storage** -- Persist the event to the conversation store
-9. **Broadcast** -- Deliver to all eligible channels via the EventRouter
-10. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`)
-11. **Side effects** -- Persist tasks and observations
-12. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST)
-13. **Activity update** -- Update room timestamp and latest event index
+7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST), before any persistence
+8. **Write-permission gate** -- A source whose binding cannot write (`READ_ONLY`/`NONE`, or muted) is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected
+9. **Edit/delete mutation** -- For `EDIT`/`DELETE` events, the target message is mutated only here -- after hooks allow the event -- so a moderation hook that blocks the edit leaves the target untouched
+10. **Event storage** -- Persist the allowed event as `DELIVERED`
+11. **Broadcast** -- Deliver to all eligible channels via the EventRouter
+12. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`)
+13. **Side effects** -- Persist tasks and observations
+14. **Activity update** -- Update room timestamp and latest event index
+15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
 
 ### Hook System
 
@@ -2168,7 +2170,7 @@ async def sms_webhook(request: Request):
 
 ### Direct Event Injection
 
-Send events directly into a room without going through the inbound pipeline:
+Send events directly into a room without an inbound channel message. Injection runs the **same locked pipeline** as inbound -- BEFORE_BROADCAST hooks, the source write-permission gate, persistence, broadcast, reentry drain, and AFTER_BROADCAST hooks -- so moderation, orchestration, and transformations apply exactly as they do to channel messages (a blocking hook returns a `BLOCKED` event and suppresses delivery):
 
 ```python
 event = await kit.send_event(

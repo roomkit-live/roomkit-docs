@@ -280,11 +280,11 @@ sequenceDiagram
 
             IR->>IR: Drain reentry events (AI responses)
             IR->>Store: Store tasks & observations
-            IR->>AH: Run async hooks (AFTER_BROADCAST)
             IR->>Store: Update room activity timestamp
         end
         Note over IR,Store: Per-room lock released
     end
+    IR->>AH: Run async hooks (AFTER_BROADCAST, lock released)
 ```
 
 ### Event Routing Decision Flow
