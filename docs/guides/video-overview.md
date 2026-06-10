@@ -231,7 +231,7 @@ For room-based integration with hooks, use `RealtimeAudioVideoChannel` instead.
 | `webcam_recording.py` | OpenCV video recording |
 | `webcam_censor.py` | YOLO + censor filter pipeline |
 | `screen_describe.py` | Screen capture + vision description |
-| `screen_assistant_ia.py` | Voice + screen AI assistant |
+| `screen_assistant_ai.py` | Voice + screen AI assistant |
 | `screen_agent_orchestrated.py` | Multi-agent screen automation |
 | `sip_video_bridge.py` | Bridge two SIP A/V calls (audio + video forwarding) |
 | `sip_video_call.py` | Full SIP audio+video call |
