@@ -1508,6 +1508,30 @@ Wire protocol: `[2 bytes sample_rate/100 LE] [PCM-16 LE audio data]`
 
 Lazy-loaded via `roomkit.voice.get_webtransport_backend()`. Install with `pip install 'roomkit[webtransport]'`.
 
+#### Packet Loss Concealment (SIP/RTP)
+
+The SIP backend replaces RTP packets confirmed lost in transit with
+concealment PCM (`plc=True` by default), keeping the inbound stream
+temporally continuous — recordings keep their duration, AEC reference
+alignment is preserved, and no pipeline stage needs loss awareness:
+
+```python
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    plc=True,   # default — set False to skip lost audio silently
+)
+```
+
+Opus uses native libopus PLC; G.711/G.722/L16 fall back to last-frame
+repetition fading to silence over 60 ms. Loss detection is
+sequence-number based, so sender pauses (DTMF, VAD suppression) are never
+mistaken for loss. The per-session `concealed=N` counter appears in the
+backend's periodic and final stats logs.
+
+See the [SIP Voice Backend guide](guides/sip-backend.md#packet-loss-concealment)
+for details.
+
 ---
 
 ## Video

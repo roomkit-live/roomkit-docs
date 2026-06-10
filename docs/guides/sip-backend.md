@@ -75,7 +75,8 @@ PBX/SIP Trunk                    SIPVoiceBackend
 | `dtmf_payload_type` | `int` | `101` | RTP payload type for RFC 4733 DTMF events. |
 | `jitter_capacity` | `int` | `32` | Max packets the RTP jitter buffer can hold (~640 ms at 20 ms/packet). |
 | `jitter_prefetch` | `int` | `0` | Packets to accumulate before starting playout. 0 = start immediately. |
-| `skip_audio_gaps` | `bool` | `True` | Skip gaps in the RTP stream rather than filling with silence. |
+| `skip_audio_gaps` | `bool` | `True` | Skip confirmed-lost packets rather than stalling the jitter buffer. |
+| `plc` | `bool` | `True` | Replace confirmed-lost packets with concealment PCM, keeping the inbound stream temporally continuous. Effective only with `skip_audio_gaps`. |
 | `rtp_inactivity_timeout` | `float` | `30.0` | Seconds of RTP silence before forcing session disconnect (0 to disable). |
 
 ## X-header routing
@@ -345,7 +346,7 @@ backend = SIPVoiceBackend(
     rtp_port_start=10000,
     jitter_capacity=64,     # ~1.3 s buffer
     jitter_prefetch=4,      # wait for 4 packets (~80 ms) before playout
-    skip_audio_gaps=False,  # fill gaps with silence for continuous playout
+    skip_audio_gaps=False,  # wait for late packets instead of skipping
 )
 
 # Ultra-low latency (LAN / localhost)
@@ -362,6 +363,42 @@ backend = SIPVoiceBackend(
 |---|---|---|
 | `jitter_capacity` | Absorbs larger bursts of delayed packets | Higher memory usage; stale packets stay buffered longer |
 | `jitter_prefetch` | Smoother playout start, fewer underruns | Adds fixed latency before audio begins |
+
+## Packet loss concealment
+
+With `skip_audio_gaps=True` (the default), the jitter buffer confirms losses by
+sequence-number analysis and skips them instead of stalling. On its own that
+compresses the delivered timeline: a lost 20 ms packet means 20 ms of audio
+simply missing — recordings shorten and AEC reference alignment drifts.
+
+`plc=True` (the default) repairs this at the transport layer. Confirmed-lost
+packets are replaced with concealment PCM before delivery to the pipeline:
+
+- **Opus** — native libopus PLC (the decoder synthesizes plausible audio from
+  its internal state)
+- **G.711 / G.722 / L16** — generic concealer: the last received frame is
+  repeated with a linear fade to silence over 60 ms; longer bursts are filled
+  with silence to preserve timeline alignment
+
+Concealment is transparent to the pipeline — recorder, AEC, and STT receive a
+temporally continuous stream and need no loss awareness. Sender pauses (RFC
+4733 DTMF, VAD suppression) never trigger concealment: only sequence-number
+gaps count as loss.
+
+```python
+backend = SIPVoiceBackend(
+    local_sip_addr=("0.0.0.0", 5060),
+    local_rtp_ip="10.0.0.5",
+    plc=True,   # default — set False to skip lost audio silently
+)
+```
+
+Diagnostics: the periodic per-session stats line (DEBUG) and the final stats
+line on hangup (INFO) both include `concealed=N` — the number of lost packets
+replaced by concealment. See `examples/voice_sip_packet_loss.py` for a
+runnable demo.
+
+Requires `aiortp >= 0.4.0` and `aiosipua >= 0.4.2`.
 | `skip_audio_gaps` (off) | Continuous audio stream with silence fill | May mask packet loss from downstream processing |
 
 ## SIP vs RTP backend
