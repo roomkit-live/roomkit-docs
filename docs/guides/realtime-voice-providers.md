@@ -546,10 +546,15 @@ from __future__ import annotations
 from roomkit.voice.backends.local import LocalAudioBackend
 
 transport = LocalAudioBackend(
-    sample_rate=16000,
-    channels=1,
+    input_sample_rate=24000,   # match the provider output rate for AEC
+    output_sample_rate=24000,
 )
 ```
+
+**Audio pacing**: `rt_prebuffer_ms` (default 120ms) primes the speaker buffer
+before playback starts and re-primes after an underrun — the local-speaker
+analogue of the SIP pacer's pre-buffer. Set it to `0` to play from the first
+byte. The `rt_underruns` property counts mid-response starvations.
 
 ---
 
