@@ -77,6 +77,8 @@ PBX/SIP Trunk                    SIPVoiceBackend
 | `jitter_prefetch` | `int` | `0` | Packets to accumulate before starting playout. 0 = start immediately. |
 | `skip_audio_gaps` | `bool` | `True` | Skip confirmed-lost packets rather than stalling the jitter buffer. |
 | `plc` | `bool` | `True` | Replace confirmed-lost packets with concealment PCM, keeping the inbound stream temporally continuous. Effective only with `skip_audio_gaps`. |
+| `playout` | `bool` | `False` | Deliver inbound audio on a steady clock through an adaptive jitter buffer (depth tracks measured jitter). `jitter_prefetch` only applies when this is off. |
+| `playout_max_delay_ms` | `int` | `200` | Upper bound on the adaptive playout depth — the most latency it may add to absorb jitter. |
 | `rtp_inactivity_timeout` | `float` | `30.0` | Seconds of RTP silence before forcing session disconnect (0 to disable). |
 
 ## X-header routing
