@@ -398,7 +398,9 @@ line on hangup (INFO) both include `concealed=N` — the number of lost packets
 replaced by concealment. See `examples/voice_sip_packet_loss.py` for a
 runnable demo.
 
-Requires `aiortp >= 0.4.0` and `aiosipua >= 0.4.2`.
+Requires `aiortp >= 0.5.0` and `aiosipua >= 0.4.2` (0.5.0 also accounts for
+RFC 4733 telephone-events in loss detection, so DTMF digits are never
+concealed).
 | `skip_audio_gaps` (off) | Continuous audio stream with silence fill | May mask packet loss from downstream processing |
 
 ## SIP vs RTP backend
