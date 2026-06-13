@@ -300,6 +300,38 @@ AI features:
 - **Vision support** -- Providers with vision capability can receive and process images
 - **Function calling** -- Tools can be defined for AI to call external functions
 
+#### Model Discovery
+
+Every AI provider can report which models it supports, so an integrator can list
+options before configuring anything:
+
+```python
+from roomkit.providers.openai.ai import OpenAIAIProvider
+
+# Curated, offline catalog — a classmethod, so no API key, network, or SDK needed.
+for model in OpenAIAIProvider.available_models():
+    print(model.id, model.display_name, model.context_window, model.supports_vision)
+
+# Live query — what the account/server actually exposes right now.
+provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-..."))
+live = await provider.list_models()
+```
+
+- **`available_models()`** -- classmethod returning a hand-maintained `list[ModelInfo]`
+  (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`). Curated
+  catalogs ship for Anthropic, OpenAI, Gemini, Mistral, and Ollama.
+- **`list_models()`** -- async query against the provider's models endpoint
+  (OpenAI `/v1/models`, Anthropic/Mistral `models.list`, Gemini `models.list()`,
+  Ollama `/api/tags`), backfilling metadata from the curated catalog. Providers
+  without an endpoint fall back to `available_models()`.
+- **Azure / vLLM** -- these serve user-named deployments or arbitrary local models,
+  so their curated catalog is empty (Azure) or reflects OpenAI's hosted set (vLLM);
+  use `list_models()` for the authoritative live list.
+
+Catalogs are best-effort snapshots — model lineups move fast, so treat
+`list_models()` as the source of truth when the live endpoint is reachable. See
+`examples/list_models.py`.
+
 #### Per-Room AI Configuration
 
 AI channels support per-room configuration via binding metadata, allowing different rooms to have different AI behaviors:
