@@ -79,6 +79,35 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
 
+#### Voice Discovery
+
+Every realtime voice provider can report which voices it supports, mirroring the
+AI model catalog — so an integrator can list the `voice` ids before configuring:
+
+```python
+from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
+
+# Curated, offline catalog — a classmethod, so no API key, network, or SDK needed.
+for voice in OpenAIRealtimeProvider.available_voices():
+    print(voice.id, voice.name, voice.gender, voice.description)
+
+# Live query — what the account exposes right now (ElevenLabs hits its voices API).
+provider = ElevenLabsRealtimeProvider(ElevenLabsRealtimeConfig(api_key="...", agent_id="..."))
+live = await provider.list_voices()
+```
+
+- **`available_voices()`** — classmethod returning a curated `list[VoiceInfo]`
+  (`id`, `name`, `language`, `gender`, `description`, `deprecated`). Catalogs ship
+  for OpenAI Realtime, Gemini Live, xAI Grok, PersonaPlex, and ElevenLabs.
+- **`list_voices()`** — async query against the provider's voices endpoint,
+  backfilling metadata from the curated catalog. OpenAI Realtime, Gemini Live,
+  xAI, and PersonaPlex have fixed voice sets (no endpoint) and fall back to
+  `available_voices()`; ElevenLabs queries `client.voices` live.
+
+`VoiceInfo.id` is exactly what you pass as `connect(voice=...)` (e.g. `"alloy"`,
+`"Puck"`, a PersonaPlex `"NATF2.pt"` prompt, or an ElevenLabs `voice_id`). See
+`examples/list_voices.py`.
+
 ### Shared Patterns
 
 RoomKit uses **FastAPI + Pydantic v2 + async Python** patterns throughout. If your application uses these, integration is straightforward — models work directly, async patterns align, and type hints are comprehensive.
