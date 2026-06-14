@@ -115,6 +115,7 @@ nav:
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
           - PolarGrid Provider: guides/polargrid.md
           - OpenRouter Provider: guides/openrouter.md
+          - Gemini on Vertex AI: guides/gemini-vertex.md
       - Channels & Content:
           - SMS & RCS Providers: guides/sms-providers.md
           - Content Transcoding: guides/content-transcoding.md

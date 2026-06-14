@@ -324,6 +324,7 @@ AI features:
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
 - **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, Gemini, Mistral, or custom providers
+- **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
 - **Vision support** -- Providers with vision capability can receive and process images
