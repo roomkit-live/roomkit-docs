@@ -114,6 +114,7 @@ nav:
           - Agent Skills: guides/agent-skills.md
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
           - PolarGrid Provider: guides/polargrid.md
+          - OpenRouter Provider: guides/openrouter.md
       - Channels & Content:
           - SMS & RCS Providers: guides/sms-providers.md
           - Content Transcoding: guides/content-transcoding.md

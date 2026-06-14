@@ -323,7 +323,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Gemini, Mistral, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, Gemini, Mistral, or custom providers
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
 - **Vision support** -- Providers with vision capability can receive and process images
@@ -348,7 +348,7 @@ live = await provider.list_models()
 
 - **`available_models()`** -- classmethod returning a hand-maintained `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`). Curated
-  catalogs ship for Anthropic, OpenAI, Gemini, Mistral, and Ollama.
+  catalogs ship for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, and Ollama.
 - **`list_models()`** -- async query against the provider's models endpoint
   (OpenAI `/v1/models`, Anthropic/Mistral `models.list`, Gemini `models.list()`,
   Ollama `/api/tags`), backfilling metadata from the curated catalog. Providers
@@ -356,6 +356,9 @@ live = await provider.list_models()
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local models,
   so their curated catalog is empty (Azure) or reflects OpenAI's hosted set (vLLM);
   use `list_models()` for the authoritative live list.
+- **OpenRouter** -- ships a small curated snapshot of current flagship slugs; its
+  `list_models()` reads OpenRouter's rich `/models` endpoint (300+ models across
+  providers, with live context windows and vision flags) and is authoritative.
 
 Catalogs are best-effort snapshots — model lineups move fast, so treat
 `list_models()` as the source of truth when the live endpoint is reachable. See
