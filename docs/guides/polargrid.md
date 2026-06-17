@@ -98,7 +98,7 @@ context.tools = [
 
 `tool_choice` is not exposed by `AIContext`, so it is left unset and the backend defaults to `auto`. **Forcing a specific tool is steered, not hard-guaranteed**, on PolarGrid's backend — design tool loops to tolerate the model answering directly instead of calling the tool.
 
-[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) wires a `web_search` tool end-to-end: it passes `tools=[WebSearchTool()]` to the `AIChannel`, which runs the whole loop (model → `web_search` → grounded answer). Ask it "What is the speed of light?" to see the model search and answer from the result.
+[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) wires a `web_search` tool end-to-end: it passes `tools=[WebSearchTool()]` to the `AIChannel`, which runs the whole loop (model → `web_search` → grounded answer). Ask it "What is the speed of light?" to see the model search and answer from the result. The tool works key-free (Wikipedia search + summary, which handles the natural-language queries models generate); set `TAVILY_API_KEY` for real web search that also finds niche companies and current info.
 
 ## Vision
 
