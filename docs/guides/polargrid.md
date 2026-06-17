@@ -98,6 +98,8 @@ context.tools = [
 
 `tool_choice` is not exposed by `AIContext`, so it is left unset and the backend defaults to `auto`. **Forcing a specific tool is steered, not hard-guaranteed**, on PolarGrid's backend — design tool loops to tolerate the model answering directly instead of calling the tool.
 
+[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) wires a `web_search` tool end-to-end: it passes `tools=[WebSearchTool()]` to the `AIChannel`, which runs the whole loop (model → `web_search` → grounded answer). Ask it "What is the speed of light?" to see the model search and answer from the result.
+
 ## Vision
 
 `supports_vision` is `False`. The current model catalog (`qwen-3.5-9b`, `qwen-3.5-27b`, `kokoro-82m`, `whisper-large-v3-turbo`) has no multimodal entry on the chat endpoint.
