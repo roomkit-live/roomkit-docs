@@ -1,11 +1,11 @@
 # PolarGrid Provider
 
-[PolarGrid](https://polargrid.ai) is a Canadian-hosted inference network with regional edges in **Toronto**, **Vancouver**, and **Montreal**. Use it when data residency on Canadian soil matters and the workload only needs LLM/text — voice and tool calling are limited (see below).
+[PolarGrid](https://polargrid.ai) is a Canadian-hosted inference network with regional edges in **Toronto**, **Vancouver**, and **Montreal**. Use it when data residency on Canadian soil matters. It serves OpenAI-shaped chat completions with streaming and tool / function calling; voice is limited (see below).
 
 ## Install
 
 ```bash
-pip install roomkit[polargrid]
+pip install roomkit[polargrid]   # requires polargrid-sdk>=0.8.4
 ```
 
 ## Quick start
@@ -65,22 +65,38 @@ async for delta in provider.generate_stream(context):
     print(delta, end="", flush=True)
 
 async for event in provider.generate_structured_stream(context):
-    # StreamTextDelta | StreamDone
+    # StreamTextDelta | StreamToolCall | StreamDone
     ...
 ```
 
 There are **no thinking deltas** — PolarGrid's chat endpoint doesn't emit a separate reasoning channel today.
 
-## Tool / function calling — not supported (yet)
+## Tool / function calling
 
-PolarGrid's chat-completions endpoint does **not** expose tool calling at the time of writing. The provider drops `context.tools` with a warning so the degradation is visible in logs:
+PolarGrid's chat-completions endpoint supports tool / function calling as of `polargrid-sdk>=0.8.4`. The provider forwards `context.tools` (OpenAI-shaped) and surfaces tool calls back:
 
+- **Non-streaming** — `generate()` returns them on `AIResponse.tool_calls`.
+- **Streaming** — `generate_structured_stream()` emits a `StreamToolCall` per call after the text deltas, accumulating the SDK's fragmented `delta.tool_calls`.
+
+PolarGrid sends tool arguments as a JSON string; the provider parses them into a dict for RoomKit (malformed payloads are preserved under a `raw` key). For multi-turn tool loops, assistant tool calls and tool results are rendered back into structured messages (`role="assistant"` with `tool_calls`, `role="tool"` with `tool_call_id`) rather than flattened to text.
+
+```python
+from roomkit.providers.ai.base import AITool
+
+context.tools = [
+    AITool(
+        name="get_weather",
+        description="Get current weather for a city.",
+        parameters={
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+    )
+]
 ```
-WARNING roomkit.providers.polargrid: PolarGrid does not support tool/function
-calling; 2 tool(s) will be ignored.
-```
 
-If you need tools today, route tool-bearing requests to a different provider (Anthropic, OpenAI, Ollama) and keep PolarGrid for text-only generation.
+`tool_choice` is not exposed by `AIContext`, so it is left unset and the backend defaults to `auto`. **Forcing a specific tool is steered, not hard-guaranteed**, on PolarGrid's backend — design tool loops to tolerate the model answering directly instead of calling the tool.
 
 ## Vision
 
