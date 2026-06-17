@@ -65,11 +65,18 @@ async for delta in provider.generate_stream(context):
     print(delta, end="", flush=True)
 
 async for event in provider.generate_structured_stream(context):
-    # StreamTextDelta | StreamToolCall | StreamDone
+    # StreamThinkingDelta | StreamTextDelta | StreamToolCall | StreamDone
     ...
 ```
 
-There are **no thinking deltas** — PolarGrid's chat endpoint doesn't emit a separate reasoning channel today.
+## Thinking / reasoning
+
+PolarGrid's SDK has no dedicated reasoning field and no thinking toggle, so the qwen models surface their reasoning **inline** as `<think>...</think>` tags in the message content (the same convention vLLM / Ollama reasoning models use). The provider parses those tags out so:
+
+- non-streaming `generate()` returns the reasoning on `AIResponse.thinking` and a clean `AIResponse.content`;
+- streaming `generate_structured_stream()` emits the reasoning as `StreamThinkingDelta` (handling tags split across chunks) and the answer as `StreamTextDelta`.
+
+`generate_stream()` (plain text) filters thinking out entirely. Whether reasoning appears depends on the model and edge — qwen "thinking" variants emit it; a model (or edge) that strips `<think>` server-side simply yields no thinking deltas, and the answer text is unaffected either way.
 
 ## Tool / function calling
 
