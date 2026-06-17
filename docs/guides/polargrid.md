@@ -38,6 +38,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
 | `top_p` | `0.9` | 0.0-1.0 |
+| `thinking` | `None` | Toggle qwen reasoning via the in-prompt soft switch — `True` appends `/think`, `False` appends `/no_think`. `None` leaves the model default. See [Thinking / reasoning](#thinking--reasoning). |
 | `timeout` | `30.0` | Seconds. |
 | `max_retries` | `0` | Defaults to 0 so RoomKit's `RetryPolicy` controls retries. |
 | `debug` | `False` | Verbose SDK logging. |
@@ -76,7 +77,17 @@ PolarGrid's SDK has no dedicated reasoning field and no thinking toggle, so the 
 - non-streaming `generate()` returns the reasoning on `AIResponse.thinking` and a clean `AIResponse.content`;
 - streaming `generate_structured_stream()` emits the reasoning as `StreamThinkingDelta` (handling tags split across chunks) and the answer as `StreamTextDelta`.
 
-`generate_stream()` (plain text) filters thinking out entirely. Whether reasoning appears depends on the model and edge — qwen "thinking" variants emit it; a model (or edge) that strips `<think>` server-side simply yields no thinking deltas, and the answer text is unaffected either way.
+`generate_stream()` (plain text) filters thinking out entirely.
+
+Reasoning is often **off by default** on the edge. Since PolarGrid's SDK has no thinking parameter, the provider toggles it with qwen's in-prompt soft switch via the `thinking` config:
+
+```python
+PolarGridConfig(api_key="pg_...", thinking=True)   # appends /think  → reasoning on
+PolarGridConfig(api_key="pg_...", thinking=False)  # appends /no_think → reasoning off
+PolarGridConfig(api_key="pg_...")                  # thinking=None    → model default
+```
+
+The switch is appended to the latest user turn (falling back to the system message). Whether it takes effect depends on the model and edge honoring it — a model (or edge) that strips `<think>` server-side simply yields no thinking deltas, and the answer text is unaffected either way. To display reasoning in a CLI, construct the channel with `CLIChannel("cli", show_thinking=True)`.
 
 ## Tool / function calling
 
