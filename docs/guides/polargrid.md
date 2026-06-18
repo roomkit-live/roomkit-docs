@@ -17,7 +17,7 @@ from roomkit.providers.polargrid import PolarGridAIProvider, PolarGridConfig
 provider = PolarGridAIProvider(
     PolarGridConfig(
         api_key="pg_...",          # from the PolarGrid Console
-        model="qwen-3.5-9b",       # or qwen-3.5-27b for higher quality
+        model="qwen-3.5-27b",      # default; qwen-3.6-35b-a3b on yul-02
         region=None,               # None = auto-route; pin in production
     )
 )
@@ -33,7 +33,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | Field | Default | Notes |
 |-------|---------|-------|
 | `api_key` | _(required)_ | `pg_...` Bearer token from the PolarGrid Console |
-| `model` | `qwen-3.5-9b` | Also `qwen-3.5-27b` (higher quality). Call `list_models()` on the raw SDK for the live catalog. |
+| `model` | `qwen-3.5-27b` | Also `qwen-3.6-35b-a3b` (yul-02, thinking-capable). See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
 | `region` | `None` | `toronto` / `vancouver` / `montreal` — or the IDs `yto-01` / `yvr-02` / `yul-01`. `None` auto-routes. |
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
@@ -56,6 +56,36 @@ config = PolarGridConfig(api_key="pg_...", region="vancouver")
 ```
 
 The auto-routing path is convenient for development but **pin a region in production** if residency matters. Confirm with PolarGrid whether their auto-routing or failover ever crosses regions before relying on it for compliance.
+
+## Models
+
+Like every RoomKit AI provider, PolarGrid exposes two discovery entry points returning `ModelInfo`:
+
+```python
+# Curated, offline catalog — a classmethod, no API key or network.
+for m in PolarGridAIProvider.available_models():
+    print(m.id, m.display_name, m.capabilities)
+
+# Live query against the connected edge (region-specific).
+provider = PolarGridAIProvider(PolarGridConfig(api_key="pg_...", region="yul-02"))
+for m in await provider.list_models():
+    print(m.id)
+```
+
+`available_models()` is the curated snapshot of the **chat** models (sourced from PolarGrid's [model availability guide](https://polargrid.mintlify.app/guides/model-availability)); `list_models()` returns whatever is actually loaded on the connected edge, **including the STT/TTS models**, and backfills display names from the catalog.
+
+Availability is **regional** — the chat models are not loaded on every edge:
+
+| Model | Type | Availability |
+|-------|------|--------------|
+| `qwen-3.5-27b` | chat (tools) | yto-01, yul-01, yvr-02, nyc-01/02, sfo-01, dfw-01/02 |
+| `qwen-3.6-35b-a3b` | chat (tools, **thinking**) | **yul-02 only** (Montreal) |
+| `whisper-large-v3-turbo` | STT | all edges except dfw-02 |
+| `cohere-transcribe-03-2026` | STT | all edges except dfw-02 |
+| `kokoro-82m` | TTS | all edges except dfw-02 |
+| `tada-3b-ml` | TTS | all edges |
+
+So `region="yul-02"` is the edge to pin for the reasoning-capable `qwen-3.6-35b-a3b`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
 
 ## Streaming
 
@@ -120,7 +150,7 @@ context.tools = [
 
 ## Vision
 
-`supports_vision` is `False`. The current model catalog (`qwen-3.5-9b`, `qwen-3.5-27b`, `kokoro-82m`, `whisper-large-v3-turbo`) has no multimodal entry on the chat endpoint.
+`supports_vision` is `False`. The current model catalog (`qwen-3.5-27b`, `qwen-3.6-35b-a3b`, `kokoro-82m`, `whisper-large-v3-turbo`, …) has no multimodal entry on the chat endpoint.
 
 ## Error handling
 
