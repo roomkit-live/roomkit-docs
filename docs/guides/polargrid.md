@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install roomkit[polargrid]   # requires polargrid-sdk>=0.8.4
+pip install roomkit[polargrid]   # requires polargrid-sdk>=0.8.5
 ```
 
 ## Quick start
@@ -38,7 +38,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
 | `top_p` | `0.9` | 0.0-1.0 |
-| `thinking` | `None` | Toggle qwen reasoning via the in-prompt soft switch — `True` appends `/think`, `False` appends `/no_think`. `None` leaves the model default. See [Thinking / reasoning](#thinking--reasoning). |
+| `thinking` | `None` | Toggle qwen reasoning via the `enable_thinking` request flag (sdk 0.8.5+) — `True` on, `False` off, `None` leaves it unset. See [Thinking / reasoning](#thinking--reasoning). |
 | `timeout` | `30.0` | Seconds. |
 | `max_retries` | `0` | Defaults to 0 so RoomKit's `RetryPolicy` controls retries. |
 | `debug` | `False` | Verbose SDK logging. |
@@ -72,26 +72,26 @@ async for event in provider.generate_structured_stream(context):
 
 ## Thinking / reasoning
 
-PolarGrid's SDK has no dedicated reasoning field and no thinking toggle, so the qwen models surface their reasoning **inline** as `<think>...</think>` tags in the message content (the same convention vLLM / Ollama reasoning models use). The provider parses those tags out so:
+qwen surfaces its reasoning **inline** as `<think>...</think>` tags in the message content (the same convention vLLM / Ollama reasoning models use; PolarGrid has no separate `reasoning_content` field). The provider parses those tags out so:
 
 - non-streaming `generate()` returns the reasoning on `AIResponse.thinking` and a clean `AIResponse.content`;
 - streaming `generate_structured_stream()` emits the reasoning as `StreamThinkingDelta` (handling tags split across chunks) and the answer as `StreamTextDelta`.
 
 `generate_stream()` (plain text) filters thinking out entirely.
 
-Reasoning is often **off by default** on the edge. Since PolarGrid's SDK has no thinking parameter, the provider toggles it with qwen's in-prompt soft switch via the `thinking` config:
+Reasoning is **off by default** on the edge. polargrid-sdk 0.8.5+ exposes an `enable_thinking` request flag, which the provider sets from the `thinking` config:
 
 ```python
-PolarGridConfig(api_key="pg_...", thinking=True)   # appends /think  → reasoning on
-PolarGridConfig(api_key="pg_...", thinking=False)  # appends /no_think → reasoning off
-PolarGridConfig(api_key="pg_...")                  # thinking=None    → model default
+PolarGridConfig(api_key="pg_...", thinking=True)   # enable_thinking=true  → reasoning on
+PolarGridConfig(api_key="pg_...", thinking=False)  # enable_thinking=false → reasoning off
+PolarGridConfig(api_key="pg_...")                  # thinking=None         → flag unset (model default)
 ```
 
-The switch is appended to the latest user turn (falling back to the system message). Whether it takes effect depends on the model and edge honoring it — a model (or edge) that strips `<think>` server-side simply yields no thinking deltas, and the answer text is unaffected either way. To display reasoning in a CLI, construct the channel with `CLIChannel("cli", show_thinking=True)`.
+Thinking responses are **larger and slower** (the reasoning counts toward latency and `max_tokens`), so raise `timeout` and `max_tokens` when enabling it. To display reasoning in a CLI, construct the channel with `CLIChannel("cli", show_thinking=True)`.
 
 ## Tool / function calling
 
-PolarGrid's chat-completions endpoint supports tool / function calling as of `polargrid-sdk>=0.8.4`. The provider forwards `context.tools` (OpenAI-shaped) and surfaces tool calls back:
+PolarGrid's chat-completions endpoint supports tool / function calling as of `polargrid-sdk>=0.8.5`. The provider forwards `context.tools` (OpenAI-shaped) and surfaces tool calls back:
 
 - **Non-streaming** — `generate()` returns them on `AIResponse.tool_calls`.
 - **Streaming** — `generate_structured_stream()` emits a `StreamToolCall` per call after the text deltas, accumulating the SDK's fragmented `delta.tool_calls`.
