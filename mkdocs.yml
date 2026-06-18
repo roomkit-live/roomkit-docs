@@ -127,6 +127,7 @@ nav:
           - Identity Resolution: guides/identity-resolution.md
           - PostgreSQL Storage: guides/postgres-store.md
           - Realtime Features: guides/realtime-features.md
+          - Room Lifecycle & Timers: guides/room-lifecycle.md
           - Production Resilience: guides/production-resilience.md
           - Telemetry: guides/telemetry.md
       - Development:

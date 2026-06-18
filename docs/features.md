@@ -149,7 +149,7 @@ Rooms follow a state machine with four statuses:
 stateDiagram-v2
     [*] --> ACTIVE: create_room()
     ACTIVE --> PAUSED: pause (timer or manual)
-    PAUSED --> ACTIVE: (resume on activity)
+    PAUSED --> ACTIVE: resume (app-driven)
     ACTIVE --> CLOSED: close_room() / leave() or timer
     PAUSED --> CLOSED: close_room() / leave() or timer
     CLOSED --> ARCHIVED: (archive)
@@ -163,19 +163,25 @@ stateDiagram-v2
 Timer-based automation:
 
 ```python
+from datetime import UTC, datetime
+
 from roomkit import RoomTimers
 
-await kit.create_room(
-    room_id="support-123",
-    metadata={"timers": RoomTimers(
-        inactive_after_seconds=300,     # Auto-pause after 5min inactivity
-        closed_after_seconds=3600,      # Auto-close after 1hr inactivity
+room = await kit.create_room(room_id="support-123")
+room = room.model_copy(
+    update={"timers": RoomTimers(
+        inactive_after_seconds=300,            # Auto-pause after 5min inactivity
+        closed_after_seconds=3600,             # Auto-close after 1hr inactivity
+        last_activity_at=datetime.now(UTC),    # Start the idle clock
     )},
 )
+await kit.store.update_room(room)
 
-# Check and apply timer transitions for all active/paused rooms
+# No internal scheduler — sweep periodically to apply timer transitions
 transitioned = await kit.check_all_timers()
 ```
+
+See the [Room Lifecycle & Timers guide](guides/room-lifecycle.md) for statuses, the activity model, and resuming paused rooms.
 
 ### Event Pipeline
 

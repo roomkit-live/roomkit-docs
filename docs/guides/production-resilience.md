@@ -144,43 +144,38 @@ async def on_delivery(event, ctx):
 
 ## Room Lifecycle Timers
 
-Automatically manage room state with timers:
+Drive room state automatically based on inactivity — pause after a short idle period, close after a longer one:
 
 ```python
 from __future__ import annotations
 
-from roomkit import HookTrigger, RoomKit
-from roomkit.models.room import RoomTimers
+from datetime import UTC, datetime
+
+from roomkit import RoomKit, RoomTimers
 
 kit = RoomKit()
 
-room = await kit.create_room(
-    room_id="support-123",
-    timers=RoomTimers(
-        idle_timeout_seconds=300,     # Pause after 5 min idle
-        max_duration_seconds=3600,    # Close after 1 hour
-    ),
+room = await kit.create_room(room_id="support-123")
+room = room.model_copy(
+    update={
+        "timers": RoomTimers(
+            inactive_after_seconds=300,            # Pause after 5 min idle
+            closed_after_seconds=3600,             # Close after 1 hour idle
+            last_activity_at=datetime.now(UTC),    # Start the idle clock
+        )
+    }
 )
+await kit.store.update_room(room)
 ```
 
 | Timer | Effect |
 |-------|--------|
-| `idle_timeout_seconds` | Pauses the room after N seconds without activity |
-| `max_duration_seconds` | Closes the room after N seconds total |
+| `inactive_after_seconds` | Pauses the room after N seconds without activity |
+| `closed_after_seconds` | Closes the room after N seconds without activity (takes priority over pause) |
 
-### Lifecycle Hooks
+Transitions are evaluated on demand via `kit.check_room_timers(room_id)` or `kit.check_all_timers()` — RoomKit has no internal scheduler, so run the sweep from a background task. Each transition fires the `ON_ROOM_PAUSED` / `ON_ROOM_CLOSED` lifecycle hooks.
 
-```python
-@kit.hook(HookTrigger.ON_ROOM_PAUSED)
-async def on_paused(event, ctx):
-    logger.info(f"Room {event.room_id} paused due to inactivity")
-    # Notify participants, save state, etc.
-
-@kit.hook(HookTrigger.ON_ROOM_CLOSED)
-async def on_closed(event, ctx):
-    logger.info(f"Room {event.room_id} closed")
-    # Archive conversation, generate summary, etc.
-```
+See the [Room Lifecycle & Timers guide](room-lifecycle.md) for statuses, the activity-tracking model, driving the sweep, and resuming paused rooms.
 
 ## Complete Production Setup
 
@@ -189,7 +184,7 @@ Combining all patterns for a resilient deployment:
 ```python
 from __future__ import annotations
 
-from roomkit import RoomKit
+from roomkit import RoomKit, RoomTimers
 from roomkit.channels import AIChannel, SMSChannel
 from roomkit.core.rate_limit import RateLimit, TokenBucketRateLimiter
 from roomkit.models.channel import RetryPolicy
@@ -229,11 +224,12 @@ sms = SMSChannel(
 kit.register_channel(ai)
 kit.register_channel(sms)
 
-# Room with lifecycle timers
-room = await kit.create_room(
-    room_id="support-123",
-    timers=RoomTimers(idle_timeout_seconds=300, max_duration_seconds=3600),
+# Room with lifecycle timers (attached after creation)
+room = await kit.create_room(room_id="support-123")
+room = room.model_copy(
+    update={"timers": RoomTimers(inactive_after_seconds=300, closed_after_seconds=3600)}
 )
+await kit.store.update_room(room)
 ```
 
 ## Health Monitoring
