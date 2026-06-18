@@ -57,14 +57,34 @@ config = PolarGridConfig(api_key="pg_...", region="vancouver")
 
 The auto-routing path is convenient for development but **pin a region in production** if residency matters. Confirm with PolarGrid whether their auto-routing or failover ever crosses regions before relying on it for compliance.
 
-To confirm **which edge actually handles your requests** — especially under auto-routing — call `connected_region()`:
+### Region discovery
+
+`available_regions()` is the curated, offline catalog of all PolarGrid edges (id, name, location); `connected_region()` reports the edge a provider is actually routed to. Both return `PolarGridRegion`, and `location` carries the **Canada / US** split that matters for residency:
 
 ```python
-region = await provider.connected_region()
-print(region.id, region.name)   # e.g. "yul-02" "Montreal 02"
+from roomkit.providers.polargrid import PolarGridAIProvider
+
+# All edges, filtered to the Canadian ones (Law 25 / PIPEDA).
+canadian = [r for r in PolarGridAIProvider.available_regions()
+            if (r.location or "").startswith("Canada")]
+# → yto-01 Toronto, yul-01 Montreal, yul-02 Montreal 02, yvr-02 Vancouver
+
+# Which edge am I actually hitting (esp. under auto-routing)?
+here = await provider.connected_region()
+print(here.id, here.name, here.location)   # e.g. "yul-02" "Montreal 02" "Canada East"
 ```
 
-It reports the **connected** edge only (id + human name). PolarGrid serves no live list of all regions over the edge API (`/v1/status` 404s on edge nodes); the full set of edges is the static table under [Models](#models).
+| Region | Name | Location |
+|--------|------|----------|
+| `yto-01` | Toronto | Canada Central |
+| `yul-01` | Montreal | Canada East |
+| `yul-02` | Montreal 02 | Canada East |
+| `yvr-02` | Vancouver | Canada West |
+| `nyc-01` / `nyc-02` | New York | US East |
+| `dfw-01` / `dfw-02` | Dallas | US Central |
+| `sfo-01` | San Francisco | US West |
+
+`available_regions()` is a static snapshot from PolarGrid's [regions guide](https://polargrid.mintlify.app/guides/regions) — there is **no live full-region endpoint** (`/v1/status` 404s on edges), so `connected_region()` reports only the routed edge (its `location` is backfilled from the catalog).
 
 ## Models
 
