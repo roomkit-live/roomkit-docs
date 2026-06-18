@@ -57,6 +57,15 @@ config = PolarGridConfig(api_key="pg_...", region="vancouver")
 
 The auto-routing path is convenient for development but **pin a region in production** if residency matters. Confirm with PolarGrid whether their auto-routing or failover ever crosses regions before relying on it for compliance.
 
+To confirm **which edge actually handles your requests** — especially under auto-routing — call `connected_region()`:
+
+```python
+region = await provider.connected_region()
+print(region.id, region.name)   # e.g. "yul-02" "Montreal 02"
+```
+
+It reports the **connected** edge only (id + human name). PolarGrid serves no live list of all regions over the edge API (`/v1/status` 404s on edge nodes); the full set of edges is the static table under [Models](#models).
+
 ## Models
 
 Like every RoomKit AI provider, PolarGrid exposes two discovery entry points returning `ModelInfo`:
