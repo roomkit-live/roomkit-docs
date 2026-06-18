@@ -34,29 +34,31 @@ The close timer **supersedes** the pause timer: once the close threshold is cros
 
 ## Quick start
 
-Timers live in a `RoomTimers` object on the room. `create_room()` does not take them directly, so attach them just after creation with `model_copy` + `store.update_room`:
+Pass a `RoomTimers` object when you create the room:
 
 ```python
 from __future__ import annotations
-
-from datetime import UTC, datetime
 
 from roomkit import RoomKit, RoomTimers
 
 kit = RoomKit()
 
-room = await kit.create_room(room_id="support-123")
-
-room = room.model_copy(
-    update={
-        "timers": RoomTimers(
-            inactive_after_seconds=300,            # pause after 5 min idle
-            closed_after_seconds=3600,             # close after 1 h idle
-            last_activity_at=datetime.now(UTC),    # start the clock now
-        )
-    }
+room = await kit.create_room(
+    room_id="support-123",
+    timers=RoomTimers(
+        inactive_after_seconds=300,    # pause after 5 min idle
+        closed_after_seconds=3600,     # close after 1 h idle
+    ),
 )
-await kit.store.update_room(room)
+```
+
+To set or change the timers on an existing room, use `set_room_timers()` — no `model_copy` boilerplate:
+
+```python
+await kit.set_room_timers(
+    "support-123",
+    RoomTimers(closed_after_seconds=7200),   # extend the close window to 2 h
+)
 ```
 
 | Field | Type | Default | Effect |
@@ -65,8 +67,8 @@ await kit.store.update_room(room)
 | `closed_after_seconds` | `int \| None` | `None` | Closes the room after N seconds of inactivity. Takes priority over the pause timer. `None` disables. |
 | `last_activity_at` | `datetime \| None` | `None` | Timestamp the idle clock measures from. Updated automatically on every processed inbound event. |
 
-!!! warning "Start the clock"
-    Timers are inert while `last_activity_at` is `None`. A freshly created room has no activity timestamp, so set `last_activity_at` when you attach the timers (as above) if you want the countdown to begin at creation — otherwise it only starts after the first inbound message.
+!!! note "The idle clock starts automatically"
+    Both `create_room(timers=...)` and `set_room_timers()` fill in `last_activity_at` for you when you omit it, so the countdown begins immediately. `set_room_timers()` also **preserves** an existing activity timestamp when you only change thresholds, so adjusting a window mid-conversation never resets the idle clock. Timers stay inert only if you build a `Room` by hand and leave `last_activity_at` as `None`.
 
 ## How it works
 
@@ -132,19 +134,17 @@ Alongside the hooks, the transition emits a system event into the room — `room
 
 ## Resuming a paused room
 
-`PAUSED` is a soft state, not a dead end — but RoomKit does **not** auto-resume it. The default inbound router only routes to `ACTIVE` rooms, so a paused room receives no new traffic and its idle clock keeps running toward the close threshold. If your application decides a paused conversation should continue, reactivate it explicitly:
+`PAUSED` is a soft state, not a dead end — but RoomKit does **not** auto-resume it. The default inbound router only routes to `ACTIVE` rooms, so a paused room receives no new traffic and its idle clock keeps running toward the close threshold. If your application decides a paused conversation should continue, set its status back to `ACTIVE`:
 
 ```python
 from roomkit.models.enums import RoomStatus
 
 room = await kit.get_room("support-123")
-room = room.model_copy(
-    update={"status": RoomStatus.ACTIVE, "timers": room.timers.model_copy(
-        update={"last_activity_at": datetime.now(UTC)}
-    )}
-)
+room = room.model_copy(update={"status": RoomStatus.ACTIVE})
 await kit.store.update_room(room)
 ```
+
+Once active again, inbound traffic resumes and each new message refreshes `last_activity_at`. To restart the idle clock immediately without waiting for a message, call `set_room_timers()` with a fresh `last_activity_at`.
 
 ## Manual close
 

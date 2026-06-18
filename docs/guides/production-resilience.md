@@ -149,23 +149,17 @@ Drive room state automatically based on inactivity — pause after a short idle 
 ```python
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from roomkit import RoomKit, RoomTimers
 
 kit = RoomKit()
 
-room = await kit.create_room(room_id="support-123")
-room = room.model_copy(
-    update={
-        "timers": RoomTimers(
-            inactive_after_seconds=300,            # Pause after 5 min idle
-            closed_after_seconds=3600,             # Close after 1 hour idle
-            last_activity_at=datetime.now(UTC),    # Start the idle clock
-        )
-    }
+room = await kit.create_room(
+    room_id="support-123",
+    timers=RoomTimers(
+        inactive_after_seconds=300,    # Pause after 5 min idle
+        closed_after_seconds=3600,     # Close after 1 hour idle
+    ),
 )
-await kit.store.update_room(room)
 ```
 
 | Timer | Effect |
@@ -224,12 +218,11 @@ sms = SMSChannel(
 kit.register_channel(ai)
 kit.register_channel(sms)
 
-# Room with lifecycle timers (attached after creation)
-room = await kit.create_room(room_id="support-123")
-room = room.model_copy(
-    update={"timers": RoomTimers(inactive_after_seconds=300, closed_after_seconds=3600)}
+# Room with lifecycle timers
+room = await kit.create_room(
+    room_id="support-123",
+    timers=RoomTimers(inactive_after_seconds=300, closed_after_seconds=3600),
 )
-await kit.store.update_room(room)
 ```
 
 ## Health Monitoring

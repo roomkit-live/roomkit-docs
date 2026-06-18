@@ -163,19 +163,18 @@ stateDiagram-v2
 Timer-based automation:
 
 ```python
-from datetime import UTC, datetime
-
 from roomkit import RoomTimers
 
-room = await kit.create_room(room_id="support-123")
-room = room.model_copy(
-    update={"timers": RoomTimers(
-        inactive_after_seconds=300,            # Auto-pause after 5min inactivity
-        closed_after_seconds=3600,             # Auto-close after 1hr inactivity
-        last_activity_at=datetime.now(UTC),    # Start the idle clock
-    )},
+room = await kit.create_room(
+    room_id="support-123",
+    timers=RoomTimers(
+        inactive_after_seconds=300,    # Auto-pause after 5min inactivity
+        closed_after_seconds=3600,     # Auto-close after 1hr inactivity
+    ),
 )
-await kit.store.update_room(room)
+
+# Adjust timers on an existing room (no model_copy needed)
+await kit.set_room_timers("support-123", RoomTimers(closed_after_seconds=7200))
 
 # No internal scheduler — sweep periodically to apply timer transitions
 transitioned = await kit.check_all_timers()
