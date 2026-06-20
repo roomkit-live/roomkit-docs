@@ -118,6 +118,33 @@ provider = create_vllm_provider(
 ai = AIChannel("ai", provider=provider, thinking_budget=8192)
 ```
 
+#### Native Ollama provider & authentication
+
+For Ollama specifically, prefer the native `OllamaAIProvider`. It calls
+`/api/chat` directly, so the `think` parameter and the streamed `thinking`
+field work without `<think>` tag parsing.
+
+To reach a protected endpoint — Ollama Cloud/Turbo, or a self-hosted server
+behind a reverse proxy — set `api_key`; it is sent as
+`Authorization: Bearer <key>`. Use `headers` for extra proxy headers or a
+non-Bearer scheme (`api_key` wins over an `Authorization` entry in `headers`).
+When `api_key` is `None`, the SDK still falls back to the `OLLAMA_API_KEY`
+environment variable.
+
+```python
+from roomkit.providers.ollama import OllamaAIProvider, OllamaConfig
+
+provider = OllamaAIProvider(OllamaConfig(
+    host="https://ollama.example.com",
+    model="deepseek-r1:8b",
+    api_key="sk-...",                 # → Authorization: Bearer sk-...
+    headers={"X-Proxy-Region": "eu"},  # optional extra headers
+    think="high",
+))
+
+ai = AIChannel("ai", provider=provider, thinking_budget=8192)
+```
+
 ### Gemini
 
 Gemini does not currently emit thinking content. The `thinking_budget` parameter is accepted but has no effect.
