@@ -107,15 +107,37 @@ Models served via Ollama or vLLM (DeepSeek-R1, QwQ, etc.) emit reasoning inside 
 - **History**: `AIThinkingPart` is re-wrapped as `<think>` tags when sent back to the model
 
 ```python
-from roomkit.providers.vllm import create_vllm_provider
+from roomkit.providers.vllm import VLLMConfig, create_vllm_provider
 
-provider = create_vllm_provider(
+provider = create_vllm_provider(VLLMConfig(
     base_url="http://localhost:11434/v1",
     api_key="ollama",
     model="deepseek-r1:8b",
-)
+))
 
 ai = AIChannel("ai", provider=provider, thinking_budget=8192)
+```
+
+#### vLLM authentication & native params
+
+`create_vllm_provider` wraps `OpenAIAIProvider` — vLLM's online server *is*
+the OpenAI-compatible API, so this is the canonical integration. Set
+`api_key` to match `vllm serve --api-key` (sent as `Authorization: Bearer`).
+`headers` adds proxy/non-Bearer headers; `extra_body` forwards vLLM-specific
+request fields the OpenAI schema omits — guided decoding and extra sampling.
+
+```python
+provider = create_vllm_provider(VLLMConfig(
+    base_url="http://gpu-server:8000/v1",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    api_key="token-abc123",                  # vllm serve --api-key token-abc123
+    headers={"X-Proxy-Region": "eu"},        # optional reverse-proxy headers
+    extra_body={                             # vLLM-native params
+        "top_k": 40,
+        "repetition_penalty": 1.05,
+        "guided_choice": ["yes", "no"],      # constrain output to a choice set
+    },
+))
 ```
 
 #### Native Ollama provider & authentication
