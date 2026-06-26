@@ -241,6 +241,58 @@ kit = RoomKit(delivery_strategy=ImmediateDelivery(prompt="Task done!"))
 
 All strategies support `RealtimeVoiceChannel` — they detect the channel type and deliver via `inject_text()` instead of `process_inbound()`. For `WaitForIdleDelivery`, realtime voice delivery is immediate since there's no playback queue to wait for.
 
+## Structured results
+
+By default a delegated agent's result is its **free-text response**, scraped
+from the child room. Set `require_structured_result=True` to instead force the
+agent to hand its work back by calling a `submit_result` tool — a structured,
+parseable handoff, and a guarantee of a result at all (the worker can't punt
+with a question back to the user):
+
+```python
+task = await kit.delegate(
+    room_id="call-room",
+    agent_id="pr-reviewer",
+    task="Review the latest PR on roomkit",
+    require_structured_result=True,
+    wait=True,
+)
+# result.output is the JSON-encoded submit_result payload
+```
+
+The framework injects the `submit_result` tool, runs the agent, and applies a
+completion guard: if the agent ends a turn without calling it, the agent is
+re-prompted to use the tool (up to `max_result_retries` times); if it still
+hasn't, the orchestration submits a failure on its behalf
+(`status="failed"`, `by="orchestration"`) carrying the worker's last raw output
+so the caller knows what went wrong.
+
+The `submit_result` payload:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `"completed"` / `"failed"` | Required. `failed` only if the worker genuinely could not do the task |
+| `summary` | `str` | Required. One or two sentences on what was produced |
+| `data` | `object` | Structured result for the next step to build on |
+| `deliverables` | `list[{title, url}]` | Concrete artifacts (e.g. a published report URL) |
+| `reason` | `str` | If `failed`, why |
+
+Capture is delivery-agnostic: a function-calling provider's tool call is caught
+directly, and a `claude_code` worker (which calls the gateway-exposed tool,
+surfaced with an `mcp__…` prefix) is recovered by scanning its persisted trace.
+The supervised sequential flow (see
+[Multi-Agent Orchestration](orchestration.md#supervised-validation-sequential))
+uses this internally so every worker hands the supervisor a clean object to
+review.
+
+## Inherited context
+
+A child room inherits the parent room's delegation context envelope: any
+context attached to the parent cascades verbatim onto each child room (and
+re-stamps so it carries into nested delegations). A worker delegated from
+within another delegated task therefore sees the same originating context as
+the top-level parent.
+
 ## Configuration reference
 
 | Parameter | Type | Description |
@@ -252,6 +304,9 @@ All strategies support `RealtimeVoiceChannel` — they detect the channel type a
 | `share_channels` | `list[str]` | Channel IDs to share from parent |
 | `notify` | `str` | Channel ID to update with result (default: `agent_id`) |
 | `on_complete` | `callable` | Async callback `(DelegatedTaskResult) -> None` |
+| `wait` | `bool` | Run inline and return a pre-completed task (default `False` = background) |
+| `require_structured_result` | `bool` | Force the agent to hand back via the `submit_result` tool (default `False`) — see [Structured results](#structured-results) |
+| `max_result_retries` | `int` | Re-prompts for `submit_result` before the orchestration fails on the agent's behalf (default `3`) |
 
 ## Custom task runner
 

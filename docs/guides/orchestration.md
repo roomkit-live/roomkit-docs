@@ -75,7 +75,8 @@ The recommended mode. The framework triggers workers automatically on every user
 ```python
 from roomkit import Agent, RoomKit, Supervisor
 
-# Sequential: researcher runs first, writer receives researcher's output
+# Sequential: workers run in order; the supervisor validates each
+# worker's output before framing the next worker's task
 kit = RoomKit(
     orchestration=Supervisor(
         supervisor=coordinator,
@@ -96,12 +97,29 @@ kit = RoomKit(
 )
 ```
 
-With `auto_delegate=True` and `refine_task=True` (default), the flow is:
+With `auto_delegate=True` and `refine_task=True` (default), the supervisor first
+extracts a clean topic from the user's message (pass 1), then the workers run.
+What happens during the worker run depends on the strategy:
+
+**Parallel** — all workers run concurrently on the same topic, then the
+supervisor presents the combined results (pass 2):
 
 1. User sends message
-2. Supervisor extracts the core topic (pass 1 — framework-injected instruction)
-3. Framework runs workers with the topic (sequential or parallel)
-4. Supervisor presents combined results to user (pass 2)
+2. Supervisor extracts the core topic
+3. Framework runs all workers concurrently on the topic
+4. Supervisor presents the combined results to the user
+
+**Sequential** — runs as a supervised **hub-and-spoke** loop: the supervisor
+frames each worker's task, reviews its output, and only then frames the next
+(see [Supervised validation](#supervised-validation-sequential) below):
+
+1. User sends message
+2. Supervisor extracts the core topic
+3. For each worker in order: the supervisor frames the task → the worker runs →
+   the supervisor reviews the output (APPROVE/REJECT) → rejected work is sent
+   back with feedback, up to `max_revisions` times → the validated result is
+   carried into the next worker's brief
+4. Supervisor presents the validated chain of results to the user
 
 Agent prompts describe only **what the agent does** — no orchestration instructions needed:
 
@@ -110,6 +128,46 @@ coordinator = Agent("coordinator", system_prompt="You coordinate analysis.")
 researcher = Agent("researcher", system_prompt="You research topics thoroughly.")
 writer = Agent("writer", system_prompt="You write clear articles.")
 ```
+
+#### Supervised validation (sequential)
+
+In **synchronous sequential** mode the supervisor doesn't just pass output from
+one worker to the next — it acts as a reviewer between every step. For each
+worker the framework:
+
+1. Asks the supervisor to **frame** the worker's task (turning the topic, plus
+   any prior validated results, into a concrete brief).
+2. Runs the worker, which hands its work back as a structured result (see
+   [Structured results](agent-delegation.md#structured-results)).
+3. Asks the supervisor to **review** that output with a strict APPROVE / REJECT
+   verdict.
+4. On REJECT, sends the worker the supervisor's feedback for a **rework** — up
+   to `max_revisions` times.
+5. Carries the validated result into the next worker's brief.
+
+Each worker is bounded by `task_timeout` (default 120s, per worker — not a
+single global budget). If a worker can't satisfy the supervisor within
+`max_revisions` rounds, the step is delivered **flagged as unvalidated** rather
+than looping forever — the supervisor reports an honest failure instead of
+presenting unreviewed work.
+
+```python
+kit = RoomKit(
+    orchestration=Supervisor(
+        supervisor=editor,
+        workers=[researcher, writer],
+        strategy="sequential",
+        auto_delegate=True,
+        task_timeout=180,     # per-worker budget in seconds
+        max_revisions=2,      # rework round-trips per worker
+    ),
+)
+```
+
+> **Sequential only, and only when the supervisor reviews.** Validation applies
+> to synchronous sequential runs (sync `auto_delegate` and strategy-tool mode).
+> `async_delivery` sequential (voice/background) and `parallel` mode run workers
+> without the per-step review loop.
 
 #### Voice / real-time mode (`async_delivery=True`)
 
@@ -152,6 +210,8 @@ The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user
 | `delegation_message` | `"I'm dispatching..."` | Message injected when workers start (async mode) |
 | `wait_for_result` | `True` | Inline or background execution (manual mode) |
 | `share_channels` | `None` | Channel IDs from parent room to share with worker child rooms |
+| `task_timeout` | `120.0` | Per-worker delegation budget in seconds (each task bounded individually) |
+| `max_revisions` | `3` | Supervised sequential: max supervisor→worker rework round-trips per step |
 
 #### Sharing channels with workers
 

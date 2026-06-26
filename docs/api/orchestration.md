@@ -57,3 +57,20 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 ::: roomkit.orchestration.HandoffMemoryProvider
 
 ::: roomkit.orchestration.setup_handoff
+
+## Structured results
+
+Delegated workers can hand their result back through the `submit_result` tool
+instead of a free-text message scraped from the room — a forced, parseable
+handoff. See [Structured results](../guides/agent-delegation.md#structured-results)
+in the Agent Delegation guide. Enabled per call via
+`kit.delegate(require_structured_result=True)`, and used internally by the
+supervised sequential flow.
+
+::: roomkit.orchestration.result.SUBMIT_RESULT_TOOL
+
+::: roomkit.orchestration.result.is_submit_result
+
+::: roomkit.orchestration.result.normalize_result
+
+::: roomkit.orchestration.result.orchestration_fail
