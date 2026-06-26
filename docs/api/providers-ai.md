@@ -224,6 +224,32 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[azure]`
 
+## Ollama Provider (Local / Cloud LLM)
+
+Native provider for [Ollama](https://ollama.com). Calls `/api/chat` directly, so
+the `think` parameter and streamed reasoning work without `<think>` tag parsing.
+See [AI Thinking — Native Ollama provider](../guides/ai-thinking.md#native-ollama-provider--authentication)
+for thinking, authentication, and sampling options (`temperature`, `num_ctx`,
+`top_p`, `top_k`, `min_p`, `keep_alive`).
+
+::: roomkit.providers.ollama.ai.OllamaAIProvider
+
+::: roomkit.providers.ollama.config.OllamaConfig
+
+### Usage
+
+```python
+from roomkit.providers.ollama import OllamaAIProvider, OllamaConfig
+from roomkit.channels.ai import AIChannel
+
+config = OllamaConfig(host="http://localhost:11434", model="llama3.2")
+provider = OllamaAIProvider(config)
+
+ai_channel = AIChannel("ai", provider=provider)
+```
+
+Install with: `pip install roomkit[ollama]`
+
 ## Streaming
 
 ::: roomkit.providers.ai.base.StreamEvent

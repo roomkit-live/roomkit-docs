@@ -129,6 +129,11 @@ researcher = Agent("researcher", system_prompt="You research topics thoroughly."
 writer = Agent("writer", system_prompt="You write clear articles.")
 ```
 
+Pass an optional `name` (e.g. `Agent("researcher", name="Willie Researcher", ...)`)
+to give an agent a human-readable display name, distinct from its `channel_id`
+and `role`. Hosts use it to label a step in orchestration timelines by who ran
+it instead of a truncated role sentence.
+
 #### Supervised validation (sequential)
 
 In **synchronous sequential** mode the supervisor doesn't just pass output from

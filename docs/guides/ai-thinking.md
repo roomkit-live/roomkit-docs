@@ -167,6 +167,28 @@ provider = OllamaAIProvider(OllamaConfig(
 ai = AIChannel("ai", provider=provider, thinking_budget=8192)
 ```
 
+`OllamaConfig` also exposes per-config sampling options, mapped to Ollama's
+`options`: `temperature` (default `0.7`), `max_tokens` (→ `num_predict`),
+`num_ctx`, `top_p`, `top_k`, and `min_p`. Each defaults to `None` (the model's
+own default) except `temperature`.
+
+```python
+provider = OllamaAIProvider(OllamaConfig(
+    model="llama3.2",
+    temperature=0.2,
+    num_ctx=8192,
+    top_p=0.9,
+    keep_alive=-1,    # keep the model loaded indefinitely
+))
+```
+
+`keep_alive` controls how long the model stays resident after a request. Ollama
+reads a **string** `keep_alive` as a Go duration (e.g. `"5m"`), so a unit-less
+value must be a number, not a numeric string: pass `keep_alive=-1` (load
+forever) or `keep_alive=0` (unload immediately) as an `int`. A unit-less string
+like `"-1"` is coerced to `int` automatically so Ollama doesn't reject it as a
+malformed duration.
+
 ### Gemini
 
 Gemini does not currently emit thinking content. The `thinking_budget` parameter is accepted but has no effect.
