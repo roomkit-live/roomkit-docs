@@ -65,5 +65,5 @@ with distributed implementations (Redis, PostgreSQL, etc.) for production deploy
 
 - [Enums](docs/api/enums.md): ChannelType, EventType, EventStatus, RoomStatus, HookTrigger, HookExecution, IdentificationStatus, ParticipantRole
 - [Technical Details](docs/technical.md): Implementation details and internal architecture
-- [RFC](docs/roomkit-rfc.md): Original design document and rationale
+- [RFC](https://github.com/roomkit-live/roomkit-specs/blob/main/roomkit-rfc.md): Normative design specification and rationale
 - [CPaaS Comparison](docs/cpaas-comparison.md): Comparison with other communication platforms

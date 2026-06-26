@@ -992,23 +992,23 @@ After-the-fact resolution is also supported via `resolve_participant()`.
 
 ### Feature Matrix
 
-| Feature | WebSocket | SMS | RCS | Email | Messenger | Teams | WhatsApp | HTTP | AI | Voice |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Text** | x | x | x | x | x | x | x | x | x | x |
-| **Rich text** | x | -- | x | x | x | x | x | x | x | -- |
-| **Audio** | -- | -- | -- | -- | -- | -- | -- | -- | -- | x |
-| **Media** | x | x* | x | x | x | -- | x | -- | *[1] | -- |
-| **Location** | -- | -- | x | -- | -- | -- | x | -- | -- | -- |
-| **Templates** | -- | -- | x | -- | x | -- | x | -- | -- | -- |
-| **Buttons** | -- | -- | x | -- | x | -- | x | -- | -- | -- |
-| **Quick replies** | -- | -- | x | -- | x | -- | x | -- | -- | -- |
-| **Threading** | -- | -- | -- | x | -- | x | -- | -- | -- | -- |
-| **Reactions** | x | -- | x | -- | -- | x | x | -- | -- | -- |
-| **Read receipts** | x | x | x | -- | x | x | x | -- | -- | -- |
-| **Typing indicators** | x | -- | -- | -- | -- | -- | x | -- | -- | -- |
-| **Max length** | -- | 1600 | 3000 | -- | 2000 | 28000 | 4096 | -- | -- | -- |
-| **Bidirectional** | x | x | x | x | x | x | x | x | x | x |
-| **Category** | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Intelligence | Transport |
+| Feature | WebSocket | SMS | RCS | Email | Messenger | Teams | WhatsApp | Telegram | Discord | HTTP | AI | Voice |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Text** | x | x | x | x | x | x | x | x | x | x | x | x |
+| **Rich text** | x | -- | x | x | x | x | x | x | x | x | x | -- |
+| **Audio** | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | x |
+| **Media** | x | x* | x | x | x | -- | x | x | x | -- | *[1] | -- |
+| **Location** | -- | -- | x | -- | -- | -- | x | x | -- | -- | -- | -- |
+| **Templates** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
+| **Buttons** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
+| **Quick replies** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
+| **Threading** | -- | -- | -- | x | -- | x | -- | -- | x | -- | -- | -- |
+| **Reactions** | x | -- | x | -- | -- | x | x | -- | x | -- | -- | -- |
+| **Read receipts** | x | x | x | -- | x | x | x | -- | -- | -- | -- | -- |
+| **Typing indicators** | x | -- | -- | -- | -- | -- | x | -- | -- | -- | -- | -- |
+| **Max length** | -- | 1600 | 3000 | -- | 2000 | 28000 | 4096 | 4096 | 2000 | -- | -- | -- |
+| **Bidirectional** | x | x | x | x | x | x | x | x | x | x | x | x |
+| **Category** | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Intelligence | Transport |
 
 *SMS supports MMS for media attachments.
 *[1] AI channels support media when the provider has vision capability (`supports_vision=True`).*
@@ -1233,6 +1233,26 @@ teams = TeamsChannel("teams-channel", provider=provider)
 ```
 
 Conversation ID read from `binding.metadata["teams_conversation_id"]`. Uses stored conversation references for proactive messaging. Supports rich text, threading, reactions, and read receipts. Max message length: 28,000 characters. Includes `parse_teams_webhook()` for inbound Activity parsing with automatic `<at>` mention stripping in group chats, `bot_mentioned` metadata detection, `is_bot_added()` for installation events, `parse_teams_activity()` for lifecycle event handling, and `create_channel_conversation()` for proactive channel messaging.
+
+### Telegram Channel
+
+Telegram Bot integration over the Bot API:
+
+```python
+from roomkit import TelegramChannel
+from roomkit.providers.telegram.bot import TelegramBotProvider
+from roomkit.providers.telegram.config import TelegramConfig
+
+provider = TelegramBotProvider(TelegramConfig(bot_token="YOUR_BOT_TOKEN"))
+kit.register_channel(TelegramChannel("telegram-main", provider=provider))
+```
+
+Recipient read from `binding.metadata["telegram_chat_id"]`. Outbound Markdown is
+rendered into native Telegram entities (bold, code, links); set
+`rich_messages=True` to opt in to Bot API 10.1 Rich Messages (native tables and
+headings), with automatic fallback to entity formatting. Supports text, rich
+text, media, location, and reactions. Max message length: 4096 characters. See
+the [Telegram API reference](api/providers-telegram.md).
 
 ### Discord Channel
 

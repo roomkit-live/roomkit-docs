@@ -228,6 +228,6 @@ Tool(
 ## Resources
 
 - [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
-- [RoomKit API Reference](/docs/api/)
-- [AI Integration Guide](/docs/ai-integration/)
+- [RoomKit API Reference](api/index.md)
+- [AI Integration Guide](ai-integration.md)
 - [llms.txt Specification](https://llmstxt.org/)

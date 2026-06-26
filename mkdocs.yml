@@ -133,7 +133,7 @@ nav:
           - Telemetry: guides/telemetry.md
       - Development:
           - Testing Patterns: guides/testing-patterns.md
-  - RFC: roomkit-rfc.md
+  - RFC: https://github.com/roomkit-live/roomkit-specs/blob/main/roomkit-rfc.md
   - API Reference:
       - api/index.md
       - Core:

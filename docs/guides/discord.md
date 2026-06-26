@@ -79,7 +79,8 @@ RoomKit `InboundMessage`:
 
 The bot's own messages are always dropped (no echo loop), and other bots are
 dropped by default (`DiscordConfig.ignore_bots=True`). Metadata includes
-`guild_id`, `channel_id`, `channel_name`, `author_name`, and `author_bot`.
+`guild_id`, `channel_id`, `channel_name`, `author_name`, `author_bot`, and
+`message_id`.
 
 ## Outbound messages
 
@@ -88,7 +89,7 @@ dropped by default (`DiscordConfig.ignore_bots=True`). Metadata includes
 | Content        | Discord output                                             |
 | -------------- | ---------------------------------------------------------- |
 | `TextContent`  | plain message                                              |
-| `RichContent`  | an embed (`description` = body)                            |
+| `RichContent`  | an embed (`description` = `plain_text` or body)            |
 | `MediaContent` | http(s) URL in the message (auto-embedded); `data:` URIs are uploaded as a file |
 
 When `event.channel_data.thread_id` is set, the message is sent as a **reply**
