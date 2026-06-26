@@ -228,7 +228,7 @@ Install with: `pip install roomkit[azure]`
 
 Native provider for [Ollama](https://ollama.com). Calls `/api/chat` directly, so
 the `think` parameter and streamed reasoning work without `<think>` tag parsing.
-See [AI Thinking — Native Ollama provider](../guides/ai-thinking.md#native-ollama-provider--authentication)
+See [AI Thinking — Native Ollama provider](../guides/ai-thinking.md#native-ollama-provider-authentication)
 for thinking, authentication, and sampling options (`temperature`, `num_ctx`,
 `top_p`, `top_k`, `min_p`, `keep_alive`).
 
