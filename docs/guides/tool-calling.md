@@ -286,6 +286,31 @@ async def on_tool_event(event: EphemeralEvent) -> None:
 sub_id = await kit.subscribe_room("room-1", on_tool_event)
 ```
 
+## Cross-turn tool memory
+
+The AI context rebuilt for each turn contains MESSAGE events only — tool-call
+events are filtered out (providers track tool context *within* a turn, not
+across turns). Left alone, the model would lose all trace of the tools it
+invoked from one turn to the next: it couldn't tell which tool or source it
+already used, and under Tool Search it couldn't re-call a tool it used a moment
+ago because the catalogue is re-hidden every turn.
+
+`AIChannel` closes both gaps automatically with a per-room, in-memory record of
+tool usage — no configuration needed:
+
+- **A "what you did" digest** — a compact summary of recent tool calls (name +
+  arguments + a short result preview) is appended to the system prompt, so the
+  model knows what it already did. Bounded by recent *calls*.
+- **Sticky re-exposure** — the distinct tool names called recently are
+  re-revealed each turn, so a tool used once stays callable even while Tool
+  Search hides the rest of the catalogue. Bounded by recent distinct *tools* —
+  the conversation's working set — since this is the part that costs full tool
+  schemas.
+
+The record is in-memory and scoped per room: a process restart clears it (the
+model simply rediscovers tools on next use), which is fine for continuity
+within a live conversation.
+
 ## Tool Loop Configuration
 
 ```python
