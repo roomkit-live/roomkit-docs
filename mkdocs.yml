@@ -118,6 +118,7 @@ nav:
           - Gemini on Vertex AI: guides/gemini-vertex.md
       - Channels & Content:
           - SMS & RCS Providers: guides/sms-providers.md
+          - Discord Bot: guides/discord.md
           - Content Transcoding: guides/content-transcoding.md
           - Response Visibility: guides/response-visibility.md
       - Data & Infrastructure:
@@ -177,4 +178,5 @@ nav:
           - Messenger: api/providers-messenger.md
           - Teams: api/providers-teams.md
           - Telegram: api/providers-telegram.md
+          - Discord: api/providers-discord.md
           - HTTP: api/providers-http.md

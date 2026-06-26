@@ -1234,6 +1234,35 @@ teams = TeamsChannel("teams-channel", provider=provider)
 
 Conversation ID read from `binding.metadata["teams_conversation_id"]`. Uses stored conversation references for proactive messaging. Supports rich text, threading, reactions, and read receipts. Max message length: 28,000 characters. Includes `parse_teams_webhook()` for inbound Activity parsing with automatic `<at>` mention stripping in group chats, `bot_mentioned` metadata detection, `is_bot_added()` for installation events, `parse_teams_activity()` for lifecycle event handling, and `create_channel_conversation()` for proactive channel messaging.
 
+### Discord Channel
+
+Discord bot integration via the gateway (`discord.py`). Unlike webhook-based
+channels, a Discord bot keeps a persistent gateway connection for inbound and
+uses REST for outbound, so it is wired as a **source + provider pair** sharing
+a single `discord.Client` (like WhatsApp-personal):
+
+```python
+from roomkit import DiscordChannel
+from roomkit.providers.discord import DiscordBotProvider, DiscordConfig
+from roomkit.sources.discord import DiscordGatewaySource
+
+config = DiscordConfig(bot_token="YOUR_BOT_TOKEN")
+source = DiscordGatewaySource(config, channel_id="discord-main")
+provider = DiscordBotProvider(source)        # reuses the source's client
+
+kit.register_channel(DiscordChannel("discord-main", provider=provider))
+await kit.attach_source("discord-main", source)
+```
+
+Channel ID read from `binding.metadata["discord_channel_id"]`. Inbound messages
+are parsed by `parse_discord_message()` (text → `TextContent`, attachments →
+`MediaContent`, replies → `thread_id`); the bot's own and other bots' messages
+are dropped by default. Outbound supports text, embeds (`RichContent`), media,
+and replies (`channel_data.thread_id`). Reactions are surfaced via the source's
+`on_event` callback and sent with `provider.send_reaction()`. Requires the
+privileged **Message Content** intent. Max message length: 2000 characters.
+See the [Discord Bot guide](guides/discord.md).
+
 ### WhatsApp Channel
 
 WhatsApp Business integration:
