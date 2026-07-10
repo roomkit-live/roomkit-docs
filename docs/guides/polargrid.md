@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install roomkit[polargrid]   # requires polargrid-sdk>=0.8.5
+pip install roomkit[polargrid]   # requires polargrid-sdk>=0.9.0
 ```
 
 ## Quick start
@@ -179,7 +179,17 @@ context.tools = [
 
 ## Vision
 
-`supports_vision` is `False`. The current model catalog (`qwen-3.5-27b`, `qwen-3.6-35b-a3b`, `kokoro-82m`, `whisper-large-v3-turbo`, …) has no multimodal entry on the chat endpoint.
+PolarGrid added multimodal chat in `polargrid-sdk>=0.9.0`: `Message.content` now accepts OpenAI-shaped `image_url` parts. The provider renders an `AIImagePart` (in a user turn or split off an image tool result) as an `image_url` block — the URL may be a remote `https://` URL or a base64 `data:` URI.
+
+`supports_vision` is **model-driven**: it reads the configured model's flag from the curated catalog. Only `qwen-3.6-35b-a3b` (served on Montreal-02, `yul-02`) actually reads images — verified live. `qwen-3.5-27b` accepts a multimodal request but answers as if no image was sent, so it (and any unknown model id) is treated as text-only. Vision is the deployed model's capability, not the SDK's.
+
+To analyse an image, pin the vision model and its edge:
+
+```python
+PolarGridConfig(api_key="pg_...", model="qwen-3.6-35b-a3b", region="yul-02")
+```
+
+[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) accepts a `/image <path> [question]` command: it embeds the local file as a base64 `data:` URI and sends it as an `image_url` part (defaulting to "Analyse this image." when no question is given). Run it with `POLARGRID_MODEL=qwen-3.6-35b-a3b POLARGRID_REGION=yul-02` for vision.
 
 ## Error handling
 
