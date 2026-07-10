@@ -4,9 +4,9 @@
 
 RoomKit is designed around architectural patterns that solve real problems in multi-channel conversation systems. Here's what makes it valuable for production use:
 
-### Hook System with 27 Triggers
+### Hook System with 65 Triggers
 
-Instead of a single "webhook" callback, RoomKit provides **27 distinct hook triggers** covering the full event lifecycle -- including 10 voice triggers and 2 realtime voice triggers. This enables:
+Instead of a single "webhook" callback, RoomKit provides **65 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
 
 - **Memory injection** — Add context before AI generates responses (`BEFORE_BROADCAST`)
 - **Compliance filtering** — Block or modify messages based on content rules

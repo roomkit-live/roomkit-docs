@@ -3464,7 +3464,7 @@ RoomKit exports **73 symbols** from `roomkit`. Providers and voice types import 
 | `EventStatus` | DELIVERED, BLOCKED, etc. |
 | `EventType` | MESSAGE, SYSTEM, EDIT, DELETE, etc. |
 | `HookExecution` | SYNC or ASYNC |
-| `HookTrigger` | 40+ hook triggers (BEFORE_BROADCAST, AFTER_BROADCAST, etc.) |
+| `HookTrigger` | 65 hook triggers (BEFORE_BROADCAST, AFTER_BROADCAST, etc.) |
 | `RoomStatus` | ACTIVE, PAUSED, CLOSED, ARCHIVED |
 
 ### Orchestration
