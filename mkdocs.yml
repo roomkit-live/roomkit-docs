@@ -121,6 +121,7 @@ nav:
           - Discord Bot: guides/discord.md
           - Content Transcoding: guides/content-transcoding.md
           - Response Visibility: guides/response-visibility.md
+          - Message Threading: guides/message-threading.md
       - Data & Infrastructure:
           - Activity Persistence: guides/activity-persistence.md
           - Advanced Memory Providers: guides/advanced-memory.md
