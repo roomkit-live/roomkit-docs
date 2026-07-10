@@ -202,6 +202,35 @@ Every message passes through a deterministic processing pipeline:
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
 
+### Message Threading
+
+RoomKit supports **flat, two-level threads** (Slack / Teams style) on the
+`RoomEvent.parent_event_id` field: a reply points at its thread **root**; a root
+or non-threaded message is `None`. Set it on the inbound message or on direct
+injection, and the locked pipeline **normalises** any parent to the thread root
+(replying to a reply collapses into one thread; a dangling or cross-room parent
+drops to top level with a warning). Because normalisation is a single choke
+point, the invariant "`parent_event_id` is always a root" holds for every entry
+point and every channel — no per-channel wiring. An AI channel's response
+inherits the trigger's thread root, so an `@`-mention inside a thread is
+answered in-thread.
+
+```python
+reply = await kit.send_event("r1", "ws-bob", TextContent(body="Tuesday?"),
+                             parent_event_id=root_id)
+
+# Reads: main timeline (replies excluded) and one thread's replies
+from roomkit.models.store_filter import EventFilter
+timeline = await kit.store.list_events("r1", event_filter=EventFilter(top_level_only=True))
+thread = await kit.store.list_events("r1", event_filter=EventFilter(parent_event_id=root_id))
+
+# Per-root reply aggregates for a "N replies · last reply" affordance
+summaries = await kit.store.get_thread_summaries("r1", [root_id])
+```
+
+Distinct from `ChannelData.thread_id` (the provider-native reference). See the
+[Message Threading guide](guides/message-threading.md).
+
 ### Hook System
 
 Hooks intercept events at specific points in the pipeline for business logic injection.
@@ -284,6 +313,8 @@ Filter options:
 | `ON_IDENTITY_AMBIGUOUS` | Both | Multi-candidate disambiguation |
 | `ON_IDENTITY_UNKNOWN` | Both | Unknown sender handling |
 | `ON_PARTICIPANT_IDENTIFIED` | Async | Post-identification actions |
+| `ON_PARTICIPANT_JOINED` | Async | Explicit member join (`add_member`) |
+| `ON_PARTICIPANT_LEFT` | Async | Explicit member leave (`remove_member`) |
 | `ON_TASK_CREATED` | Async | Task routing |
 | `ON_DELIVERY_STATUS` | Async | Outbound message tracking |
 | `ON_ERROR` | Async | Error monitoring |
@@ -2023,6 +2054,47 @@ The idempotency check is performed inside the room lock to prevent TOCTOU races.
 | `INACTIVE` | Temporarily away |
 | `LEFT` | Has left the room |
 | `BANNED` | Removed from the room |
+
+### Explicit Membership (Join/Leave)
+
+Explicit membership models a deliberate roster on top of the participant model,
+distinct from the lazy `ensure_participant` that materialises a sender the first
+time they speak.
+
+```python
+await kit.add_member("team", channel_id="ws-alice", participant_id="alice",
+                     identity_id="alice", display_name="Alice")
+roster = await kit.list_members("team")            # ACTIVE only; include_left=True for history
+joined = await kit.is_member("team", "alice")      # True if that identity is ACTIVE
+await kit.remove_member("team", "alice")           # soft leave: status -> LEFT
+```
+
+- **`add_member`** is idempotent — joining an already-`ACTIVE` member is a no-op
+  (no write, no event). A genuine join or re-join upserts to `ACTIVE`, preserves
+  the original `joined_at`, and fires `ON_PARTICIPANT_JOINED`.
+- **`remove_member`** is a *soft* leave — it flips `status` to `LEFT` (or
+  `BANNED`) rather than deleting the row, so history and read markers survive,
+  and fires `ON_PARTICIPANT_LEFT`.
+- Both write a `PARTICIPANT_JOINED` / `PARTICIPANT_LEFT` system event for
+  auditing.
+
+### Read Markers ("Seen By")
+
+`read_markers` is the single source of truth for read position
+(`ChannelBinding.last_read_index` is a non-authoritative hint the read API does
+not advance). Channels advance their marker with `mark_read` / `mark_all_read`;
+`list_read_markers` returns every channel's high-water-mark as
+`channel_id -> event index`, which — with one channel per member — aggregates
+into a per-member "seen by" receipt.
+
+```python
+markers = await kit.list_read_markers("team")      # {"ws-bob": 8, "ws-carol": 6}
+by_channel = {p.channel_id: p.display_name for p in await kit.list_members("team")}
+seen_by = {by_channel.get(cid, cid): idx for cid, idx in markers.items()}
+```
+
+See the [Room Membership guide](guides/room-membership.md) for the full
+walkthrough.
 
 ### Channel Access Control
 
