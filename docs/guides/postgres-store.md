@@ -91,7 +91,24 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 ### Schema Initialization
 
-The schema is idempotent — `CREATE TABLE IF NOT EXISTS` and `INSERT ... WHERE NOT EXISTS` patterns ensure safe re-runs. Version tracking via `schema_version` table enables future migrations.
+`store.init()` runs **only additive, idempotent DDL** — `CREATE TABLE IF NOT EXISTS` and `INSERT ... WHERE NOT EXISTS`. It **never drops a table**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
+
+!!! danger "Legacy v1 → v2 migration is explicit and destructive"
+    A very early (v1) release stored rooms as a JSONB blob. Migrating that schema to the current relational layout requires **dropping every table** — irreversible data loss. `init()` will **not** do this for you: if it detects a v1 schema it raises `PostgresSchemaError` and refuses to touch your data.
+
+    To migrate deliberately, **back up your database first**, then call the opt-in migration. It defaults to a dry run:
+
+    ```python
+    from roomkit.store.postgres import PostgresStore, PostgresSchemaError
+
+    store = PostgresStore(dsn="postgres://…")
+    # Report what would happen, without executing anything:
+    print(await store.migrate())              # {"action": "dry_run", "dropped_tables": [...]}
+    # Execute the destructive migration (requires an explicit confirmation):
+    await store.migrate(dry_run=False, confirm=True)
+    ```
+
+    The migration is serialized across processes with a PostgreSQL advisory lock. Fresh databases and existing v2 databases need no migration — `init()` handles them directly.
 
 ### Extending the Schema
 
