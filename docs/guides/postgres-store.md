@@ -110,6 +110,9 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
     The migration is serialized across processes with a PostgreSQL advisory lock. Fresh databases and existing v2 databases need no migration — `init()` handles them directly.
 
+!!! info "Running several processes against one database?"
+    Sharing a `PostgresStore` across a load-balanced deployment needs cross-process locking and a one-time index check. See [Horizontal Scaling (Multi-Process)](scaling.md).
+
 ### Extending the Schema
 
 Applications can add custom columns to RoomKit's tables for business-specific needs. RoomKit reads `SELECT *` and maps known columns — extra columns are ignored by the row-to-model converters. Use RoomKit's `metadata` JSONB fields for application-specific data that doesn't need its own column, or add columns via your own migrations for data that benefits from indexing.

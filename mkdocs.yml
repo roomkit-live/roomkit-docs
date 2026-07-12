@@ -128,6 +128,7 @@ nav:
           - Memory Provider: guides/memory-provider.md
           - Identity Resolution: guides/identity-resolution.md
           - PostgreSQL Storage: guides/postgres-store.md
+          - Horizontal Scaling (Multi-Process): guides/scaling.md
           - Realtime Features: guides/realtime-features.md
           - Room Lifecycle & Timers: guides/room-lifecycle.md
           - Room Membership: guides/room-membership.md
