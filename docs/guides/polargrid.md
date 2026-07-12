@@ -38,7 +38,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
 | `top_p` | `0.9` | 0.0-1.0 |
-| `thinking` | `None` | Toggle qwen reasoning via the `enable_thinking` request flag (sdk 0.8.5+) — `True` on, `False` off, `None` leaves it unset. See [Thinking / reasoning](#thinking--reasoning). |
+| `thinking` | `None` | Toggle qwen reasoning via the `enable_thinking` request flag (sdk 0.8.5+) — `True` on, `False` off, `None` leaves it unset. See [Thinking / reasoning](#thinking-reasoning). |
 | `timeout` | `30.0` | Seconds. |
 | `max_retries` | `0` | Defaults to 0 so RoomKit's `RetryPolicy` controls retries. |
 | `debug` | `False` | Verbose SDK logging. |

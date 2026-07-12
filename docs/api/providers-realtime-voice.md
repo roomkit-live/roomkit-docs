@@ -27,7 +27,7 @@ All realtime transports extend [`VoiceBackend`](providers-voice.md#roomkit.voice
 
 ## Session & State
 
-See [`VoiceSession`](providers-voice.md#roomkit.VoiceSession) and [`VoiceSessionState`](providers-voice.md#roomkit.VoiceSessionState).
+See [`VoiceSession`](providers-voice.md#roomkit.voice.base.VoiceSession) and [`VoiceSessionState`](providers-voice.md#roomkit.voice.base.VoiceSessionState).
 
 ## Events
 
