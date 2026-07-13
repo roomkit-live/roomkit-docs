@@ -308,11 +308,46 @@ async def rate_limit(event, ctx):
 
 ### How do I run multiple instances (horizontal scaling)?
 
-Implement a distributed lock manager using `RoomLockManager`:
+When several processes share one persistent store, room processing must be
+serialized *across* processes. RoomKit **ships** a PostgreSQL advisory-lock
+manager for exactly this — pair it with `PostgresStore`:
 
 ```python
-from roomkit.core.locks import RoomLockManager
+from roomkit import RoomKit
+from roomkit.store import PostgresStore, PostgresAdvisoryLockManager
+
+store = PostgresStore(dsn="postgresql://user:pass@db/roomkit")
+await store.init()
+
+# Give the lock manager its OWN pool (separate from the store's query pool): a
+# session advisory lock is held on its connection for the whole locked section,
+# so sharing the store's pool could deadlock.
+locks = PostgresAdvisoryLockManager(
+    dsn="postgresql://user:pass@db/roomkit",
+    max_size=20,   # ≈ rooms processed concurrently per process
+)
+await locks.init()
+
+kit = RoomKit(store=store, lock_manager=locks)
+```
+
+The manager maps each room id to an advisory key with a **stable** hash
+(`blake2b`), never Python's built-in `hash()` — which is randomized per process
+(`PYTHONHASHSEED`), so two workers would derive different keys for the same room
+and fail to serialize. As defence in depth, index assignment is authoritative at
+the storage layer regardless of the lock: `commit_event` assigns the index and
+bumps the room counters in a single transaction, backed by a
+`UNIQUE(room_id, index)` constraint — so a misconfigured lock surfaces as a loud
+constraint error, never silent corruption.
+
+To back the lock with another system (Redis, etcd, …), implement
+`RoomLockManager` yourself — but keep the same guarantees: a **stable** key, and
+lock/unlock on the **same** connection.
+
+```python
 from contextlib import asynccontextmanager
+
+from roomkit import RoomLockManager
 
 class RedisLockManager(RoomLockManager):
     def __init__(self, redis_client):
@@ -320,23 +355,12 @@ class RedisLockManager(RoomLockManager):
 
     @asynccontextmanager
     async def locked(self, room_id: str):
-        lock = self._redis.lock(f"roomkit:room:{room_id}", timeout=30)
-        async with lock:
+        async with self._redis.lock(f"roomkit:room:{room_id}", timeout=30):
             yield
-
-# Or use PostgreSQL advisory locks
-class PostgresLockManager(RoomLockManager):
-    @asynccontextmanager
-    async def locked(self, room_id: str):
-        lock_key = hash(room_id) & 0x7FFFFFFFFFFFFFFF
-        await self._db.execute("SELECT pg_advisory_lock($1)", lock_key)
-        try:
-            yield
-        finally:
-            await self._db.execute("SELECT pg_advisory_unlock($1)", lock_key)
-
-kit = RoomKit(store=my_store, lock_manager=RedisLockManager(redis))
 ```
+
+See the [Horizontal Scaling guide](guides/scaling.md) for pool sizing and the
+startup warning.
 
 ---
 
