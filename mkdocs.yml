@@ -119,6 +119,7 @@ nav:
       - Channels & Content:
           - SMS & RCS Providers: guides/sms-providers.md
           - Discord Bot: guides/discord.md
+          - Buzz (Nostr): guides/buzz.md
           - Content Transcoding: guides/content-transcoding.md
           - Response Visibility: guides/response-visibility.md
           - Message Threading: guides/message-threading.md
@@ -182,4 +183,5 @@ nav:
           - Teams: api/providers-teams.md
           - Telegram: api/providers-telegram.md
           - Discord: api/providers-discord.md
+          - Buzz: api/providers-buzz.md
           - HTTP: api/providers-http.md

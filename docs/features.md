@@ -1314,6 +1314,35 @@ and replies (`channel_data.thread_id`). Reactions are surfaced via the source's
 privileged **Message Content** intent. Max message length: 2000 characters.
 See the [Discord Bot guide](guides/discord.md).
 
+### Buzz (Nostr) Channel
+
+[Block's Buzz](https://github.com/block/buzz) integration via a Nostr relay. Like
+Discord, the agent keeps a persistent authenticated connection (NIP-42) for
+inbound and publishes outbound over the relay's HTTP bridge, so it is wired as a
+**source + provider pair** sharing one [`buzzkit`](https://pypi.org/project/buzzkit/)
+client:
+
+```python
+from roomkit import BuzzChannel
+from roomkit.providers.buzz import BuzzConfig, BuzzProvider
+from roomkit.sources.buzz import BuzzRelaySource
+
+config = BuzzConfig(relay_url="wss://you.communities.buzz.xyz", private_key="nsec1...")
+source = BuzzRelaySource(config, "buzz-main", relay_channel_id="<channel-uuid>")
+provider = BuzzProvider(source)          # reuses the source's client
+
+kit.register_channel(BuzzChannel("buzz-main", provider=provider))
+await kit.attach_source("buzz-main", source)
+```
+
+Channel UUID read from `binding.metadata["buzz_channel_id"]`. Inbound Nostr
+events are parsed by `parse_buzz_event()` (kind-9 text → `TextContent`, sender
+pubkey → `sender_id`); the agent's own events are dropped (no echo loop).
+Outbound publishes a signed kind-9 message over the HTTP bridge. The agent's key
+must be a member of the community (claim an invite once via `buzzkit`). Max
+message length: 65536 characters. Requires `pip install roomkit[buzz]`. See the
+[Buzz (Nostr) guide](guides/buzz.md).
+
 ### WhatsApp Channel
 
 WhatsApp Business integration:
