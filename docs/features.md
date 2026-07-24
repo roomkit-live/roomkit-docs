@@ -366,6 +366,34 @@ AI features:
 - **Vision support** -- Providers with vision capability can receive and process images
 - **Function calling** -- Tools can be defined for AI to call external functions
 
+#### ACP Coding Agents
+
+`ACPChannel` is a separate intelligence channel for external coding-agent
+runtimes. RoomKit is the ACP client, while Claude Agent, Codex CLI, Gemini CLI,
+or another compatible agent owns the ACP session and tool loop:
+
+```python
+from roomkit import ACPChannel, ChannelCategory
+
+agent = ACPChannel(
+    "coding-agent",
+    command=["my-acp-agent", "--stdio"],
+    cwd="/srv/workspaces/project",
+)
+kit.register_channel(agent)
+await kit.attach_channel(
+    "support-123",
+    "coding-agent",
+    category=ChannelCategory.INTELLIGENCE,
+)
+```
+
+The channel maps one ACP session to each Room and supports streamed text,
+thinking, tool-call activity, plans, permission requests, and cancellation.
+Tool permissions are denied by default. Install it with
+`pip install "roomkit[acp]"`. See the [ACP Agent Channel
+guide](guides/acp-channel.md).
+
 #### Model Discovery
 
 Every AI provider can report which models it supports, so an integrator can list

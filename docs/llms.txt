@@ -29,7 +29,8 @@ with distributed implementations (Redis, PostgreSQL, etc.) for production deploy
 ## Channels
 
 - [Channel ABC](docs/api/channel.md): Base class for all channels - handle_inbound, deliver, on_event, capabilities
-- [Built-in Channels](docs/api/channels.md): SMSChannel, EmailChannel, AIChannel, WebSocketChannel, VoiceChannel, RealtimeVoiceChannel, MessengerChannel, TeamsChannel, HTTPChannel, WhatsAppChannel, WhatsAppPersonalChannel
+- [Built-in Channels](docs/api/channels.md): SMSChannel, EmailChannel, AIChannel, ACPChannel, WebSocketChannel, VoiceChannel, RealtimeVoiceChannel, MessengerChannel, TeamsChannel, HTTPChannel, WhatsAppChannel, WhatsAppPersonalChannel
+- [ACP Agent Channel](docs/guides/acp-channel.md): Connect a Room to an external ACP coding agent over stdio, with per-Room sessions, streaming updates, default-deny permissions, and cancellation
 - [Voice Channel](docs/api/providers-voice.md): VoiceBackend ABC, STTProvider, TTSProvider, DeepgramSTTProvider, ElevenLabsTTSProvider, FastRTCVoiceBackend - real-time voice with barge-in support
 - [Realtime Voice](docs/api/providers-realtime-voice.md): RealtimeVoiceChannel, RealtimeVoiceProvider ABC, GeminiLiveProvider, OpenAIRealtimeProvider, WebSocketRealtimeTransport, FastRTCRealtimeTransport (WebRTC passthrough) - speech-to-speech AI with tool calling, text injection, auto-reconnect
 

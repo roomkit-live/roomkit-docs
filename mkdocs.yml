@@ -99,6 +99,7 @@ nav:
           - PyAV Video Recorder: guides/pyav-video-recorder.md
           - Room Media Recorder: guides/room-media-recorder.md
       - AI & Tools:
+          - ACP Agent Channel: guides/acp-channel.md
           - Guardrails: guides/guardrails.md
           - AI Steering Directives: guides/ai-steering.md
           - Tool Calling & Policies: guides/tool-calling.md

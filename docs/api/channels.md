@@ -8,6 +8,8 @@
 
 ::: roomkit.AIChannel
 
+::: roomkit.ACPChannel
+
 ::: roomkit.WebSocketChannel
 
 ::: roomkit.VoiceChannel
