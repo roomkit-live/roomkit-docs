@@ -245,17 +245,23 @@ from roomkit.voice.pipeline.aec.mock import MockAECProvider
 
 aec = MockAECProvider()
 
-# Process returns frame unchanged (pass-through)
-result = await aec.process(frame)
+# Process returns frame unchanged (pass-through). Stage methods are sync and
+# take the stream the frame belongs to.
+result = aec.process(frame, "alice")
 assert result.data == frame.data
 
-# Feed reference audio (for echo cancellation)
-await aec.feed_reference(reference_frame)
+# Feed reference audio (for echo cancellation) for that same stream
+aec.feed_reference(reference_frame, "alice")
 
 # Tracking
 assert len(aec.frames) == 1
 assert len(aec.reference_frames) == 1
+assert aec.streams == ["alice"]
+assert aec.reference_streams == ["alice"]
 ```
+
+Pass a distinct key per speaker to check a stage keeps them apart — see
+`tests/voice/pipeline/stream_conformance.py` for a reusable check.
 
 ### Other Pipeline Mocks
 

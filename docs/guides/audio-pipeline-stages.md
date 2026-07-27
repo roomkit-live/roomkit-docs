@@ -134,7 +134,7 @@ aec = SpeexAECProvider(
 | `SpeexAECProvider` | libspeexdsp (ctypes) | Split API with internal ring buffer |
 | `WebRTCAECProvider` | aec-audio-processing (pip) | WebRTC-based AEC |
 
-**How it works**: The pipeline automatically feeds TTS playback audio as the reference signal via `feed_reference()` on the outbound path. The `process()` method on the inbound path uses this reference to subtract echo.
+**How it works**: The pipeline automatically feeds TTS playback audio as the reference signal via `feed_reference(frame, stream)` on the outbound path. The `process(frame, stream)` method on the inbound path uses that stream's reference to subtract echo. Both carry the same key, because each stream owns its echo canceller — in a conference every lane hears a different mix.
 
 !!! note "Capability-Aware Skipping"
     When the backend declares `VoiceCapability.NATIVE_AEC`, the pipeline skips the AEC stage — the backend handles echo cancellation natively.
@@ -262,15 +262,71 @@ class VolumeNormalizer(AudioPostProcessor):
     def name(self) -> str:
         return "volume_normalizer"
 
-    def process(self, frame: AudioFrame) -> AudioFrame:
+    def process(self, frame: AudioFrame, stream: str) -> AudioFrame:
         # Apply volume normalization
         return frame
+
+    def reset(self, stream: str) -> None:
+        # Drop this stream's state — the stream has ended
+        ...
 
 
 pipeline = AudioPipelineConfig(postprocessors=[VolumeNormalizer()])
 ```
 
 Multiple postprocessors are applied in order. Use cases: volume normalization, audio watermarking, effects.
+
+### Writing a stage: keep your state per stream
+
+Every stage method takes a `stream` key — an opaque identifier for the audio
+stream the frame belongs to. One pipeline serves many streams: a bridged voice
+channel has one per session, a conference one per lane. **Your stage must key
+its state on it.** Sharing state between streams is what makes one speaker's
+silence close another speaker's utterance.
+
+```python
+from dataclasses import dataclass, field
+
+
+@dataclass
+class _StreamState:
+    # Only what process() mutates. Immutable config stays on the instance.
+    buffer: bytearray = field(default_factory=bytearray)
+
+
+class MyStage(AudioPostProcessor):
+    def __init__(self) -> None:
+        self._streams: dict[str, _StreamState] = {}
+
+    def process(self, frame: AudioFrame, stream: str) -> AudioFrame:
+        st = self._streams.setdefault(stream, _StreamState())
+        st.buffer.extend(frame.data)
+        return frame
+
+    def reset(self, stream: str) -> None:
+        self._streams.pop(stream, None)
+
+    def close(self) -> None:
+        self._streams.clear()
+```
+
+`stream` has no default on purpose: a stage that quietly ignored it would still
+satisfy the interface while mixing speakers together. If your stage wraps a
+native SDK, note that the model and the adaptive state usually live in the same
+object — one stream then means one native instance, so release it in **both**
+`reset(stream)` and `close()`. A leak there is C memory, not a red test.
+
+RoomKit ships a conformance check you can run against your own stage:
+
+```python
+from tests.voice.pipeline.stream_conformance import (
+    assert_stage_keeps_state_per_stream,
+)
+
+
+def test_my_stage_is_per_stream():
+    assert_stage_keeps_state_per_stream(MyStage, make_frame)
+```
 
 ---
 
