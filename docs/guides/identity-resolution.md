@@ -202,6 +202,80 @@ Inbound Message
   → Broadcast
 ```
 
+## Conferences: the participant the framework did not name
+
+A conference participant that RoomKit admitted arrives already named — the id
+passed to `mint_access()` comes back from the SFU. One it did not admit (a
+SIP/PSTN dial-in, or an admission arranged out of band) arrives under the
+backend's own opaque identity, `sip_15551234`, which no resolver can match. The
+address that *can* be matched is in the provider's participant attributes, and
+`ConferenceChannel` passes it to the resolver on its own.
+
+Two things about this differ from the inbound pipeline above:
+
+- **It runs when the participant arrives, not when it first speaks.** Someone
+  can sit through a whole meeting without publishing a word; waiting for speech
+  would leave them unidentified to every hook and roster read in the meantime.
+- **The result is linked to the participant, not substituted for it.** The Room
+  `Participant.id` stays the backend's identity — that is what attributes
+  transcription events, per-track recordings and the interruption allowlist —
+  and the resolved Identity is carried on `identity_id`:
+
+```python
+participant = await kit.store.get_participant("room-1", "sip_15551234")
+participant.id              # "sip_15551234"  — the backend's identity
+participant.external_id     # "sip_15551234"
+participant.identity_id     # "user-42"       — who it turned out to be
+participant.identification  # IdentificationStatus.IDENTIFIED
+```
+
+So a caller dialling into a conference reaches the same `Identity` it would have
+reached by texting the room, and nothing downstream has to change identifier
+halfway through the meeting.
+
+### Which attribute counts as an address
+
+The channel reads a documented list of participant-attribute keys, most specific
+first, and takes the first non-empty string it finds:
+
+```python
+from roomkit import CONFERENCE_ADDRESS_KEYS
+
+CONFERENCE_ADDRESS_KEYS
+# ("sip.phoneNumber", "phone_number", "phoneNumber",
+#  "caller_id", "callerId", "from_number", "from")
+```
+
+`sip.trunkPhoneNumber` — the number the caller *dialled* — is deliberately absent:
+every dial-in reaches the same trunk, so reading it would identify all of them as
+one person. If your provider names the caller's number differently, say so rather
+than forking:
+
+```python
+channel = ConferenceChannel(
+    "conf",
+    backend=backend,
+    identity_address_keys=("x-caller-number", *CONFERENCE_ADDRESS_KEYS),
+)
+```
+
+When no address is found, the participant stays `UNKNOWN`: the channel does not
+fall back to resolving on the opaque identity.
+
+### What an arrival does not do
+
+An arrival is not a message, so there is nothing to hold, refuse, or reply to. It
+does **not** fire `ON_IDENTITY_AMBIGUOUS` / `ON_IDENTITY_UNKNOWN`, and it runs no
+challenge or rejection flow — those act on an inbound message, and the
+participant's first utterance goes through the full pipeline like any other.
+An `AMBIGUOUS` or `PENDING` result is recorded as a pending identification with
+its candidates; `UNKNOWN`, `REJECTED` and `CHALLENGE_SENT` leave the participant
+unknown. `identity_timeout` applies as everywhere else: on timeout the result is
+`UNKNOWN`, the framework event is emitted, and the participant joins regardless.
+A resolver that raises never keeps someone out of a meeting.
+
+See RFC §12.10.2 for the normative rules.
+
 ## Hook Filtering
 
 Identity hooks support the same filtering as regular hooks:
