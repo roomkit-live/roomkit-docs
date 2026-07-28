@@ -52,6 +52,8 @@ RoomKit has three independent recording layers:
 
 All three can run simultaneously without interference.
 
+A conference uses the `MediaRecorder` interface at a different granularity — one recording per track rather than one per room. See [Conference recording](#conference-recording).
+
 ## Configuration
 
 ### MediaRecordingConfig
@@ -93,6 +95,34 @@ voice = VoiceChannel("voice", ..., recording=ChannelRecordingConfig(video=False)
 # Exclude screen share from recording
 video = VideoChannel("video", ..., recording=ChannelRecordingConfig(screen_share=False))
 ```
+
+## Conference recording
+
+A conference records through the same `MediaRecorder` interface, but at a different granularity: **one recording per track**, not one per room. The recorder is passed to the channel rather than to `create_room()`.
+
+```python
+from roomkit import ConferenceRecordingConfig
+from roomkit.channels.conference import ConferenceChannel
+from roomkit.recorder.pyav import PyAVMediaRecorder
+
+channel = ConferenceChannel(
+    "conf",
+    backend=backend,
+    stt=stt,
+    recorder=PyAVMediaRecorder(),
+    recording=ConferenceRecordingConfig(storage="./recordings"),
+)
+```
+
+Each subscribed track opens its own recording on its first frame, carrying that track alone with `RecordingTrack.participant_id` set to the publisher — so the output is per-participant and attributed, which is what a compliance recording of a meeting has to be. The bot's own published audio is recorded as one more attributed track (`bot:<session_id>`), never mixed into a participant's.
+
+Per track rather than one file per room, because a conference gains participants while it runs. A room recording adds every track to a single container, and a container fixes its streams at the first write — a participant who joins ten minutes in cannot be added to it. Giving each track its own recording means no track is ever a late one.
+
+A participant who never speaks produces no file: the recording opens on the first frame, which is also where that track's own sample rate is known.
+
+Recording counts as collection, so it stops when the room binding stops permitting it (`kit.set_access(room, "conf", Access.NONE)`), and `channel.info()["rooms"][room]["recording_active"]` answers whether a given conference is being recorded right now.
+
+`ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
 
 ## A/V sync
 
