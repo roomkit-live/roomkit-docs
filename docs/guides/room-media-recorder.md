@@ -124,6 +124,48 @@ Recording counts as collection, so it stops when the room binding stops permitti
 
 `ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
 
+### Finding the files
+
+A recording nobody can locate is not much of a recording, so the channel reports each one: `ON_RECORDING_STARTED` when a track's recording opens, `ON_RECORDING_STOPPED` when it closes with the result.
+
+```python
+from roomkit import (
+    ConferenceRecordingStarted,
+    ConferenceRecordingStopped,
+    HookExecution,
+    HookTrigger,
+)
+
+@kit.hook(HookTrigger.ON_RECORDING_STARTED, execution=HookExecution.ASYNC)
+async def recording_started(event: ConferenceRecordingStarted, ctx) -> None:
+    print(f"{event.participant_id} is being recorded ({event.kind}, {event.sample_rate} Hz)")
+
+@kit.hook(HookTrigger.ON_RECORDING_STOPPED, execution=HookExecution.ASYNC)
+async def recording_stopped(event: ConferenceRecordingStopped, ctx) -> None:
+    await archive(
+        room_id=event.room_id,
+        participant_id=event.participant_id,
+        track_id=event.track_id,
+        location=event.url,           # where the recorder wrote it
+        duration=event.duration_seconds,
+        size=event.size_bytes,
+    )
+```
+
+The same pair is emitted as framework events — `recording_started` and `recording_stopped`, carrying `channel_id`, `track_id`, `participant_id` and `url` — for observers that watch the bus rather than register hooks:
+
+```python
+@kit.on("recording_stopped")
+async def on_stopped(event) -> None:
+    print(event.data["url"])
+```
+
+**One report per track, not one per conference.** The tracks of a meeting do not end together: a participant who leaves halfway through has a finished file while the meeting runs on, and holding those results back for a single report at the end would deliver them after the point you could act on them. An integrator that wants the meeting's full list accumulates it by room — which is state it was going to keep anyway.
+
+A track that stayed silent reports nothing at all, since it produced no file. Both hooks are ASYNC: a recording already written is a fact, not a decision. Egress mode fires neither — it carries no result contract (RFC §12.10.8).
+
+A runnable end-to-end walkthrough, against the mock backend and recorder, is in [`examples/conference_recording_result.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/conference_recording_result.py).
+
 ## A/V sync
 
 Audio and video PTS are both derived from `time.monotonic()` at frame acquisition time, referenced to a shared origin set after all codec streams are initialized. This ensures:
