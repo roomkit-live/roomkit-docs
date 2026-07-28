@@ -1010,6 +1010,12 @@ kit = RoomKit(
 )
 ```
 
+Two senders are skipped without any configuration, because a resolver maps an
+*address* and they carry none: one the room has already marked `IDENTIFIED`, and
+one arriving on a channel whose `sender_id` is a room `Participant.id` rather
+than an address (`Channel.sender_is_participant`, which `ConferenceChannel`
+sets). See the [identity resolution guide](guides/identity-resolution.md).
+
 Identity statuses and their hooks:
 
 | Status | Hook Trigger | Use Case |

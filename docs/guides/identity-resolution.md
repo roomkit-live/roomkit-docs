@@ -202,6 +202,37 @@ Inbound Message
   → Broadcast
 ```
 
+### When resolution is skipped
+
+A resolver maps an *address* — a number, an email, a handle — to an `Identity`.
+Two senders carry no such question, and the framework does not ask
+(RFC §11.6):
+
+| Case | What it means |
+|------|---------------|
+| The room has already identified the sender | The event's `participant_id` names a `Participant` of the room whose `identification` is `IDENTIFIED`. The answer is on the roster; `identity_id` already carries it |
+| The channel names its own senders | The channel sets `sender_is_participant = True`, declaring its `sender_id` is a room `Participant.id` rather than an address. `ConferenceChannel` does — see below |
+
+Skipping matters beyond the saved lookup. Re-resolving a sender the room already
+identified returns `UNKNOWN` — no resolver matches a framework identifier — so
+`ON_IDENTITY_UNKNOWN` fires again, and the standard refusal pattern:
+
+```python
+@kit.identity_hook(HookTrigger.ON_IDENTITY_UNKNOWN)
+async def refuse(event, ctx, id_result):
+    return IdentityHookResult.reject("unknown sender")
+```
+
+would block every message from a participant the framework itself identified.
+
+`PENDING` and `AMBIGUOUS` participants are deliberately *not* skipped: a
+participant the room has is not one it has identified, the resolver may still be
+what settles it, and a hook may still want to challenge or refuse.
+
+A channel that carries real addresses must leave `sender_is_participant` at its
+default of `False` — declaring it wrongly stops those addresses ever being
+resolved.
+
 ## Conferences: the participant the framework did not name
 
 A conference participant that RoomKit admitted arrives already named — the id
@@ -216,6 +247,12 @@ Two things about this differ from the inbound pipeline above:
 - **It runs when the participant arrives, not when it first speaks.** Someone
   can sit through a whole meeting without publishing a word; waiting for speech
   would leave them unidentified to every hook and roster read in the meantime.
+  The arrival is also the *only* point at which a conference resolves: a
+  transcription enters the inbound pipeline under the identity its track was
+  published under — a `Participant.id`, not an address — so `ConferenceChannel`
+  sets `sender_is_participant = True` and utterances skip resolution entirely
+  (RFC §11.6). Speaking again asks nothing new, and no identity hook fires per
+  sentence.
 - **The result is linked to the participant, not substituted for it.** The Room
   `Participant.id` stays the backend's identity — that is what attributes
   transcription events, per-track recordings and the interruption allowlist —
