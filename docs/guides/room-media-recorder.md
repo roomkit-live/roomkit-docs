@@ -118,7 +118,23 @@ Each subscribed track opens its own recording on its first frame, carrying that 
 
 Per track rather than one file per room, because a conference gains participants while it runs. A room recording adds every track to a single container, and a container fixes its streams at the first write — a participant who joins ten minutes in cannot be added to it. Giving each track its own recording means no track is ever a late one.
 
-A participant who never speaks produces no file: the recording opens on the first frame, which is also where that track's own sample rate is known.
+A participant who never speaks produces no file: the recording opens on the first frame, which is also where that track's own format is known.
+
+### Each track is recorded in the format it was published in
+
+Participants negotiate their audio format with the SFU separately, and nothing obliges them to agree — a phone dial-in at 8 kHz 8-bit and a studio microphone at 48 kHz stereo are an ordinary pair in one meeting. So the format belongs to the track, not to the conference: the recording is opened on the first frame and `RecordingTrack` carries what that frame actually was.
+
+```python
+@kit.hook(HookTrigger.ON_RECORDING_STARTED, execution=HookExecution.ASYNC)
+async def recording_started(event: ConferenceRecordingStarted, ctx) -> None:
+    print(f"{event.participant_id}: {event.sample_rate} Hz, {event.channels} ch, {event.codec}")
+```
+
+`codec` names the sample width the way FFmpeg does — `pcm_s8`, `pcm_s16le`, `pcm_s32le`, signed little-endian throughout. Four-byte samples are `pcm_s32le` and never float: `AudioFrame` carries a width, not a format, and the framework's resamplers and pipeline stages are integer throughout. A backend holding float samples converts them before handing them over.
+
+**A recording carries one format.** A container fixes its streams at the first write, so a frame arriving in a format other than the one its recording was opened on has nowhere honest to go. It is not written: it is logged once for the track and counted in `recording_dropped_frames` below. Writing it would be worse than losing it — PCM carries no description of itself, so the frame would be decoded as the header claims, and the file would open, play wrong, and report nothing.
+
+If you write your own `MediaRecorder`, this is the contract from your side: `on_data` hands you bytes and nothing else, so `track.codec`, `track.sample_rate` and `track.channels` are the only things that say how to read them. `channels` is `None` where a caller did not state it, which means mono.
 
 Recording counts as collection, so it stops when the room binding stops permitting it (`kit.set_access(room, "conf", Access.NONE)`), and `channel.info()["rooms"][room]["recording_active"]` answers whether a given conference is being recorded right now.
 
