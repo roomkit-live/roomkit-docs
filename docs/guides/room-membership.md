@@ -79,6 +79,15 @@ await kit.remove_member("team", "carol")                              # status -
 await kit.remove_member("team", "mallory", status=ParticipantStatus.BANNED)  # status -> BANNED
 ```
 
+`LEFT` and `BANNED` differ in what they permit, not only in what they record.
+`ConferenceChannel.mint_access()` reads the status before it asks the SFU for
+anything: `ACTIVE`, `INACTIVE` and `LEFT` are minted for — someone whose
+connection dropped asks for a second credential, not a second identity — and
+`BANNED` raises `ParticipantNotAdmittedError`. It has to be caught there, since
+an SFU honours the credential it minted and there is no revocation in the
+backend contract. `add_member` puts a banned participant back to `ACTIVE` and
+undoes it; `ensure_participant` returns the record as it stands and does not.
+
 ## Lifecycle hooks
 
 Each transition fires an async lifecycle hook, so you can run side effects —

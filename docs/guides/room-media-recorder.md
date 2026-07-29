@@ -140,15 +140,15 @@ Recording counts as collection, so it stops when the room binding stops permitti
 
 `ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
 
-### The write is not on the frame callback
+### Nothing the recorder does happens on the frame callback
 
-A conference backend hands each frame to its subscribers in sequence, so anything slow done where a frame arrives is time every *other* participant's audio waits for. Encoding and writing a file is exactly that, which is why a conference recording never does it there: the frame is queued and the callback returns, and the writing happens on a task of its own, one batch at a time.
+A conference backend hands each frame to its subscribers in sequence, so anything slow done where a frame arrives is time every *other* participant's audio waits for. Encoding and writing a file is exactly that — and so is *creating* one, and so is closing it. A conference recording therefore does none of them there: the frame is queued and the callback returns, and the recording's whole life — the open, the writes, the close — happens on a task of its own.
 
-Off the loop's thread, too. Every call in `MediaRecorder` is synchronous — it blocks for as long as the storage takes — so a queue alone would only move the block a few microseconds later. **Your recorder's `on_data` is therefore called from a worker thread**, and it must not assume otherwise (RFC §12.11). What the framework promises in return is serialization per recording: the calls belonging to one handle are ordered and never overlap, so per-recording state needs no locking of its own. Different handles may be written at the same time, which is what keeps one participant's slow disk one participant's problem.
+Off the loop's thread, too. Every call in `MediaRecorder` is synchronous — each blocks for as long as the storage takes — so a queue alone would only move the block a few microseconds later. **Your recorder is called from a worker thread, on every method**, and it must not assume otherwise (RFC §12.11). What the framework promises in return is serialization per recording: the calls belonging to one handle are ordered and never overlap, so per-recording state needs no locking of its own. Different handles may be used at the same time, which is what keeps one participant's slow disk one participant's problem.
 
 Two consequences worth knowing:
 
-- **Writes land a moment after the frame.** A test that asserts on what a recorder received has to wait for them; in production the flush happens before a recording is finalized, so a closed file is never missing frames that were still in flight.
+- **A recording opens a moment after the frame that decided to record it**, and its writes land a moment after that. A test that asserts on what a recorder received has to wait for them (`await channel._recorder.drain()`); in production the flush happens before a recording is finalized, so a closed file is never missing frames that were still in flight. `ON_RECORDING_STARTED` fires when the recorder has actually accepted the recording, which is also the first moment it has an id to report.
 - **A recording that falls behind drops frames rather than memory.** Each track's write backlog is bounded by `max_queued_frames` (the same bound the transcription lanes use — default 100 frames, about two seconds), and a full backlog drops its **oldest** frame. That leaves a gap in the file rather than an ever-growing queue and an ever-growing lag.
 
 ```python

@@ -156,8 +156,9 @@ class MyChannel(Channel):
 
 Two consequences worth knowing about:
 
-- **`attach_channel()` can fail on a remote backend.** `on_room_attached` is awaited between the binding write and the attachment being announced. A channel that raises there has not been attached: the binding is removed and the error reaches the caller, rather than leaving a room bound to a conference that was never created. `process_inbound()` inherits this wherever it auto-attaches a channel.
+- **`attach_channel()` can fail on a remote backend.** `on_room_attached` is awaited between the binding write and the attachment being announced. A channel that raises there has not been attached: the binding is put back the way it was and the error reaches the caller, rather than leaving a room bound to a conference that was never created. Attaching *over* a live attachment is the case that "put back" matters for — the channel refusing the new binding has said nothing about the old one, so the previous binding is restored rather than deleted and `detach_channel()` can still tear the attachment down. `process_inbound()` inherits all of this wherever it auto-attaches a channel.
 - **`ON_CHANNEL_ATTACHED` handlers run afterwards.** A handler that calls `ConferenceChannel.mint_access()` finds a conference to admit someone to. Async hooks of one trigger run concurrently with each other, so this ordering only holds because the channel's own work is not one of them. `on_room_detached` is awaited before the `ON_CHANNEL_DETACHED` handlers for the same reason.
+- **A detach is announced whether or not the channel let go cleanly.** By the time `on_room_detached` runs the binding is gone and `CHANNEL_DETACHED` is indexed, so a channel that raises there changes how well it detached, not whether: `ON_CHANNEL_DETACHED` and `room_channel_detached` still fire, and the error reaches the caller afterwards.
 
 ### Room Lifecycle Management
 
