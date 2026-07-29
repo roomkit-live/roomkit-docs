@@ -157,6 +157,13 @@ channel.info()["rooms"][room]["recording_dropped_frames"]  # 0 when nothing was 
 
 Frames a failed write lost — a full disk, a codec that refuses one frame — are counted there too, and the log says which of the two it was. None of it reaches the transcription path: a conference that cannot be recorded goes on being transcribed, and a track whose recording could not be opened at all is logged once rather than retried on every frame.
 
+### Every wait is bounded — including the one on your `close`
+
+A conference teardown waits for a recording to be finalized before its bot leaves the meeting, so a `MediaRecorder` that blocks forever in `on_recording_stop()` would keep the framework's bot sitting in a conference for as long as it took. Every wait the framework makes on your recorder is therefore bounded — the flush, the open, the writes and the finalization alike. Two things follow for a recorder:
+
+- **A call that passes the budget is abandoned, not cancelled.** It is running on a worker thread and the framework cannot stop it; it stops *waiting*. Your call still owns whatever it was given: what you were told to close is still yours to close, and the absence of a further call is not permission to discard it. The framework reports the recording as having no location, because you never got as far as returning one.
+- **`close()` is never called while one of those is still running.** Freeing what a running call is inside is a crash rather than an error for a native muxer, so the framework settles every abandoned call first — after the bot has left, with nothing queued behind that wait — and if they will not settle it leaves your recorder unreleased and logs why. Leaking a recorder is a bounded cost; calling into a freed one is not.
+
 ### Finding the files
 
 A recording nobody can locate is not much of a recording, so the channel reports each one: `ON_RECORDING_STARTED` when a track's recording opens, `ON_RECORDING_STOPPED` when it closes with the result.
