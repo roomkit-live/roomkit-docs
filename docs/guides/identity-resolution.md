@@ -233,6 +233,23 @@ A channel that carries real addresses must leave `sender_is_participant` at its
 default of `False` — declaring it wrongly stops those addresses ever being
 resolved.
 
+### Which channels name their own senders
+
+The test is where the `sender_id` comes from. A channel that reads it off the
+wire carries whatever the remote network put there. A channel RoomKit itself
+names the sender of carries a `Participant.id`, and declares it:
+
+| Channel | Declares | Why |
+|---|---|---|
+| `ConferenceChannel` | ✅ | An utterance carries the identity its track was published under — a `Participant.id`. The conference resolves once, when the participant arrives (below) |
+| `CLIChannel` | ✅ | `run()` names the human at the keyboard; its `sender_id` defaults to `"user"` and is a `Participant.id`, not an address |
+| `WebSocketChannel` | ❌ | Whatever the integrator puts on `sender_id` — an address in one deployment, an internal id in another. Excluding it is a configuration call: `identity_channel_types` |
+| `VoiceChannel` | ❌ | `sender_id` is the `VoiceSession.participant_id` the backend filled in — a SIP session id for one call, a caller number for the next. Deployment-dependent |
+| Transport channels (SMS, email, RCS, WhatsApp, chat…) | ❌ | The address *is* the sender: that is the question a resolver exists to answer |
+
+The rule of thumb: declare it when RoomKit chose the value, leave it alone when
+the network or the integrator did.
+
 ## Conferences: the participant the framework did not name
 
 A conference participant that RoomKit admitted arrives already named — the id
