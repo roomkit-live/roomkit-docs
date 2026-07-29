@@ -186,7 +186,7 @@ kit = RoomKit(
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `identity_resolver` | `None` | The resolver instance. `None` disables resolution |
-| `identity_channel_types` | `None` | Restrict to specific channel types. `None` = all |
+| `identity_channel_types` | `None` | Restrict to specific channel types. `None` = all. Applies to conference arrivals too — [below](#turning-it-off) |
 | `identity_timeout` | `10.0` | Timeout in seconds. On timeout, status becomes `UNKNOWN` |
 
 ## Pipeline Position
@@ -327,6 +327,33 @@ its candidates; `UNKNOWN`, `REJECTED` and `CHALLENGE_SENT` leave the participant
 unknown. `identity_timeout` applies as everywhere else: on timeout the result is
 `UNKNOWN`, the framework event is emitted, and the participant joins regardless.
 A resolver that raises never keeps someone out of a meeting.
+
+### Turning it off
+
+`identity_channel_types` gates the arrival exactly as it gates the inbound
+pipeline. A deployment that restricts resolution — to hold a contractual or
+data-processing limit on what leaves for an external resolver — is not bypassed
+by the conference path: a dial-in's caller number is one of the addresses that
+restriction exists to keep in.
+
+```python
+kit = RoomKit(
+    identity_resolver=my_resolver,
+    identity_channel_types={ChannelType.SMS},   # conferences excluded
+)
+```
+
+The arrival is otherwise unchanged: the participant joins, the roster records
+it, the provider's attributes stay on `Participant.metadata` — only the lookup
+does not happen, and the participant stays `UNKNOWN`. Include
+`ChannelType.CONFERENCE` in the set (or leave `identity_channel_types` at
+`None`) to resolve dial-ins.
+
+One accessor answers the question wherever it is asked:
+
+```python
+kit.identity_enabled_for(ChannelType.CONFERENCE)   # False, above
+```
 
 See RFC §12.10.2 for the normative rules.
 
