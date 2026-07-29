@@ -124,6 +124,23 @@ Recording counts as collection, so it stops when the room binding stops permitti
 
 `ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
 
+### The write is not on the frame callback
+
+A conference backend hands each frame to its subscribers in sequence, so anything slow done where a frame arrives is time every *other* participant's audio waits for. Encoding and writing a file is exactly that, which is why a conference recording never does it there: the frame is queued and the callback returns, and the writing happens on a task of its own, one batch at a time.
+
+Off the loop's thread, too. Every call in `MediaRecorder` is synchronous — it blocks for as long as the storage takes — so a queue alone would only move the block a few microseconds later. **Your recorder's `on_data` is therefore called from a worker thread**, and it must not assume otherwise (RFC §12.11). What the framework promises in return is serialization per recording: the calls belonging to one handle are ordered and never overlap, so per-recording state needs no locking of its own. Different handles may be written at the same time, which is what keeps one participant's slow disk one participant's problem.
+
+Two consequences worth knowing:
+
+- **Writes land a moment after the frame.** A test that asserts on what a recorder received has to wait for them; in production the flush happens before a recording is finalized, so a closed file is never missing frames that were still in flight.
+- **A recording that falls behind drops frames rather than memory.** Each track's write backlog is bounded by `max_queued_frames` (the same bound the transcription lanes use — default 100 frames, about two seconds), and a full backlog drops its **oldest** frame. That leaves a gap in the file rather than an ever-growing queue and an ever-growing lag.
+
+```python
+channel.info()["rooms"][room]["recording_dropped_frames"]  # 0 when nothing was lost
+```
+
+Frames a failed write lost — a full disk, a codec that refuses one frame — are counted there too, and the log says which of the two it was. None of it reaches the transcription path: a conference that cannot be recorded goes on being transcribed, and a track whose recording could not be opened at all is logged once rather than retried on every frame.
+
 ### Finding the files
 
 A recording nobody can locate is not much of a recording, so the channel reports each one: `ON_RECORDING_STARTED` when a track's recording opens, `ON_RECORDING_STOPPED` when it closes with the result.
