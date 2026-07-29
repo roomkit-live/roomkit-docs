@@ -306,6 +306,138 @@ backchannel = MockBackchannelDetector(decisions=[
 
 ---
 
+## Mock Conference Backend
+
+`MockConferenceBackend` scripts what an SFU would do, so a conference can be
+tested without an SFU, credentials or a network. It is deliberately strict —
+it delivers no frame for a track nobody subscribed to, and refuses operations
+the declared capabilities do not cover — and it can be made to misbehave, which
+is what the failure paths need in order to be reachable at all.
+
+### Scripting the happy path
+
+```python
+from __future__ import annotations
+
+from roomkit import ConferenceGrants, MockConferenceBackend
+
+backend = MockConferenceBackend()
+bot = await backend.join_as_bot("room-1", "roomkit", ConferenceGrants())
+
+await backend.simulate_participant_joined("room-1", "p-alice")
+track = await backend.simulate_track_published("room-1", "p-alice")
+await backend.subscribe_track(bot, track.id)
+await backend.simulate_audio(track, backend.frame_for(track))
+
+# An unsubscribed track delivers nothing — a real SFU forwards nothing to a
+# subscriber that did not ask.
+assert backend.dropped_frames == []
+```
+
+### Failures
+
+Any backend method can be made to raise. The call is recorded before it fails,
+because the request did go out: a test asserting the channel *tried* to join
+needs the trace of the attempt.
+
+```python
+backend.fail("join_as_bot", TimeoutError("SFU unreachable"))
+backend.fail("close_room", RuntimeError, times=1)   # first call only, then it works
+backend.fail("leave")                               # default: RuntimeError naming the method
+
+assert backend.calls[-1].method == "join_as_bot"    # recorded, then raised
+backend.faults.clear("leave")                       # back to the happy path
+```
+
+`error` accepts an exception instance, a class, or a factory. `times=1` retires
+the fault after one call, which is the shape a retry — or a second teardown
+after a first that died — has to be tested against.
+
+An unknown method name raises `ValueError` rather than doing nothing quietly: a
+lever that silently no-ops lets a test pass believing it injected a failure.
+
+### Latency
+
+`delay()` applies to backend methods *and* to callback fanouts, and every
+delivery is timed:
+
+```python
+backend.delay("list_participants", 0.05)   # a slow control call
+backend.delay("track_audio", 0.05)         # a slow media path
+
+await backend.simulate_audio(track, backend.frame_for(track))
+assert backend.deliveries[-1].elapsed >= 0.05
+```
+
+`backend.deliveries` is what makes lane isolation checkable from outside, as
+the RFC describes it — "delaying recognition on one track and measuring frame
+delivery on another". Subscribers are awaited in sequence, so a lane doing its
+work inside the delivery callback shows up as delivery time on every *other*
+participant's frames:
+
+```python
+slow = [d.elapsed for d in backend.deliveries if d.track_id == alice.id]
+fast = [d.elapsed for d in backend.deliveries if d.track_id == bob.id]
+assert max(fast) < min(slow)   # Bob's frames were not held up by Alice's lane
+```
+
+Emissions can be delayed but not made to fail: a backend logs what its
+subscribers raise and carries on, so a failure injected there would never be
+observable. Raise from the callback instead.
+
+### Heterogeneous audio formats
+
+Participants negotiate their own format with the SFU and nothing obliges them
+to agree, so one conference can carry three at once. A track can declare the
+format its publisher sent, and `frame_for()` builds frames in it:
+
+```python
+from roomkit import MockTrackFormat
+
+dial_in = await backend.simulate_track_published(
+    "room-1", "p-bob", audio_format=MockTrackFormat(sample_rate=8_000, sample_width=1)
+)
+studio = await backend.simulate_track_published(
+    "room-1", "p-carol",
+    audio_format=MockTrackFormat(sample_rate=48_000, channels=2, sample_width=4),
+)
+
+await backend.simulate_audio(dial_in, backend.frame_for(dial_in))
+await backend.simulate_audio(studio, backend.frame_for(studio, amplitude=0.0))  # silence
+```
+
+`amplitude` is a fraction of full scale: the default is loud enough for an
+energy VAD to call it speech, and `0.0` gives the silence that ends an
+utterance.
+
+A track that declared a format only accepts frames in it — an SFU forwards what
+the publisher sent, and a mock that let a 16 kHz frame land on an 8 kHz track
+would hide exactly the mismatch these formats exist to expose. Tracks that
+declare nothing stay permissive.
+
+Widths are 1, 2 or 4 bytes, always signed. 24-bit PCM is refused with a reason:
+`AudioFrame` has no representation for it and the resamplers map only
+`int8`/`int16`/`int32`.
+
+### What the bot published, per utterance
+
+`published_audio` is every chunk in arrival order. `utterances` groups them,
+opening a new record after each `is_final` chunk:
+
+```python
+assert [u.data for u in backend.utterances] == [b"first answer", b"second answer"]
+assert backend.utterances[-1].complete      # False if a detach cut it off
+```
+
+Two answers published concurrently land in *one* record with their chunks
+interleaved — which is the point: a flat list of chunks cannot show that two
+responses ran together, and a single record whose contents alternate can.
+
+See `examples/conference_fault_injection.py` for all four levers running
+against a real `ConferenceChannel`.
+
+---
+
 ## Voice Pipeline Integration Test
 
 Wire up a full pipeline with mocks to test end-to-end voice flow:
