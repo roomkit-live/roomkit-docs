@@ -287,23 +287,65 @@ So a caller dialling into a conference reaches the same `Identity` it would have
 reached by texting the room, and nothing downstream has to change identifier
 halfway through the meeting.
 
+### Who put the address there
+
+Which key carries the address is the second question. The first is who wrote the
+value, because on most SFUs one attribute map carries two very different things:
+
+| | |
+|---|---|
+| **Asserted** — `ConferenceParticipant.asserted_metadata` | Facts the SFU established: the number a SIP trunk reported, a claim in a token it authenticated, an attribute set through a server-side API. |
+| **The rest** — everything else in `ConferenceParticipant.metadata` | What a participant's own client supplied when it joined. Surfaced, never vouched for. |
+
+Only the first kind founds an identity. An attribute a client supplied is a claim
+about itself: a caller writing its own `phone_number` and resolved on it reaches
+whichever `Identity` that number belongs to — someone else's — and the
+`Participant` then carries the victim's `identity_id` on the record every later
+attribution reads.
+
+```python
+# The SFU asserts the trunk's number → identified.
+await backend.simulate_participant_joined(
+    "room-1", "sip_15551234", metadata={"sip.phoneNumber": "+15551234"}
+)
+
+# The participant writes it itself → the resolver is never called.
+await backend.simulate_participant_joined(
+    "room-1", "sip_9", client_metadata={"sip.phoneNumber": "+15551234"}
+)
+```
+
+Provenance outranks specificity: an asserted address on a generic key beats an
+unasserted one on the provider's own key, because an attacker chooses the key and
+never the provenance.
+
+A backend that cannot tell the two apart says so by leaving `asserted_metadata`
+as `None`, and nothing is founded on what it surfaces. If your deployment has a
+reason to trust it anyway — a closed client fleet, provenance you establish
+elsewhere — say so explicitly:
+
+```python
+channel = ConferenceChannel("conf", backend=backend, identity_trusts_unasserted_metadata=True)
+```
+
 ### Which attribute counts as an address
 
-The channel reads a documented list of participant-attribute keys, most specific
-first, and takes the first non-empty string it finds:
+Among the asserted attributes, the channel reads a documented list of keys, most
+specific first, and takes the first non-empty string it finds:
 
 ```python
 from roomkit import CONFERENCE_ADDRESS_KEYS
 
 CONFERENCE_ADDRESS_KEYS
 # ("sip.phoneNumber", "phone_number", "phoneNumber",
-#  "caller_id", "callerId", "from_number", "from")
+#  "caller_id", "callerId", "from_number")
 ```
 
 `sip.trunkPhoneNumber` — the number the caller *dialled* — is deliberately absent:
 every dial-in reaches the same trunk, so reading it would identify all of them as
-one person. If your provider names the caller's number differently, say so rather
-than forking:
+one person. So is `from`: it is a SIP header name generic enough that a value
+found under it says nothing about where it came from. If your provider names the
+caller's number differently, say so rather than forking:
 
 ```python
 channel = ConferenceChannel(
@@ -315,6 +357,34 @@ channel = ConferenceChannel(
 
 When no address is found, the participant stays `UNKNOWN`: the channel does not
 fall back to resolving on the opaque identity.
+
+### Where the provider's attributes end up
+
+A conference is the one place where strangers write into a `Participant`'s
+metadata, so what the provider attached lives under a key of its own, with its
+provenance kept and its size bounded — never merged flat over the fields your
+own code put there:
+
+```python
+from roomkit import CONFERENCE_METADATA_KEY
+
+participant.metadata
+# {
+#     "tier": "gold",                                     # yours, untouched
+#     "conference": {
+#         "asserted":   {"sip.phoneNumber": "+15551234"},   # the SFU vouched
+#         "unasserted": {"nickname": "bob"},                # the client said so
+#     },
+# }
+participant.metadata[CONFERENCE_METADATA_KEY]["asserted"]
+```
+
+A re-join refreshes that one key and touches nothing else. Each bag keeps at most
+32 attributes, keys up to 128 characters and values up to 1024 characters
+serialized, first seen kept — so a participant that floods its own attributes can
+evict neither what the SFU asserted about it nor what it was already carrying.
+
+See `examples/conference_identity_provenance.py` for all of this end to end.
 
 ### What an arrival does not do
 
