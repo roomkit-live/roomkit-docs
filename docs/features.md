@@ -141,6 +141,24 @@ await kit.attach_channel("support-123", "ai-bot", category=ChannelCategory.INTEL
 
 When a message arrives on any channel, it is automatically broadcast to all other attached channels, with content transcoded as needed for each target's capabilities.
 
+#### Attachment is a channel contract, not just a store write
+
+Some channels have outside-world work to do when they are attached: `ConferenceChannel` creates the SFU room (RFC §12.10.4 step 1). That work runs through two `Channel` methods the framework awaits itself — no-ops on the base class, so an ordinary channel needs neither:
+
+```python
+class MyChannel(Channel):
+    async def on_room_attached(self, room_id: str, binding: ChannelBinding) -> None:
+        """Establish whatever the new binding claims exists."""
+
+    async def on_room_detached(self, room_id: str) -> None:
+        """Take it back down."""
+```
+
+Two consequences worth knowing about:
+
+- **`attach_channel()` can fail on a remote backend.** `on_room_attached` is awaited between the binding write and the attachment being announced. A channel that raises there has not been attached: the binding is removed and the error reaches the caller, rather than leaving a room bound to a conference that was never created. `process_inbound()` inherits this wherever it auto-attaches a channel.
+- **`ON_CHANNEL_ATTACHED` handlers run afterwards.** A handler that calls `ConferenceChannel.mint_access()` finds a conference to admit someone to. Async hooks of one trigger run concurrently with each other, so this ordering only holds because the channel's own work is not one of them. `on_room_detached` is awaited before the `ON_CHANNEL_DETACHED` handlers for the same reason.
+
 ### Room Lifecycle Management
 
 Rooms follow a state machine with four statuses:
@@ -306,8 +324,8 @@ Filter options:
 | `ON_ROOM_CREATED` | Async | Room initialization |
 | `ON_ROOM_PAUSED` | Async | Inactivity alerts |
 | `ON_ROOM_CLOSED` | Async | Cleanup, archival |
-| `ON_CHANNEL_ATTACHED` | Async | Welcome messages |
-| `ON_CHANNEL_DETACHED` | Async | Farewell messages |
+| `ON_CHANNEL_ATTACHED` | Async | Welcome messages — runs after the channel's own `on_room_attached` ([above](#attachment-is-a-channel-contract-not-just-a-store-write)) |
+| `ON_CHANNEL_DETACHED` | Async | Farewell messages — runs after the channel's own `on_room_detached` |
 | `ON_CHANNEL_MUTED` | Async | State tracking |
 | `ON_CHANNEL_UNMUTED` | Async | State tracking |
 | `ON_IDENTITY_AMBIGUOUS` | Both | Multi-candidate disambiguation |
