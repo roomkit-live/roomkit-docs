@@ -273,10 +273,10 @@ config = AudioPipelineConfig(vad=vad)
 
 ```bash
 # TEN-VAD (recommended — fast, low latency)
-wget https://github.com/k2-fsa/sherpa-onnx/releases/download/vad-models/ten-vad.onnx
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/ten-vad.onnx
 
 # Silero VAD
-wget https://github.com/k2-fsa/sherpa-onnx/releases/download/vad-models/silero_vad.onnx
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
 ```
 
 ### Configuration
