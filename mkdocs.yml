@@ -135,6 +135,7 @@ nav:
           - Room Lifecycle & Timers: guides/room-lifecycle.md
           - Room Membership: guides/room-membership.md
           - Production Resilience: guides/production-resilience.md
+          - Security Hardening: guides/security-hardening.md
           - Telemetry: guides/telemetry.md
       - Development:
           - Testing Patterns: guides/testing-patterns.md
