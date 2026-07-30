@@ -70,6 +70,7 @@ config = MediaRecordingConfig(
     audio_codec="aac",         # Audio codec
     audio_sample_rate=16000,   # Audio sample rate (Hz)
     format="mp4",              # Container format
+    metadata={"matter": "M-2026-071"},  # Yours to define, the recorder's to interpret
 )
 ```
 
@@ -81,6 +82,7 @@ config = MediaRecordingConfig(
 | `audio_codec` | `aac` | Audio codec (AAC recommended for MP4) |
 | `audio_sample_rate` | `16000` | Audio sample rate in Hz |
 | `format` | `mp4` | Container format |
+| `metadata` | `{}` | Caller-supplied, carried to the recorder verbatim — a matter id, a retention class. The framework never reads it; a conference channel copies `ConferenceRecordingConfig.metadata` into it, one copy per per-track recording. |
 
 ### ChannelRecordingConfig
 
