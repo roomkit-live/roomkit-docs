@@ -304,6 +304,61 @@ to stay near live rather than accumulate delay, and the count is how you know
 it happened. The trade is deliberate — a transcript that lags the meeting by
 growing seconds is worth less than one with a hole it can report.
 
+## The AI in the meeting
+
+The flagship combination — a human speaks, the model understands, the bot
+answers out loud — is not a feature you wire. It is principle 2 doing its
+job: transcriptions are RoomEvents, cross-channel broadcast applies with no
+conference-specific exceptions, so attaching an `AIChannel` to the room *is*
+the STT → LLM → TTS loop:
+
+```python
+from roomkit.channels.ai import AIChannel
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+
+conference = ConferenceChannel("conf", backend=backend, stt=stt, tts=tts)
+ai = AIChannel("ai", provider=AnthropicAIProvider(AnthropicConfig(api_key=...)),
+               system_prompt="You are the meeting's voice assistant.")
+kit.register_channel(conference)
+kit.register_channel(ai)
+await kit.attach_channel("standup", "conf")
+await kit.attach_channel("standup", "ai")
+# done — speak, and the bot answers on its own track
+```
+
+One channel rule makes the voicing automatic: a conference speaks only
+events from an AI-typed source (`speak_text_events=True` widens that to
+everything, and is off because a meeting is not a place to read other
+channels' traffic aloud). The model's answer is such an event, so it is
+synthesized and published on the bot track with zero configuration; any
+other channel's text passes through silently.
+
+A loop that answers a room it also speaks into needs two protections, and
+both are already in place:
+
+- **The media loop.** The bot's own TTS must not come back through a lane,
+  be transcribed, and be answered again. Bot self-exclusion closes it: the
+  channel never subscribes to a track its own session published
+  (RFC §12.10.4).
+- **The event loop.** The AI must not answer its own answer. `AIChannel`
+  skips events it produced, and the framework bounds any AI-to-AI chain at
+  `max_chain_depth` (default 5, RFC §8.3) — two AIs in one room converse
+  finitely.
+
+Between the answer and the audio sit the orchestration points. `BEFORE_TTS`
+runs synchronously with the final text just before synthesis: it may rewrite
+the bot's words or block them — a pending handoff is the classic reason to
+hold the bot silent — and blocking keeps the answer out of the *audio*, not
+out of the room's record. `AFTER_TTS` fires with what was actually said. And
+who may cut the bot off mid-answer is policy, not accident — see
+[Interruption](#interruption).
+
+The deterministic version of all of this — including a handoff holding an
+answer back, and both loop protections measured — is
+[`examples/conference_ai_meeting.py`][example-ai]; export `ANTHROPIC_API_KEY`
+before running [`examples/conference_livekit.py`][example-livekit] and the
+same loop runs live: you talk, the bot talks back.
+
 ## The three read surfaces
 
 A management UI asks three different questions, and RoomKit answers each from
@@ -573,6 +628,11 @@ class documentation.
 - [`examples/conference_livekit.py`][example-livekit] — the same against a
   real LiveKit SFU: two browser tabs, one bot, speech attribution by ear,
   interruption, teardown, and a resume mode that proves the occupancy probe.
+  With `ANTHROPIC_API_KEY`, a live `AIChannel` answers the meeting out loud.
+- [`examples/conference_ai_meeting.py`][example-ai] — the STT → LLM → TTS
+  loop, deterministic on the mock backend: the AI answers a spoken question,
+  `BEFORE_TTS` holds an answer back during a handoff, and both anti-loop
+  protections are measured rather than asserted.
 - [`examples/conference_notetaker_on_demand.py`][example-notetaker] — the
   hot-plug round trip: a purely human meeting gains its notetaker when the
   host asks (join, retroactive subscription, transcription from the plug
@@ -581,6 +641,7 @@ class documentation.
 - [`examples/conference_fault_injection.py`][example-faults] — testing
   against a backend that fails, lags and varies its audio formats.
 
+[example-ai]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_ai_meeting.py
 [example-mock]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_quickstart.py
 [example-livekit]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_livekit.py
 [example-notetaker]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_notetaker_on_demand.py
