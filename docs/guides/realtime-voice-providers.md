@@ -2,6 +2,8 @@
 
 RoomKit's `RealtimeVoiceChannel` enables speech-to-speech AI conversations using providers like OpenAI Realtime API, Google Gemini Live, xAI Grok Realtime, and ElevenLabs Conversational AI. Audio flows directly between the client and the AI provider — no separate STT/TTS stages.
 
+`RealtimeVoiceChannel` is the 1:1 surface — one human, one session. The same providers also join multi-party meetings as the conference's intelligence, mixed N→1 onto one session per room: see [Speech-to-speech in a conference](conference.md#speech-to-speech-the-realtime-ai-as-a-participant) (RFC §12.10.12).
+
 ## How It Differs from VoiceChannel
 
 | Aspect | VoiceChannel | RealtimeVoiceChannel |

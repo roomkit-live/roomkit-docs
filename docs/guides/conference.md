@@ -359,6 +359,70 @@ answer back, and both loop protections measured — is
 before running [`examples/conference_livekit.py`][example-livekit] and the
 same loop runs live: you talk, the bot talks back.
 
+## Speech-to-speech: the realtime AI as a participant
+
+The STT → LLM → TTS loop trades latency for structure. When the meeting wants
+a sub-second agent with native turn-taking instead, one realtime provider
+(Gemini Live, OpenAI Realtime, …) replaces all three stages
+(RFC §12.10.12):
+
+```python
+from roomkit import ConferenceRealtimeConfig
+from roomkit.providers.gemini import GeminiLiveProvider
+
+conference = ConferenceChannel(
+    "conf",
+    backend=backend,
+    realtime=ConferenceRealtimeConfig(
+        provider=GeminiLiveProvider(api_key=...),
+        system_prompt="You are the meeting's voice assistant.",
+    ),
+    stt=stt,  # optional, and recommended: see attribution below
+)
+```
+
+The shape of the composition: every subscribed audio track is mixed N→1 —
+additive, headroom-scaled, in 20 ms windows, with silence-only windows never
+forwarded — and fed to **one provider session per conference**, established
+lazily on the first mixed window and torn down with the bot's own session.
+The provider's voice publishes on the bot track under the ordinary utterance
+contract: floor, terminal `is_final`, one utterance at a time. To the SFU and
+to a barge-in, a realtime response and a TTS answer are indistinguishable.
+
+Three arbitrations to know about:
+
+- **Attribution ends at the provider boundary.** The provider heard a mix,
+  so its own transcription of the room names nobody — RoomKit discards it
+  rather than guess. Configure `stt=` beside `realtime=` and the per-track
+  lanes run in parallel with the mix, keeping the transcript attributed
+  exactly as in the STT/TTS pattern. The provider's *assistant* finals are
+  kept: they are the only record of what the AI said, and they land as room
+  events attributed to the channel.
+- **The per-lane VAD stays the barge-in sensor.** The provider brings its
+  own turn-taking on the mix, but *who* may cut the bot off is the
+  conference's [interruption policy](#interruption), and only track identity
+  can name the interrupter. A barge-in that lands stops the chunk stream,
+  discards what the SFU had queued (`stop_playback`), and tells the provider
+  to cancel the response — best-effort, since not every provider can cancel
+  (Gemini Live's `interrupt()` is a documented no-op; its own detection
+  usually beats the framework to it anyway).
+- **One voice per bot.** `tts=` and `realtime=` are mutually exclusive: both
+  publish on the one bot track. The provider *is* the voice, so inbound text
+  events that pass the speaking gate are injected into its conversation
+  context (`inject_text`) instead of being synthesized over it.
+
+The slot hot-plugs like every other need — `plug_realtime(config)` /
+`unplug_realtime()`, with the occupancy probe re-run at the plug and the bot
+retiring on the last unplug — and the lanes it shares with a recognizer
+survive whichever of the two unplugs first. `info()` discloses
+`realtime_configured`, `realtime_provider`, and per room `realtime_active`
+(the session is actually connected) and `realtime_dropped_windows` (audio
+the mix discarded to stay near-live).
+
+The deterministic walkthrough — lazy session, attributed transcript beside
+the mix, a barge-in reaching the provider as a cancellation — is
+[`examples/conference_realtime_ai.py`][example-realtime].
+
 ## The three read surfaces
 
 A management UI asks three different questions, and RoomKit answers each from
@@ -633,6 +697,10 @@ class documentation.
   loop, deterministic on the mock backend: the AI answers a spoken question,
   `BEFORE_TTS` holds an answer back during a handoff, and both anti-loop
   protections are measured rather than asserted.
+- [`examples/conference_realtime_ai.py`][example-realtime] — speech-to-speech
+  N→1, deterministic on the mocks: the mixed meeting reaches one realtime
+  session lazily, the provider's voice closes on `is_final`, and a barge-in
+  stops the playback and cancels the response.
 - [`examples/conference_notetaker_on_demand.py`][example-notetaker] — the
   hot-plug round trip: a purely human meeting gains its notetaker when the
   host asks (join, retroactive subscription, transcription from the plug
@@ -642,6 +710,7 @@ class documentation.
   against a backend that fails, lags and varies its audio formats.
 
 [example-ai]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_ai_meeting.py
+[example-realtime]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_realtime_ai.py
 [example-mock]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_quickstart.py
 [example-livekit]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_livekit.py
 [example-notetaker]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_notetaker_on_demand.py
