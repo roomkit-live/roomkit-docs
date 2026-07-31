@@ -79,10 +79,35 @@ Each Nostr event is parsed by
 - **Text** (kind-9 stream message) → `TextContent`.
 - The sender's Nostr pubkey becomes `sender_id` (resolved to a participant).
 - The Nostr event id becomes `external_id` and `idempotency_key`.
+- **Threads** (NIP-10): the thread ROOT event id becomes `thread_id` (flat
+  two-level model, like Slack's `thread_ts`), and the immediate parent lands in
+  `metadata["nostr_reply_to"]`.
 
 The agent's own events are always dropped (no echo loop;
 `BuzzConfig.ignore_own=True`). Metadata includes `nostr_event_id`, `nostr_kind`,
 and `buzz_channel_id`.
+
+### Reactions
+
+Reactions live **outside the message pipeline** — the same contract as the
+Discord and WhatsApp channels. Pass an `on_event` callback to the source to
+receive them (this widens the subscription to kinds 9 + 7 + 5):
+
+```python
+def on_relay_event(data: dict) -> None:
+    # {"action": "add", "emoji": "🔥", "user_id": <pubkey>,
+    #  "target_event_id": ..., "reaction_event_id": ..., "channel_id": ...}
+    # or {"action": "remove", "user_id": ..., "reaction_event_id": ..., ...}
+    ...
+
+source = BuzzRelaySource(config, "buzz-main",
+                         relay_channel_id=CHANNEL, on_event=on_relay_event)
+```
+
+A kind-5 deletion is surfaced as `action: "remove"` with the retracted
+reaction's event id (Buzz retracts reactions by deleting the reaction event, so
+the emoji/target are not on the wire). The agent's own reactions are dropped
+under the same `ignore_own` policy as messages.
 
 ## Outbound messages
 
@@ -91,6 +116,14 @@ channel message (kind 9) over the relay's HTTP bridge, signed with the agent's
 key. It returns a `ProviderResult` carrying the Nostr `event_id`. Because sends
 use the HTTP bridge, they succeed even while the inbound WebSocket is
 reconnecting.
+
+To reply **in a thread**, set `channel_data.thread_id` to the thread-root
+Nostr event id (the `thread_id` the inbound parser produced, or the message's
+own `external_id` to start a thread under it) — the provider passes it as a
+NIP-10 `reply_to`. To react, call
+`provider.send_reaction(target_event_id, emoji)`; retract with
+`provider.remove_reaction(reaction_event_id)` (the id a successful
+`send_reaction` returned).
 
 ## Voice: huddles
 
@@ -175,8 +208,15 @@ and call `watcher.bridge(huddle_id)` from your own hook.
 `BuzzChannel` advertises text, with threading and reactions. Max message length
 is 65536 characters (the relay's content limit).
 
-Out of scope for now: rich content, media (imeta), and reaction dispatch. Each
-source subscribes to a single relay channel.
+Lifecycle details: a relay closing with code **1012** (graceful restart) is
+reconnected quietly at the initial backoff — replayed events are deduped by
+id. Presence is re-announced every 30 s (safe for both the 180 s and the older
+90 s relay TTLs). `BuzzConfig.leave_on_stop` opts into a NIP-29 leave (kind
+9022) when the source stops — leave it off for private channels, where an
+admin granted the membership and self-join cannot get it back.
+
+Out of scope for now: rich content and media (imeta). Each source subscribes
+to a single relay channel.
 
 ## Runnable examples
 

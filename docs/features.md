@@ -1391,10 +1391,16 @@ await kit.attach_source("buzz-main", source)
 
 Channel UUID read from `binding.metadata["buzz_channel_id"]`. Inbound Nostr
 events are parsed by `parse_buzz_event()` (kind-9 text → `TextContent`, sender
-pubkey → `sender_id`); the agent's own events are dropped (no echo loop).
-Outbound publishes a signed kind-9 message over the HTTP bridge. The agent's key
-must be a member of the community (claim an invite once via `buzzkit`). Max
-message length: 65536 characters. Requires `pip install roomkit[buzz]`. See the
+pubkey → `sender_id`, NIP-10 thread root → `thread_id`); the agent's own events
+are dropped (no echo loop). Outbound publishes a signed kind-9 message over the
+HTTP bridge; `channel_data.thread_id` threads it as a NIP-10 reply. Reactions
+are surfaced via the source's `on_event` callback (kind 7 add / kind 5 remove,
+outside the message pipeline — same contract as Discord) and sent with
+`provider.send_reaction()` / `remove_reaction()`. Graceful relay restarts
+(close code 1012) reconnect quietly, and `BuzzConfig.leave_on_stop` opts into a
+NIP-29 leave on shutdown. The agent's key must be a member of the community
+(claim an invite once via `buzzkit`). Max message length: 65536 characters.
+Requires `pip install roomkit[buzz]` (buzzkit>=0.2.1). See the
 [Buzz (Nostr) guide](guides/buzz.md).
 
 ### WhatsApp Channel
