@@ -212,6 +212,41 @@ bridge is a trade settled for continuity. An explicit `bot_grants=` is never
 rewritten by a plug or an unplug — the caller who set it took coverage on
 themselves.
 
+**Explicit grants are owned — and their owner can speak at runtime.** That
+the plugs never rewrite an explicit `bot_grants=` makes it owned, not
+frozen: `set_bot_grants()` is the owner's runtime voice (RFC §12.10.4).
+Pass a new grant set to replace the explicit one — the coverage bargain
+carries forward, so a set that does not cover the plugged needs is accepted
+exactly as construction would accept it — or pass `None` to return the
+channel to derivation. Unlike a plug's alignment, the change is an
+instruction: it is applied to every live session in full, in place where
+the backend can, and by the announced re-join where it cannot or where the
+in-place update fails.
+
+The flagship move is the observer who reveals itself:
+
+```python
+# Hidden from the first second — the event bridge without the listening:
+conference = ConferenceChannel(
+    "conf", backend=backend, stt=stt, bot_grants=ConferenceGrants.observer()
+)
+# Mid-meeting the host starts the notetaker, and the policy says: visible.
+await kit.unmute(room_id, "conf")                        # collection opens
+await conference.set_bot_grants(ConferenceGrants.for_bot(listens=True))
+```
+
+On LiveKit the reveal happens in place — `UpdateParticipant` removes
+`hidden` and the SFU announces the bot to the clients already connected
+(verified live): same session, same subscriptions, the event bridge intact.
+Concealment is the asymmetric half: no SFU interface can *un-tell* clients
+about a participant they were told of, so a visible→hidden change always
+replaces the session — the announced leave is the retraction — whatever the
+backend's capabilities. `info()["bot_grant_update_in_place"]` says
+beforehand which price a change will carry, the per-room
+`info()["rooms"][id]["bot_hidden"]` reports the status in force on the
+session (§17.7), and every effective change on a connected session emits
+the `conference_bot_grants_changed` framework event.
+
 **Refusals and ownership.** A plug refuses exactly what construction
 refuses — `stt` or `recording` on an E2EE conference, a recording mode with
 no egress surface — and a slot already holding a provider is refused rather
