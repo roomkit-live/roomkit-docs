@@ -2029,6 +2029,21 @@ access = await conference.mint_access("standup", "alice")
 
 The bot joins lazily — on a mint, on an attach that finds the conference already occupied (a restart over a live meeting), on a delivery, on an arrival — and an empty conference is never joined. The triggers answer to a need: a channel with no `stt`, no `tts` and no `recording` never joins at all and skips the occupancy probe — pure transport, where RoomKit stays the meeting's admission gate and roster with no participant of its own in it (RFC §12.10.4; see the [guide](guides/conference.md#pure-transport-mode) for what that trades away). `mint_access()` enforces admission (roster membership, bans) before it mints; eviction is reactive (`remove_participant()`), and the credential TTL (`access_ttl`, 15 min default) bounds the exposure of a token already issued.
 
+### Hot-Plugging Intelligence
+
+The configuration first need is read from is not fixed at construction (RFC §12.10.4): `plug_stt()` / `unplug_stt()`, `plug_tts()` / `unplug_tts()` and `plug_recording()` / `unplug_recording()` change a channel serving live conferences. Plugging a need is a first need — the occupancy probe is re-run, an occupied conference is joined before the plug returns, and the tracks already published are subscribed retroactively: the meeting is transcribed from the plug forward. Unplugging the last need takes the bot out (`conference_ended` announced) and the channel is pure transport again — the notetaker that enters when the host asks and leaves when dismissed is the use case:
+
+```python
+# Mid-meeting, on the host's explicit request (the §17.7 consent gesture):
+await conference.plug_stt(stt)
+await conference.plug_recording(ConferenceRecordingConfig(), recorder=recorder)
+# ... the bot is in, transcription and recording run ...
+await conference.unplug_stt()
+await conference.unplug_recording()   # last need gone: the bot leaves
+```
+
+The bot's derived grants follow the configuration at each join; a plug that widens what a live session must do is applied in place where the backend declares `ConferenceCapability.BOT_GRANT_UPDATE` (LiveKit does, over `UpdateParticipant` — same session, event bridge intact) and by an announced re-join otherwise. A plug refuses exactly what construction refuses (E2EE × stt, E2EE × recording, an occupied slot); unplugging an empty slot is a no-op; an unplugged provider is closed under the existing `close_providers` rule. `conference.info()` answers §17.7 with the configuration in force, not the constructor's. See the [guide](guides/conference.md#hot-plugging-intelligence) and `examples/conference_notetaker_on_demand.py`.
+
 ### Per-Track Transcription Lanes
 
 Each subscribed audio track runs through the shared audio pipeline in a lane of its own (`Resampler -> [AGC] -> [Denoiser] -> VAD -> STT`) under the track's identity: one utterance becomes one `RoomEvent` attributed to its speaker — no diarization needed, the track says who — and one participant's slow recognizer never delays another's frames. Backpressure is bounded and counted (`max_queued_frames`, oldest frame dropped, `lane.dropped_frames`). `ON_TRANSCRIPTION` fires synchronously before the text reaches the room and may rewrite or block it (redaction); it fails closed. Interruption is policy (`ConferenceInterruptionConfig`: scope any/none/allowlist), and `ON_BARGE_IN` names the interrupting participant.

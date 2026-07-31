@@ -153,7 +153,81 @@ observer RFC §17.7 exists to surface, and RoomKit does not offer that as a
 mode.
 
 Configure any one of `stt=`, `tts=` or `recording=` and every trigger above
-is restored unchanged.
+is restored unchanged — and none of the three has to be configured at
+construction: the next section is how a running channel gains and loses them.
+
+## Hot-plugging intelligence
+
+The configuration first need is read from is not fixed at construction (RFC
+§12.10.4). Each kind of intelligence can be plugged into and unplugged from a
+channel that is serving live conferences:
+
+```python
+# The meeting is running, purely human. The host asks for a notetaker:
+await conference.plug_stt(stt)
+await conference.plug_recording(ConferenceRecordingConfig(), recorder=recorder)
+
+# Later, the host dismisses it:
+await conference.unplug_stt()
+await conference.unplug_recording()   # last need gone — the bot leaves
+```
+
+Six methods, one per kind and direction: `plug_stt(stt, pipeline=None)` /
+`unplug_stt()`, `plug_tts(tts)` / `unplug_tts()`,
+`plug_recording(config, recorder=...)` / `unplug_recording()`. All are
+`async`, and their effects are in force when they return.
+
+**Plugging a need is a first need.** In every attached room, an occupied
+conference is joined before the plug returns — the attach's occupancy probe
+is re-run, because the join is once more a consequence a probe can have —
+and the tracks already published are subscribed retroactively: the meeting
+is transcribed from the plug forward, not from the next publication. An
+empty conference stays unjoined, and the ordinary lazy-join triggers stand
+ready. A probe or join that fails does not fail the plug: the configuration
+stands, and the next mint, delivery or arrival retries — the same discipline
+as every other trigger.
+
+**Unplugging the last need takes the bot out.** A session kept past the last
+consumer and the last voice is the silent observer §17.7 refuses, so it
+leaves, `conference_ended` is announced, and the channel stands down exactly
+as a channel constructed pure-transport — same channel, same room, no
+rebuild. An unplug that leaves other needs standing keeps the bot: unplug
+the stt of a channel that still records and the lanes close while the
+subscriptions — recording still consumes them — stay. An utterance in flight
+when the voice is unplugged is ended the way a barge-in ends one
+(`stop_playback` plus the terminal chunk): the conference is live, and the
+turn genuinely ended.
+
+**The grants follow.** Derived bot grants are computed from the
+configuration in force at each join, and a plug that widens what a live
+session must do — a voice needs `publish_audio`, a consumer needs
+`subscribe` — brings the session's grants in line before the plug returns.
+Where the backend declares `ConferenceCapability.BOT_GRANT_UPDATE` (LiveKit
+does — `UpdateParticipant` is part of the server API), the update happens in
+place: same session, same subscriptions, the event bridge intact. Where it
+cannot, the channel re-joins — a `leave()` and a `join_as_bot()`, each
+announced as the session event it is. A narrowing the backend cannot apply
+in place is left standing: an unused privilege against a cut in the event
+bridge is a trade settled for continuity. An explicit `bot_grants=` is never
+rewritten by a plug or an unplug — the caller who set it took coverage on
+themselves.
+
+**Refusals and ownership.** A plug refuses exactly what construction
+refuses — `stt` or `recording` on an E2EE conference, a recording mode with
+no egress surface — and a slot already holding a provider is refused rather
+than silently replaced: a swap is a teardown and a rebuild whatever single
+verb offers it, so the observation gap belongs in the open — unplug, then
+plug. Unplugging an empty slot is a no-op. An unplugged provider is closed
+under the same `close_providers` rule that governs the channel's own
+`close()` (the default `True` closes it; pass `False` to keep a shared
+provider alive). And `info()` answers §17.7 with the configuration in
+force, not the constructor's: a meeting that gained a transcriber mid-way
+reads as transcribed from that moment, and one that lost it reads as clean.
+
+See [`examples/conference_notetaker_on_demand.py`][example-notetaker] for
+the whole round trip — transport-only to intelligent and back — driven by a
+host's explicit request, which is exactly the consent gesture §17.7 wants
+the decision tied to.
 
 ## Lanes: how transcription scales to N speakers
 
@@ -464,9 +538,15 @@ class documentation.
 - [`examples/conference_livekit.py`][example-livekit] — the same against a
   real LiveKit SFU: two browser tabs, one bot, speech attribution by ear,
   interruption, teardown, and a resume mode that proves the occupancy probe.
+- [`examples/conference_notetaker_on_demand.py`][example-notetaker] — the
+  hot-plug round trip: a purely human meeting gains its notetaker when the
+  host asks (join, retroactive subscription, transcription from the plug
+  forward) and loses it when dismissed (the bot leaves, recordings
+  finalized).
 - [`examples/conference_fault_injection.py`][example-faults] — testing
   against a backend that fails, lags and varies its audio formats.
 
 [example-mock]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_quickstart.py
 [example-livekit]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_livekit.py
+[example-notetaker]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_notetaker_on_demand.py
 [example-faults]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_fault_injection.py
