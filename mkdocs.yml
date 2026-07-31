@@ -1,6 +1,6 @@
 site_name: RoomKit
 site_description: Pure async Python library for multi-channel conversations
-site_url: https://www.roomkit.live
+site_url: https://www.roomkit.live/docs/
 repo_url: https://github.com/roomkit-live/roomkit
 repo_name: roomkit-live/roomkit
 
