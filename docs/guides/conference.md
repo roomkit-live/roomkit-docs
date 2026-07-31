@@ -130,6 +130,31 @@ without the backend's help (RFC §12.10.4 step 1):
 - **An event needs delivering** (the AI has something to say), or **a
   participant arrives** on a conference the bot already left.
 
+### Pure transport mode
+
+A reason is only a reason if the channel can do something with the
+connection. The join exists for the intelligence — subscribed tracks feed
+stt and recording through it, tts publishes on it — so a channel constructed
+with none of the three never joins at all: the mint and the arrival start no
+join, and the occupancy probe is not made, the join being the only
+consequence a probe can have (RFC §12.10.4 step 1).
+
+What remains is exactly what a purely human meeting needs from RoomKit:
+`ensure_room()` creates the conference, `mint_access()` admits participants,
+arrivals a backend reports are still recorded on the roster, and `info()`
+answers truthfully — `bot_present: false`, nothing active. What is given up
+is the event bridge: the bot's connection is how presence becomes observable
+(RFC §12.10.3), so against a real SFU a pure-transport conference produces
+no `participant_joined`/`left`, active-speaker or quality callbacks — the
+framework's view of the meeting is its mints. If your obligations require
+attendance tracking, configure a consumer or track presence through your own
+client surface; a bot kept in the meeting only to watch it is the silent
+observer RFC §17.7 exists to surface, and RoomKit does not offer that as a
+mode.
+
+Configure any one of `stt=`, `tts=` or `recording=` and every trigger above
+is restored unchanged.
+
 ## Lanes: how transcription scales to N speakers
 
 Each subscribed AUDIO track gets a **lane** of its own — a bounded queue and a
@@ -187,12 +212,13 @@ neither can answer "is anything listening right now", which is `info()`'s
 job. A UI composes the three. The [LiveKit example][example-livekit] dumps
 all three side by side.
 
-Two facts about the bot's own presence belong here. First, it is not
-optional: media is only observable through a connection, so transcription,
-recording and AI voice all require the bot in the meeting — there is no
-"STT without the participant". Today the join is also unconditional on its
-triggers: once a credential is minted the bot joins even when nothing is
-configured to listen or speak. Second, *visible* is a grant, not a law: a
+Two facts about the bot's own presence belong here. First, where there is
+intelligence it is not optional: media is only observable through a
+connection, so transcription, recording and AI voice all require the bot in
+the meeting — there is no "STT without the participant". The reverse holds
+too: with no stt, tts or recording configured, the bot never joins at all
+and `info()` says so — see [Pure transport mode](#pure-transport-mode).
+Second, *visible* is a grant, not a law: a
 `ConferenceGrants` with `hidden=True` as `bot_grants` keeps the bot off the
 meeting's participant lists where the SFU supports it (LiveKit does) — but
 `info()` reports `bot_hidden` either way. Whether a silent notetaker is
