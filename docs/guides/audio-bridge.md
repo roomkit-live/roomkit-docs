@@ -5,6 +5,11 @@ human-to-human voice calls.  Audio flows between participants without
 the STT/TTS roundtrip, preserving natural voice quality and minimizing
 latency.
 
+Bridging mixes audio *inside* RoomKit, which puts the framework in the media
+path and caps how far it scales. For multi-party meetings at SFU scale —
+where RoomKit steps out of the media path entirely — see
+[Conference (SFU Orchestration)](conference.md) (RFC §12.10.10).
+
 ## Quick Start
 
 Enable bridging by passing `bridge=True` to `VoiceChannel`:

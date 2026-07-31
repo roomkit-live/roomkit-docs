@@ -1,5 +1,7 @@
 # Built-in Channels
 
+`ConferenceChannel` has a page of its own: [Conference](conference.md).
+
 ::: roomkit.SMSChannel
 
 ::: roomkit.RCSChannel

@@ -1077,23 +1077,23 @@ After-the-fact resolution is also supported via `resolve_participant()`.
 
 ### Feature Matrix
 
-| Feature | WebSocket | SMS | RCS | Email | Messenger | Teams | WhatsApp | Telegram | Discord | HTTP | AI | Voice |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Text** | x | x | x | x | x | x | x | x | x | x | x | x |
-| **Rich text** | x | -- | x | x | x | x | x | x | x | x | x | -- |
-| **Audio** | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | x |
-| **Media** | x | x* | x | x | x | -- | x | x | x | -- | *[1] | -- |
-| **Location** | -- | -- | x | -- | -- | -- | x | x | -- | -- | -- | -- |
-| **Templates** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
-| **Buttons** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
-| **Quick replies** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- |
-| **Threading** | -- | -- | -- | x | -- | x | -- | -- | x | -- | -- | -- |
-| **Reactions** | x | -- | x | -- | -- | x | x | -- | x | -- | -- | -- |
-| **Read receipts** | x | x | x | -- | x | x | x | -- | -- | -- | -- | -- |
-| **Typing indicators** | x | -- | -- | -- | -- | -- | x | -- | -- | -- | -- | -- |
-| **Max length** | -- | 1600 | 3000 | -- | 2000 | 28000 | 4096 | 4096 | 2000 | -- | -- | -- |
-| **Bidirectional** | x | x | x | x | x | x | x | x | x | x | x | x |
-| **Category** | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Intelligence | Transport |
+| Feature | WebSocket | SMS | RCS | Email | Messenger | Teams | WhatsApp | Telegram | Discord | HTTP | AI | Voice | Conference |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Text** | x | x | x | x | x | x | x | x | x | x | x | x | x |
+| **Rich text** | x | -- | x | x | x | x | x | x | x | x | x | -- | -- |
+| **Audio** | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | x | x |
+| **Media** | x | x* | x | x | x | -- | x | x | x | -- | *[1] | -- | -- |
+| **Location** | -- | -- | x | -- | -- | -- | x | x | -- | -- | -- | -- | -- |
+| **Templates** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- | -- |
+| **Buttons** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- | -- |
+| **Quick replies** | -- | -- | x | -- | x | -- | x | -- | -- | -- | -- | -- | -- |
+| **Threading** | -- | -- | -- | x | -- | x | -- | -- | x | -- | -- | -- | -- |
+| **Reactions** | x | -- | x | -- | -- | x | x | -- | x | -- | -- | -- | -- |
+| **Read receipts** | x | x | x | -- | x | x | x | -- | -- | -- | -- | -- | -- |
+| **Typing indicators** | x | -- | -- | -- | -- | -- | x | -- | -- | -- | -- | -- | -- |
+| **Max length** | -- | 1600 | 3000 | -- | 2000 | 28000 | 4096 | 4096 | 2000 | -- | -- | -- | -- |
+| **Bidirectional** | x | x | x | x | x | x | x | x | x | x | x | x | x |
+| **Category** | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Intelligence | Transport | Transport |
 
 *SMS supports MMS for media attachments.
 *[1] AI channels support media when the provider has vision capability (`supports_vision=True`).*
@@ -2000,6 +2000,54 @@ Recording starts automatically when all tracks receive their first frame. A/V sy
 
 ---
 
+## Conference
+
+### Conference Channel (SFU Orchestration)
+
+RoomKit joins multi-party meetings whose media plane an external SFU owns (RFC §12.10, conformance Level 3). Human clients connect directly to the SFU with credentials RoomKit mints; RoomKit is never in the media path between humans. It joins as a bot participant to transcribe, speak the AI's answers, record, and bridge the meeting to every other channel attached to the room:
+
+```python
+from roomkit import LiveKitConferenceBackend, LiveKitConfig, RoomKit
+from roomkit.channels.conference import ConferenceChannel
+
+kit = RoomKit()
+conference = ConferenceChannel(
+    "conf",
+    backend=LiveKitConferenceBackend(LiveKitConfig(url="wss://my-project.livekit.cloud")),
+    stt=stt,   # transcription, attributed per speaker
+    tts=tts,   # the bot's voice
+)
+kit.register_channel(conference)
+await kit.create_room("standup")
+await kit.attach_channel("standup", "conf")
+
+# The client uses this to connect to the SFU directly — and the mint is
+# what brings the bot into the meeting (the lazy join).
+await kit.ensure_participant("standup", "conf", "alice", display_name="Alice")
+access = await conference.mint_access("standup", "alice")
+```
+
+The bot joins lazily — on a mint, on an attach that finds the conference already occupied (a restart over a live meeting), on a delivery, on an arrival — and an empty conference is never joined. `mint_access()` enforces admission (roster membership, bans) before it mints; eviction is reactive (`remove_participant()`), and the credential TTL (`access_ttl`, 15 min default) bounds the exposure of a token already issued.
+
+### Per-Track Transcription Lanes
+
+Each subscribed audio track runs through the shared audio pipeline in a lane of its own (`Resampler -> [AGC] -> [Denoiser] -> VAD -> STT`) under the track's identity: one utterance becomes one `RoomEvent` attributed to its speaker — no diarization needed, the track says who — and one participant's slow recognizer never delays another's frames. Backpressure is bounded and counted (`max_queued_frames`, oldest frame dropped, `lane.dropped_frames`). `ON_TRANSCRIPTION` fires synchronously before the text reaches the room and may rewrite or block it (redaction); it fails closed. Interruption is policy (`ConferenceInterruptionConfig`: scope any/none/allowlist), and `ON_BARGE_IN` names the interrupting participant.
+
+### Conference Events
+
+The meeting's whole surface reaches hooks: `ON_CONFERENCE_PARTICIPANT_JOINED`/`_LEFT`, `ON_CONFERENCE_TRACK_PUBLISHED`/`_UNPUBLISHED`/`_MUTED`/`_UNMUTED` (with track kind — a muted VIDEO track is "camera off"), `ON_SCREEN_SHARE_STARTED`/`_STOPPED`, `ON_SPEECH_START`/`ON_SPEECH_END` (the VAD's real-time utterance boundaries, per participant and track), `ON_ACTIVE_SPEAKER_CHANGED`, `ON_CONNECTION_QUALITY_CHANGED` (the bot included). Framework events `conference_started`/`conference_ended` bracket the bot's session. Three read surfaces serve a management UI: `backend.list_participants()` (the SFU's media truth), `kit.store.list_participants()` (the room's roster), `conference.info()` (the RFC §17.7 disclosure — bot present, STT/recording active, right now).
+
+### Conference Backends
+
+| Backend | Purpose | Install |
+|---------|---------|---------|
+| `LiveKitConferenceBackend` | LiveKit as SFU — media plane only (`livekit.rtc` + `livekit.api`, deliberately not `livekit-agents`) | `pip install roomkit[livekit]` |
+| `MockConferenceBackend` | Tests and demos — full ABC, `simulate_*` events, fault injection | built-in |
+
+`ConferenceBackend` is the ABC to implement for any other SFU: decoded PCM frames and opaque credentials cross the boundary; SDP, ICE and codecs never do. A backend that observes the bot's session ending without a `leave()` reports it, and the channel finalizes recordings, announces `conference_ended`, and re-joins with bounded backoff. See the [Conference guide](guides/conference.md) and `examples/conference_quickstart.py` / `examples/conference_livekit.py`.
+
+---
+
 ## Webhook Handling
 
 ### Generic Webhook Processing
@@ -2596,7 +2644,7 @@ kit = RoomKit(inbound_router=TenantRouter())
 - **Event streaming** -- Kafka or Redis Streams integration for cross-service event distribution
 - **OpenTelemetry integration** -- Built-in tracing and metrics via the `FrameworkEvent` system
 - **Voice MediaStore** -- Store-and-forward mode for VoiceChannel (S3/GCS audio hosting)
-- **Additional voice backends** -- LiveKit, Twilio Voice, or raw WebRTC backends
+- **Additional voice backends** -- Twilio Voice or raw WebRTC backends (LiveKit now ships as a conference backend)
 - **Additional STT/TTS providers** -- Google Cloud Speech, Amazon Polly (local sherpa-onnx now available)
 - **Push notifications** -- Firebase Cloud Messaging or APNs provider
 - **WhatsApp Business API** -- Full provider implementation with template management

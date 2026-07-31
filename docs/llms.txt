@@ -33,6 +33,8 @@ with distributed implementations (Redis, PostgreSQL, etc.) for production deploy
 - [ACP Agent Channel](docs/guides/acp-channel.md): Connect a Room to an external ACP coding agent over stdio, with per-Room sessions, streaming updates, default-deny permissions, and cancellation
 - [Voice Channel](docs/api/providers-voice.md): VoiceBackend ABC, STTProvider, TTSProvider, DeepgramSTTProvider, ElevenLabsTTSProvider, FastRTCVoiceBackend - real-time voice with barge-in support
 - [Realtime Voice](docs/api/providers-realtime-voice.md): RealtimeVoiceChannel, RealtimeVoiceProvider ABC, GeminiLiveProvider, OpenAIRealtimeProvider, WebSocketRealtimeTransport, FastRTCRealtimeTransport (WebRTC passthrough) - speech-to-speech AI with tool calling, text injection, auto-reconnect
+- [Conference Guide](docs/guides/conference.md): SFU orchestration — RoomKit never in the human-to-human media path; the SFU transports, RoomKit joins as a bot participant for transcription, AI voice and recording; lazy join, per-track lanes, minted access, resilience
+- [Conference API](docs/api/conference.md): ConferenceChannel, ConferenceBackend ABC, LiveKitConferenceBackend, MockConferenceBackend, ConferenceAccess/Grants, ConferenceTranscription, ConferenceBargeIn - multi-party meetings on an external SFU with per-speaker attribution
 
 ## Key Concepts (in llms-full.txt)
 
