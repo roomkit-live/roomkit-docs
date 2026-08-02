@@ -145,6 +145,13 @@ print(await store.dedupe_event_indices(dry_run=False))
 3. Confirm no startup warning about `InMemoryLockManager`.
 4. Point all workers at the same PostgreSQL store.
 
+## Scaling voice inside one worker
+
+Horizontal scaling addresses room count; a voice worker's ceiling is
+per-process CPU. Set `AudioPipelineConfig(inbound_dsp_threads=N)` to run
+each session's DSP chain on a thread pool instead of the event loop — see
+[Audio Pipeline Stages](audio-pipeline-stages.md#running-the-inbound-chain-off-the-event-loop).
+
 ## See also
 
 - [PostgreSQL Storage](postgres-store.md) — the store, schema, and `migrate()`.

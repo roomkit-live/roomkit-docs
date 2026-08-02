@@ -39,6 +39,38 @@ pipeline = AudioPipelineConfig(
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
 ```
 
+### Running the inbound chain off the event loop
+
+By default every inbound frame runs the full stage chain on the thread
+that delivered it — usually the event loop. That caps concurrent sessions
+at one core, and one slow stage delays every other session's audio and
+all message traffic.
+
+`inbound_dsp_threads` moves the chain onto a small thread pool:
+
+```python
+pipeline = AudioPipelineConfig(
+    vad=vad_provider,
+    denoiser=denoiser_provider,
+    inbound_dsp_threads=4,   # size to your core count
+)
+```
+
+Guarantees and behaviour:
+
+- **Frames of one session stay strictly FIFO** — a per-stream queue is
+  drained by at most one worker at a time. Only *which sessions* run in
+  parallel is decided by the pool, so the RFC §12 stage order is
+  untouched.
+- **The native stages release the GIL** (SpeexDSP, WebRTC AEC, RNNoise,
+  sherpa-onnx, NumPy), so pool threads deliver real multi-core
+  parallelism — measured 3.9× on 4 workers in the stress bench.
+- **Backpressure is per stream and bounded**: when a stream's queue is
+  full the oldest frame is dropped and counted (late audio is worthless
+  audio; a stalled consumer never grows memory).
+- Applies to both `VoiceChannel` and `RealtimeVoiceChannel`. Unset keeps
+  today's inline processing.
+
 ---
 
 ## Stage: Resampler
