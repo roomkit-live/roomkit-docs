@@ -96,28 +96,41 @@ await bus.post_async("exec", "search_google", "ok", detail="Found results")
 
 ## Pluggable backends
 
-The default `InMemoryStatusBackend` works for single-process setups. For distributed deployments, implement the `StatusBackend` ABC:
+The default `InMemoryStatusBackend` works for single-process setups. For
+distributed deployments, use `RedisStatusBackend` — entries live in a capped
+Redis list (shared history) and fan out to every process via pub/sub:
 
 ```python
-from roomkit.orchestration.status_bus import StatusBackend, StatusEntry
-
-class RedisStatusBackend(StatusBackend):
-    async def publish(self, entry: StatusEntry) -> None:
-        await self.redis.publish("status", entry.to_dict())
-
-    async def recent(self, n, *, agent_id=None, status=None):
-        # Read from Redis sorted set
-        ...
-
-    async def subscribe(self, callback):
-        # Redis pub/sub
-        ...
-
-    async def unsubscribe(self, callback):
-        ...
+from roomkit.orchestration import RedisStatusBackend
+from roomkit.orchestration.status_bus import StatusBus
 
 bus = StatusBus(backend=RedisStatusBackend("redis://localhost:6379"))
 ```
+
+Requires `pip install roomkit[redis]`. Options:
+
+```python
+RedisStatusBackend(
+    "redis://localhost:6379",
+    key_prefix="roomkit:status",  # list key + pub/sub channel namespace
+    max_entries=500,              # shared history cap (as InMemoryStatusBackend)
+)
+```
+
+Semantics that differ from the in-memory backend:
+
+- `publish()` returning does **not** mean subscribers ran — local callbacks
+  are notified through the Redis round-trip, asynchronously.
+- Every process's subscribers observe every entry from every process. With
+  RoomKit that means each worker re-emits all entries as `status_posted`
+  framework events — distributed observability by default.
+- Pub/sub notifications published while a process is disconnected are lost,
+  but the shared history stays consistent — consumers can resync with
+  `recent()`.
+
+For another transport (NATS, ...), implement the `StatusBackend` ABC:
+`publish()`, `recent()`, `subscribe()`, `unsubscribe()`, and optionally
+`close()`. See `examples/realtime_redis.py` for a cross-process demo.
 
 ## Integration with voice agents
 

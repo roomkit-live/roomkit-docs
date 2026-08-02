@@ -807,7 +807,7 @@ Key features:
 - **Framework-wired** — `kit.status_bus` is always available, defaults to `InMemoryStatusBackend`
 - **Sync and async posting** — `post()` (fire-and-forget) and `post_async()` (awaits subscribers)
 - **Framework events** — every post emits `status_posted` via `kit.on("status_posted")`
-- **Pluggable backend** — `StatusBackend` ABC with `InMemoryStatusBackend` default; swap in Redis/NATS for distributed deployments
+- **Pluggable backend** — `StatusBackend` ABC with `InMemoryStatusBackend` default; `RedisStatusBackend` ships for distributed deployments (shared capped history + cross-process pub/sub)
 - **JSONL persistence** — `StatusBus(persist_path="/tmp/session.jsonl")` for audit trails
 
 See the [Status Bus guide](guides/status-bus.md) for the full API, backend implementation, and voice agent integration patterns.
@@ -955,34 +955,23 @@ await kit.unsubscribe_room(sub_id)
 | `READ_RECEIPT` | User read a message |
 | `CUSTOM` | Custom ephemeral event |
 
-**Custom backend for distributed deployments:**
+**Distributed deployments:**
 
-The default `InMemoryRealtime` is single-process only. For distributed deployments, implement `RealtimeBackend`:
+The default `InMemoryRealtime` is single-process only. `RedisRealtimeBackend`
+distributes ephemeral events across workers via Redis pub/sub (requires
+`pip install roomkit[redis]`):
 
 ```python
 from roomkit import RoomKit
-from roomkit.realtime.base import RealtimeBackend, EphemeralEvent, EphemeralCallback
+from roomkit.realtime import RedisRealtimeBackend
 
-class RedisRealtime(RealtimeBackend):
-    def __init__(self, url: str = "redis://localhost:6379"):
-        self._redis = redis.from_url(url)
-
-    async def publish(self, channel: str, event: EphemeralEvent) -> None:
-        await self._redis.publish(channel, json.dumps(event.to_dict()))
-
-    async def subscribe(self, channel: str, callback: EphemeralCallback) -> str:
-        # ... implementation
-        return sub_id
-
-    async def unsubscribe(self, subscription_id: str) -> bool:
-        # ... implementation
-
-    async def close(self) -> None:
-        await self._redis.close()
-
-# Use custom backend
-kit = RoomKit(realtime=RedisRealtime("redis://localhost:6379"))
+kit = RoomKit(realtime=RedisRealtimeBackend("redis://localhost:6379"))
 ```
+
+Per-subscription bounded queues isolate slow callbacks (same mechanism as
+`InMemoryRealtime`); delivery is fire-and-forget, matching the ephemeral
+contract. For another transport (NATS, ...), implement the `RealtimeBackend`
+ABC — see the [Realtime Features guide](guides/realtime-features.md).
 
 ### Content Transcoding
 
@@ -2655,7 +2644,7 @@ kit = RoomKit(inbound_router=TenantRouter())
 
 ## Current Limitations
 
-- **Single-process only (default)** -- `InMemoryLockManager` and `InMemoryRealtime` use asyncio primitives; distributed deployments require custom `RoomLockManager` and `RealtimeBackend` implementations
+- **Single-process defaults** -- `InMemoryLockManager`, `InMemoryRealtime`, and `InMemoryStatusBackend` use asyncio primitives; distributed deployments must opt in to `PostgresAdvisoryLockManager`, `RedisRealtimeBackend`, and `RedisStatusBackend` (see the [Scaling guide](guides/scaling.md))
 - **In-memory storage only (default)** -- No persistent store ships with the library; production use requires a custom `ConversationStore`
 - **No built-in HTTP server** -- RoomKit is a library, not a server; webhook endpoints must be provided by the host application
 - **No file/media storage** -- `MediaContent` stores URLs; actual file hosting must be handled externally
@@ -2671,7 +2660,6 @@ kit = RoomKit(inbound_router=TenantRouter())
 
 - **Persistent storage backends** -- PostgreSQL, Redis, or MongoDB `ConversationStore` implementations
 - **Distributed locking** -- Redis-based `RoomLockManager` for multi-process deployments
-- **Distributed realtime** -- Redis pub/sub or NATS-based `RealtimeBackend` for multi-process deployments
 - **Event streaming** -- Kafka or Redis Streams integration for cross-service event distribution
 - **OpenTelemetry integration** -- Built-in tracing and metrics via the `FrameworkEvent` system
 - **Voice MediaStore** -- Store-and-forward mode for VoiceChannel (S3/GCS audio hosting)

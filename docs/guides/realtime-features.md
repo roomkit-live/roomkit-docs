@@ -220,37 +220,51 @@ await kit.realtime.publish_to_room("room-1", event)
 
 ---
 
-## RealtimeBackend ABC
+## Distributed Deployments: RedisRealtimeBackend
 
-For distributed deployments, implement a custom backend (e.g., Redis pub/sub):
+`InMemoryRealtime` only reaches subscribers in the same process. When rooms
+are served by multiple workers, use `RedisRealtimeBackend` — ephemeral events
+cross process boundaries via Redis pub/sub:
 
 ```python
-from __future__ import annotations
-
-from roomkit.realtime import EphemeralCallback, EphemeralEvent, RealtimeBackend
-
-
-class RedisRealtimeBackend(RealtimeBackend):
-    def __init__(self, redis_url: str) -> None:
-        self._redis_url = redis_url
-
-    async def publish(self, channel: str, event: EphemeralEvent) -> None:
-        await self._redis.publish(channel, event.to_dict())
-
-    async def subscribe(self, channel: str, callback: EphemeralCallback) -> str:
-        ...  # Subscribe to Redis channel, return subscription ID
-
-    async def unsubscribe(self, subscription_id: str) -> bool:
-        ...  # Unsubscribe from Redis channel
-
-    async def close(self) -> None:
-        ...  # Clean up Redis connections
-
+from roomkit import RoomKit
+from roomkit.realtime import RedisRealtimeBackend
 
 kit = RoomKit(realtime=RedisRealtimeBackend("redis://localhost:6379"))
 ```
 
-`EphemeralEvent.to_dict()` and `EphemeralEvent.from_dict()` handle JSON serialization for transport.
+Requires `pip install roomkit[redis]`. Options:
+
+```python
+RedisRealtimeBackend(
+    "redis://localhost:6379",
+    channel_prefix="roomkit:realtime",  # Redis channel namespace
+    max_queue_size=100,                 # per-subscription queue (as InMemoryRealtime)
+)
+```
+
+Behavior to know:
+
+- **Fire-and-forget** — Redis pub/sub has no replay: events published while a
+  worker is disconnected are lost. That matches the ephemeral contract
+  (typing and presence are safe to drop); on connection loss the backend
+  retries and re-subscribes automatically.
+- **Asynchronous local delivery** — subscribers in the publishing process
+  receive events through the Redis round-trip, not synchronously during
+  `publish()` as with `InMemoryRealtime`.
+- **Slow-subscriber isolation** — each subscription keeps its own bounded
+  queue and drain task (same mechanism as `InMemoryRealtime`), so one slow
+  callback never stalls the shared reader.
+
+See `examples/realtime_redis.py` for a two-terminal cross-process demo, and
+[Scaling out](scaling.md) for the full multi-worker picture.
+
+## RealtimeBackend ABC
+
+To plug in another transport (NATS, an SFU data channel, ...), implement the
+`RealtimeBackend` ABC — `publish()`, `subscribe()`, `unsubscribe()`, and
+optionally `close()`. `EphemeralEvent.to_dict()` and
+`EphemeralEvent.from_dict()` handle JSON serialization for transport.
 
 ## InMemoryRealtime Details
 

@@ -137,6 +137,39 @@ print(await store.dedupe_event_indices(dry_run=False))
     Run the repair in a maintenance window, on a backup first, and prefer to do
     it **before** scaling out (so no concurrent workers race during the repair).
 
+## Distributed ephemeral surfaces
+
+The store and locks above cover persistent state. Two ephemeral surfaces are
+process-local by default and stay silent about it — a second worker simply
+never sees the other's events:
+
+- **Realtime events** (typing, presence, reactions, thinking deltas):
+  `InMemoryRealtime` only reaches subscribers in the same process. Use
+  [`RedisRealtimeBackend`](realtime-features.md#distributed-deployments-redisrealtimebackend)
+  so ephemeral events cross workers via Redis pub/sub.
+- **Status bus** (multi-agent coordination): `InMemoryStatusBackend` keeps
+  history and subscribers per-process. Use
+  [`RedisStatusBackend`](status-bus.md#pluggable-backends) for a shared
+  capped history plus cross-process notifications.
+
+```python
+from roomkit import RoomKit
+from roomkit.orchestration import RedisStatusBackend
+from roomkit.orchestration.status_bus import StatusBus
+from roomkit.realtime import RedisRealtimeBackend
+
+kit = RoomKit(
+    store=store,
+    lock_manager=lock_manager,
+    realtime=RedisRealtimeBackend("redis://redis:6379"),
+    status_bus=StatusBus(backend=RedisStatusBackend("redis://redis:6379")),
+)
+```
+
+Both require `pip install roomkit[redis]`. For persistent cross-worker
+*delivery* (queued outbound messages surviving restarts), see the separate
+[`RedisDeliveryBackend`](delivery.md#redis-backend).
+
 ## Checklist before scaling out
 
 1. Apply `UNIQUE(room_id, index)` on a **clean** database (run `init()` or
@@ -144,6 +177,8 @@ print(await store.dedupe_event_indices(dry_run=False))
 2. Configure `PostgresAdvisoryLockManager` with its own pool on every worker.
 3. Confirm no startup warning about `InMemoryLockManager`.
 4. Point all workers at the same PostgreSQL store.
+5. If clients rely on typing/presence or agents on the status bus, configure
+   the Redis realtime and status backends on every worker.
 
 ## Scaling voice inside one worker
 

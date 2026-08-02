@@ -166,54 +166,22 @@ async def websocket_endpoint(ws: WebSocket, room_id: str, user_id: str):
         await kit.unsubscribe_room(sub_id)
 ```
 
-## Custom Backends
+## Distributed Backends
 
-By default, RoomKit uses `InMemoryRealtime` which works for single-process deployments. For distributed systems, implement a custom `RealtimeBackend`:
+By default, RoomKit uses `InMemoryRealtime` which works for single-process
+deployments. For distributed systems, `RedisRealtimeBackend` ships with the
+library (requires `pip install roomkit[redis]`):
 
 ```python
-from roomkit.realtime.base import RealtimeBackend, EphemeralEvent, EphemeralCallback
-import redis.asyncio as redis
-import json
+from roomkit import RoomKit
+from roomkit.realtime import RedisRealtimeBackend
 
-class RedisRealtime(RealtimeBackend):
-    def __init__(self, url: str = "redis://localhost:6379"):
-        self._redis = redis.from_url(url)
-        self._pubsub = self._redis.pubsub()
-        self._subscriptions: dict[str, tuple[str, EphemeralCallback]] = {}
-
-    async def publish(self, channel: str, event: EphemeralEvent) -> None:
-        await self._redis.publish(channel, json.dumps({
-            "id": event.id,
-            "room_id": event.room_id,
-            "type": event.type.value,
-            "user_id": event.user_id,
-            "channel_id": event.channel_id,
-            "data": event.data,
-            "timestamp": event.timestamp.isoformat(),
-        }))
-
-    async def subscribe(self, channel: str, callback: EphemeralCallback) -> str:
-        from uuid import uuid4
-        sub_id = uuid4().hex
-        await self._pubsub.subscribe(channel)
-        self._subscriptions[sub_id] = (channel, callback)
-        # Start listener task...
-        return sub_id
-
-    async def unsubscribe(self, subscription_id: str) -> bool:
-        if subscription_id not in self._subscriptions:
-            return False
-        channel, _ = self._subscriptions.pop(subscription_id)
-        await self._pubsub.unsubscribe(channel)
-        return True
-
-    async def close(self) -> None:
-        await self._pubsub.close()
-        await self._redis.close()
-
-# Use custom backend
-kit = RoomKit(realtime=RedisRealtime("redis://localhost:6379"))
+kit = RoomKit(realtime=RedisRealtimeBackend("redis://localhost:6379"))
 ```
+
+See the [Realtime Features guide](../guides/realtime-features.md#distributed-deployments-redisrealtimebackend)
+for semantics (fire-and-forget, slow-subscriber isolation). For another
+transport (NATS, ...), implement the `RealtimeBackend` ABC below.
 
 ---
 
@@ -228,3 +196,5 @@ kit = RoomKit(realtime=RedisRealtime("redis://localhost:6379"))
 ::: roomkit.realtime.base.RealtimeBackend
 
 ::: roomkit.realtime.memory.InMemoryRealtime
+
+::: roomkit.realtime.redis.RedisRealtimeBackend
