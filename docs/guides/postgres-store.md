@@ -193,11 +193,14 @@ count = await store.get_event_count("room-1")
 ```python
 from roomkit import EventFilter, EventType
 
-# Messages only (for AI context)
+# Messages only (for AI context) -- the 50 most recent, ascending
 messages = await store.get_conversation("room-1", limit=50)
 
-# Full activity timeline (messages + tool calls + everything)
+# Full activity timeline (messages + tool calls + everything), from the head
 timeline = await store.get_timeline("room-1")
+
+# ...or the most recent page of it, still ascending
+latest = await store.get_timeline("room-1", limit=50, newest_first=True)
 
 # Filter by event type
 tools = await store.list_events("room-1", event_filter=EventFilter(

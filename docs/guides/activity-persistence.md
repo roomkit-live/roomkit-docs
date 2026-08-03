@@ -84,8 +84,22 @@ for event in timeline:
 For rebuilding AI context, use `get_conversation()` which returns only `MESSAGE` events -- no tool call noise:
 
 ```python
-messages = await store.get_conversation(room_id)
+messages = await store.get_conversation(room_id, limit=50)
 # Only text messages, suitable for feeding back to the AI provider
+```
+
+Without a cursor this returns the **most recent** `limit` messages, in
+ascending order -- `messages[-1]` is the newest message in the room. This is
+what fills `RoomContext.recent_events`, so a room whose history outgrew the
+limit still hands hooks and AI channels the current conversation, not its
+opening.
+
+Pass `after_index` to turn it into a forward cursor instead -- the first
+`limit` messages *after* that index, which is what you want to page through
+everything that arrived since your last read:
+
+```python
+new_messages = await store.get_conversation(room_id, limit=50, after_index=last_seen)
 ```
 
 ### Filtering with EventFilter

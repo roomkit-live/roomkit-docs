@@ -37,6 +37,10 @@ Event arrives → memory.retrieve() → MemoryResult
 
 A provider can return one or both fields. `SlidingWindowMemory` returns only `events`. A summarization provider might return only `messages`. A hybrid could return both.
 
+`context.recent_events` is the room's **tail**, in ascending order: its last
+element is the most recent event. That is why providers slice `[-N:]` rather
+than `[:N]` -- the head of a long room is the part you want to drop, not keep.
+
 ## Built-in providers
 
 ### SlidingWindowMemory
