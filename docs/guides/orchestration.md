@@ -424,6 +424,49 @@ class MyStrategy(Orchestration):
         ...
 ```
 
+## Addressing: naming who is asked
+
+Routing rules answer *which agent handles this kind of event*. Addressing
+answers the question a human asks every time they type: **which agent am I
+talking to right now**. A message can name its recipients:
+
+```python
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="you",
+        sender_id="user",
+        content=TextContent(body="review hello.py"),
+        addressed_to=["codex"],      # only this agent is asked to act
+    )
+)
+```
+
+**An address is not visibility.** `visibility` is configured on a binding and
+says who may *see* what a source produces; an address rides on the event and
+says who is *asked to act*. Addressing one agent hides the event from nobody,
+and transport delivery is never narrowed — the humans in the room still get
+the message.
+
+| `addressed_to` | Meaning |
+|---|---|
+| `None` | Unaddressed — every eligible agent acts, or the router decides |
+| `["codex"]` | Only `codex` is asked; the others see it and stay silent |
+| `[]` | Nobody is asked — a decision, not an absence |
+
+The address is stored on the event, so a transcript can show who was asked and
+a replay reproduces the same solicitation.
+
+**RoomKit takes the decision, never the syntax.** `@codex`, `/agent codex`, a
+keyboard picker, a Slack payload carrying its own mentions — how a user names
+an agent is your application's business. Parse it at the edge, pass channel
+ids.
+
+An address **outranks the router**: a `ConversationRouter` returns untouched
+on an addressed event and stamps nothing. Without that precedence the two
+mechanisms could not coexist — sticky affinity is consulted before the rules,
+so a rule written to honour an address would be unreachable for as long as any
+agent held the conversation.
+
 ## How it works
 
 Orchestration has four layers that work together:
@@ -431,12 +474,13 @@ Orchestration has four layers that work together:
 ```
 Inbound event
   -> ConversationRouter (BEFORE_BROADCAST hook, priority -100)
+     -> Addressed event? -> returns untouched, the address decides
      -> Reads ConversationState from Room.metadata
      -> Selects agent via: affinity -> rules -> default
      -> Stamps _routed_to + _always_process on event metadata
   -> EventRouter._process_target()
-     -> Checks _routed_to for INTELLIGENCE channels
-     -> Skips non-targeted agents (supervisor always processes)
+     -> Checks the address first, then _routed_to, for INTELLIGENCE channels
+     -> Skips non-solicited agents (supervisor always processes)
   -> Active agent generates response
      -> May call handoff_conversation tool
   -> HandoffHandler processes handoff
