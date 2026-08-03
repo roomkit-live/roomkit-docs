@@ -1389,7 +1389,20 @@ outside the message pipeline — same contract as Discord) and sent with
 (close code 1012) reconnect quietly, and `BuzzConfig.leave_on_stop` opts into a
 NIP-29 leave on shutdown. The agent's key must be a member of the community
 (claim an invite once via `buzzkit`). Max message length: 65536 characters.
-Requires `pip install roomkit[buzz]` (buzzkit>=0.2.1). See the
+
+A RoomKit process can run as a **first-class Buzz agent**: presence (kind
+20001) heartbeats while serving and flips to `offline` on a deliberate stop;
+the platform's owner control commands (`!shutdown`/`!cancel`/`!rotate`,
+gated on the NIP-OA auth tag's Schnorr-verified attester or an explicit
+`owner_pubkey`, fail-closed) are consumed before the pipeline so the AI never
+answers its own stop command; and the `BuzzAgent` runner ties it together —
+SIGTERM/SIGINT handling, an opt-in `exit_after_inactivity` bound, and one
+graceful exit path (`kit.close()`) for every stop cause.
+`BuzzConfig.from_env()` reads the reserved `BUZZ_PRIVATE_KEY` /
+`BUZZ_RELAY_URL` / `BUZZ_AUTH_TAG` triplet, so the same script deploys under
+any launcher.
+
+Requires `pip install roomkit[buzz]` (buzzkit>=0.3.0). See the
 [Buzz (Nostr) guide](guides/buzz.md).
 
 ### WhatsApp Channel

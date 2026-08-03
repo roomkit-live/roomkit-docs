@@ -203,6 +203,54 @@ subscribe your own source with `kinds=[KIND_HUDDLE_STARTED]` and
 [`huddle_announcement_parser`][roomkit.sources.buzz.huddle_announcement_parser],
 and call `watcher.bridge(huddle_id)` from your own hook.
 
+## Run it as a first-class agent
+
+Buzz expects the same lifecycle promises from *every* agent, however it was
+launched: presence that reflects reality, an owner whose `!shutdown` works,
+an optional inactivity bound, and intentional stops that stay stopped.
+[`BuzzAgent`][roomkit.providers.buzz.BuzzAgent] packages them around your
+configured `RoomKit`:
+
+```python
+from roomkit.providers.buzz import BuzzAgent, BuzzConfig
+
+config = BuzzConfig.from_env()          # BUZZ_PRIVATE_KEY / BUZZ_RELAY_URL / BUZZ_AUTH_TAG
+source = BuzzRelaySource(config, "buzz-main", relay_channel_id="<channel-uuid>")
+# ... register BuzzChannel, rooms, hooks as above (do NOT attach_source) ...
+
+agent = BuzzAgent(kit, [source], exit_after_inactivity=7200)
+cause = await agent.run()               # blocks: owner !shutdown / SIGTERM / idle
+sys.exit(0)                             # clean exit — supervisors must not restart it
+```
+
+What each piece does:
+
+- **Owner commands** (`buzzkit>=0.3.0`). With `obey_owner_commands=True`
+  (default), a kind-9 message whose trimmed content is exactly `!shutdown`,
+  `!cancel` or `!rotate`, mentioning the agent, from the **proven** owner, is
+  consumed before the pipeline — the AI never answers its own stop command.
+  The owner is the NIP-OA auth tag's attester (Schnorr-verified against the
+  agent's own pubkey), else the explicit `BuzzConfig.owner_pubkey`. No
+  provable owner, or a non-owner author → the message flows normally
+  (fail-closed). Without a runner, `!shutdown` stops the source itself; the
+  source's `on_owner_command` callback takes over the response when provided.
+- **Signals.** SIGTERM/SIGINT drain through the same graceful path as
+  `!shutdown` (`kit.close()` → presence `offline` → sockets closed).
+- **Inactivity** (`exit_after_inactivity`, seconds, default off). No inbound
+  dispatched and no broadcast for that long → the agent reaps itself. The
+  reaper runs on its own timer — deliberately not tied to any other loop —
+  and the knob is deliberately *not* named like the per-turn timeouts.
+- **Finality.** `run()` is single-shot and returns a `BuzzAgentStopCause`
+  (`owner_shutdown` / `signal` / `inactivity`). Exit `0` on every
+  intentional path, and never deploy the process under `Restart=always`:
+  restart-on-failure only, so a stop the owner meant stays stopped.
+
+`BuzzConfig.from_env()` reads the reserved identity triplet every Buzz
+launcher hands its agents (`BUZZ_PRIVATE_KEY`/`NOSTR_PRIVATE_KEY`,
+`BUZZ_RELAY_URL`, optional `BUZZ_AUTH_TAG`), fail-closed — so the same
+script works under a bash one-liner, a systemd unit, or a container
+entrypoint.
+
 ## Capabilities & limits
 
 `BuzzChannel` advertises text, with threading and reactions. Max message length
@@ -211,7 +259,8 @@ is 65536 characters (the relay's content limit).
 Lifecycle details: a relay closing with code **1012** (graceful restart) is
 reconnected quietly at the initial backoff — replayed events are deduped by
 id. Presence is re-announced every 30 s (safe for both the 180 s and the older
-90 s relay TTLs). `BuzzConfig.leave_on_stop` opts into a NIP-29 leave (kind
+90 s relay TTLs), survives transient publish failures, and flips to
+`"offline"` on a deliberate stop instead of lapsing by TTL. `BuzzConfig.leave_on_stop` opts into a NIP-29 leave (kind
 9022) when the source stops — leave it off for private channels, where an
 admin granted the membership and self-join cannot get it back.
 
@@ -220,8 +269,20 @@ to a single relay channel.
 
 ## Runnable examples
 
-See [`examples/buzz_bot.py`](https://github.com/roomkit/roomkit/blob/main/examples/buzz_bot.py)
-for an end-to-end echo bot:
+See [`examples/buzz_agent.py`](https://github.com/roomkit/roomkit/blob/main/examples/buzz_agent.py)
+for a first-class agent (owner `!shutdown`, signals, inactivity bound, clean
+exit) driven by the reserved env triplet:
+
+```bash
+BUZZ_RELAY_URL=wss://your-community.communities.buzz.xyz \
+BUZZ_PRIVATE_KEY=nsec1... \
+BUZZ_AUTH_TAG='["auth","<owner-pubkey>","","<sig>"]' \
+BUZZ_CHANNEL_ID=<channel-uuid> \
+uv run python examples/buzz_agent.py
+```
+
+[`examples/buzz_bot.py`](https://github.com/roomkit/roomkit/blob/main/examples/buzz_bot.py)
+is the minimal end-to-end echo bot:
 
 ```bash
 BUZZ_RELAY_URL=wss://your-community.communities.buzz.xyz \

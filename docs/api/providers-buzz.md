@@ -12,6 +12,12 @@
 
 ::: roomkit.sources.buzz.huddle_announcement_parser
 
+## Agent lifecycle
+
+::: roomkit.providers.buzz.agent.BuzzAgent
+
+::: roomkit.providers.buzz.agent.BuzzAgentStopCause
+
 ## Voice (huddles)
 
 ::: roomkit.voice.backends.buzz_huddle.BuzzHuddleBackend
