@@ -413,7 +413,14 @@ Tool permissions are denied by default. The agent's session tunables are
 readable and settable — `agent.session_config(room_id)` returns
 `{"model": "sonnet", "mode": "auto", ...}` and
 `await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
-with every change published as an ephemeral event. Install it with
+with every change published as an ephemeral event.
+
+An agent that is not addressed is skipped entirely — not asked, and not told
+(RFC §19.3.2). Because an ACP session holds its history inside the agent's
+process, the channel catches up from the room's timeline the moment it *is*
+addressed: only what it missed, only what visibility would have delivered to
+it (RFC §7.5 rule 8), bounded by `room_history` (default 20) and honest about
+the bound when it truncates. `room_history=0` opts out. Install it with
 `pip install "roomkit[acp]"`. See the [ACP Agent Channel
 guide](guides/acp-channel.md).
 

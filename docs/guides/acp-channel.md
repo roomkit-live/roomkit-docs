@@ -288,42 +288,72 @@ CONSOLE=1 uv run python examples/acp_multi_agent.py
 
 ```text
 ❯ @claude-code write hello.py
-❯ @codex review hello.py
-❯ /agents          # keyboard menu: pick the agent you address
+❯ @codex what did claude just do?
+❯ /agent           # keyboard menu: pick the agent you address
 ```
 
-Two things make this work, and both are ordinary RoomKit:
+Two settings make this work, and no routing rules at all:
 
 ```python
-router = ConversationRouter(
-    rules=[
-        RoutingRule(
-            agent_id=spec.channel_id,
-            conditions=RoutingConditions(custom=_addressed_to(addressed, spec.channel_id)),
-        )
-        for spec in AGENTS
-    ]
-)
-kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
-    router.as_hook()
+# An agent's own output solicits nobody it did not address itself.
+kit = RoomKit(agent_response_policy=AgentResponsePolicy.ADDRESSED_ONLY)
+
+# Every submission names its recipient (RFC §19.3).
+await cli.run(
+    kit,
+    room_id=room_id,
+    addressed_to=lambda _line: [addressed.agent_id],
+    ...
 )
 ```
 
-1. **Only the addressed agent runs.** The router stamps its decision on the
-   event and `EventRouter` skips every other intelligence channel.
-2. **Agents do not trigger each other.** The predicate returns `False` for
-   intelligence-sourced events, so no agent is selected for another agent's
-   output. Without that, the first answer would be delivered to the second
-   agent, whose answer would come back to the first, until `max_chain_depth`
-   (5) stopped it.
+1. **Only the addressed agent runs.** `addressed_to` names it on the event and
+   `EventRouter` skips every other intelligence channel — ahead of any routing
+   decision (RFC §19.4 step 0).
+2. **Agents do not trigger each other.** Under `ADDRESSED_ONLY` an agent's own
+   output solicits only what it addressed itself. Without that, the first
+   answer would reach the second agent, whose answer would come back to the
+   first, until `max_chain_depth` (5) stopped it.
 
-!!! note "Each agent's context is its own session"
+### Catching up on what it missed
 
-    A non-addressed agent is skipped entirely, so it never sees the message.
-    For an `AIChannel` that is harmless — its context is rebuilt from the
-    store each turn. An ACP agent keeps its history **inside its session**,
-    so what it was not addressed with is permanently absent from it. Ask
-    Codex to review a file, not to comment on what Claude said.
+A non-addressed agent is skipped entirely — not asked, and not told (RFC
+§19.3.2). For an `AIChannel` that costs nothing: its context is rebuilt from
+the store every turn. An ACP agent keeps its history **inside its session**, so
+what it was not told would be gone for good — and the failure is quiet. Asked
+whether it saw the previous message, it answers yes, in good faith, about its
+own session preamble.
+
+So `ACPChannel` reads the room's timeline the moment it *is* addressed, and
+prefixes what it missed to the prompt:
+
+```text
+[Room context — 2 messages you did not receive. Context only; the request follows.]
+[1] Marie · sms: on part sur quoi ?
+[2] claude-code: I wrote hello.py
+[End of room context]
+
+what did claude just do?
+```
+
+- **Only the gap.** What arrived since this agent's last prompt, never what its
+  session already holds — an ordinary back-and-forth carries no block at all.
+- **Only what it may see.** The block is filtered per reader (RFC §7.5 rule 8),
+  so a message scoped away from the agents stays out of every session. Catching
+  up is not a second door into the room.
+- **Honest about its bound.** `room_history` (default 20) caps the block, and
+  the header says so when it bites: *"the 20 most recent of 47 messages you did
+  not receive"*. An agent that knows it was truncated can ask for the rest; one
+  that believes it holds the whole room cannot.
+- **Its own words stay out**, and a session closed and reopened starts over —
+  the new one has missed everything.
+
+```python
+ACPChannel("codex", command=[...], cwd=workspace, room_history=0)  # opt out
+```
+
+`recent_events_window` follows `room_history`, which is what makes the framework
+load a room tail at all for a room whose only readers are ACP sessions.
 
 ## Event mapping
 
