@@ -41,8 +41,75 @@ RoomKit closes this with a coordinator plus a database backstop (RFC §13.5):
    rejected loudly (a constraint violation) instead of silently persisted. The
    `PostgresStore` schema applies it automatically.
 
-With the advisory lock manager configured, the existing pipeline is correct
-across processes; the unique constraint is the defence-in-depth backstop.
+With the advisory lock manager configured, the pipeline is correct across
+processes; the unique constraint is the defence-in-depth backstop.
+
+Note what the room lock does — and deliberately does not — cover. It
+serializes everything that decides and writes the timeline: the pre-commit
+gates, index assignment, the atomic commit, and the *planning* of the
+broadcast (RFC §10.1 steps 6–12). **External delivery executes off the
+lock**, in per-room delivery lanes ordered by the store's `delivered_index`
+cursor — see [Delivery lanes](#delivery-lanes-ordered-delivery-off-the-room-lock)
+below. A slow provider or a long AI generation therefore no longer extends
+the room's critical section, which under a distributed lock manager is what
+serializes the whole deployment.
+
+## Delivery lanes: ordered delivery off the room lock
+
+Every committed event's delivery set (which channels get `on_event` /
+`deliver`) is resolved under the room lock, then executed by the room's
+*delivery lane* — strictly in index order, one event's set completing before
+the next begins (RFC §10.2). Order across workers comes from two shared
+pieces, not from lock tenure:
+
+- **`Room.delivered_index`** — a per-room cursor the store advances by strict
+  compare-and-set: a lane may only execute the plan at `delivered_index + 1`.
+- **The delivery claim** — a derived `__delivery__:{room_id}` key on the lock
+  manager, held while a lane executes. It serializes the executors of one
+  room across processes, and it is why a *slow* delivery is never mistaken
+  for a dead worker: while the owner works, the claim is held and the
+  waiters block on acquisition instead of measuring a gap.
+
+A worker that commits events and **crashes before delivering them** releases
+its claim with its connection and leaves a cursor hole. The next lane with
+work for that room waits `delivery_gap_timeout` (default 30 s,
+`RoomKit(delivery_gap_timeout=...)`), then skips over the hole and emits a
+**`delivery_skipped`** framework event (`{from_index, to_index}`). The loss
+is bounded to exactly what the crashed worker had committed-but-undelivered —
+the same window as a crash under the previous under-lock delivery — but it is
+now observable, and the room never wedges. Subscribe to `delivery_skipped`
+if you want to alert on it or re-send from your own records.
+
+Callers still observe their own delivery: `process_inbound` / `send_event`
+return once their event's delivery set *and* every AI reentry pass it
+spawned have executed. The one relaxation (RFC §10.1 step 14): a concurrent
+inbound may commit between a trigger and its response — ordering guarantees
+are per-room index monotonicity and parent linkage, never adjacency.
+
+### The claim pool
+
+A claim is held for the length of a delivery set — provider round trips and
+AI generation included — while a room lock is now held only for gates,
+commit and planning. On a shared `PostgresAdvisoryLockManager`, long claim
+tenures and short commit tenures would compete for the same connections, so
+give the claims their own manager in multi-process deployments:
+
+```python
+claims = PostgresAdvisoryLockManager(
+    dsn="postgresql://user:pass@db/roomkit",
+    max_size=20,   # ≈ rooms this worker delivers for concurrently
+)
+await claims.init()
+
+kit = RoomKit(
+    store=store,
+    lock_manager=locks,
+    delivery_claim_lock_manager=claims,
+)
+```
+
+The default (claims on the room-lock manager) is fine for a single process —
+`InMemoryLockManager` has no pool to starve.
 
 ## Configuration
 
@@ -76,10 +143,14 @@ await kit.close()   # closes the store and the lock manager pools
 
 ### Pool sizing
 
-A worker acquires one lock-pool connection while it holds a room lock. Size
-`max_size` for the number of **distinct rooms a single process handles
-concurrently**. If it is too small, workers queue for a lock-pool connection
-before they can even take the advisory lock.
+A worker acquires one lock-pool connection while it holds a room lock. Since
+delivery moved off the lock, that tenure is short — gates, commit, broadcast
+planning; no provider I/O — so `max_size` sizes for the number of **distinct
+rooms a single process commits for concurrently**. If it is too small,
+workers queue for a lock-pool connection before they can even take the
+advisory lock. The *long* tenures live on the delivery claims: size the
+claim manager's pool (see [The claim pool](#the-claim-pool)) for the rooms a
+worker delivers for concurrently.
 
 ### The startup warning
 
