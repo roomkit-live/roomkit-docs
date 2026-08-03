@@ -166,9 +166,14 @@ model to report until then). Several distinct models in one room collapse to
   completed Markdown block (paragraph, list, fenced code block — fences are
   never split mid-block). In classic and non-TTY modes streaming stays
   token-level.
-- **Exiting.** `quit` / `exit` / `q`, Ctrl+D, or Ctrl+C end the session. An
-  in-flight turn is cancelled and pending queued messages are dropped; a
-  turn cancelled mid-stream does not persist its partial text.
+- **Interrupting.** **Esc** stops the turn in flight and nothing else. What
+  the agent had already said stays — it is on your screen, so it is in the
+  timeline too, stored with `metadata["cancelled"] = True`. The queue keeps
+  draining, so a message typed behind the interrupted turn still runs.
+  Cancelling is not an error: no `ON_ERROR` fires.
+- **Exiting.** `quit` / `exit` / `q`, Ctrl+D, or Ctrl+C end the session — a
+  different intention from Esc, hence a different key. The in-flight turn is
+  cancelled and pending queued messages are dropped.
 
 ### Mid-turn terminal prompts (`terminal_input`)
 
