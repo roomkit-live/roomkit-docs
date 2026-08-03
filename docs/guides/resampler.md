@@ -77,6 +77,7 @@ class SoxrResamplerProvider(ResamplerProvider):
         target_rate: int,
         target_channels: int,
         target_width: int,
+        stream: str,
     ) -> AudioFrame:
         if (
             frame.sample_rate == target_rate
@@ -86,14 +87,46 @@ class SoxrResamplerProvider(ResamplerProvider):
             return frame
         # ... your soxr/libsamplerate/scipy implementation ...
 
-    def reset(self) -> None:
-        """Reset any internal state between sessions."""
+    def reset(self, stream: str | None = None) -> None:
+        """Drop buffered state — one stream's, or every stream's when None."""
 
     def close(self) -> None:
         """Release native resources."""
 ```
 
 The `resample()` method receives target format parameters (not fixed at construction) because the pipeline calls it with different targets for inbound vs outbound.
+
+### The stream key
+
+The resampler is stage 1 of the inbound pipeline and is bound by the same
+[stream identity contract](audio-pipeline-stages.md) as every other stage: one
+provider instance serves many streams — a voice session per participant, a
+conference lane per track — and anything it holds *between* frames must be kept
+under the `stream` key it was given.
+
+A stateless resampler ignores the argument. One that buffers a frame for
+look-ahead context must not: keying that buffer on audio format alone hands one
+speaker's audio to the next stream that asks, and in a conference that attributes
+a participant's voice, and the transcript drawn from it, to someone else.
+
+```python
+class SoxrResamplerProvider(ResamplerProvider):
+    def __init__(self) -> None:
+        self._pending: dict[tuple[str, int, int], AudioFrame] = {}
+        #                    ^^^ the stream leads the key
+
+    def reset(self, stream: str | None = None) -> None:
+        if stream is None:
+            self._pending.clear()
+            return
+        for key in [k for k in self._pending if k[0] == stream]:
+            del self._pending[key]
+```
+
+`AudioPipeline` passes the key itself and releases it through
+`release_stream()`, so only code *implementing* a resampler is affected.
+`tests/voice/pipeline/stream_conformance.py` ships a check you can run against
+your own provider.
 
 ## Auto-default behavior
 
@@ -111,4 +144,10 @@ The `resample()` method receives target format parameters (not fixed at construc
 
 ## Lifecycle
 
-The pipeline calls `reset()` on session start and `close()` on pipeline shutdown, following the same pattern as all other providers.
+`reset()` is keyed by stream, following the same pattern as all other stages. The pipeline calls it:
+
+- for a voice session, at both ends of its life — `on_session_active()` clears any state left under that key before the session starts, and `on_session_ended()` releases it;
+- for a conference lane, at the end only: `release_stream()` when the track goes away. A lane is keyed by track id, which the SFU mints fresh, so there is nothing to clear on the way in;
+- with no argument, from `AudioPipeline.reset()`, which drops every stream at once.
+
+`close()` is called on pipeline shutdown.
