@@ -120,6 +120,7 @@ nav:
           - OpenRouter Provider: guides/openrouter.md
           - Gemini on Vertex AI: guides/gemini-vertex.md
       - Channels & Content:
+          - CLI Channel & Console Mode: guides/cli-channel.md
           - SMS & RCS Providers: guides/sms-providers.md
           - Discord Bot: guides/discord.md
           - Buzz (Nostr): guides/buzz.md

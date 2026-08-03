@@ -81,7 +81,9 @@ subscription login; the example forwards it to the restricted ACP subprocess
 environment.
 
 The example enables `CLIChannel(markdown=True)`, which uses Rich's live display
-to rebuild the accumulated Markdown document on every text delta. Headings,
+to rebuild the accumulated Markdown document on every text delta. Set
+`CONSOLE=1` to upgrade to the branded console mode (startup banner, styled
+tool activity — see the [CLI Channel & Console Mode guide](cli-channel.md)). Headings,
 lists, emphasis, links, tables, and fenced code therefore remain formatted
 while the response is still arriving. Tool start/completion events are
 displayed inline, and the terminal asks before every requested operation. It

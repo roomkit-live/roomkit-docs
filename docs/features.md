@@ -1434,6 +1434,26 @@ http = HTTPChannel("http-channel", provider=provider)
 
 Recipient ID read from `binding.metadata["recipient_id"]`. Includes `parse_http_webhook()` for inbound webhook parsing.
 
+### CLI Channel
+
+Interactive terminal transport — a stdin/stdout REPL for talking to any room
+(AI channel, orchestration, ACP coding agent) without a web frontend:
+
+```python
+from roomkit import CLIChannel
+
+cli = CLIChannel("cli")                    # plain streaming REPL
+cli = CLIChannel("cli", markdown=True)     # progressive Markdown (console extra)
+cli = CLIChannel("cli", console=True)      # branded console mode (console extra)
+```
+
+Console mode adds a startup banner (RoomKit logo and version, AI models
+discovered from the room's intelligence bindings, room and channels),
+brand-palette styling, and Claude-Code-style tool activity lines — rendered
+inline in the normal scrollback, unlike the full-screen voice dashboard.
+Examples enable it with `CONSOLE=1`. See the
+[CLI Channel & Console Mode guide](guides/cli-channel.md).
+
 ### Voice Channel
 
 Real-time voice communication with STT, TTS, and VAD integration:
