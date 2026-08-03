@@ -68,6 +68,43 @@ store = PostgresStore(pool=pool)
 # Store won't close the pool on exit (caller is responsible)
 ```
 
+### Connection Tenure
+
+A checkout is not free. asyncpg resets a connection when it goes back to the
+pool — `pg_advisory_unlock_all(); CLOSE ALL; UNLISTEN *; RESET ALL;` — a full
+round trip on top of the query you asked for. A stretch of small reads can
+spend more time on that bookkeeping than on the reads.
+
+`ConversationStore.connection()` bounds it. The calls inside the block are
+served from one connection instead of one each:
+
+```python
+async with store.connection():
+    room = await store.get_room(room_id)
+    bindings = await store.list_bindings(room_id)
+    participants = await store.list_participants(room_id)
+# one checkout, not three
+```
+
+RoomKit already uses it on the inbound path, so you get the saving without
+asking for it. Reach for it yourself when your own code makes several store
+calls in a row.
+
+Three things it is **not**:
+
+- **Not a transaction.** No atomicity, no isolation, no rollback, no snapshot.
+  A failure halfway leaves the earlier calls applied, exactly as it would
+  outside the block. Ask for atomicity explicitly (`commit_event`).
+- **Not a place to await anything else.** Store calls only, awaited
+  sequentially — no hook, no provider call, no lock, no `gather` or
+  `create_task` over store calls. A pooled connection held across foreign code
+  parks a database backend behind someone else's HTTP request, and a child task
+  inherits the binding, which would use the one connection from two coroutines.
+- **Not exclusive to PostgreSQL.** It is on the ABC. `InMemoryStore` inherits a
+  default that binds nothing and yields, so the same code runs unchanged on
+  either store — and a custom pooled backend gets the same win by overriding
+  this one method.
+
 ## Schema
 
 PostgresStore creates 10 tables on first `init()`:
