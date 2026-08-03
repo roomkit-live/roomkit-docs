@@ -220,6 +220,55 @@ await kit.attach_channel(
 await cli.run(kit, room_id=room_id)
 ```
 
+## Two agents in one Room
+
+`examples/acp_multi_agent.py` puts Claude Code **and** Codex in the same Room
+and the same working directory, so you can have one write code and the other
+review what landed on disk:
+
+```bash
+CONSOLE=1 uv run python examples/acp_multi_agent.py
+```
+
+```text
+❯ @claude-code write hello.py
+❯ @codex review hello.py
+❯ /agents          # keyboard menu: pick the agent you address
+```
+
+Two things make this work, and both are ordinary RoomKit:
+
+```python
+router = ConversationRouter(
+    rules=[
+        RoutingRule(
+            agent_id=spec.channel_id,
+            conditions=RoutingConditions(custom=_addressed_to(addressed, spec.channel_id)),
+        )
+        for spec in AGENTS
+    ]
+)
+kit.hook(HookTrigger.BEFORE_BROADCAST, execution=HookExecution.SYNC, priority=-100)(
+    router.as_hook()
+)
+```
+
+1. **Only the addressed agent runs.** The router stamps its decision on the
+   event and `EventRouter` skips every other intelligence channel.
+2. **Agents do not trigger each other.** The predicate returns `False` for
+   intelligence-sourced events, so no agent is selected for another agent's
+   output. Without that, the first answer would be delivered to the second
+   agent, whose answer would come back to the first, until `max_chain_depth`
+   (5) stopped it.
+
+!!! note "Each agent's context is its own session"
+
+    A non-addressed agent is skipped entirely, so it never sees the message.
+    For an `AIChannel` that is harmless — its context is rebuilt from the
+    store each turn. An ACP agent keeps its history **inside its session**,
+    so what it was not addressed with is permanently absent from it. Ask
+    Codex to review a file, not to comment on what Claude said.
+
 ## Event mapping
 
 | ACP update | RoomKit representation |

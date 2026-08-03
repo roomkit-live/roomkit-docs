@@ -187,6 +187,41 @@ and answer land in the normal scrollback); without a shell it behaves as a
 plain threaded `input()`. The ACP example's `TerminalPermissionHandler` uses
 it.
 
+### Picking from a list (`terminal_select`)
+
+The other question an application asks — *which one?* — gets a keyboard
+menu:
+
+```python
+from roomkit.console import terminal_select
+
+chosen = await terminal_select(
+    [("claude-code", "@claude-code · opus"), ("codex", "@codex · gpt-5.6-sol")],
+    title="Address which agent?",
+    default="claude-code",
+)
+```
+
+```text
+Address which agent?
+❯ @claude-code · opus
+  @codex · gpt-5.6-sol
+  ↑/↓ to move · enter to choose · esc to cancel
+```
+
+It renders where the bar sits, erases itself once answered, and returns the
+chosen **value** — or `None` when the user cancels (Esc, Ctrl-C). Options
+are `(value, label)` pairs, or bare strings used as both. Without a shell it
+degrades to a numbered list read from stdin, so piped runs still answer.
+
+!!! warning "One reader at a time"
+
+    The menu works because the shell suspends its own reading for the
+    duration. In the classic loop there is no such suspension: a picker
+    started *beside* the read-print loop competes with it for the same line.
+    Call it from a place the loop awaits, or reserve it for console mode —
+    `examples/acp_multi_agent.py` shows the guard.
+
 ### Inline, not a dashboard
 
 Console mode is **not** the voice dashboard. `RoomKitConsole` (voice) takes
