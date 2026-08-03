@@ -872,6 +872,8 @@ ai = AIChannel("ai", provider=provider, memory=SummaryMemory())
 
 `MemoryResult` has two fields: `messages` (pre-built `AIMessage` objects prepended to context) and `events` (raw `RoomEvent` objects converted by `AIChannel` with vision support preserved). See the [Memory Provider guide](guides/memory-provider.md) for details.
 
+The `context` a provider receives is already the requesting channel's view of the room: events [visibility](#channel-access-control) kept from that channel are gone before your `retrieve` runs, so `context.recent_events[-5:]` above is safe by construction and a summarizing provider cannot accidentally launder hidden content into a summary. You do not filter, and there is no way to opt out.
+
 Built-in providers: `SlidingWindowMemory` (last N events), `BudgetAwareMemory` (token-budget trimming), `CompactingMemory` (LLM summarization), and `SummarizingMemory` (two-tier proactive budget management with truncation + summarization). See the [Advanced Memory guide](guides/advanced-memory.md) for details.
 
 ### Agentic AI Features
@@ -2301,6 +2303,20 @@ Access can be changed dynamically:
 await kit.set_access("room-1", "observer-channel", Access.READ_ONLY)
 await kit.set_visibility("room-1", "ai-channel", "intelligence")
 ```
+
+**Visibility holds on the next turn, not just at delivery.** An event a channel
+was not allowed to see is not handed back to it later as reconstructed history
+either — an AI channel's prompt is built from *its* view of the room, never the
+whole timeline. Two things this deliberately does not cover: a channel always
+keeps its own events (or an assistant bound `visibility="advisor-ws"` would lose
+its own answers from its own context), and hooks receive the full timeline
+(they are your code, running in your process, holding the store anyway).
+
+Because a source's visibility is resolved from its binding when the history is
+read, visibility is a **live** policy: widening a binding widens its past too.
+If you need a scope that cannot be revoked retroactively, set it on the event
+(`visibility=` on the inbound message or `send_event`) rather than on the
+binding — an event's own scope travels with it.
 
 ### Response Visibility
 

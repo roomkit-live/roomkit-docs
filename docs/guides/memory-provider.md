@@ -41,6 +41,14 @@ A provider can return one or both fields. `SlidingWindowMemory` returns only `ev
 element is the most recent event. That is why providers slice `[-N:]` rather
 than `[:N]` -- the head of a long room is the part you want to drop, not keep.
 
+It is also already **this channel's view** of the room, not the room's whole
+timeline. Events whose visibility excluded the AI channel were removed before
+`retrieve()` was called, so your provider cannot accidentally put into a prompt
+something the room decided that channel should not see -- including by
+summarizing it. You do not filter, and you cannot opt out. The channel's own
+past events are always kept, so an assistant bound with a narrow visibility
+still recalls what it said.
+
 ## Built-in providers
 
 ### SlidingWindowMemory
