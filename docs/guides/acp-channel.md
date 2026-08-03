@@ -313,6 +313,20 @@ RoomKit injects `BEFORE_TOOL_USE` and `ON_TOOL_CALL` hooks into the handler when
 the channel is registered. An approval chooses `allow_once` when the agent
 offers it; RoomKit does not silently grant durable permissions.
 
+A handler serves **one** channel — that is what makes the injected hooks
+attributable — and it can say which, so a prompt can name who is asking:
+
+```python
+async def process_tool_call(self, tool_name, tool_input, **kwargs):
+    answer = await terminal_input(f"@{self.channel_id} wants {tool_name}. Allow? [y/N] ")
+    ...
+```
+
+`channel_id` is empty until the channel is registered (handlers are built
+first), so read it when a tool call arrives, not in `__init__`. Wiring the
+same instance to a second channel logs a warning and re-attributes its tool
+events — give each channel its own handler.
+
 !!! warning
     ACP v1 tool calls expose a human-readable title and a coarse tool kind, not
     one universal canonical tool name across agents. Treat title-based glob
