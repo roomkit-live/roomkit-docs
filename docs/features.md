@@ -409,7 +409,11 @@ await kit.attach_channel(
 
 The channel maps one ACP session to each Room and supports streamed text,
 thinking, tool-call activity, plans, permission requests, and cancellation.
-Tool permissions are denied by default. Install it with
+Tool permissions are denied by default. The agent's session tunables are
+readable and settable — `agent.session_config(room_id)` returns
+`{"model": "sonnet", "mode": "auto", ...}` and
+`await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
+with every change published as an ephemeral event. Install it with
 `pip install "roomkit[acp]"`. See the [ACP Agent Channel
 guide](guides/acp-channel.md).
 

@@ -84,6 +84,55 @@ agent = ACPChannel(
 Keep the list minimal — the trimmed default exists so the agent does not
 inherit secrets it has no business seeing.
 
+## Session config: model, mode, effort
+
+ACP agents advertise their tunables as *session config options* — a list of
+select and boolean entries, each with an id (`model`, `mode`, `effort`, …), a
+current value and its available choices. RoomKit records them when a session
+opens and follows the agent's `config_option_update` notifications:
+
+```python
+agent.session_config(room_id)
+# {"mode": "auto", "model": "sonnet", "effort": "xhigh"}
+
+agent.config_options(room_id)          # full descriptors, for a picker
+# [{"id": "model", "name": "Model", "currentValue": "sonnet",
+#   "options": [{"value": "opus[1m]", "name": "Opus"}, ...]}, ...]
+
+await agent.set_config_option(room_id, "model", "opus[1m]")
+# {"mode": "auto", "model": "opus[1m]", "effort": "xhigh"}
+```
+
+Both readers are empty until the room's session exists — sessions open on the
+first prompt. `set_config_option()` opens one if needed (which starts the
+agent process), and returns the mapping the agent reports back, so you see the
+value it actually landed on: agents resolve aliases, and a change can
+invalidate a sibling option.
+
+Every change — the agent's own, or one you make — publishes an ephemeral
+`CUSTOM` event so UI surfaces can follow along:
+
+```python
+{
+    "type": "acp_config_options",
+    "session_id": "sess-1",
+    "values": {"model": "opus[1m]"},        # ids, for logic
+    "labels": {"model": "Opus"},            # display names, for a status bar
+    "config_options": [...],                # full descriptors
+}
+```
+
+!!! warning "A slash command inside the agent is invisible here"
+
+    Verified against `claude-agent-acp` 0.61.0: typing `/model sonnet` at a
+    RoomKit prompt *works* — the Claude SDK handles the command locally,
+    without invoking the model — but the adapter relays only its text output
+    and sends **no** config update. The switch is real and RoomKit never
+    hears about it, so `session_config()` and anything built on it go stale.
+    Drive switches through `set_config_option()` when the value must stay
+    observable. The Claude Code example intercepts `/model` in its
+    `content_factory` and does exactly that.
+
 ## Claude Code with the CLI channel
 
 The repository includes a complete interactive example that connects a
@@ -129,6 +178,24 @@ thinking budget. Set it to `0` for lower latency with reasoning disabled:
 
 ```bash
 uv run python examples/acp_claude_code.py --thinking-tokens 0
+```
+
+The model is pinned at startup with `--model` (forwarded as
+`ANTHROPIC_MODEL`, the adapter's highest-priority model source) and switched
+mid-session with the example's own `/model` command, which routes through
+`set_config_option()` so the console's status bar follows:
+
+```bash
+uv run python examples/acp_claude_code.py --model sonnet
+```
+
+```text
+❯ /model
+Model: sonnet
+Available: default, opus[1m], claude-fable-5[1m], sonnet, haiku
+
+❯ /model opus[1m]
+Model: opus[1m]
 ```
 
 Its Room wiring follows the same pattern as the other CLI examples:

@@ -80,29 +80,39 @@ found in the room, the room id, and the attached channels:
 - **The prompt becomes `❯`** in the brand color, unless you pass an explicit
   `prompt=`.
 
-During a streamed response, thinking (when `show_thinking=True`) renders dim
-above the answer, and tool calls render inline with their results — output
-previews for commands, colored ± diffs for file edits (ACP diff blocks and
-MCP-style payloads are understood), capped at a few lines:
+A turn opens with the agent's handle — quiet and dim, it names who is
+speaking without shouting — and the prose that follows leads with `●`, so
+the answer is visually one block whatever it contains. Thinking (when
+`show_thinking=True`) renders dim, tool calls render inline with their
+results — output previews for commands, colored ± diffs for file edits (ACP
+diff blocks and MCP-style payloads are understood), capped at a few lines —
+and the turn closes with what the wait cost:
 
 ```text
+@claude code
 💭 The user wants a hello world in C.
+
 ⏺ Write
   ⎿ ✓ Write /tmp/hello.c · 3.0s
     /tmp/hello.c
     +#include <stdio.h>
     +int main(void) {
     … +3 lines
+
 ⏺ Terminal
   ⎿ ✓ cc /tmp/hello.c -o /tmp/hello && /tmp/hello · 5.2s
     Hello, world!
-● Claude Code
-Compiled and ran — output `Hello, world!`.
+
+● Compiled and ran — output `Hello, world!`. The program prints the
+  greeting and exits cleanly.
+  ⎿ took 9.4s · 2 tools
 ```
 
-A tool start renders without parentheses when its arguments are not yet
-known (ACP agents enrich the tool title while it runs); failures render
-`⎿ ✗ tool failed` with the error text as the preview.
+The marker leads each stretch of prose, so an answer resuming after a tool
+round starts a fresh `●`; continuation lines align under the text, not under
+the marker. A tool start renders without parentheses when its arguments are
+not yet known (ACP agents enrich the tool title while it runs); failures
+render `⎿ ✗ tool failed` with the error text as the preview.
 
 ### The pinned input bar
 
@@ -115,18 +125,43 @@ so your messages stand apart from agent output:
 
 ```text
 ❯ summarize the last meeting          ← echoed, tinted background
-● Assistant
-Here is the summary you asked for — …
+@assistant
+● Here is the summary you asked for — …
+  ⎿ took 4.1s
 
 ──────────────────────────────────────────────
 ❯ and now compare it with│
 ──────────────────────────────────────────────
- demo · claude-sonnet-5 (anthropic) · working (1 queued)
+ demo · Sonnet · ⠹ Claude Code working 32s · Edit · 12.3k ctx (1 queued)
 ```
 
 - **Type while the agent streams.** The bar never blocks. Each submitted
   line queues, and queued messages process strictly one at a time — the
-  toolbar shows `working (n queued)` until the queue drains.
+  toolbar shows `(n queued)` until the queue drains.
+
+### The status bar: who is working
+
+The toolbar reads `room · model · status`. While a turn is in flight the
+status spins and names the agent producing it, how long the wait has run,
+and what it is doing right now (`thinking`, a tool name, `responding`);
+context usage joins in when the agent reports it:
+
+```text
+ demo · idle                                        ← nothing in flight
+ demo · ⠙ working 2s                                ← submitted, still routing
+ demo · Sonnet · ⠹ Claude Code working 32s · Edit   ← an agent is streaming
+ demo · ⠴ 2 agents working 41s · Planner, Coder     ← orchestration
+```
+
+Activity is tracked **per source channel**, not as one global flag, so a
+room running several intelligence channels names them all; the oldest turn
+owns the clock, because that is the wait actually being lived. The spinner
+runs only while work is in flight — an idle console never repaints.
+
+The model shown is what each agent reports for itself, which replaces the
+banner's startup value as soon as a session exists (an ACP agent has no
+model to report until then). Several distinct models in one room collapse to
+`n models`.
 - **Rendering granularity.** Under the bar the response flushes per
   completed Markdown block (paragraph, list, fenced code block — fences are
   never split mid-block). In classic and non-TTY modes streaming stays
