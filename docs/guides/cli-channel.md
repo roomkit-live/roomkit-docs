@@ -214,13 +214,39 @@ chosen **value** — or `None` when the user cancels (Esc, Ctrl-C). Options
 are `(value, label)` pairs, or bare strings used as both. Without a shell it
 degrades to a numbered list read from stdin, so piped runs still answer.
 
-!!! warning "One reader at a time"
+The menu works because only one reader touches the terminal at a time. Call
+it from a place the loop awaits — a local command is exactly that.
 
-    The menu works because the shell suspends its own reading for the
-    duration. In the classic loop there is no such suspension: a picker
-    started *beside* the read-print loop competes with it for the same line.
-    Call it from a place the loop awaits, or reserve it for console mode —
-    `examples/acp_multi_agent.py` shows the guard.
+### Local commands (`commands=`)
+
+Lines that should never reach the room — `/model`, `/agents`, `:q` — are
+declared as commands, keyed by their first word:
+
+```python
+async def switch_model(argument: str) -> None:
+    ...
+
+await cli.run(
+    kit,
+    room_id=room_id,
+    commands={"/model": switch_model, "/agents": pick_agent},
+)
+```
+
+A matching line skips `content_factory` and the room entirely; the handler
+is **awaited by the loop**, in submission order, with the rest of the line
+as its argument. Two consequences worth relying on:
+
+- A handler may prompt (`terminal_input`, `terminal_select`) without racing
+  the loop for stdin — the loop is not reading while it awaits.
+- A command typed behind a message runs **after** that message's turn, never
+  inside it. `/model sonnet` cannot land halfway through the answer it would
+  have changed.
+
+Under the pinned bar, commands ride the same submission queue as messages
+(so the bar is up and can be suspended for a prompt); in the classic loop
+they run between reads. The prefix is yours — RoomKit matches the first word
+and nothing else.
 
 ### Inline, not a dashboard
 
@@ -276,6 +302,7 @@ CONSOLE=1 uv run python examples/acp_claude_code.py            # external coding
 | `console` | `False` | Branded console mode (subsumes `markdown`) |
 
 `run()` accepts `sender_id` (a room **Participant ID**, not an address — see
-[Identity Resolution](identity-resolution.md)), `welcome`, and
-`content_factory` (map a raw input line to custom content, or return `None`
-to swallow a line — the hook point for local slash commands).
+[Identity Resolution](identity-resolution.md)), `welcome`, `content_factory`
+(map a raw input line to custom content, or return `None` to swallow a line)
+and `commands` (local commands the loop awaits — see
+[Local commands](#local-commands-commands)).
