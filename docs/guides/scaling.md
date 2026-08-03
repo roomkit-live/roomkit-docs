@@ -86,6 +86,26 @@ spawned have executed. The one relaxation (RFC §10.1 step 14): a concurrent
 inbound may commit between a trigger and its response — ordering guarantees
 are per-room index monotonicity and parent linkage, never adjacency.
 
+### One delivery primitive per room
+
+The cursor advances **after** an event's delivery set has run, never at
+commit time — advancing it early would declare the event delivered and
+release the lane to execute the next index while this one is still on its
+way out. That is why every committed event with recipients goes through the
+lane, including the ones a caller produces itself: a greeting, a regenerated
+answer, the segments of a streamed reply. A streamed answer's segments
+therefore reach the non-streaming channels *as they are produced* rather
+than in a batch after the stream, each firing its `AFTER_BROADCAST` once its
+own delivery set completes — an SMS participant follows the answer at the
+pace the web one does.
+
+The flip side is head-of-line blocking, and it is the specified behaviour
+(RFC §10.2): while a room is streaming a long answer, the delivery of events
+committed *after* those segments waits for them. It is per room only —
+other rooms' lanes are untouched — and it is the price of "one event's set
+completes before the next begins". If a room needs a side channel that does
+not queue behind a turn, give it its own room.
+
 ### The claim pool
 
 A claim is held for the length of a delivery set — provider round trips and
