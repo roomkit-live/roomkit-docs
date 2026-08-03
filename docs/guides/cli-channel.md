@@ -81,16 +81,28 @@ found in the room, the room id, and the attached channels:
   `prompt=`.
 
 During a streamed response, thinking (when `show_thinking=True`) renders dim
-above the answer, and tool calls render inline:
+above the answer, and tool calls render inline with their results — output
+previews for commands, colored ± diffs for file edits (ACP diff blocks and
+MCP-style payloads are understood), capped at a few lines:
 
 ```text
-💭 The user wants a summary — checking the docs first.
-⏺ search({"query": "roomkit"})
-  ⎿ ✓ search · 42 ms
-● Assistant
-# Summary
-...
+💭 The user wants a hello world in C.
+⏺ Write
+  ⎿ ✓ Write /tmp/hello.c · 3.0s
+    /tmp/hello.c
+    +#include <stdio.h>
+    +int main(void) {
+    … +3 lines
+⏺ Terminal
+  ⎿ ✓ cc /tmp/hello.c -o /tmp/hello && /tmp/hello · 5.2s
+    Hello, world!
+● Claude Code
+Compiled and ran — output `Hello, world!`.
 ```
+
+A tool start renders without parentheses when its arguments are not yet
+known (ACP agents enrich the tool title while it runs); failures render
+`⎿ ✗ tool failed` with the error text as the preview.
 
 ### The pinned input bar
 

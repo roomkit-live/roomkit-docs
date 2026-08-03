@@ -56,6 +56,34 @@ agent process is started lazily for the channel. Each Room receives a separate
 ACP session, and prompts are serialized within that session. Different Rooms
 can make progress concurrently through the same connection.
 
+## Environment passthrough
+
+The ACP SDK spawns the agent with a deliberately trimmed environment —
+`HOME`, `LOGNAME`, `PATH`, `SHELL`, `TERM`, `USER` only (the MCP practice) —
+plus whatever you pass in `env=`. That default silently breaks tooling a
+coding agent relies on: without `SSH_AUTH_SOCK`, for instance, every
+git-over-SSH operation the agent runs falls back to the on-disk key files
+and prompts for their passphrases **on the controlling terminal**, stealing
+keystrokes from whatever else is reading it.
+
+`inherit_env=` names parent-process variables to forward. Values are read at
+each process spawn (a reconnect picks up a rotated agent socket), unset
+names are skipped, and explicit `env=` entries win over inherited ones.
+Nothing is forwarded by default:
+
+```python
+agent = ACPChannel(
+    "coding-agent",
+    command=["my-acp-agent", "--stdio"],
+    cwd=Path("/srv/workspaces/my-project"),
+    env={"MAX_THINKING_TOKENS": "1024"},      # explicit values
+    inherit_env=["SSH_AUTH_SOCK", "LANG"],    # forwarded from the parent
+)
+```
+
+Keep the list minimal — the trimmed default exists so the agent does not
+inherit secrets it has no business seeing.
+
 ## Claude Code with the CLI channel
 
 The repository includes a complete interactive example that connects a
