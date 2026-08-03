@@ -84,6 +84,62 @@ agent = ACPChannel(
 Keep the list minimal — the trimmed default exists so the agent does not
 inherit secrets it has no business seeing.
 
+## Reaching an agent you cannot spawn
+
+`command=` spawns the agent here and speaks over its stdio. When the agent runs
+somewhere this process cannot start it — on a user's own machine behind a
+relay, in another container — pass a `transport=` instead. ACP does not care
+what carries it: the SDK builds its connection from a reader/writer pair, so a
+transport is whatever produces one.
+
+```python
+import acp
+from roomkit import ACPChannel, ACPTransport
+
+
+class MyRelayTransport(ACPTransport):
+    @property
+    def name(self) -> str:
+        return "my-relay"                      # shows up in channel.info
+
+    async def open(self, client, *, queue):
+        reader, writer = await connect_to_my_relay()
+        return acp.connect_to_agent(client, writer, reader, queue=queue)
+
+    async def close(self) -> None:
+        ...                                    # must not raise
+
+    def is_alive(self) -> bool:
+        return not self._socket.closed         # optional; defaults to True
+
+
+agent = ACPChannel(
+    "coding-agent",
+    transport=MyRelayTransport(),
+    cwd="/srv/workspaces/my-project",          # a path on the AGENT's machine
+)
+```
+
+`command` and `transport` are mutually exclusive, and one is required. `env` and
+`inherit_env` configure the subprocess spawn, so they are refused next to a
+transport rather than quietly ignored — a custom transport carries its own
+environment to wherever the agent lives.
+
+Only the pipe is yours. `initialize`, protocol-version negotiation,
+`authenticate`, per-Room sessions, prompts, cancellation, permissions, config
+options and the whole event mapping stay on the channel, so a transport inherits
+them without reimplementing anything. Note the split on the session fields:
+`cwd`, `additional_directories` and `mcp_servers` are declared to
+`session/new`, which means they name paths and servers on the **agent's**
+machine — the absolute-path check still applies, but the path does not have to
+exist here.
+
+`is_alive()` is what lets the channel notice a dead connection: when it turns
+false, the next prompt reconnects and drops every session behind the old one (a
+reconnect never resumes them). Answer only when you know — the default `True`
+costs at worst a failed request the channel already reports, while a wrong
+`False` throws away live sessions.
+
 ## Session config: model, mode, effort
 
 ACP agents advertise their tunables as *session config options* — a list of
@@ -356,7 +412,7 @@ creates new sessions; persistent ACP load/resume is not yet enabled.
 
 ## Current scope
 
-- Stable ACP protocol v1 over stdio
+- Stable ACP protocol v1, over stdio or any transport you supply
 - Text and rich-text Room input
 - Streaming text, thoughts, tool lifecycle, plans, and usage
 - Permission requests through `ExternalToolHandler`
