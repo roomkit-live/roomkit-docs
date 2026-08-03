@@ -352,8 +352,10 @@ what did claude just do?
 ACPChannel("codex", command=[...], cwd=workspace, room_history=0)  # opt out
 ```
 
-`recent_events_window` follows `room_history`, which is what makes the framework
-load a room tail at all for a room whose only readers are ACP sessions.
+`recent_events_window` follows `room_history`. The framework sizes the room tail
+it loads to the largest window any bound channel declares, under a floor it keeps
+for hooks (50 events) — so the default reads a tail that was loaded anyway, and
+raising `room_history` past the floor grows the tail the catch-up draws on.
 
 ## Event mapping
 
