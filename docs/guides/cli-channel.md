@@ -239,6 +239,30 @@ keyboard picker, a payload carrying its own mentions — parse it at the edge
 and hand over ids. See
 [Addressing](orchestration.md#addressing-naming-who-is-asked).
 
+### Your own status segment (`status_extra=`)
+
+The bar knows the room, the models and what is running. What it cannot know
+is application context — which agent your next line will reach, which mode
+you are in. `status_extra` contributes one segment, asked fresh on every
+render:
+
+```python
+await cli.run(
+    kit,
+    room_id=room_id,
+    status_extra=lambda: f"→ @{focused_agent}",
+)
+```
+
+```text
+ coding-agents · gpt-5.6-sol · → @codex · ⠋ Codex working 12s · Shell
+```
+
+It sits between the model and the live status. Return `None` to show
+nothing. A segment that raises is skipped and logged — rendering is not a
+place your code can crash the console. Console mode on a real terminal only;
+the classic loop has no bar.
+
 ### Local commands (`commands=`)
 
 Lines that should never reach the room — `/model`, `/agents`, `:q` — are
