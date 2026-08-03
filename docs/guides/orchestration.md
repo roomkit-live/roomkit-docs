@@ -461,6 +461,31 @@ keyboard picker, a Slack payload carrying its own mentions — how a user names
 an agent is your application's business. Parse it at the edge, pass channel
 ids.
 
+### Do agents answer each other?
+
+An agent's output is an event like any other, so by default it solicits the
+other agents in the room — the chaining that makes a pipeline work
+(analyst → writer), bounded by `max_chain_depth`. In a room of *independent*
+agents that is a hazard: two agents answer each other until the depth limit
+stops them. The room says which it wants:
+
+```python
+kit = RoomKit(agent_response_policy=AgentResponsePolicy.ADDRESSED_ONLY)
+await kit.create_room(room_id="dev", agent_response_policy=...)  # per room
+```
+
+| Policy | An agent's output solicits |
+|---|---|
+| `AGENT_CHAIN` | every eligible intelligence channel — the default |
+| `ADDRESSED_ONLY` | only the channels it addressed, if any |
+
+It lives on the `Room` and is persisted, not passed at construction: a policy
+consulted on every broadcast must reach the same verdict in whichever worker
+owns the delivery lane. `update_room()` changes it later; a room created
+before the setting existed reads `agent_chain`, the behaviour it was already
+running under. Under either policy an explicit address is honoured — an agent
+may address another agent and be answered by it alone.
+
 An address **outranks the router**: a `ConversationRouter` returns untouched
 on an addressed event and stamps nothing. Without that precedence the two
 mechanisms could not coexist — sticky affinity is consulted before the rules,

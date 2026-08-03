@@ -217,6 +217,28 @@ degrades to a numbered list read from stdin, so piped runs still answer.
 The menu works because only one reader touches the terminal at a time. Call
 it from a place the loop awaits — a local command is exactly that.
 
+### Naming who a submission asks (`addressed_to=`)
+
+In a room with several agents, each submission can name its recipients:
+
+```python
+await cli.run(
+    kit,
+    room_id=room_id,
+    addressed_to=lambda line: [focused_agent],   # channel ids, or None
+)
+```
+
+The hook receives the submitted line and returns channel ids — or `None` to
+leave the message unaddressed. It runs **after** `content_factory`, so a line
+like `@codex review it` that switched the focus is already reflected when the
+recipient is named.
+
+RoomKit takes the decision, never the syntax: `@codex`, `/agent codex`, a
+keyboard picker, a payload carrying its own mentions — parse it at the edge
+and hand over ids. See
+[Addressing](orchestration.md#addressing-naming-who-is-asked).
+
 ### Local commands (`commands=`)
 
 Lines that should never reach the room — `/model`, `/agents`, `:q` — are
