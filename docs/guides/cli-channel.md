@@ -108,6 +108,11 @@ and the turn closes with what the wait cost:
   ⎿ took 9.4s · 2 tools
 ```
 
+A speaker with a participant behind them is named, with the kind of channel
+they reach you through — `@marie · sms`. Two colleagues texting into one room
+are told apart; an agent, having no participant, keeps its channel-derived
+handle.
+
 The marker leads each stretch of prose, so an answer resuming after a tool
 round starts a fresh `●`; continuation lines align under the text, not under
 the marker. A tool start renders without parentheses when its arguments are
@@ -243,6 +248,30 @@ RoomKit takes the decision, never the syntax: `@codex`, `/agent codex`, a
 keyboard picker, a payload carrying its own mentions — parse it at the edge
 and hand over ids. See
 [Addressing](orchestration.md#addressing-naming-who-is-asked).
+
+### Scoping a submission (`visibility=`)
+
+Addressing says who is *asked*; visibility says who may *see*. In a room that
+holds a colleague as well as agents, you need both:
+
+```python
+await cli.run(
+    kit,
+    room_id=room_id,
+    visibility=lambda line: ["you", "sms"] if line.startswith("/dm ") else None,
+)
+```
+
+Return a keyword (`"transport"`), a sequence of channel ids, or `None` for no
+restriction — the default, where everything you type is visible to the whole
+room. **Prefer the sequence**: `"transport,codex"` reads like "the transports
+plus codex" and means neither, because the comma form matches channel ids
+only. Handing ids never writes that sentence.
+
+It sets both the message's `visibility` and its `response_visibility`, so a
+private question does not publish the answer it draws — the scope covers the
+whole turn, tool activity included. `examples/sms_and_agents.py` puts a
+colleague on SMS in an agent's room and uses it for `/dm`.
 
 ### Your own status segment (`status_extra=`)
 
