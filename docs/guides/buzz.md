@@ -232,8 +232,12 @@ What each piece does:
   The owner is the NIP-OA auth tag's attester (Schnorr-verified against the
   agent's own pubkey), else the explicit `BuzzConfig.owner_pubkey`. No
   provable owner, or a non-owner author → the message flows normally
-  (fail-closed). Without a runner, `!shutdown` stops the source itself; the
-  source's `on_owner_command` callback takes over the response when provided.
+  (fail-closed). Replay-safe: relays replay recent history on every
+  subscribe, so a command issued before the source started is stale —
+  consumed without action — while one issued during a disconnection is
+  honored when the reconnect replays it. Without a runner, `!shutdown`
+  stops the source itself; the source's `on_owner_command` callback takes
+  over the response when provided.
 - **Signals.** SIGTERM/SIGINT drain through the same graceful path as
   `!shutdown` (`kit.close()` → presence `offline` → sockets closed).
 - **Inactivity** (`exit_after_inactivity`, seconds, default off). No inbound
