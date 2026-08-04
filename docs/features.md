@@ -786,6 +786,7 @@ await kit.set_agent_response_policy(room_id, AgentResponsePolicy.ADDRESSED_ONLY)
 Key features:
 
 - **`addressed_to` on the event** — `None` unaddressed (every eligible agent acts, or the router decides), `["codex"]` only that agent, `[]` nobody, which is a decision rather than an absence
+- **Both entry points** — `InboundMessage(addressed_to=...)` and `kit.send_event(addressed_to=...)`; a direct injection that stores a message and triggers the answer itself passes `[]` so the stored event does not also wake the agent
 - **Not visibility** — addressing narrows who is *asked*, never who may *see*; the humans in the room still get the message
 - **Outranks the router** — a `ConversationRouter` cannot override what the sender asked for
 - **Stored on the event** — a transcript shows who was asked, and a replay reproduces the same solicitation

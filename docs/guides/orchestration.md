@@ -456,6 +456,20 @@ the message.
 The address is stored on the event, so a transcript can show who was asked and
 a replay reproduces the same solicitation.
 
+Direct injection has a sender too, so `send_event()` addresses the same way.
+The `[]` case is what an application needs when it stores a message and
+triggers the answer itself: the stored event must not *also* wake the agent.
+
+```python
+# Stored, and asking nobody — the caller runs the turn on its own terms.
+await kit.send_event(
+    room_id=room_id,
+    channel_id="system",
+    content=TextContent(body=body),
+    addressed_to=[],
+)
+```
+
 **RoomKit takes the decision, never the syntax.** `@codex`, `/agent codex`, a
 keyboard picker, a Slack payload carrying its own mentions — how a user names
 an agent is your application's business. Parse it at the edge, pass channel
