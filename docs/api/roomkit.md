@@ -13,6 +13,7 @@
         - check_room_timers
         - check_all_timers
         - update_room_metadata
+        - set_agent_response_policy
         - register_channel
         - attach_channel
         - detach_channel

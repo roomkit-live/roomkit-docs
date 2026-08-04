@@ -481,10 +481,32 @@ await kit.create_room(room_id="dev", agent_response_policy=...)  # per room
 
 It lives on the `Room` and is persisted, not passed at construction: a policy
 consulted on every broadcast must reach the same verdict in whichever worker
-owns the delivery lane. `update_room()` changes it later; a room created
-before the setting existed reads `agent_chain`, the behaviour it was already
-running under. Under either policy an explicit address is honoured — an agent
-may address another agent and be answered by it alone.
+owns the delivery lane. A room created before the setting existed reads
+`agent_chain`, the behaviour it was already running under. Under either policy
+an explicit address is honoured — an agent may address another agent and be
+answered by it alone.
+
+### A room that becomes multi-agent
+
+A room rarely knows at creation how many agents it will end up holding. A chat
+that starts with one assistant and gains a second when the user asks for it is
+a *different room* the moment that second one attaches: under `AGENT_CHAIN` the
+first answer solicits the newcomer, whose answer comes back, down to
+`max_chain_depth`. Switch the live room at that moment:
+
+```python
+await kit.attach_channel(room_id, "codex", category=ChannelCategory.INTELLIGENCE)
+await kit.set_agent_response_policy(room_id, AgentResponsePolicy.ADDRESSED_ONLY)
+```
+
+The change applies to events processed after it; an event already broadcast is
+not reconsidered. Setting the policy a room already holds is a no-op, so the
+call sits safely on the attach path.
+
+Growing the roster this way costs nothing at rest. A binding whose channel is
+not registered — the state after a restart, before the roster is rehydrated —
+is skipped silently when the event does not address it, so only the agent
+actually being talked to has to be rebuilt.
 
 An address **outranks the router**: a `ConversationRouter` returns untouched
 on an addressed event and stamps nothing. Without that precedence the two

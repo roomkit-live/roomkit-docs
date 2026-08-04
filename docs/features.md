@@ -764,6 +764,37 @@ Key features:
 
 See the [Orchestration guide](guides/orchestration.md) for strategies, state management, routing rules, and handoff configuration.
 
+### Addressing: Naming Who Is Asked
+
+Routing rules answer *which agent handles this kind of event*. Addressing answers the question a human asks every time they type: **which agent am I talking to right now**. A message names its recipients, and only they are asked to act:
+
+```python
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="you",
+        sender_id="user",
+        content=TextContent(body="review hello.py"),
+        addressed_to=["codex"],       # only this agent is asked
+    )
+)
+
+# A room that gains a second agent: stop the two from answering each other.
+await kit.attach_channel(room_id, "codex", category=ChannelCategory.INTELLIGENCE)
+await kit.set_agent_response_policy(room_id, AgentResponsePolicy.ADDRESSED_ONLY)
+```
+
+Key features:
+
+- **`addressed_to` on the event** — `None` unaddressed (every eligible agent acts, or the router decides), `["codex"]` only that agent, `[]` nobody, which is a decision rather than an absence
+- **Not visibility** — addressing narrows who is *asked*, never who may *see*; the humans in the room still get the message
+- **Outranks the router** — a `ConversationRouter` cannot override what the sender asked for
+- **Stored on the event** — a transcript shows who was asked, and a replay reproduces the same solicitation
+- **`AgentResponsePolicy` per room** — `AGENT_CHAIN` (default) or `ADDRESSED_ONLY`, settable at creation *and* on a live room with `set_agent_response_policy()`
+- **Unsolicited targets cost nothing** — a binding that is not asked to act is skipped before any work is done for it, so a roster can be attached lazily and rehydrated one agent at a time
+- **RoomKit takes the decision, never the syntax** — `@codex`, a `/agent` command, a picker or a Slack payload all live in your application, which passes channel ids
+
+See the [Orchestration guide](guides/orchestration.md#addressing-naming-who-is-asked) for the full semantics.
+
 ### Agent Delegation
 
 Delegate tasks to background agents while conversations continue. A voice agent can hand off a PR review to a specialist while still chatting with the user:

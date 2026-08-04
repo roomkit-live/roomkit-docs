@@ -295,8 +295,10 @@ CONSOLE=1 uv run python examples/acp_multi_agent.py
 Two settings make this work, and no routing rules at all:
 
 ```python
-# An agent's own output solicits nobody it did not address itself.
-kit = RoomKit(agent_response_policy=AgentResponsePolicy.ADDRESSED_ONLY)
+# An agent's own output solicits nobody it did not address itself. Set on the
+# room that turned multi-agent, not on the kit: a kit-wide default would also
+# silence the single-agent rooms a server hosts alongside it.
+await kit.set_agent_response_policy(room_id, AgentResponsePolicy.ADDRESSED_ONLY)
 
 # Every submission names its recipient (RFC §19.3).
 await cli.run(
