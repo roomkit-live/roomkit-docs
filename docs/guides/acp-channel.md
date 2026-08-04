@@ -372,6 +372,46 @@ Generated text and tool activity continue through RoomKit's regular streaming
 pipeline. Visibility, chain-depth limits, persistence, hooks, and re-broadcast
 therefore behave like other intelligence-channel output.
 
+### A turn never outlives its tool calls
+
+An agent that disappears mid-tool — its process restarted, its host gone — sends
+no terminal update for the call it was running. The tool-call start is already
+persisted, so nothing would ever close it and the card reads as *running* on
+every reload of the conversation, indefinitely.
+
+However a turn ends, therefore, every tool it started and left unfinished is
+closed first: a tool-call end with status `failed`, carrying an error that says
+the turn ended before the tool reported a result. That distinction is for
+whoever reads the thread later — a tool that never returned because the turn
+died is not a tool that failed on its own. Cancellation goes the same way: a
+stop the user asks for returns through the ordinary end of a prompt, and takes
+the open tool with it. A turn whose tools all reported adds nothing.
+
+One case stays open by construction. A response stream closed from the outside —
+its consumer cancelled, a muted binding dropping it — is past the point where
+anything can be added to it, so the live surfaces get their ephemeral tool-call
+end and the stored row stays pending.
+
+### What a tool result shows
+
+ACP fixes the *envelope* — `content` blocks and a free-form `raw_output` — and
+leaves the payload inside it to each agent. Two agents in one room therefore
+answer in two dialects, and console mode reads both:
+
+| The agent sends | The console shows |
+|---|---|
+| A `text` content block (Claude Code) | Its lines |
+| A `diff` block with old/new text | Colored ± lines under the file path |
+| `raw_output: {"formatted_output": …, "exit_code": N}` (Codex) | The command's output — `exit code N` when a failure printed nothing |
+| A `terminal` block — a handle on live output, carrying no text | Whatever `raw_output` holds, since the block itself has none |
+| An MCP `{"result": {"content": […]}, "error": …}` wrapper | The result's text, or the error |
+| An `image`, `audio`, or `resource` block | The medium, named — base64 is never printed |
+| Anything else | Compact JSON, capped |
+
+Previews are capped at five lines with a `… +N lines` marker, and each line at
+200 characters. Output that merely *happens* to be JSON — `cat package.json` —
+keeps its own lines instead of being taken apart.
+
 ## Permissions
 
 ACP agents may ask the client to approve a tool. `ACPChannel` rejects these
