@@ -62,7 +62,50 @@ joined = await kit.is_member("team", "alice")              # True if that identi
 ```
 
 `list_members` returns `Participant` objects — each carries `channel_id`,
-`display_name`, `role`, `status`, and `identity_id`.
+`display_name`, `role`, `status`, `identity_id`, and `connected_via`.
+
+## One record, several channels
+
+A participant is **one record per (room, id)**. The same person reached by SMS
+and then by email is one participant, not two — that is what makes a
+cross-channel identity useful. So `channel_id` is their *primary* channel, not a
+filter, and `connected_via` lists every channel the room has reached them
+through, primary first:
+
+```python
+await kit.add_member("team", "ws:alice:team", "alice", identity_id="alice")
+
+# The conference asks for a participant under the same id …
+p = await kit.ensure_participant("team", "conference:team", "alice")
+
+p.channel_id     # 'ws:alice:team'  — unchanged: a lookup never re-homes a record
+p.connected_via  # ['ws:alice:team', 'conference:team']
+```
+
+`ensure_participant` hands the record back **as it stands**, and logs a warning
+naming both channels, because nothing in the object you receive would otherwise
+tell you that the channel you named is not the one it is homed on:
+
+```
+Participant alice of room team is recorded on channel 'ws:alice:team';
+'conference:team' asked for them and gets that record as it stands, primary
+channel included (RFC 5.5). …
+```
+
+!!! warning "Do not keep per-channel state on a shared record"
+    This is the trap the warning exists for. If you drive a lifecycle from the
+    record — flipping it `ACTIVE` on connect and `LEFT` on disconnect — you are
+    driving it for *every* channel that shares it. A real integration hit
+    exactly this: a conference and a team channel used the same participant id,
+    so leaving the call wrote `LEFT` over the team-channel membership and the
+    room vanished from the user's menu. Give each channel its own participant
+    id, and correlate them through `identity_id`.
+
+`add_member` is the one verb that *may* move `channel_id` — a deliberate join
+through another channel is a join through that channel — and it keeps the
+channel it replaced in `connected_via`, logging the move. Recording a channel is
+bookkeeping, not presentation: it emits no `PARTICIPANT_UPDATED` and fires no
+`ON_PARTICIPANT_UPDATED`.
 
 ## Leaving
 

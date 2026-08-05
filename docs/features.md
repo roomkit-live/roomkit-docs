@@ -1105,6 +1105,19 @@ async def challenge_unknown_sms(event, ctx, id_result):
 
 After-the-fact resolution is also supported via `resolve_participant()`.
 
+### One participant record, several channels
+
+A participant is one record per `(room_id, id)` (RFC §5.5). `channel_id` is
+their *primary* channel; `connected_via` lists every channel the room has
+reached them through, primary included. Looking a participant up on a second
+channel — `ensure_participant("room", "conference:x", pid)` on a record created
+by a WebSocket channel — returns that record unchanged and records the new
+channel; it never forks a second record, and it logs a warning naming both
+channels so a caller cannot unknowingly keep per-channel state on a record
+another channel also drives. Only a deliberate `add_member` moves the primary
+channel, and it keeps the one it replaced. See
+[Room Membership](guides/room-membership.md#one-record-several-channels).
+
 ---
 
 ## Channel Support
