@@ -468,9 +468,9 @@ trusting a stale number.
   (`make check-models`), which is what catches a vendor shipping a new
   flagship — a stale list is internally consistent, so no test can.
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local
-  models, so there is no meaningful offline list: Azure's is empty, and vLLM
-  inherits OpenAI's hosted set, which will not describe whatever your server
-  loaded. Use `list_models()` on both.
+  models, so neither has a meaningful offline list and both return an empty
+  one. `context_window` is `None` there by design; `list_models()` asks the
+  deployment or the server, which does know.
 - **OpenRouter** -- its offline list is a deliberately small slice of current
   flagships; `list_models()` reads OpenRouter's `/models` endpoint (300+ models
   across providers, with live context windows and vision flags).
