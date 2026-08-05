@@ -1382,7 +1382,25 @@ Resolving that id to bytes
 belongs to the provider, which holds the bot token: `get_file(file_id)` returns
 a path and `download_file(path)` returns the bytes, both `None` on failure and
 capped by Telegram at 20 MB. What happens to those bytes — transcription,
-storage — is the application's call. See the
+storage — is the application's call.
+
+`TelegramBotProvider` is `TelegramBotAPI` plus that rendering. The API half is
+the Bot API surface an application needs around its sends — `get_me`,
+`get_updates`, `set_webhook`, `delete_webhook`, `leave_chat`, `send_message`,
+`send_force_reply`, `send_chat_action`, `answer_callback_query`,
+`edit_message_text`, `edit_message_reply_markup` — so it never writes a second
+HTTP client for the same token. Every call answers with a `ProviderResult`:
+`telegram_<code>` / `http_<status>` / `timeout`, with Telegram's own words under
+`metadata["description"]`, and the two reads carrying its `result` under
+`metadata["result"]`.
+
+`parse_telegram_update()` says which form an Update took — `message`,
+`edited_message` (same shape, flagged), or `callback_query`, parsed into a
+`TelegramCallback`. `mentions_bot()` says whether a group message addressed the
+bot (reply, `bot_command`, `mention`, `text_mention`, or a plain-text handle);
+whether to answer is your policy. `entity_text()` slices by entity offsets,
+which count UTF-16 code units — a code-point slice goes wrong the moment an
+emoji precedes the mention. See the
 [Telegram API reference](api/providers-telegram.md).
 
 ### Discord Channel
