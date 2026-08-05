@@ -128,7 +128,7 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 ### Schema Initialization
 
-`store.init()` runs **only additive, idempotent DDL** — `CREATE TABLE IF NOT EXISTS` and `INSERT ... WHERE NOT EXISTS`. It **never drops a table**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
+`store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, and bounded repairs that populate newly added columns without discarding existing values. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
 
 !!! danger "Legacy v1 → v2 migration is explicit and destructive"
     A very early (v1) release stored rooms as a JSONB blob. Migrating that schema to the current relational layout requires **dropping every table** — irreversible data loss. `init()` will **not** do this for you: if it detects a v1 schema it raises `PostgresSchemaError` and refuses to touch your data.

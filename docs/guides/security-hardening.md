@@ -53,6 +53,12 @@ framework parses and re-serialises them.
 `examples/webhook_signature_verification.py` runs the whole thing offline —
 acceptance, a tampered body, a replay aimed at another URL, a missing header.
 
+For Telegram, configure one persistent `webhook_secret` on `TelegramConfig`.
+`set_webhook()` sends that value by default, and `verify_signature()` compares
+the incoming `X-Telegram-Bot-Api-Secret-Token` header against the same runtime
+value. Generate it once, store it as a secret, and verify it before parsing the
+JSON update.
+
 Providers with no `verify_signature` — WhatsApp, Discord, ElasticEmail,
 SendGrid, VoiceMeUp, and the generic HTTP provider, which signs its *outbound*
 requests but verifies nothing inbound — leave authentication entirely to your

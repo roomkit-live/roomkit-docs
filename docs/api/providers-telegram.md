@@ -97,6 +97,15 @@ message it already sent — so it never writes a second HTTP client for a token
 the provider already holds.
 
 ```python
+import os
+
+config = TelegramConfig(
+    bot_token="...",
+    # Generate this once and persist it in a secret manager.
+    webhook_secret=os.environ["TELEGRAM_WEBHOOK_SECRET"],
+)
+provider = TelegramBotProvider(config)
+
 me = await provider.get_me()
 if not me.success:
     ...                              # me.error, me.metadata["description"]
@@ -104,10 +113,20 @@ bot = me.metadata["result"]          # id, username, first_name
 
 await provider.set_webhook(
     "https://example.com/hooks/telegram",
-    secret=secret,                                       # echoed in the header
     allowed_updates=["message", "callback_query"],       # ask for what you need
 )
+
+# In the HTTP endpoint, before parsing or processing the update:
+raw = await request.body()
+secret_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+if not provider.verify_signature(raw, secret_header):
+    raise HTTPException(status_code=403)
 ```
+
+`set_webhook()` uses `TelegramConfig.webhook_secret` when `secret` is omitted.
+If an explicit secret is supplied to rotate it, the provider starts verifying
+that value only after Telegram accepts the registration; registration and
+verification therefore keep one runtime source of truth.
 
 | Call | Bot API | Notes |
 |---|---|---|

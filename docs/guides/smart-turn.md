@@ -8,6 +8,12 @@ pip install roomkit[smart-turn]
 
 This installs `numpy`, `onnxruntime`, and `transformers`.
 
+`smart-turn` requires `transformers>=5.5`, the first release line containing
+all currently published security fixes needed by this extra. It cannot be
+installed in the same environment as the `neutts`, `qwen-tts`, or `qwen-asr`
+extras while those providers pin older, mutually incompatible Transformers
+versions.
+
 ---
 
 ## Why audio-native turn detection?
