@@ -386,12 +386,11 @@ integrator hangs off that hook therefore runs for a conversation an agent held:
 @kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC)
 async def summarize(event, ctx: RoomContext) -> None:
     logger.info(
-        "%s answered in %sms with %d tool calls (%s in / %s out)",
+        "%s answered in %sms with %d tool calls (%s tokens)",
         event.channel_id,
         event.latency_ms,
         event.tool_calls_count,
-        event.usage.get("input_tokens"),
-        event.usage.get("output_tokens"),
+        event.usage.get("total_tokens"),
     )
 ```
 
@@ -402,23 +401,33 @@ consumer cancelled, a muted binding dropping it — cancels the agent and
 delivers nothing to the room, so it is not a response and fires nothing. Nor
 does a turn that ended in an error.
 
-**`usage` is per turn, `usage["session_total"]` is not.** ACP reports token
-counters as running session totals ("total input tokens across all turns"), so
-the standard keys carry the difference this turn made — summable over a
-conversation, like every other channel's. The cumulative reading is kept whole
-under `session_total`, together with the context-window occupancy and the
-session's running cost:
+**`usage` is the agent's own accounting, relayed unaltered.** The token
+counters come off the prompt's response; the context occupancy and running
+cost come off the usage notifications the session sends:
 
 ```python
 {
-    "input_tokens": 160, "output_tokens": 25, "total_tokens": 185,
-    "session_total": {
-        "input_tokens": 260, "output_tokens": 45, "total_tokens": 305,
-        "context_used": 120, "context_size": 200000,
-        "cost": 0.25, "currency": "USD",
-    },
+    "input_tokens": 2, "output_tokens": 3, "total_tokens": 27369,
+    "cached_read_tokens": 16997, "cached_write_tokens": 10367,
+    "context_used": 27369, "context_size": 1000000,
+    "cost": 0.1128, "currency": "USD",
 }
 ```
+
+Read `total_tokens`. A coding agent's context arrives almost entirely as cache
+reads, so the numbers above are a real turn: `2` uncached input tokens against
+`27369` actually accounted for. Any per-turn cost computed from `input_tokens`
+alone is off by four orders of magnitude.
+
+The ACP schema annotates those counters as running session figures ("total
+input tokens across all turns"), while the reference agent fills them per
+prompt — measured against it, `cached_read_tokens` is the whole prefix re-read
+on that turn rather than a sum over turns. A client cannot tell the two apart
+from one reading, and reinterpreting either way corrupts the figure where
+nothing downstream can notice, so RoomKit does no arithmetic on them at all. If
+an integrator knows which convention its agent follows, that is where the
+subtraction belongs. Only `context_used`, `context_size` and `cost` are
+dependably cumulative — they climb turn after turn.
 
 An agent that reports no usage at all leaves `usage` empty rather than
 inventing zeros.

@@ -373,7 +373,7 @@ async def output_filter(event: RoomEvent, ctx: RoomContext) -> HookResult:
 
 `ON_AI_RESPONSE` is an **async** (observational) hook — it fires after the AI responds but cannot block or modify. Use it for logging and analytics:
 
-It fires for **any** channel of category `INTELLIGENCE`, not only `AIChannel`. An [ACP coding agent](acp-channel.md) runs its tool loop in its own process and reports the same way at the end of a turn — with one caveat on `event.usage`: ACP reports token counters as session totals, so the standard keys carry *this turn's* difference and the cumulative reading stays under `event.usage["session_total"]`, next to the context occupancy and the running cost.
+It fires for **any** channel of category `INTELLIGENCE`, not only `AIChannel`. An [ACP coding agent](acp-channel.md) runs its tool loop in its own process and reports the same way at the end of a turn — with one caveat on `event.usage`: those counters are the agent's own, relayed unaltered, and a coding agent's context arrives almost entirely as cache reads. Read `total_tokens`, not `input_tokens`.
 
 ```python
 from __future__ import annotations
