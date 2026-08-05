@@ -189,9 +189,45 @@ forever) or `keep_alive=0` (unload immediately) as an `int`. A unit-less string
 like `"-1"` is coerced to `int` automatically so Ollama doesn't reject it as a
 malformed duration.
 
-### Gemini
+### Gemini (thought summaries + thought signatures)
 
-Gemini does not currently emit thinking content. The `thinking_budget` parameter is accepted but has no effect.
+`GeminiAIProvider` streams thought summaries: the parts Gemini flags
+`thought=True` surface as `StreamThinkingDelta`, everything else as
+`StreamTextDelta`. Two knobs reach the same `ThinkingConfig`, and
+`thinking_level` wins when both are set:
+
+- `GeminiConfig(thinking_level=...)` — `minimal`, `low`, `medium`, `high`, for
+  Gemini 3.x models
+- `thinking_budget` (per turn, from the channel) — a token budget, for Gemini 2.5
+
+```python
+from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
+
+provider = GeminiAIProvider(GeminiConfig(
+    api_key="...",
+    model="gemini-3.6-flash",
+    thinking_level="high",
+))
+```
+
+When the model reasons and calls tools, each function call it returns carries a
+**thought signature**, and Gemini 3 rejects a later turn whose history replays a
+function call without one. RoomKit handles the round trip for you: the signature
+is kept in `AIToolCallPart.metadata["thought_signature"]` and replayed on the
+matching call.
+
+A round of parallel calls is the case to know about — Gemini signs one call of
+the group, not all of them, so the provider lends that signature to the round's
+other calls when it rebuilds the history. Nothing to configure. If a whole round
+comes back unsigned there is nothing to lend, and the provider logs a warning
+naming the calls before Gemini rejects the next turn.
+
+RoomKit also refuses, before the request leaves, a history that ends on a model
+turn — Gemini answers a user turn and would reply `400 "Requests ending with a
+model turn are not supported."` The `ProviderError` names the condition instead,
+because the cause is upstream: a turn generated with nothing new to answer,
+typically concurrent turns on one room each rebuilding a history that ends on
+another's reply.
 
 ## Streaming
 
