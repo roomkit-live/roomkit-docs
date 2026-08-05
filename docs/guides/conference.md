@@ -522,6 +522,52 @@ never who they are, announced on `PARTICIPANT_UPDATED` /
 `ON_PARTICIPANT_UPDATED`. Calling `add_member()` on an already-ACTIVE member
 is deliberately a no-op — re-admitting is not renaming.
 
+## Attributes
+
+A name is presentation. When your own clients need to know *who* a tile
+belongs to — to draw a face from your directory, to link to a profile — the
+participant id is the wrong place to put it: it is a **channel** identity, and
+the person behind it is carried by `identity_id`, which never leaves the room.
+Encoding meaning in the id (`call:<user_uuid>` and friends) turns it into a
+small format, with as many parsers as readers.
+
+So a mint may carry attributes of your own, which the backend puts in the
+credential and the SFU reports back on every participant (RFC §12.10.3):
+
+```python
+await channel.mint_access(
+    "standup", "p-alice", attributes={"app.user": "user-42"}
+)
+```
+
+Three things to know about them.
+
+**Opt-in, per mint.** The channel knows each participant's `identity_id` and
+adds *nothing* on its own. Minting it unasked would publish everyone's
+platform identity to every peer of a conference that may well be
+pseudonymous — so what travels is what you passed, on the mints you passed it
+on.
+
+**They come back unasserted.** Under `Participant.metadata["conference"]`
+they land in the `unasserted` bag, never in `asserted`: they rode a token,
+which is not something the SFU established. Readable and renderable, and
+unable to found an identity — `sip.*` on a dial-in stays the only thing
+LiveKit vouches for. That is exact rather than conservative: a backend cannot
+see whether some other token in your deployment grants
+`can_update_own_metadata`, which is what would let a client rewrite them
+after joining. (With RoomKit minting every token, it does not: the grant is
+left unset, which is LiveKit's deny.)
+
+**They are bounded, and the mint refuses.** The same bound the room applies to
+provider attributes it persists — 32 per bag, 128-character keys,
+1024-character values, string values only — applies to what a mint emits, and
+over it `mint_access()` raises `ValueError`. Emitting what would be dropped on
+the way back in would promise a round trip that does not happen; refusing says
+so where it can still be fixed.
+
+A backend whose SFU carries no per-participant attributes ignores them, and
+nothing downstream depends on their arrival.
+
 ## Interruption
 
 Who may talk over the bot is policy, not physics:
@@ -706,6 +752,9 @@ class documentation.
   host asks (join, retroactive subscription, transcription from the plug
   forward) and loses it when dismissed (the bot leaves, recordings
   finalized).
+- [`examples/conference_identity_provenance.py`][example-provenance] — who
+  gets believed when a participant arrives, what the record keeps of it, and
+  what a mint may send along in the other direction.
 - [`examples/conference_fault_injection.py`][example-faults] — testing
   against a backend that fails, lags and varies its audio formats.
 
@@ -714,4 +763,5 @@ class documentation.
 [example-mock]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_quickstart.py
 [example-livekit]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_livekit.py
 [example-notetaker]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_notetaker_on_demand.py
+[example-provenance]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_identity_provenance.py
 [example-faults]: https://github.com/roomkit-live/roomkit/blob/main/examples/conference_fault_injection.py
