@@ -139,7 +139,9 @@ handler.release(pending.pending_id)
 
 ### Late and Repeated Reads
 
-An outcome that has been consumed stays readable. `wait()` retires the request into a bounded retention — the last 128 outcomes by default, `HumanInputHandler(retention=…)` — and replays it: a second `wait()` returns the same answer, re-raises the same rejection, or re-raises the timeout. Only a genuinely unknown id — never seen, or evicted from the retention — raises `ValueError`.
+An outcome that has been recorded stays readable. A request settling — answered, rejected, timed out — goes into a bounded retention (the last 128 outcomes by default, `HumanInputHandler(retention=…)`), and `wait()` replays it once the request has left the active set: the same answer, the same rejection, the same timeout. Only a genuinely unknown id — never seen, or evicted from the retention — raises `ValueError`.
+
+The retention fills when the answer arrives, not when someone reads it, so a host that keeps its own bookkeeping and drops the request on `resolve()` cannot turn the answer it just recorded into a tool failure for the model that asked the question.
 
 ### Parallel Tool Execution
 
