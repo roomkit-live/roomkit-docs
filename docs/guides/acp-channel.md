@@ -370,7 +370,7 @@ agent's process and has no such seam. `context_contributor` is that seam:
 ```python
 async def host_context(context: RoomContext, trigger: RoomEvent) -> list[str]:
     """Blocks for *this* request. Awaited once per solicited turn."""
-    notes = await corpus.search(trigger.content.body, room_id=context.room.id)
+    notes = await corpus.search(Channel.extract_text(trigger), room_id=trigger.room_id)
     return [f"[Host context] {note}" for note in notes]
 
 
