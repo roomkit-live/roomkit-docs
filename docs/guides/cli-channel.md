@@ -84,9 +84,8 @@ A turn opens with the agent's handle — quiet and dim, it names who is
 speaking without shouting — and the prose that follows leads with `●`, so
 the answer is visually one block whatever it contains. Thinking (when
 `show_thinking=True`) renders dim, tool calls render inline with their
-results — output previews for commands, colored ± diffs for file edits (ACP
-diff blocks and MCP-style payloads are understood), capped at a few lines —
-and the turn closes with what the wait cost:
+results — output previews for commands, colored ± diffs for file edits,
+capped at a few lines — and the turn closes with what the wait cost:
 
 ```text
 @claude code
@@ -118,6 +117,15 @@ round starts a fresh `●`; continuation lines align under the text, not under
 the marker. A tool start renders without parentheses when its arguments are
 not yet known (ACP agents enrich the tool title while it runs); failures
 render `⎿ ✗ tool failed` with the error text as the preview.
+
+A tool result is *read*, not printed: agents wrap their output differently —
+ACP diff and text blocks, MCP `content` payloads, Codex's
+`{"formatted_output": …, "exit_code": N}` JSON — and each wrapper is unwrapped
+down to the text a reader wants. Media (`image`, `audio`, `resource`) is named
+rather than dumped as base64, a command that failed silently reports its exit
+code, and a payload nobody recognises still renders as compact JSON. See
+[what a tool result shows](acp-channel.md#what-a-tool-result-shows) for the
+full mapping.
 
 ### The pinned input bar
 
