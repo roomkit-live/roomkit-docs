@@ -198,7 +198,7 @@ kit = RoomKit(
 )
 
 # AI with fallback and retries
-primary = AnthropicAIProvider(model="claude-sonnet-4-20250514", api_key="...")
+primary = AnthropicAIProvider(model="claude-opus-5", api_key="...")
 fallback = OpenAIAIProvider(model="gpt-4o", api_key="...")
 
 ai = AIChannel(

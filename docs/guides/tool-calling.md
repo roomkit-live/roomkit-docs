@@ -43,7 +43,7 @@ class GetWeatherTool:
 kit = RoomKit()
 ai = AIChannel(
     "ai-assistant",
-    provider=AnthropicAIProvider(model="claude-sonnet-4-20250514", api_key="..."),
+    provider=AnthropicAIProvider(model="claude-opus-5", api_key="..."),
     system_prompt="You are a helpful assistant.",
     tools=[GetWeatherTool()],
 )

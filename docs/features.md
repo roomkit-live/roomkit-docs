@@ -431,38 +431,51 @@ guide](guides/acp-channel.md).
 
 #### Model Discovery
 
-Every AI provider can report which models it supports, so an integrator can list
-options before configuring anything:
+Discovery is `list_models()`. It asks the provider, so it is always current and
+reflects your own account — entitlements, regional availability, whichever
+weights someone pulled onto a local server:
 
 ```python
-from roomkit.providers.openai.ai import OpenAIAIProvider
-
-# Curated, offline catalog — a classmethod, so no API key, network, or SDK needed.
-for model in OpenAIAIProvider.available_models():
-    print(model.id, model.display_name, model.context_window, model.supports_vision)
-
-# Live query — what the account/server actually exposes right now.
 provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-..."))
-live = await provider.list_models()
+for model in await provider.list_models():
+    print(model.id, model.display_name, model.context_window, model.supports_vision)
 ```
 
-- **`available_models()`** -- classmethod returning a hand-maintained `list[ModelInfo]`
-  (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`). Curated
-  catalogs ship for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, and Ollama.
+`available_models()` answers a different question: what RoomKit knows about a
+model *without* a network call. It exists because `context_window` is a sync
+property — history trimming needs a number before any request goes out, and
+cannot await one.
+
+```python
+# Offline metadata: a classmethod, so no API key, network, or SDK needed.
+OpenAIAIProvider.available_models()
+```
+
+Read it that way and its limits stop being surprising. A lineup turns over
+faster than a release cycle, so this list is never the authoritative answer to
+"what does this provider offer" — and a model missing from it is a normal
+outcome, not a bug: you get `context_window is None` and degrade, which beats
+trusting a stale number.
+
 - **`list_models()`** -- async query against the provider's models endpoint
   (OpenAI `/v1/models`, Anthropic/Mistral `models.list`, Gemini `models.list()`,
-  Ollama `/api/tags`), backfilling metadata from the curated catalog. Providers
+  Ollama `/api/tags`), backfilling metadata from the offline list. Providers
   without an endpoint fall back to `available_models()`.
-- **Azure / vLLM** -- these serve user-named deployments or arbitrary local models,
-  so their curated catalog is empty (Azure) or reflects OpenAI's hosted set (vLLM);
-  use `list_models()` for the authoritative live list.
-- **OpenRouter** -- ships a small curated snapshot of current flagship slugs; its
-  `list_models()` reads OpenRouter's rich `/models` endpoint (300+ models across
-  providers, with live context windows and vision flags) and is authoritative.
+- **`available_models()`** -- classmethod returning `list[ModelInfo]`
+  (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`),
+  shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI, Ollama, and
+  PolarGrid. Verified against a live upstream mirror on every release
+  (`make check-models`), which is what catches a vendor shipping a new
+  flagship — a stale list is internally consistent, so no test can.
+- **Azure / vLLM** -- these serve user-named deployments or arbitrary local
+  models, so there is no meaningful offline list: Azure's is empty, and vLLM
+  inherits OpenAI's hosted set, which will not describe whatever your server
+  loaded. Use `list_models()` on both.
+- **OpenRouter** -- its offline list is a deliberately small slice of current
+  flagships; `list_models()` reads OpenRouter's `/models` endpoint (300+ models
+  across providers, with live context windows and vision flags).
 
-Catalogs are best-effort snapshots — model lineups move fast, so treat
-`list_models()` as the source of truth when the live endpoint is reachable. See
-`examples/list_models.py`.
+See `examples/list_models.py`.
 
 #### Per-Room AI Configuration
 

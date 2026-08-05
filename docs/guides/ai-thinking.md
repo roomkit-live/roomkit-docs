@@ -92,7 +92,7 @@ from roomkit.providers.anthropic.config import AnthropicConfig
 
 provider = AnthropicAIProvider(AnthropicConfig(
     api_key="sk-...",
-    model="claude-sonnet-4-20250514",
+    model="claude-opus-5",
 ))
 
 ai = AIChannel("ai", provider=provider, thinking_budget=8192)
