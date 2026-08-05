@@ -462,10 +462,10 @@ trusting a stale number.
   Ollama `/api/tags`), backfilling metadata from the offline list. Providers
   without an endpoint fall back to `available_models()`.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
-  (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`),
-  shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI, Ollama, and
-  PolarGrid. Verified against a live upstream mirror on every release
-  (`make check-models`), which is what catches a vendor shipping a new
+  (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
+  `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
+  Ollama, and PolarGrid. Verified against a live upstream mirror on every
+  release (`make check-models`), which is what catches a vendor shipping a new
   flagship — a stale list is internally consistent, so no test can.
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local
   models, so neither has a meaningful offline list and both return an empty
@@ -476,6 +476,42 @@ trusting a stale number.
   across providers, with live context windows and vision flags).
 
 See `examples/list_models.py`.
+
+#### Model Pricing
+
+A `ModelInfo` carries its vendor's list price, so pricing a turn needs no
+second table:
+
+```python
+entry = provider.catalog_entry()          # ModelInfo for the configured model
+response = await provider.generate(context)
+if entry and entry.pricing:
+    print(entry.pricing.cost_for(response.usage), entry.pricing.currency)
+```
+
+The rates live beside the ids on purpose. Kept in a separate sheet they drift:
+a model added to the catalog bills at zero until someone remembers the other
+file, and nothing fails while that is true.
+
+- **`ModelPricing`** -- `input_per_million`, `output_per_million`,
+  `cache_read_per_million`, `cache_write_per_million`, `currency`, and
+  `verified`, the date the rates were read from the vendor's own price list. A
+  rate changes without the model changing, so the date travels with it.
+- **Four rates, not two** -- they mirror the counters RoomKit reports in
+  `AIResponse.usage`. A cached prefix costs a tenth of fresh input at
+  Anthropic's rates, so pricing everything at the input rate overstates a long
+  conversation by an order of magnitude.
+- **An unset rate is a statement** -- `None` means "not billed per token here":
+  OpenAI charges nothing to write a cache, Google bills cache *storage* by the
+  hour. `cost_for()` falls back to the input rate for a counter it has no rate
+  for, so an unknown never silently costs zero.
+- **No price at all** -- Ollama (weights pulled onto your own hardware),
+  PolarGrid (private edges), Azure and vLLM (no offline catalog). Per-client
+  negotiated rates stay with whoever bills; this is the list price.
+- **Two guards** -- every model in a priced catalog must carry a rate (a test,
+  so it fails on the commit that adds one without), and the rates are compared
+  against the upstream mirror at release (`make check-models`), which reports a
+  disagreeing rate as `PRICE`.
 
 #### Per-Room AI Configuration
 

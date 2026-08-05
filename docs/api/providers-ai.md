@@ -16,6 +16,10 @@
 
 ::: roomkit.providers.ai.base.AIResponse
 
+::: roomkit.providers.ai.base.ModelInfo
+
+::: roomkit.providers.ai.base.ModelPricing
+
 ::: roomkit.providers.ai.mock.MockAIProvider
 
 ## Per-Room AI Configuration
