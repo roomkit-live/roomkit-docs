@@ -99,15 +99,17 @@ handler.resolve(pending_id, answer_json)
 ```
 AI calls AskUserQuestion(questions=[...])
   → HumanInputToolHandler intercepts (tool name matches)
-  → HumanInputHandler.create() registers pending request
-  → ON_USER_INPUT_REQUIRED hook fires (sync)
-    → App broadcasts "question_pending" to frontend via WebSocket
+  → HumanInputHandler.create() registers pending request — answerable from here
   → HumanInputHandler.wait() blocks (asyncio.Event)
+    ⇄ alongside: ON_USER_INPUT_REQUIRED hooks run (sync, can deny)
+        → App broadcasts "question_pending" to frontend via WebSocket
   → User sees question in UI, selects answer
   → App calls handler.resolve(pending_id, answer_json)
   → wait() unblocks, returns answer as tool result
   → AI continues with user's response
 ```
+
+The notification runs **alongside** the wait, not in front of it. A user who answers while a slow broadcast is still fanning out — or while a hook is burning its 30-second budget — is answering a request that is already listening, and the tool resumes on the answer. A denial from an `ON_USER_INPUT_REQUIRED` hook still rejects the request, wherever `wait()` has got to.
 
 ### Hook Execution Order
 
@@ -116,10 +118,28 @@ Three hooks interact during a human-input tool call:
 | Order | Hook | Type | Purpose |
 |-------|------|------|---------|
 | 1 | `BEFORE_TOOL_USE` | Sync | Gate: should this tool run at all? |
-| 2 | `ON_USER_INPUT_REQUIRED` | Sync | Notify: broadcast question to user |
+| 2 | `ON_USER_INPUT_REQUIRED` | Sync | Notify: broadcast question to user; can deny |
 | 3 | `ON_TOOL_CALL` | Sync | Observe: tool completed with result |
 
-`BEFORE_TOOL_USE` fires before the handler — it can deny the tool (e.g., rate limiting). `ON_USER_INPUT_REQUIRED` fires inside `create()` — it notifies the app. `ON_TOOL_CALL` fires after `wait()` returns — standard observability.
+`BEFORE_TOOL_USE` fires before the handler — it can deny the tool (e.g., rate limiting). `ON_USER_INPUT_REQUIRED` is scheduled by `create()` and keeps sync semantics — hooks run in priority order and a `HookResult.block()` rejects the request — but it does not hold up the wait. `ON_TOOL_CALL` fires after `wait()` returns — standard observability.
+
+### Who Owns the Cleanup
+
+`wait()` owns it. It retires the request when the answer, the rejection, or the timeout arrives — callers should not track requests on the side and drop them, because a request removed under `wait()`'s feet is an answer turned into an error.
+
+For a runtime that owns its own tool loop and carries the answer back another way — nobody calls `wait()` — say so at the call site with `create_detached()`, and free the request with `release()`:
+
+```python
+pending = await handler.create_detached("AskUserQuestion", args, room_id=room_id)
+# ... answer travels back through the runtime's own path ...
+handler.release(pending.pending_id)
+```
+
+`release()` rejects a request that is still unanswered, so a stray waiter unblocks rather than hanging.
+
+### Late and Repeated Reads
+
+An outcome that has been consumed stays readable. `wait()` retires the request into a bounded retention — the last 128 outcomes by default, `HumanInputHandler(retention=…)` — and replays it: a second `wait()` returns the same answer, re-raises the same rejection, or re-raises the timeout. Only a genuinely unknown id — never seen, or evicted from the retention — raises `ValueError`.
 
 ### Parallel Tool Execution
 
@@ -135,11 +155,15 @@ The core primitive that manages pending requests:
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `create` | `async (tool_name, arguments, *, room_id, tool_call_id, channel_id) → PendingInput` | Register a pending request, fires `_on_input_required` callback |
-| `wait` | `async (pending_id, *, timeout=300) → str` | Block until resolved/rejected/timeout |
+| `create` | `async (tool_name, arguments, *, room_id, tool_call_id, channel_id) → PendingInput` | Register a pending request and schedule the `_on_input_required` callback. `wait()` owns the cleanup |
+| `create_detached` | `async (…same…) → PendingInput` | Same, for a request no one will `wait()` on. The caller owns the cleanup and MUST `release()` it |
+| `wait` | `async (pending_id, *, timeout=300) → str` | Block until resolved/rejected/timeout; replays an outcome already consumed |
 | `resolve` | `(pending_id, result) → bool` | Unblock with answer. Returns `True` if found |
 | `reject` | `(pending_id, reason="") → bool` | Unblock with error. Returns `True` if found |
+| `release` | `(pending_id) → bool` | Drop a request the caller owns; rejects it if still unanswered. Returns `True` if one was dropped |
 | `pending` | `property → dict[str, PendingInput]` | Snapshot of active pending requests |
+
+`HumanInputHandler(retention=128)` sets how many consumed outcomes stay replayable; `retention=0` switches the retention off.
 
 ### HumanInputToolHandler
 
@@ -171,6 +195,7 @@ Mutable dataclass representing a pending request:
 | `channel_id` | `str` | Originating channel |
 | `status` | `PendingInputStatus` | `PENDING` / `RESOLVED` / `REJECTED` / `TIMED_OUT` |
 | `result` | `str \| None` | Answer (set on resolve) |
+| `detached` | `bool` | No one will `wait()` on it — its creator frees it with `release()` |
 | `created_at` | `datetime` | Timestamp |
 
 ### PendingInputEvent
