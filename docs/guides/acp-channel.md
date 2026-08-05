@@ -374,6 +374,55 @@ Generated text and tool activity continue through RoomKit's regular streaming
 pipeline. Visibility, chain-depth limits, persistence, hooks, and re-broadcast
 therefore behave like other intelligence-channel output.
 
+### The end of a turn is announced
+
+An agent that owns its own turn still reports it finished. When a turn reaches
+its end, the channel fires `ON_AI_RESPONSE` with the text it produced, how many
+tools it called, and how long it took — the same trigger, and the same
+`AIResponseEvent`, an in-process AI channel fires. Post-processing an
+integrator hangs off that hook therefore runs for a conversation an agent held:
+
+```python
+@kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC)
+async def summarize(event, ctx: RoomContext) -> None:
+    logger.info(
+        "%s answered in %sms with %d tool calls (%s in / %s out)",
+        event.channel_id,
+        event.latency_ms,
+        event.tool_calls_count,
+        event.usage.get("input_tokens"),
+        event.usage.get("output_tokens"),
+    )
+```
+
+Two things are worth knowing about that event.
+
+**Only a finished turn reports.** A stream closed from the outside — its
+consumer cancelled, a muted binding dropping it — cancels the agent and
+delivers nothing to the room, so it is not a response and fires nothing. Nor
+does a turn that ended in an error.
+
+**`usage` is per turn, `usage["session_total"]` is not.** ACP reports token
+counters as running session totals ("total input tokens across all turns"), so
+the standard keys carry the difference this turn made — summable over a
+conversation, like every other channel's. The cumulative reading is kept whole
+under `session_total`, together with the context-window occupancy and the
+session's running cost:
+
+```python
+{
+    "input_tokens": 160, "output_tokens": 25, "total_tokens": 185,
+    "session_total": {
+        "input_tokens": 260, "output_tokens": 45, "total_tokens": 305,
+        "context_used": 120, "context_size": 200000,
+        "cost": 0.25, "currency": "USD",
+    },
+}
+```
+
+An agent that reports no usage at all leaves `usage` empty rather than
+inventing zeros.
+
 ### A turn never outlives its tool calls
 
 An agent that disappears mid-tool — its process restarted, its host gone — sends

@@ -352,7 +352,7 @@ Filter options:
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking) |
-| `ON_AI_RESPONSE` | Async | AI generation completed — scoring, analytics, job tracking |
+| `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included |
 
 ### AI Intelligence Layer
 
