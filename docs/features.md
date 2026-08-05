@@ -420,7 +420,12 @@ An agent that is not addressed is skipped entirely — not asked, and not told
 process, the channel catches up from the room's timeline the moment it *is*
 addressed: only what it missed, only what visibility would have delivered to
 it (RFC §7.5 rule 8), bounded by `room_history` (default 20) and honest about
-the bound when it truncates. `room_history=0` opts out. Install it with
+the bound when it truncates. `room_history=0` opts out.
+
+What the catch-up cannot carry is what only the host holds — member notes, a
+document corpus, an organisation's rules. `context_contributor` is awaited once
+per solicited turn and its blocks open the prompt, ahead of the catch-up; one
+that raises costs its blocks, not the turn. Install it with
 `pip install "roomkit[acp]"`. See the [ACP Agent Channel
 guide](guides/acp-channel.md).
 

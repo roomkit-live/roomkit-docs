@@ -359,6 +359,60 @@ it loads to the largest window any bound channel declares, under a floor it keep
 for hooks (50 events) — so the default reads a tail that was loaded anyway, and
 raising `room_history` past the floor grows the tail the catch-up draws on.
 
+## Contributing context the agent cannot fetch
+
+The catch-up carries the room. It does not carry what only the *host* holds —
+the member's saved notes, a document corpus, the rules of the organisation the
+room belongs to. An `AIChannel` has a `MemoryProvider` for that, because it
+rebuilds its message list every turn; an ACP session holds its history in the
+agent's process and has no such seam. `context_contributor` is that seam:
+
+```python
+async def host_context(context: RoomContext, trigger: RoomEvent) -> list[str]:
+    """Blocks for *this* request. Awaited once per solicited turn."""
+    notes = await corpus.search(trigger.content.body, room_id=context.room.id)
+    return [f"[Host context] {note}" for note in notes]
+
+
+ACPChannel("codex", command=[...], cwd=workspace, context_contributor=host_context)
+```
+
+The blocks open the prompt, ahead of the catch-up and the request — background
+sits further from the question than what the agent missed of the conversation:
+
+```text
+[Host context] The client's contract renews 2026-09-01.
+
+[Room context — 1 message you did not receive. Context only; the request follows.]
+[1] Marie · sms: chase the renewal
+[End of room context]
+
+draft the renewal email
+```
+
+Four things this contract says out loud.
+
+**A contributor that raises costs its blocks, not the turn.** The failure is
+logged and the prompt goes without them, like the other host-supplied callbacks
+in this channel. Losing the answer because a corpus was unreachable would be the
+worse trade.
+
+**Turn-scoped context only.** The session keeps what it was already told, so a
+block that never changes is paid for again on every turn. What is stable belongs
+to the agent's own configuration — `AGENTS.md`, `CLAUDE.md`, an MCP server. This
+is not a system prompt: ACP has no instruction channel, and everything here is
+conversation the agent reads.
+
+**Nothing is bounded.** RoomKit does not truncate the blocks — it knows neither
+their unit nor the agent's tokenizer, and the model can change mid-session
+(`set_config_option`) — and does not bound how long the contributor takes. Both
+budgets are yours. Note that `on_event` runs inside the broadcast pipeline: a
+slow contributor delays delivery for the whole room, not just for this agent.
+
+**RoomKit cannot filter what you put in.** The catch-up is filtered per reader
+because it is made of room events (RFC §7.5 rule 8). Your blocks are not events,
+so nothing checks them — do not route through them what visibility withheld.
+
 ## Event mapping
 
 | ACP update | RoomKit representation |
