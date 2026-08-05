@@ -1370,8 +1370,20 @@ Recipient read from `binding.metadata["telegram_chat_id"]`. Outbound Markdown is
 rendered into native Telegram entities (bold, code, links); set
 `rich_messages=True` to opt in to Bot API 10.1 Rich Messages (native tables and
 headings), with automatic fallback to entity formatting. Supports text, rich
-text, media, location, and reactions. Max message length: 4096 characters. See
-the [Telegram API reference](api/providers-telegram.md).
+text, media, location, and reactions. Max message length: 4096 characters.
+
+Inbound media — `photo`, `voice`, `audio`, `video_note`, `video`, `document` —
+parses with the caption as body (empty for a voice note) and the file reference
+in `metadata`: `file_id`, `media_type`, plus `duration` / `mime_type` /
+`file_name` / `file_size` when Telegram sends them. `parse_telegram_message()`
+is the layer below `parse_telegram_webhook()`: it returns the message's parts
+and attributes nothing, for consumers whose sender is not `message.from.id`.
+Resolving that id to bytes
+belongs to the provider, which holds the bot token: `get_file(file_id)` returns
+a path and `download_file(path)` returns the bytes, both `None` on failure and
+capped by Telegram at 20 MB. What happens to those bytes — transcription,
+storage — is the application's call. See the
+[Telegram API reference](api/providers-telegram.md).
 
 ### Discord Channel
 
