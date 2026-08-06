@@ -116,8 +116,10 @@ key against the [provider reference](../api/providers-realtime-voice.md).
 !!! note "`server_vad` is not a `provider_config` key"
     Whether the provider does its own endpointing is derived from the channel's
     pipeline, not from `provider_config`: a pipeline carrying a VAD stage puts
-    the provider in manual mode (the channel sends the activity signals from the
-    local VAD), and without one the provider's server-side VAD runs.
+    OpenAI, Gemini and Grok in manual mode (the channel sends the activity
+    signals from the local VAD), and without one their server-side VAD runs.
+    ElevenLabs and Deepgram always do their own turn-taking — Deepgram warns
+    that it ignored the request, ElevenLabs takes it silently.
 
 ---
 
@@ -200,7 +202,9 @@ provider_config = {
 provider_config = {"turn_detection_type": None}
 ```
 
-Left unset, `turn_detection_type` defaults to `semantic_vad`: its turn detection
+Left unset, `turn_detection_type` defaults to `semantic_vad` on a channel whose
+pipeline has no VAD stage (and to no turn detection at all when it has one — see
+the note above). `semantic_vad` is the better default because its turn detection
 model tells real speech from echo residuals, which matters on a laptop mic +
 speaker setup where AEC never suppresses 100% of the echo. `server_vad` is
 energy-based and too trigger-happy there — reach for it on a headset or a phone
@@ -342,8 +346,10 @@ provider_config = {
 }
 ```
 
-The keys are the same as OpenAI's, but the default differs: Grok defaults to
-`server_vad`, OpenAI to `semantic_vad`.
+Flat keys as on OpenAI, but a narrower set — the four above are all Grok reads,
+with no `eagerness`, `idle_timeout_ms`, `interrupt_response` or
+`create_response` — and a different default: `server_vad` here, `semantic_vad`
+on OpenAI.
 
 ### Available Voices
 
