@@ -680,6 +680,9 @@ When skills are configured, the AI channel automatically:
 - Appends `<available_skills>` XML to the system prompt
 - Registers `activate_skill` and `read_skill_reference` tools
 - Optionally registers `run_skill_script` when a `ScriptExecutor` is provided
+- Keeps an activation alive for the whole conversation: the skill's body moves into
+  the system prompt and `activate_skill` answers later calls with a short ack instead
+  of re-sending a multi-KB body every turn
 
 The `ScriptExecutor` ABC has no default implementation — execution policy (sandboxing, timeouts, interpreters) is always the integrator's responsibility.
 

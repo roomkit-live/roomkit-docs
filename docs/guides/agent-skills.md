@@ -153,7 +153,7 @@ ai = AIChannel(
 
 | Tool | When available | What it does |
 |------|---------------|-------------|
-| `activate_skill(name)` | Always (when skills present) | Returns full instructions + lists scripts/references |
+| `activate_skill(name)` | Always (when skills present) | First call in a conversation returns full instructions + lists scripts/references; later calls return a short ack (see [Activation lifecycle](#activation-lifecycle)) |
 | `read_skill_reference(skill_name, filename)` | Always | Reads a file from the skill's `references/` directory |
 | `run_skill_script(skill_name, script_name, arguments)` | Only when `script_executor` is set | Executes a script via the integrator's executor |
 
@@ -164,6 +164,48 @@ ai = AIChannel(
 2. **Tool handler wrapping** — The channel wraps the user's `tool_handler` with an internal dispatcher that intercepts skill tool names and delegates everything else to the user handler.
 
 3. **Streaming guard** — When skills are configured, streaming is disabled to allow the tool call loop. This ensures the AI can call `activate_skill` before responding.
+
+### Activation lifecycle
+
+**An activation lasts for the conversation, not for the turn that made it.**
+
+A skill body delivered as a *tool result* only survives the turn that fetched it: the
+rebuilt AI context carries message events, not tool calls. Without a memory of the
+activation, a model that keeps working on the same task re-calls `activate_skill` on
+every turn and re-pays the whole body each time — on a 9 KB skill over three
+exchanges, the reloading outweighs the skill itself.
+
+So the channel records which skills a room activated, and the body moves to where a
+per-turn rebuild can carry it:
+
+| | First `activate_skill` in a room | Later calls |
+|---|---|---|
+| Tool result | Full `instructions` + `scripts` + `references` | `{"ok": true, "already_active": true, ...}` — no body |
+| System prompt | *(nothing yet — the prompt was composed before the call)* | `# Active skill instructions (binding rules)` carrying the body |
+| Gated tools | Revealed for the rest of the turn | Still revealed, no re-activation needed |
+
+Consequences worth knowing:
+
+- **The ack is safe because the prompt carries the rules.** Lose the record (process
+  restart, a channel object replaced) and the prompt block goes with it, so the next
+  activation returns the body again. The mechanism degrades to reloading; it never
+  leaves the model holding an ack with no rules.
+- **The record is hydrated** from the room's persisted tool-call history, so a channel
+  swapped mid-conversation doesn't restart amnesic.
+- **Bodies are never truncated.** Large tool results are normally evicted behind
+  `read_stored_result`; a skill's instructions are exempt, because binding rules
+  reduced to a head/tail preview are not rules. References stay evictable — those are
+  data, and paginating data is what eviction is for.
+- **Four skills stay active per room**, by recency. A fifth activation retires the
+  least recently used one, which simply means its next `activate_skill` returns the
+  body again.
+- **`skills_in_prompt=False` does not disable this.** That flag governs the
+  *catalogue* — a host rendering its own `<available_skills>` manifest. Active bodies
+  are runtime state a host cannot know, so they are injected either way.
+
+Realtime voice channels run the same lifecycle per *session*, either by pushing the
+body into `system_instruction` via `provider.reconfigure` (`on_demand`) or by
+pre-loading every body at session start (`inline_full`).
 
 ### Combining with user tools
 
