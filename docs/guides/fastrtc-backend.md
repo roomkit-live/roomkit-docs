@@ -60,7 +60,12 @@ tts = ElevenLabsTTSProvider(config=ElevenLabsConfig(api_key="..."))
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
 kit.register_channel(voice)
 
-ai = AIChannel("ai", provider=AnthropicAIProvider(AnthropicConfig(api_key="...")))
+ai = AIChannel(
+    "ai",
+    provider=AnthropicAIProvider(
+        AnthropicConfig(api_key="...", model="claude-opus-5")
+    ),
+)
 kit.register_channel(ai)
 
 

@@ -27,13 +27,15 @@ producing a negative or non-finite cost.
 
 ::: roomkit.providers.ai.mock.MockAIProvider
 
-## Modern model request defaults
+## Explicit models and modern request profiling
 
-`OpenAIConfig()` profiles first-party `gpt-5`/o-series models to use
-`max_completion_tokens` and omit a custom temperature. `AnthropicConfig()`
-profiles modern Claude reasoning models to use adaptive thinking and omit
-temperature. These defaults prevent the libraries' current flagship model ids
-from being paired with parameters those models reject.
+`model=` is required by both `OpenAIConfig` and `AnthropicConfig`, so a RoomKit
+upgrade cannot silently change cost, latency, or model behavior. For the model
+the caller selects, `OpenAIConfig` profiles first-party `gpt-5`/o-series models
+to use `max_completion_tokens` and omit a custom temperature.
+`AnthropicConfig` profiles modern Claude reasoning models to use adaptive
+thinking and omit temperature. This prevents selected modern model ids from
+being paired with parameters those models reject.
 
 Explicit compatibility flags always win. A custom `base_url` also keeps the
 conservative legacy defaults, since OpenAI-compatible and Anthropic-compatible
@@ -178,7 +180,7 @@ from roomkit.providers.anthropic.ai import AnthropicAIProvider
 from roomkit.providers.anthropic.config import AnthropicConfig
 from roomkit.channels.ai import AIChannel
 
-config = AnthropicConfig(api_key="your-api-key")
+config = AnthropicConfig(api_key="your-api-key", model="claude-opus-5")
 provider = AnthropicAIProvider(config)
 
 ai_channel = AIChannel("ai", provider=provider)
@@ -199,7 +201,7 @@ from roomkit.providers.openai.ai import OpenAIAIProvider
 from roomkit.providers.openai.config import OpenAIConfig
 from roomkit.channels.ai import AIChannel
 
-config = OpenAIConfig(api_key="your-api-key")
+config = OpenAIConfig(api_key="your-api-key", model="gpt-5.6-sol")
 provider = OpenAIAIProvider(config)
 
 ai_channel = AIChannel("ai", provider=provider)

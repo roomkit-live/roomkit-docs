@@ -27,7 +27,9 @@ class LookupOrderTool:
         return '{"status": "shipped", "eta": "2026-02-20"}'
 
 
-provider = AnthropicAIProvider(AnthropicConfig(api_key="sk-..."))
+provider = AnthropicAIProvider(
+    AnthropicConfig(api_key="sk-...", model="claude-opus-5")
+)
 ai = AIChannel(
     "ai-assistant",
     provider=provider,

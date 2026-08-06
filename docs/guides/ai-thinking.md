@@ -9,7 +9,9 @@ from roomkit import AIChannel
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
 from roomkit.providers.anthropic.config import AnthropicConfig
 
-provider = AnthropicAIProvider(AnthropicConfig(api_key="sk-..."))
+provider = AnthropicAIProvider(
+    AnthropicConfig(api_key="sk-...", model="claude-opus-5")
+)
 ai = AIChannel(
     "ai-thinker",
     provider=provider,

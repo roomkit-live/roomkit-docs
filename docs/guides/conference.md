@@ -317,8 +317,13 @@ from roomkit.channels.ai import AIChannel
 from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 conference = ConferenceChannel("conf", backend=backend, stt=stt, tts=tts)
-ai = AIChannel("ai", provider=AnthropicAIProvider(AnthropicConfig(api_key=...)),
-               system_prompt="You are the meeting's voice assistant.")
+ai = AIChannel(
+    "ai",
+    provider=AnthropicAIProvider(
+        AnthropicConfig(api_key=..., model="claude-opus-5")
+    ),
+    system_prompt="You are the meeting's voice assistant.",
+)
 kit.register_channel(conference)
 kit.register_channel(ai)
 await kit.attach_channel("standup", "conf")

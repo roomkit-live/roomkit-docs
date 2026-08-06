@@ -63,7 +63,10 @@ async def main():
     ai = AIChannel(
         "ai-assistant",
         provider=AnthropicAIProvider(
-            AnthropicConfig(api_key=os.environ["ANTHROPIC_API_KEY"]),
+            AnthropicConfig(
+                api_key=os.environ["ANTHROPIC_API_KEY"],
+                model="claude-opus-5",
+            ),
         ),
         system_prompt="You can see through the user's webcam. Use describe_webcam when asked to look.",
         tools=[DescribeWebcamTool(vision, device=0), ListWebcamsTool()],

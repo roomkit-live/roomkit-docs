@@ -624,12 +624,12 @@ All provider configs use Pydantic models with `SecretStr` for sensitive values:
 ```python
 class AnthropicConfig(BaseModel):
     api_key: SecretStr
-    model: str = "claude-opus-5"
+    model: str
     max_tokens: int = 1024
 
 class OpenAIConfig(BaseModel):
     api_key: SecretStr
-    model: str = "gpt-4o"
+    model: str
     max_tokens: int = 1024
 
 class GeminiConfig(BaseModel):

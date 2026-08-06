@@ -363,7 +363,9 @@ from roomkit import AIChannel
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
 from roomkit.providers.anthropic.config import AnthropicConfig
 
-provider = AnthropicAIProvider(AnthropicConfig(api_key="sk-..."))
+provider = AnthropicAIProvider(
+    AnthropicConfig(api_key="sk-...", model="claude-opus-5")
+)
 ai = AIChannel(
     "ai-assistant",
     provider=provider,
@@ -436,7 +438,7 @@ reflects your own account — entitlements, regional availability, whichever
 weights someone pulled onto a local server:
 
 ```python
-provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-..."))
+provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-...", model="gpt-5.6-sol"))
 for model in await provider.list_models():
     print(model.id, model.display_name, model.context_window, model.supports_vision)
 ```
@@ -622,7 +624,9 @@ class LookupOrderTool:
 
 ai = AIChannel(
     "ai-assistant",
-    provider=AnthropicAIProvider(AnthropicConfig(api_key="sk-...")),
+    provider=AnthropicAIProvider(
+        AnthropicConfig(api_key="sk-...", model="claude-opus-5")
+    ),
     tools=[LookupOrderTool()],  # definitions + handlers extracted automatically
     max_tool_rounds=10,  # default
 )
@@ -989,7 +993,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 
 - **Dangling tool call recovery** — automatically patches orphaned tool calls from barge-in interruptions
 - **Large output eviction** — oversized tool results are stored externally and replaced with previews; the AI can paginate back via `_read_tool_result` (configure with `evict_threshold_tokens`)
-- **Planning tools** — opt-in `enable_planning=True` gives the AI a `_plan_tasks` tool for structured task tracking with real-time UI updates via ephemeral events
+- **Planning tools** — opt-in `enable_planning=True` gives the AI a `plan_tasks` tool for structured task tracking (up to 100 tasks, 500 characters per title) with real-time UI updates via ephemeral events
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
