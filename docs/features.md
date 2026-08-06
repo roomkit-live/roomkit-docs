@@ -1686,6 +1686,19 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
+#### Proactive Audio: `say()` and `play()`
+
+The channel can speak without an inbound message: `say()` synthesizes text through TTS, `play()` sends a pre-recorded WAV straight to the transport (no TTS, no LLM round-trip).
+
+```python
+await voice.say(session, "Welcome to Acme Support.")
+await voice.play(session, "prompts/menu.wav", text="[menu]")   # 16-bit PCM mono
+```
+
+`play()` accepts a path or raw WAV bytes, resamples to the transport rate when the pipeline has a `contract`, and awaits until the audio has drained — on SIP that is the real-time length of the file. Pair it with `kit.mute()` to keep the AI from talking over or answering a prompt: muting the intelligence channel drops its reply, muting the voice channel drops inbound audio before the VAD (no barge-in, nothing reaches STT). Neither mute blocks `play()`, which writes to the backend directly.
+
+See the [Audio Prompts guide](guides/voice-prompts.md) and `examples/voice_sip_play_prompt.py`.
+
 #### Barge-In Detection
 
 When `enable_barge_in=True` (default), the `VoiceChannel` detects when a user starts speaking while TTS is playing:

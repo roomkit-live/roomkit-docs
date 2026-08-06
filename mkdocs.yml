@@ -80,6 +80,7 @@ nav:
           - Smart Turn Detection: guides/smart-turn.md
           - WAV File Recorder: guides/wav-file-recorder.md
           - Voice Greeting: guides/voice-greeting.md
+          - Audio Prompts (WAV Playback): guides/voice-prompts.md
           - FastRTC Voice Backend: guides/fastrtc-backend.md
           - RTP Voice Backend: guides/rtp-backend.md
           - SIP Voice Backend: guides/sip-backend.md
