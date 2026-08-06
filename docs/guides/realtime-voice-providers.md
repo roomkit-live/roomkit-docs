@@ -333,7 +333,7 @@ XAI_VOICE=ara           # Voice override
 
 ## ElevenLabs Conversational AI
 
-Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider just sends/receives audio and handles client tool calls.
+Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider sends and receives audio, and bridges the agent's client tool calls into RoomKit's tool path.
 
 ```python
 from __future__ import annotations
@@ -425,7 +425,12 @@ config = ElevenLabsRealtimeConfig(
 
 ### Tool Calling
 
-Tools are configured on the ElevenLabs dashboard as **client tools**. The agent invokes them, and the provider dispatches via the standard `on_tool_call` callback:
+Tool calling takes a different route than on OpenAI or Gemini, and it takes **both** halves to work:
+
+1. The agent declares the tool as a **client tool** (ElevenLabs dashboard, or the Agents API), with its name, description and JSON schema. This is what the LLM sees, and no schema ever travels over the WebSocket.
+2. The channel declares the same names in `tools`, so the provider registers a handler for each one on the SDK's `ClientTools` registry.
+
+The agent then invokes the tool, the provider dispatches through the standard `on_tool_call` callback, and the value your `tool_handler` returns is sent back as the tool result — hooks, gates and result truncation all apply exactly as on the other providers.
 
 ```python
 async def handle_tool(name: str, arguments: dict) -> str:
@@ -438,18 +443,36 @@ channel = RealtimeVoiceChannel(
     "voice",
     provider=provider,
     transport=transport,
+    # Names must match the client tools declared on the agent.
+    tools=[{"name": "check_order", "description": "Order status", "parameters": {}}],
     tool_handler=handle_tool,
 )
 ```
 
-!!! tip "Tools are dashboard-configured"
-    Unlike OpenAI and Gemini, ElevenLabs tool definitions are set on the agent dashboard — not passed at connection time. The `tools` parameter on `RealtimeVoiceChannel` is ignored for ElevenLabs. Only the `tool_handler` callback matters.
+!!! warning "Names must match on both sides"
+    A tool the agent knows but the channel did not declare comes back to the agent as an error; a tool the channel declared but the agent does not know is never called. The names are case-sensitive.
+
+A call left unanswered for `tool_timeout_s` (default 30 s) is reported to the agent as an error rather than hanging its turn.
+
+!!! note "No mid-session reconfigure"
+    `supports_mid_session_reconfigure` is `False`: ConvAI takes its overrides once, in the initiation message, and reconnecting would start a different conversation server-side — losing the transcript and every pending `tool_call_id`. Tool and skill surfaces are therefore fixed for the life of the session. Per-conversation tool sets are possible the ElevenLabs way, by creating the tools through the Agents API and passing their `tool_ids` in the prompt override (which the agent's Security settings must allow).
+
+### Session Failures
+
+`start_session` only spawns the task that opens the WebSocket, so a rejected key, an unknown `agent_id` or a dropped connection surfaces asynchronously. The provider supervises the session and reports these through `on_error` (`connection_failed`, `session_ended`) with the session marked `ENDED`, instead of leaving a silent session that looks active.
 
 ### Audio Format
 
-ElevenLabs uses 16-bit PCM mono at **16 kHz** by default. The format is negotiated at connection time and reported in the server's init metadata.
+ElevenLabs uses 16-bit PCM mono at **16 kHz** by default.
 
 Supported formats: `pcm_8000`, `pcm_16000`, `pcm_22050`, `pcm_24000`, `pcm_44100`, `pcm_48000`, `ulaw_8000`.
+
+!!! warning "The format lives on the agent, not on the session"
+    Input and output formats are part of the agent's configuration and cannot be overridden per conversation, so `input_sample_rate` / `output_sample_rate` on the channel must match what the agent is configured for. A mismatch is not an error — it is pitched-up or pitched-down audio.
+
+### Turn Boundaries
+
+ConvAI sends its agent text *before* the synthesis and marks no end of audio, so the provider opens a response on the first audio chunk and closes it once the audio stream has been quiet for `response_idle_ms` (default 800 ms). A tool call in flight holds the turn open, since the agent resumes speaking on the same turn once it has the result.
 
 ### Environment Variables (Example)
 
