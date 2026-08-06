@@ -257,6 +257,14 @@ InterruptionConfig(
 )
 ```
 
+On `RealtimeVoiceChannel`, a provider such as OpenAI may own the VAD and cancel
+its response before RoomKit receives the speech-start callback. When the
+transport reports actual playback, RoomKit therefore enforces this grace period
+at the provider-input boundary: AEC, AGC, denoising, and recording still receive
+the real microphone signal, while the provider receives equal-duration PCM
+silence. Once the interval expires, normal audio and barge-in resume. Transports
+without playback callbacks cannot apply this physical-playback guard.
+
 ## Legacy Compatibility
 
 The older `enable_barge_in` and `barge_in_threshold_ms` parameters still work and map to `InterruptionConfig` internally:

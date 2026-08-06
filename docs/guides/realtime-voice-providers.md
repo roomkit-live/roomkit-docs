@@ -214,6 +214,36 @@ line, where the tail is already clean.
 apply to `server_vad` only; `eagerness` applies to `semantic_vad` only.
 `interrupt_response` and `create_response` work with both.
 
+### Local speaker and microphone example
+
+The local OpenAI example uses WebRTC AEC and continuous WebRTC noise
+suppression by default:
+
+```bash
+OPENAI_API_KEY=... \
+    uv run python examples/realtime_voice_local_openai.py
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
+| `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
+| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
+| `BARGE_IN_GUARD_MS` | `600` | Silence sent to provider-side VAD after physical playback starts while local AEC converges; `0` disables the guard |
+| `MUTE_MIC` | automatic | `0` keeps capture open; `1` mutes it during playback. Automatic mode mutes only without AEC |
+
+Keep `DENOISE=webrtc` when using open speakers. OpenAI's server VAD cancels an
+active response when it detects new speech; without continuous local noise
+suppression, residual echo at the beginning of a playback turn can therefore
+produce a false interruption. This stage complements OpenAI's `far_field`
+input noise reduction and remains active while AEC is bypassed between turns.
+
+The example also sets `BARGE_IN_GUARD_MS=600`. During that initial interval,
+RoomKit still processes and records the real microphone signal, so AEC and noise
+suppression continue converging, but it forwards equal-duration PCM silence to
+OpenAI. After 600 ms, normal barge-in resumes. Set the value to `0` for a headset
+or another echo-free path if you need interruptions from the very first sample.
+
 ### Available Voices
 
 alloy, echo, shimmer, breeze, cinnamon, juniper, sage (varies by model)
@@ -662,6 +692,7 @@ Its audio-specific environment variables are:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
+| `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
 | `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
 | `AUDIO_PREBUFFER_MS` | `240` | Local speaker jitter buffer used by this Deepgram example |
 | `MUTE_MIC` | automatic | `0` keeps capture open; `1` mutes capture during playback. Automatic mode mutes only when AEC is unavailable |
@@ -669,6 +700,7 @@ Its audio-specific environment variables are:
 These variables are conveniences implemented by the example, not global
 RoomKit settings. In application code, their equivalents are
 `WebRTCAECProvider(stream_delay_ms=...)` and
+`WebRTCNoiseSuppressorProvider(...)`, plus
 `LocalAudioBackend(rt_prebuffer_ms=...)`.
 
 Start with `AEC_DELAY_MS=0`. If the speaker stream reports underruns, increase

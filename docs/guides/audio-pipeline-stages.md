@@ -164,7 +164,6 @@ webrtc_aec = WebRTCAECProvider(
     sample_rate=24000,
     channels=1,
     stream_delay_ms=0,    # 0 lets WebRTC estimate the delay
-    enable_ns=True,
 )
 ```
 
@@ -195,6 +194,11 @@ input chunk sizes. Leave `stream_delay_ms=0` initially so WebRTC can estimate
 alignment. Set a non-zero value only when you have measured a stable
 speaker-to-microphone delay; an incorrect fixed delay can reduce cancellation.
 
+`enable_ns` and `enable_agc` remain available on `WebRTCAECProvider` for compact
+integrations, and their capture effects now remain active while AEC is bypassed.
+For explicit pipeline ordering and independent tuning, prefer
+`WebRTCNoiseSuppressorProvider` plus `SimpleAGCProvider` as shown below.
+
 !!! note "Capability-Aware Skipping"
     When the backend declares `VoiceCapability.NATIVE_AEC`, the pipeline skips the AEC stage — the backend handles echo cancellation natively.
 
@@ -202,12 +206,14 @@ speaker-to-microphone delay; an incorrect fixed delay can reduce cancellation.
 
 ## Stage: AGC (Automatic Gain Control)
 
-Normalizes audio volume levels. Useful when users have different microphone volumes.
+Normalizes audio volume levels. Useful when users have different microphone
+volumes. AGC is not noise cancellation: it adjusts amplitude, while the next
+denoiser stage removes fans, traffic, and other background sound.
 
 ```python
-from roomkit.voice.pipeline.agc import AGCConfig
-from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline import AGCConfig, AudioPipelineConfig, SimpleAGCProvider
 
+# Supplying only agc_config selects the built-in SimpleAGCProvider.
 pipeline = AudioPipelineConfig(
     agc_config=AGCConfig(
         target_level_dbfs=-3.0,     # Target output level
@@ -216,6 +222,10 @@ pipeline = AudioPipelineConfig(
         release_ms=100.0,           # Slower release for natural decay
     ),
 )
+
+# Equivalent explicit construction, useful when sharing the provider instance:
+agc = SimpleAGCProvider(AGCConfig(target_level_dbfs=-12.0))
+pipeline = AudioPipelineConfig(agc=agc)
 ```
 
 | Parameter | Default | Description |
@@ -224,6 +234,12 @@ pipeline = AudioPipelineConfig(
 | `max_gain_db` | `30.0` | Maximum gain to apply |
 | `attack_ms` | `10.0` | Attack time (how fast gain increases) |
 | `release_ms` | `100.0` | Release time (how fast gain decreases) |
+
+`SimpleAGCProvider` keeps gain history per stream, does not amplify frames below
+its `-60 dBFS` silence floor, and applies a peak limiter to prevent clipping.
+Each processed frame includes `metadata.gain_applied_db`. Provider-specific
+`silence_threshold_dbfs` and `min_gain_db` overrides can be placed in
+`AGCConfig.metadata`.
 
 !!! note
     Auto-skipped when backend has `VoiceCapability.NATIVE_AGC`.
@@ -235,18 +251,30 @@ pipeline = AudioPipelineConfig(
 Reduces background noise (fans, traffic, keyboard clicks).
 
 ```python
-from roomkit.voice.pipeline.denoiser import RNNoiseDenoiserProvider
+from roomkit.voice.pipeline.denoiser import (
+    RNNoiseDenoiserProvider,
+    WebRTCNoiseSuppressorProvider,
+)
 
-denoiser = RNNoiseDenoiserProvider()
+webrtc_ns = WebRTCNoiseSuppressorProvider(sample_rate=24000)
+rnnoise = RNNoiseDenoiserProvider(sample_rate=24000)
 ```
 
 | Provider | Library | Notes |
 |----------|---------|-------|
-| `RNNoiseDenoiserProvider` | librnnoise (system) | CPU-based, low latency |
+| `WebRTCNoiseSuppressorProvider` | aec-audio-processing (pip) | Continuous WebRTC NS; 10 ms internal frames |
+| `RNNoiseDenoiserProvider` | librnnoise (system) | Mono PCM16 at 16, 24, or 48 kHz |
 | `SherpaOnnxDenoiserProvider` | sherpa-onnx (pip) | ONNX models, configurable context and silence threshold |
 | `AICousticsDenoiserProvider` | aic-sdk (pip) | Quail neural enhancement, Voice Focus, ~2 ms/frame |
 
 For SherpaOnnx denoiser tuning, see the [sherpa-onnx guide](sherpa-onnx.md). For ai|coustics Quail setup, see the [ai|coustics denoiser guide](aicoustics-denoiser.md).
+
+All built-in denoisers validate their PCM format before native processing and
+keep recurrent state per stream. WebRTC NS, RNNoise, and ai|coustics accept
+arbitrary caller chunk sizes; after the first irregular fragment they use a
+fixed one-native-block delay (10 ms for WebRTC NS and RNNoise) so every input
+byte has exactly one output byte. This avoids the duplicate/raw fragment pattern
+that can otherwise leak noise into VAD and STT.
 
 ---
 

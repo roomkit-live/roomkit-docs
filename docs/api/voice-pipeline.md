@@ -22,6 +22,24 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ::: roomkit.voice.pipeline.vad.mock.MockVADProvider
 
+## Acoustic Echo Cancellation
+
+::: roomkit.voice.pipeline.aec.base.AECProvider
+
+::: roomkit.voice.pipeline.aec.webrtc.WebRTCAECProvider
+
+::: roomkit.voice.pipeline.aec.speex.SpeexAECProvider
+
+## Automatic Gain Control
+
+::: roomkit.voice.pipeline.agc.base.AGCConfig
+
+::: roomkit.voice.pipeline.agc.base.AGCProvider
+
+::: roomkit.voice.pipeline.agc.simple.SimpleAGCProvider
+
+::: roomkit.voice.pipeline.agc.mock.MockAGCProvider
+
 ## Denoiser
 
 ::: roomkit.voice.pipeline.denoiser.base.DenoiserProvider
@@ -29,6 +47,12 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserConfig
 
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserProvider
+
+::: roomkit.voice.pipeline.denoiser.rnnoise.RNNoiseDenoiserProvider
+
+::: roomkit.voice.pipeline.denoiser.sherpa_onnx.SherpaOnnxDenoiserProvider
+
+::: roomkit.voice.pipeline.denoiser.webrtc.WebRTCNoiseSuppressorProvider
 
 ::: roomkit.voice.pipeline.denoiser.mock.MockDenoiserProvider
 
