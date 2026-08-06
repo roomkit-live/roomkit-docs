@@ -24,12 +24,11 @@ from __future__ import annotations
 from roomkit import RoomKit
 from roomkit.channels import RealtimeVoiceChannel
 from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.voice.realtime.providers.openai import OpenAIRealtimeProvider
+from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="sk-...",
-    model="gpt-4o-realtime-preview",
-)
+)  # model defaults to gpt-realtime-2.1
 
 transport = MockVoiceBackend()
 
@@ -96,14 +95,29 @@ WebSocket-based speech-to-speech with server-side VAD.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime.providers.openai import OpenAIRealtimeProvider
+from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="sk-...",
-    model="gpt-4o-realtime-preview",
+    model="gpt-realtime-2.1",              # default; -2.1-mini is cheaper
     base_url=None,                         # Custom endpoint (optional)
 )
 ```
+
+Reasoning-capable models (`gpt-realtime-2` and later) accept a reasoning
+effort through `provider_config`:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    provider_config={"reasoning_effort": "low"},  # minimal|low|medium|high|xhigh
+)
+```
+
+Omit it and the field never reaches the session, which is what non-reasoning
+models need.
 
 ### VAD Configuration
 

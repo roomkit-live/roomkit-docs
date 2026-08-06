@@ -76,9 +76,14 @@ from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="...",
-    model="gpt-4o-realtime-preview",
+    model="gpt-realtime-2.1",
 )
 ```
+
+Supports `provider_config` metadata keys: `codec`, `stt_model`, `language`,
+`transcription_prompt`, `noise_reduction`, `turn_detection_type`, `eagerness`,
+`threshold`, `silence_duration_ms`, `prefix_padding_ms`, `idle_timeout_ms`,
+`interrupt_response`, `create_response`, `speed`, `reasoning_effort`.
 
 Install with: `pip install roomkit[realtime-openai]`
 
