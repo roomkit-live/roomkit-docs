@@ -647,6 +647,36 @@ Deepgram also has no "user stopped speaking" event: the user's `ConversationText
 - **Sessions are capped at two hours.** A `MAXIMUM_SESSION_LENGTH_APPROACHING` warning arrives at 1 h 55 and a terminal error at 2 h, both surfaced through `on_error`.
 - **Silent injection rewrites the prompt.** Deepgram has no message that adds to the conversation without a reply, so `inject_text(..., silent=True)` appends the text to the system prompt via `UpdatePrompt` — additive, but it lands as an instruction rather than as a turn.
 
+### Local speaker and microphone example
+
+The local Deepgram example enables WebRTC AEC by default so the microphone can
+stay open while the agent speaks:
+
+```bash
+DEEPGRAM_API_KEY=... \
+    uv run python examples/realtime_voice_local_deepgram.py
+```
+
+Its audio-specific environment variables are:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
+| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
+| `AUDIO_PREBUFFER_MS` | `240` | Local speaker jitter buffer used by this Deepgram example |
+| `MUTE_MIC` | automatic | `0` keeps capture open; `1` mutes capture during playback. Automatic mode mutes only when AEC is unavailable |
+
+These variables are conveniences implemented by the example, not global
+RoomKit settings. In application code, their equivalents are
+`WebRTCAECProvider(stream_delay_ms=...)` and
+`LocalAudioBackend(rt_prebuffer_ms=...)`.
+
+Start with `AEC_DELAY_MS=0`. If the speaker stream reports underruns, increase
+`AUDIO_PREBUFFER_MS`; lowering it reduces startup latency but gives bursty
+network audio less protection. The library default for `rt_prebuffer_ms` is
+120 ms, while this Deepgram example uses 240 ms because Aura audio commonly
+arrives in network bursts.
+
 ### Voices
 
 `DeepgramAgentProvider.available_voices()` returns the full Aura-2 catalog — English, Spanish, Dutch, French, German, Italian and Japanese — plus the twelve Aura-1 voices flagged `deprecated=True`. There is no live voices endpoint, so `list_voices()` returns the same curated list.
@@ -739,6 +769,8 @@ from roomkit.voice.backends.local import LocalAudioBackend
 transport = LocalAudioBackend(
     input_sample_rate=24000,   # match the provider output rate for AEC
     output_sample_rate=24000,
+    rt_prebuffer_ms=120,
+    aec=aec_provider,
 )
 ```
 
@@ -746,6 +778,11 @@ transport = LocalAudioBackend(
 before playback starts and re-primes after an underrun — the local-speaker
 analogue of the SIP pacer's pre-buffer. Set it to `0` to play from the first
 byte. The `rt_underruns` property counts mid-response starvations.
+
+When `aec` is supplied, the local backend uses the blocks actually written to
+the speaker as the reference, including silence inserted after playback has
+started. This keeps the render and microphone timelines aligned across an
+underrun and avoids the agent's output being transcribed back as user speech.
 
 ---
 

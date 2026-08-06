@@ -152,12 +152,19 @@ The detector emits `DTMFEvent(digit, duration_ms, confidence)` and fires the `ON
 Removes speaker audio echoing back through the microphone. Essential for speakerphone and speaker+mic setups.
 
 ```python
-from roomkit.voice.pipeline.aec import SpeexAECProvider
+from roomkit.voice.pipeline.aec import SpeexAECProvider, WebRTCAECProvider
 
-aec = SpeexAECProvider(
+speex_aec = SpeexAECProvider(
     sample_rate=16000,
     frame_size=320,       # 20ms at 16kHz
     filter_length=1024,   # Echo tail length in samples
+)
+
+webrtc_aec = WebRTCAECProvider(
+    sample_rate=24000,
+    channels=1,
+    stream_delay_ms=0,    # 0 lets WebRTC estimate the delay
+    enable_ns=True,
 )
 ```
 
@@ -167,6 +174,26 @@ aec = SpeexAECProvider(
 | `WebRTCAECProvider` | aec-audio-processing (pip) | WebRTC-based AEC |
 
 **How it works**: The pipeline automatically feeds TTS playback audio as the reference signal via `feed_reference(frame, stream)` on the outbound path. The `process(frame, stream)` method on the inbound path uses that stream's reference to subtract echo. Both carry the same key, because each stream owns its echo canceller — in a conference every lane hears a different mix.
+
+The capture and reference signals must have the same sample rate, channel count,
+sample width, and timeline. RoomKit records the post-resampler capture format per
+stream and converts the reference to that exact format. WebRTC and Speex accept
+16-bit PCM; an unexpected format is bypassed with a warning instead of being
+silently misinterpreted.
+
+AEC activation is also isolated per stream and playback source. When playback
+ends, RoomKit bypasses the stream but preserves the converged adaptive filter;
+the filter is reset only when the voice session ends. For a transport-owned AEC
+path such as `LocalAudioBackend(aec=aec)`, the reference follows audio actually
+rendered by the device. Once playback starts, hardware silence inserted during
+an underrun remains part of the reference timeline so capture and render do not
+drift apart. RoomKit prevents the pipeline from feeding that same reference a
+second time.
+
+`WebRTCAECProvider` processes 10 ms blocks internally and accepts arbitrary
+input chunk sizes. Leave `stream_delay_ms=0` initially so WebRTC can estimate
+alignment. Set a non-zero value only when you have measured a stable
+speaker-to-microphone delay; an incorrect fixed delay can reduce cancellation.
 
 !!! note "Capability-Aware Skipping"
     When the backend declares `VoiceCapability.NATIVE_AEC`, the pipeline skips the AEC stage — the backend handles echo cancellation natively.
