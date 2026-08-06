@@ -73,7 +73,7 @@ channel = RealtimeVoiceChannel(
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `provider` | required | Realtime AI provider (OpenAI, Gemini, xAI Grok, ElevenLabs) |
+| `provider` | required | Realtime AI provider (OpenAI, Gemini, xAI Grok, ElevenLabs, Deepgram) |
 | `transport` | required | Audio transport backend |
 | `system_prompt` | `None` | AI system instructions |
 | `voice` | `None` | Voice preset name |
@@ -487,6 +487,107 @@ LANGUAGE=fr                     # Language code
 ```
 
 ---
+
+## Deepgram Voice Agent
+
+Deepgram assembles an agent from three stages you choose independently — `listen` (Nova/Flux transcription), `think` (the LLM) and `speak` (an Aura voice) — instead of one end-to-end model. That is the reason to reach for it: you can put a self-hosted LLM behind a hosted STT/TTS pair, or swap the voice without touching the model.
+
+```python
+from __future__ import annotations
+
+from roomkit.providers.deepgram import DeepgramAgentConfig, DeepgramAgentProvider
+
+config = DeepgramAgentConfig(
+    api_key="...",
+    listen_model="nova-3",              # STT
+    think_model="gpt-4o-mini",          # LLM (served by Deepgram)
+    speak_model="aura-2-thalia-en",     # TTS voice
+    greeting="Hi! What can I do for you?",
+)
+provider = DeepgramAgentProvider(config)
+```
+
+The provider sends one `Settings` message at connect time and waits for Deepgram's `SettingsApplied` acknowledgement before the session goes `ACTIVE`, so a rejected key or a bad model fails in `connect()` rather than silently later.
+
+### Configuration
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `api_key` | required | Sent as `Authorization: Token <key>` |
+| `base_url` | `wss://agent.deepgram.com/v1/agent/converse` | Use `wss://api.eu.deepgram.com/v1/agent/converse` for EU processing |
+| `listen_model` | `nova-3` | Transcription model |
+| `listen_version` | `None` | Required by Flux (`"v2"`); leave unset for Nova |
+| `think_provider` / `think_model` | `open_ai` / `gpt-4o-mini` | LLM stage |
+| `speak_model` | `aura-2-thalia-en` | Aura voice id |
+| `greeting` | `None` | Line the agent speaks as soon as the session opens |
+| `keepalive_interval` | `8.0` | Seconds between `KeepAlive` messages — Deepgram closes silent sockets |
+
+Everything above can be overridden per session through `provider_config`, alongside a few keys with no config equivalent:
+
+| Key | Description |
+|-----|-------------|
+| `listen_model`, `listen_version`, `listen_language`, `keyterms`, `smart_format` | STT stage |
+| `think_provider`, `think_model`, `think_endpoint`, `context_length` | LLM stage — `think_endpoint` points at your own OpenAI-compatible server |
+| `speak_model`, `speak_language` | TTS stage |
+| `greeting`, `tags` | Session greeting; dashboard labels |
+| `input_encoding`, `output_encoding`, `output_container`, `output_bitrate` | Audio codecs (see below) |
+| `settings` | Deep-merged into the final `Settings` payload, last — escape hatch for fields the provider does not model |
+
+### Telephony
+
+Deepgram accepts `mulaw` at 8 kHz in **both** directions, so a SIP or Twilio transport needs no resampling on either leg:
+
+```python
+session = await channel.start_session(
+    room_id="room-1",
+    participant_id="caller-1",
+    metadata={
+        "provider_config": {
+            "input_encoding": "mulaw",
+            "output_encoding": "mulaw",
+        },
+    },
+)
+```
+
+Set `input_sample_rate=8000` and `output_sample_rate=8000` on the channel to match.
+
+### Tool Calling
+
+Tools declared on the channel are sent as `think.functions` and come back through the standard `on_tool_call` path — no dashboard setup, unlike ElevenLabs:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tools=[{"name": "check_order", "description": "Order status", "parameters": {...}}],
+    tool_handler=handle_tool,
+)
+```
+
+A function carrying an `endpoint` key is called by Deepgram server-side and never reaches RoomKit; without one it arrives as a client-side call for your `tool_handler` to answer.
+
+### Mid-Session Reconfigure
+
+`reconfigure()` is overridden to patch the live session instead of reconnecting: `UpdateThink` carries the new prompt, model and functions in one message, `UpdateSpeak` swaps the voice. An agent handoff therefore keeps the WebSocket **and** the conversation context. Functions are preserved when the caller does not restate them.
+
+### Barge-In
+
+Deepgram signals barge-in the other way round from most providers: there is no client-side interrupt message. When the caller speaks over the agent, Deepgram sends `UserStartedSpeaking`, which the provider surfaces as `on_speech_start` — and that is what makes the channel flush playback, reset the outbound resampler and send `clear_audio` to the client. `interrupt()` therefore only clears local state; it sends nothing.
+
+Deepgram also has no "user stopped speaking" event: the user's `ConversationText` transcript *is* the end of their turn, and the provider fires `on_speech_end` on it so idle detection keeps working.
+
+### Known Limitations
+
+- **Turn detection is always Deepgram's.** `server_vad=False` is not supported; the provider logs a warning and ignores it.
+- **Transcriptions are final-only.** `ConversationText` carries no interim results.
+- **Sessions are capped at two hours.** A `MAXIMUM_SESSION_LENGTH_APPROACHING` warning arrives at 1 h 55 and a terminal error at 2 h, both surfaced through `on_error`.
+- **Silent injection rewrites the prompt.** Deepgram has no message that adds to the conversation without a reply, so `inject_text(..., silent=True)` appends the text to the system prompt via `UpdatePrompt` — additive, but it lands as an instruction rather than as a turn.
+
+### Voices
+
+`DeepgramAgentProvider.available_voices()` returns the full Aura-2 catalog — English, Spanish, Dutch, French, German, Italian and Japanese — plus the twelve Aura-1 voices flagged `deprecated=True`. There is no live voices endpoint, so `list_voices()` returns the same curated list.
 
 ## Audio Transports
 

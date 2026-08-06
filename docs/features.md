@@ -56,7 +56,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 
 Voice isn't bolted on -- it's a full `Channel` implementation with:
 
-- Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, sherpa-onnx, or custom)
+- Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, Gemini, sherpa-onnx, or custom)
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
@@ -65,7 +65,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 ### Speech-to-Speech AI (Realtime Voice)
 
-`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, xAI Grok Realtime, ElevenLabs Conversational AI) as a first-class channel:
+`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, xAI Grok Realtime, ElevenLabs Conversational AI, Deepgram Voice Agent) as a first-class channel:
 
 - Audio flows directly between the user and the AI provider -- no intermediate STT/TTS
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
@@ -98,11 +98,11 @@ live = await provider.list_voices()
 
 - **`available_voices()`** — classmethod returning a curated `list[VoiceInfo]`
   (`id`, `name`, `language`, `gender`, `description`, `deprecated`). Catalogs ship
-  for OpenAI Realtime, Gemini Live, xAI Grok, PersonaPlex, and ElevenLabs.
+  for OpenAI Realtime, Gemini Live, xAI Grok, PersonaPlex, Deepgram, and ElevenLabs.
 - **`list_voices()`** — async query against the provider's voices endpoint,
   backfilling metadata from the curated catalog. OpenAI Realtime, Gemini Live,
-  xAI, and PersonaPlex have fixed voice sets (no endpoint) and fall back to
-  `available_voices()`; ElevenLabs queries `client.voices` live.
+  xAI, PersonaPlex, and Deepgram have fixed voice sets (no endpoint) and fall
+  back to `available_voices()`; ElevenLabs queries `client.voices` live.
 
 `VoiceInfo.id` is exactly what you pass as `connect(voice=...)` (e.g. `"alloy"`,
 `"Puck"`, a PersonaPlex `"NATF2.pt"` prompt, or an ElevenLabs `voice_id`). See
@@ -1683,6 +1683,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 |----------|----------|------------|
 | `ElevenLabsTTSProvider` | Streaming synthesis, voice listing, configurable stability | `roomkit[httpx,websocket]` |
 | `GrokTTSProvider` | REST + WebSocket streaming, 5 voices, 20 languages, expressive tags | `httpx`, `websockets` |
+| `GeminiTTSProvider` | Generative speech, natural-language style direction, 30 voices, 80+ languages. Seconds of latency — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `MockTTSProvider` | Simulated audio content | None |
 

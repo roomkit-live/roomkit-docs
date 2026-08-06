@@ -106,6 +106,31 @@ Native tools: `web_search`, `x_search` (passed as `{"type": "web_search"}`).
 
 Available voices: eve, ara, rex, sal, leo.
 
+### Deepgram Voice Agent
+
+```python
+from roomkit.providers.deepgram import DeepgramAgentConfig, DeepgramAgentProvider
+
+provider = DeepgramAgentProvider(
+    DeepgramAgentConfig(
+        api_key="...",
+        listen_model="nova-3",           # STT stage
+        think_model="gpt-4o-mini",       # LLM stage
+        speak_model="aura-2-thalia-en",  # TTS stage
+    )
+)
+```
+
+Install with: `pip install roomkit[realtime-deepgram]`
+
+Supports `provider_config` metadata keys: `listen_model`, `listen_version`, `listen_language`, `keyterms`, `smart_format`, `think_provider`, `think_model`, `think_endpoint`, `context_length`, `speak_model`, `speak_language`, `greeting`, `tags`, `input_encoding`, `output_encoding`, `output_container`, `output_bitrate`, `settings`.
+
+Turn detection is always Deepgram's (`server_vad=False` is ignored with a warning), transcriptions are final-only, and `reconfigure()` patches the live session through `UpdateThink` / `UpdateSpeak` instead of reconnecting. See the [Realtime Voice Providers guide](../guides/realtime-voice-providers.md#deepgram-voice-agent).
+
+::: roomkit.providers.deepgram.realtime.DeepgramAgentProvider
+
+::: roomkit.providers.deepgram.config.DeepgramAgentConfig
+
 ## Transports
 
 ### WebSocket Transport
