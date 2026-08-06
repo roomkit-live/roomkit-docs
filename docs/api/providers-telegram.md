@@ -156,6 +156,12 @@ words under `metadata["description"]`, which is the only text precise enough to
 say *why* a webhook URL was rejected. The raw transport exception is never
 returned because it can contain the token-bearing request URL.
 
+A successful envelope is also checked against the method's result contract:
+`getMe` must return a bot object, `getUpdates` a list of updates with integer
+ids, boolean mutations the literal `true`, and sends/edits a Message carrying
+an integer `message_id`. A mismatched but otherwise valid JSON payload returns
+`invalid_response` instead of leaking a wrong shape to the caller.
+
 ## Update forms
 
 ```python
@@ -186,10 +192,13 @@ if mentions_bot(msg, bot_username="luge_bot", bot_id=42):
 ```
 
 True on any of the five ways Telegram lets someone reach a bot in a busy room:
-a reply to the bot, a `bot_command` entity, a `mention` entity, a
-`text_mention` naming its id, or the handle posted as plain text with no entity
-at all. It reports the fact and decides no policy — whether a given group
-answers only when addressed is your rule.
+a reply to the bot, an unqualified `bot_command` (or one qualified with this
+bot's exact `@username`), a `mention` entity, a `text_mention` naming its id, or
+the handle posted as plain text with no entity at all. A command qualified for
+another bot remains false even when Telegram delivers it to this bot, and a
+longer username does not match by prefix. The helper reports the fact and
+decides no policy — whether a given group answers only when addressed is your
+rule.
 
 `entity_text(text, entity)` slices the stretch an entity covers. Telegram's
 offsets count **UTF-16 code units** and Python indexes code points, so

@@ -20,6 +20,11 @@
 
 ::: roomkit.providers.ai.base.ModelPricing
 
+`ModelPricing` is also exported from the package root. Its rates are finite and
+non-negative, its multipliers finite and positive, and `cost_for()` accepts only
+non-negative integer token counters. Invalid accounting input raises instead of
+producing a negative or non-finite cost.
+
 ::: roomkit.providers.ai.mock.MockAIProvider
 
 ## Modern model request defaults
@@ -33,6 +38,14 @@ from being paired with parameters those models reject.
 Explicit compatibility flags always win. A custom `base_url` also keeps the
 conservative legacy defaults, since OpenAI-compatible and Anthropic-compatible
 proxies may implement the older request shape.
+
+The OpenAI provider currently uses Chat Completions. On OpenAI's own endpoint,
+a GPT-5.6 turn carrying function tools therefore sends
+`reasoning_effort="none"` explicitly: omission would select the model family's
+`medium` default, which is incompatible with function tools on that endpoint.
+Tool-free turns still use `OpenAIConfig.reasoning_effort`, or the model default
+when it is unset. Custom `base_url` deployments are never force-profiled this
+way.
 
 ## Per-Room AI Configuration
 

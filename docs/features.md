@@ -497,7 +497,11 @@ file, and nothing fails while that is true.
   `cache_read_per_million`, `cache_write_per_million`, the optional
   `long_context_threshold_tokens` and its input/output multipliers, `currency`,
   and `verified`, the date the rates were read from the vendor's own price
-  list. A rate changes without the model changing, so the date travels with it.
+  list. It is importable from both `roomkit` and `roomkit.providers.ai`. Rates
+  must be finite and non-negative and multipliers finite and positive;
+  `cost_for()` likewise rejects negative, boolean, or non-integer token counters
+  instead of producing an invalid negative cost. A rate changes without the
+  model changing, so the date travels with it.
 - **Four rates, not two** -- they mirror the counters RoomKit reports in
   `AIResponse.usage`. A cached prefix costs a tenth of fresh input at
   Anthropic's rates, so pricing everything at the input rate overstates a long
@@ -509,8 +513,9 @@ file, and nothing fails while that is true.
   input rate. GPT-5.6's per-token cache writes are represented explicitly.
 - **Tiered context is automatic** -- when total fresh + cached + created input
   crosses a catalog entry's threshold, `cost_for()` applies the vendor's
-  published input and output multipliers. This covers GPT-5.6, Gemini Pro and
-  current Grok long-context pricing without asking the caller to choose a tier.
+  published input and output multipliers. This covers GPT-5.6 Sol/Terra,
+  Gemini Pro and current Grok long-context pricing without asking the caller to
+  choose a tier. GPT-5.6 Luna has its separate 400k window and no such tier.
 - **No price at all** -- Ollama (weights pulled onto your own hardware),
   PolarGrid (private edges), Azure and vLLM (no offline catalog). Per-client
   negotiated rates stay with whoever bills; this is the list price.
@@ -1477,10 +1482,13 @@ never echo the token-bearing Bot API URL.
 `parse_telegram_update()` says which form an Update took — `message`,
 `edited_message` (same shape, flagged), or `callback_query`, parsed into a
 `TelegramCallback`. `mentions_bot()` says whether a group message addressed the
-bot (reply, `bot_command`, `mention`, `text_mention`, or a plain-text handle);
-whether to answer is your policy. `entity_text()` slices by entity offsets,
-which count UTF-16 code units — a code-point slice goes wrong the moment an
-emoji precedes the mention. See the
+bot (reply, unqualified `bot_command`, command qualified with this bot's exact
+username, `mention`, `text_mention`, or a boundary-delimited plain-text handle);
+whether to answer is your policy. Commands qualified for another bot are not
+attributed to this one, even when Telegram delivers them to an administrator or
+a bot without privacy mode. `entity_text()` slices by entity offsets, which
+count UTF-16 code units — a code-point slice goes wrong the moment an emoji
+precedes the mention. See the
 [Telegram API reference](api/providers-telegram.md).
 
 ### Discord Channel

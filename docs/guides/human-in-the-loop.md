@@ -163,9 +163,14 @@ The core primitive that manages pending requests:
 | `resolve` | `(pending_id, result) → bool` | Unblock with answer. Returns `True` if found |
 | `reject` | `(pending_id, reason="") → bool` | Unblock with error. Returns `True` if found |
 | `release` | `(pending_id) → bool` | Drop a request the caller owns; rejects it if still unanswered. Returns `True` if one was dropped |
+| `close` | `async (*, channel_id=None)` | Reject active work and prevent later creates globally, or only for one channel |
 | `pending` | `property → dict[str, PendingInput]` | Snapshot of active pending requests |
 
 `HumanInputHandler(retention=128)` sets how many consumed outcomes stay replayable; `retention=0` switches the retention off.
+One handler may be shared by several `AIChannel` instances: framework callbacks
+are routed by `channel_id`, and closing one channel leaves the other owners
+available. A create for the closed scope raises `RuntimeError` rather than
+arming work that can outlive its channel.
 
 ### HumanInputToolHandler
 
