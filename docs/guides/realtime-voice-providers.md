@@ -628,6 +628,8 @@ channel = RealtimeVoiceChannel(
 
 A function carrying an `endpoint` key is called by Deepgram server-side and never reaches RoomKit; without one it arrives as a client-side call for your `tool_handler` to answer.
 
+Runnable end to end in `examples/realtime_deepgram_tools.py`.
+
 ### Mid-Session Reconfigure
 
 `reconfigure()` is overridden to patch the live session instead of reconnecting: `UpdateThink` carries the new prompt, model and functions in one message, `UpdateSpeak` swaps the voice. An agent handoff therefore keeps the WebSocket **and** the conversation context. Functions are preserved when the caller does not restate them.
