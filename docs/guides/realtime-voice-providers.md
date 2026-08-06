@@ -21,8 +21,7 @@ RoomKit's `RealtimeVoiceChannel` enables speech-to-speech AI conversations using
 ```python
 from __future__ import annotations
 
-from roomkit import RoomKit
-from roomkit.channels import RealtimeVoiceChannel
+from roomkit import RealtimeVoiceChannel, RoomKit
 from roomkit.voice.backends.mock import MockVoiceBackend
 from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
 
@@ -88,6 +87,40 @@ channel = RealtimeVoiceChannel(
 
 ---
 
+## Passing `provider_config`
+
+Everything provider-specific — VAD tuning, transcription model, Gemini's
+sensitivities, an ElevenLabs first message — travels in one dict called
+`provider_config`. It is **not** a channel constructor argument: it reaches the
+provider through the session metadata, so two sessions on the same channel can
+run different settings.
+
+```python
+provider_config = {
+    "turn_detection_type": "semantic_vad",   # keys are provider-specific
+}
+
+session = await channel.start_session(
+    room_id="room-1",
+    participant_id="caller-1",
+    connection=None,
+    metadata={"provider_config": provider_config},
+)
+```
+
+Every `provider_config` snippet below shows only the dict — pass it as
+`metadata={"provider_config": ...}` exactly as above. Unknown keys are ignored
+silently, so a typo produces default behaviour rather than an error: check the
+key against the [provider reference](../api/providers-realtime-voice.md).
+
+!!! note "`server_vad` is not a `provider_config` key"
+    Whether the provider does its own endpointing is derived from the channel's
+    pipeline, not from `provider_config`: a pipeline carrying a VAD stage puts
+    the provider in manual mode (the channel sends the activity signals from the
+    local VAD), and without one the provider's server-side VAD runs.
+
+---
+
 ## OpenAI Realtime API
 
 WebSocket-based speech-to-speech with server-side VAD.
@@ -108,20 +141,10 @@ Reasoning-capable models (`gpt-realtime-2` and later) accept a reasoning
 effort through `provider_config`:
 
 ```python
-session = await channel.start_session(
-    "room-1",
-    "caller",
-    connection=None,
-    metadata={
-        "provider_config": {
-            "reasoning_effort": "low",  # minimal|low|medium|high|xhigh
-        },
-    },
-)
+provider_config = {
+    "reasoning_effort": "low",  # minimal|low|medium|high|xhigh
+}
 ```
-
-`provider_config` reaches the provider through the session metadata, not the
-channel constructor, so two sessions on one channel can run different settings.
 
 Omit the key and the field never reaches the session, which is what
 non-reasoning models need.
@@ -140,7 +163,7 @@ await channel.inject_image(
 )
 ```
 
-`provider_config={"image_detail": "low"}` trades fidelity for tokens. Left
+An `"image_detail": "low"` in `provider_config` trades fidelity for tokens. Left
 unset, the API's own default applies, which resolves to high detail — worth
 setting explicitly on a session that injects frames repeatedly.
 
@@ -150,47 +173,42 @@ which `RealtimeVoiceChannel` catches and logs.
 
 ### VAD Configuration
 
-Pass VAD settings via `provider_config` in the channel or session:
+Turn detection is configured with flat `provider_config` keys — the provider
+assembles the API's nested `turn_detection` object itself:
 
 ```python
-# Server VAD (default)
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    provider_config={
-        "turn_detection": {
-            "type": "server_vad",
-            "threshold": 0.5,
-            "silence_duration_ms": 800,
-            "prefix_padding_ms": 300,
-            "interrupt_response": True,
-            "create_response": True,
-        },
-    },
-)
+# Semantic VAD — the default
+provider_config = {
+    "turn_detection_type": "semantic_vad",
+    "eagerness": "high",               # low, medium, high, auto
+    "interrupt_response": True,
+    "create_response": True,
+}
 
-# Semantic VAD (understands conversation flow)
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    provider_config={
-        "turn_detection": {
-            "type": "semantic_vad",
-            "eagerness": "high",           # low, medium, high, auto
-        },
-    },
-)
+# Server VAD (energy-based)
+provider_config = {
+    "turn_detection_type": "server_vad",
+    "threshold": 0.5,
+    "silence_duration_ms": 800,
+    "prefix_padding_ms": 300,
+    "idle_timeout_ms": 8000,           # optional; turn times out on silence
+    "interrupt_response": True,
+    "create_response": True,
+}
 
 # Manual turn management (no automatic VAD)
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    provider_config={"turn_detection": None},
-)
+provider_config = {"turn_detection_type": None}
 ```
+
+Left unset, `turn_detection_type` defaults to `semantic_vad`: its turn detection
+model tells real speech from echo residuals, which matters on a laptop mic +
+speaker setup where AEC never suppresses 100% of the echo. `server_vad` is
+energy-based and too trigger-happy there — reach for it on a headset or a phone
+line, where the tail is already clean.
+
+`threshold`, `silence_duration_ms`, `prefix_padding_ms` and `idle_timeout_ms`
+apply to `server_vad` only; `eagerness` applies to `semantic_vad` only.
+`interrupt_response` and `create_response` work with both.
 
 ### Available Voices
 
@@ -200,7 +218,7 @@ alloy, echo, shimmer, breeze, cinnamon, juniper, sage (varies by model)
 
 ```python
 # Configure which model transcribes user input
-provider_config={
+provider_config = {
     "stt_model": "gpt-4o-transcribe",
 }
 ```
@@ -214,7 +232,7 @@ Persistent streaming connection with session resumption and advanced features.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime.providers.gemini import GeminiLiveProvider
+from roomkit.providers.gemini.realtime import GeminiLiveProvider
 
 provider = GeminiLiveProvider(
     api_key="your-gemini-key",
@@ -224,41 +242,36 @@ provider = GeminiLiveProvider(
 
 ### Advanced Configuration
 
-Gemini supports several unique features via `provider_config`:
+Gemini supports several unique features via `provider_config` (the voice itself
+stays a channel parameter — `voice="Aoede"`):
 
 ```python
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    voice="Aoede",
-    provider_config={
-        # VAD sensitivity
-        "start_of_speech_sensitivity": "HIGH",     # LOW, MEDIUM, HIGH
-        "end_of_speech_sensitivity": "MEDIUM",
-        "silence_duration_ms": 500,
+provider_config = {
+    # VAD sensitivity — LOW or HIGH; the API has no MEDIUM
+    "start_of_speech_sensitivity": "HIGH",
+    "end_of_speech_sensitivity": "LOW",
+    "silence_duration_ms": 500,
 
-        # Proactive audio (AI speaks without prompt)
-        "proactive_audio": True,
+    # Proactive audio (AI speaks without prompt)
+    "proactive_audio": True,
 
-        # Affective dialog (emotional responses)
-        "enable_affective_dialog": True,
+    # Affective dialog (emotional responses)
+    "enable_affective_dialog": True,
 
-        # Extended thinking
-        "thinking_budget": 1024,
+    # Extended thinking
+    "thinking_budget": 1024,
 
-        # Generation parameters
-        "top_p": 0.8,
-        "top_k": 40,
-        "max_output_tokens": 2048,
+    # Generation parameters
+    "top_p": 0.8,
+    "top_k": 40,
+    "max_output_tokens": 2048,
 
-        # Non-interruptible mode
-        "activity_handling": "NO_INTERRUPTION",
+    # Non-interruptible mode
+    "no_interruption": True,
 
-        # Language
-        "language_code": "en-US",
-    },
-)
+    # Language
+    "language": "en-US",
+}
 ```
 
 | Feature | Description |
@@ -321,18 +334,16 @@ provider = XAIRealtimeProvider(
 ### VAD Configuration
 
 ```python
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    provider_config={
-        "turn_detection_type": "server_vad",    # server_vad (default)
-        "threshold": 0.5,
-        "silence_duration_ms": 800,
-        "prefix_padding_ms": 300,
-    },
-)
+provider_config = {
+    "turn_detection_type": "server_vad",    # server_vad (default)
+    "threshold": 0.5,
+    "silence_duration_ms": 800,
+    "prefix_padding_ms": 300,
+}
 ```
+
+The keys are the same as OpenAI's, but the default differs: Grok defaults to
+`server_vad`, OpenAI to `semantic_vad`.
 
 ### Available Voices
 
@@ -359,7 +370,7 @@ channel = RealtimeVoiceChannel(
 
 ```python
 # Override transcription model via provider_config
-provider_config={
+provider_config = {
     "transcription_model": "grok-2-audio",
 }
 ```
@@ -641,7 +652,7 @@ Realtime channels need a transport to carry audio between the client and server.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime import WebSocketRealtimeTransport
+from roomkit.voice.realtime.ws_transport import WebSocketRealtimeTransport
 
 transport = WebSocketRealtimeTransport(
     authenticate=my_auth_callback,             # Optional auth
@@ -669,7 +680,10 @@ Browser-based WebRTC with low latency:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
+from roomkit.voice.realtime.fastrtc_transport import (
+    FastRTCRealtimeTransport,
+    mount_fastrtc_realtime,
+)
 
 transport = FastRTCRealtimeTransport(
     input_sample_rate=16000,
@@ -696,7 +710,7 @@ Bridge SIP calls to realtime AI:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime import SIPRealtimeTransport
+from roomkit.voice.realtime.sip_transport import SIPRealtimeTransport
 
 transport = SIPRealtimeTransport(backend=sip_backend)
 ```
@@ -738,8 +752,7 @@ from __future__ import annotations
 
 import json
 
-from roomkit import Tool
-from roomkit.channels import RealtimeVoiceChannel
+from roomkit import RealtimeVoiceChannel, Tool
 
 
 async def get_weather(city: str) -> str:
@@ -834,7 +847,7 @@ async def on_tool_call(event, ctx):
 ```python
 from __future__ import annotations
 
-from roomkit.channels import RealtimeVoiceChannel
+from roomkit import RealtimeVoiceChannel
 
 # Start a session
 session = await channel.start_session(
@@ -921,10 +934,12 @@ import json
 
 from fastapi import FastAPI
 
-from roomkit import RoomKit, Tool
-from roomkit.channels import RealtimeVoiceChannel
-from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
-from roomkit.voice.realtime.providers.gemini import GeminiLiveProvider
+from roomkit import RealtimeVoiceChannel, RoomKit, Tool
+from roomkit.providers.gemini.realtime import GeminiLiveProvider
+from roomkit.voice.realtime.fastrtc_transport import (
+    FastRTCRealtimeTransport,
+    mount_fastrtc_realtime,
+)
 
 app = FastAPI()
 kit = RoomKit()
@@ -983,7 +998,7 @@ mount_fastrtc_realtime(app, transport, path="/rtc")
 ```python
 from __future__ import annotations
 
-from roomkit.channels import RealtimeVoiceChannel
+from roomkit import RealtimeVoiceChannel
 from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
 
 provider = MockRealtimeProvider()
