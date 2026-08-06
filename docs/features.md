@@ -73,11 +73,35 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
 - `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
 - `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
+- `inject_image()` — put a picture in the model's own context (Gemini Live, OpenAI Realtime)
 - Task delivery via `inject_text()` — `ImmediateDelivery` and `WaitForIdleDelivery` auto-detect RealtimeVoiceChannel
 - Gemini schema cleaning — tool schemas auto-stripped of unsupported fields (`$schema`, `additionalProperties`, `default`, `title`)
 - Auto-reconnect on connection drops with exponential backoff
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
+
+#### Images in the Conversation
+
+Two different things carry a picture into a voice session, and the choice matters:
+
+| | What travels | When to use it |
+|---|---|---|
+| `inject_image()` | The image itself, in the model's own context | The model should look at the picture and reason about it directly |
+| `setup_realtime_vision()` | A vision model's *text* description, via `inject_text(silent=True)` | Continuous screen or camera feeds, where a described frame is enough and dedup matters |
+
+```python
+await channel.inject_image(
+    session,
+    image_bytes,
+    "image/png",                    # PNG and JPEG
+    prompt="What do you see?",      # optional, same item as the image
+)
+```
+
+Supported by Gemini Live and by OpenAI Realtime on `gpt-realtime-2.1` and later.
+Providers without image support raise `NotImplementedError`, which the channel
+catches and logs. See the [realtime voice providers
+guide](guides/realtime-voice-providers.md) for the fidelity and cost knob.
 
 #### Voice Discovery
 

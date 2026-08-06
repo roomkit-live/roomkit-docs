@@ -108,16 +108,45 @@ Reasoning-capable models (`gpt-realtime-2` and later) accept a reasoning
 effort through `provider_config`:
 
 ```python
-channel = RealtimeVoiceChannel(
-    "voice",
-    provider=provider,
-    transport=transport,
-    provider_config={"reasoning_effort": "low"},  # minimal|low|medium|high|xhigh
+session = await channel.start_session(
+    "room-1",
+    "caller",
+    connection=None,
+    metadata={
+        "provider_config": {
+            "reasoning_effort": "low",  # minimal|low|medium|high|xhigh
+        },
+    },
 )
 ```
 
-Omit it and the field never reaches the session, which is what non-reasoning
-models need.
+`provider_config` reaches the provider through the session metadata, not the
+channel constructor, so two sessions on one channel can run different settings.
+
+Omit the key and the field never reaches the session, which is what
+non-reasoning models need.
+
+### Images
+
+`gpt-realtime-2.1` and later accept image input, so a picture can be put in
+front of the model inside the live conversation:
+
+```python
+await channel.inject_image(
+    session,
+    image_bytes,
+    "image/png",                       # PNG and JPEG only
+    prompt="What do you see here?",    # optional, travels in the same item
+)
+```
+
+`provider_config={"image_detail": "low"}` trades fidelity for tokens. Left
+unset, the API's own default applies, which resolves to high detail — worth
+setting explicitly on a session that injects frames repeatedly.
+
+Pass `silent=True` to add the image as context without asking for a spoken
+answer. Providers without image support (xAI Grok) raise `NotImplementedError`,
+which `RealtimeVoiceChannel` catches and logs.
 
 ### VAD Configuration
 
