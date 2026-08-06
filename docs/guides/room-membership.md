@@ -98,8 +98,10 @@ channel included (RFC 5.5). …
     driving it for *every* channel that shares it. A real integration hit
     exactly this: a conference and a team channel used the same participant id,
     so leaving the call wrote `LEFT` over the team-channel membership and the
-    room vanished from the user's menu. Give each channel its own participant
-    id, and correlate them through `identity_id`.
+    room vanished from the user's menu. `Participant.status` is the membership
+    state of that one shared record, never per-channel presence. Give each
+    independently-lived channel membership a distinct, preferably namespaced
+    participant id, and correlate them through `identity_id`.
 
 `add_member` is the one verb that *may* move `channel_id` — a deliberate join
 through another channel is a join through that channel — and it keeps the

@@ -44,7 +44,11 @@ The last three are protocol facts, not attribution: they stay off the
 `InboundMessage`, so `parse_telegram_webhook`'s metadata is unchanged.
 
 `parse_telegram_webhook` is that function plus the ordinary attribution — the
-sender is `message.from.id` — wrapped in an `InboundMessage`.
+sender is `message.from.id` — wrapped in an `InboundMessage`. Its `external_id`
+and `idempotency_key` are `<chat_id>:<message_id>`: Telegram reuses message ids
+between chats. Malformed nested objects, missing ids and invalid coordinates
+are rejected with no message rather than escaping an exception from a webhook
+boundary.
 
 Reach for the lower layer when your identity model is not Telegram's. Under a
 one-bot-per-user deployment a direct message belongs to the bot's *owner*, not
@@ -80,7 +84,9 @@ if file_path:
 ```
 
 Both return `None` on failure and log a warning that never contains the URL —
-every Bot API URL embeds the bot token. Telegram caps Bot API downloads at
+every Bot API URL embeds the bot token. The same rule applies to every API
+transport error: its safe exception class is returned, never `str(exc)` with
+the token-bearing URL. Telegram caps Bot API downloads at
 **20 MB** and refuses larger files at the `getFile` step, so `get_file()`
 returns `None` for them; `metadata["file_size"]` lets you tell before spending
 the call.
@@ -145,8 +151,10 @@ verification therefore keep one runtime source of truth.
 Every one answers with a `ProviderResult`, so failure reads the same way
 whichever call produced it: `telegram_<code>` when Telegram refused,
 `http_<status>` when the refusal carried no Bot API body, `timeout` when
-nothing came back — with Telegram's own words under `metadata["description"]`,
-which is the only text precise enough to say *why* a webhook URL was rejected.
+nothing came back, or a safe transport exception class — with Telegram's own
+words under `metadata["description"]`, which is the only text precise enough to
+say *why* a webhook URL was rejected. The raw transport exception is never
+returned because it can contain the token-bearing request URL.
 
 ## Update forms
 

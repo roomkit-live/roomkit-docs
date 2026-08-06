@@ -494,17 +494,23 @@ a model added to the catalog bills at zero until someone remembers the other
 file, and nothing fails while that is true.
 
 - **`ModelPricing`** -- `input_per_million`, `output_per_million`,
-  `cache_read_per_million`, `cache_write_per_million`, `currency`, and
-  `verified`, the date the rates were read from the vendor's own price list. A
-  rate changes without the model changing, so the date travels with it.
+  `cache_read_per_million`, `cache_write_per_million`, the optional
+  `long_context_threshold_tokens` and its input/output multipliers, `currency`,
+  and `verified`, the date the rates were read from the vendor's own price
+  list. A rate changes without the model changing, so the date travels with it.
 - **Four rates, not two** -- they mirror the counters RoomKit reports in
   `AIResponse.usage`. A cached prefix costs a tenth of fresh input at
   Anthropic's rates, so pricing everything at the input rate overstates a long
   conversation by an order of magnitude.
 - **An unset rate is a statement** -- `None` means "not billed per token here":
-  OpenAI charges nothing to write a cache, Google bills cache *storage* by the
-  hour. `cost_for()` falls back to the input rate for a counter it has no rate
-  for, so an unknown never silently costs zero.
+  earlier OpenAI models charge nothing to write a cache, while Google bills
+  cache *storage* by the hour. `cost_for()` omits a cache counter whose rate is
+  `None`; a vendor that bills it as ordinary input must explicitly repeat the
+  input rate. GPT-5.6's per-token cache writes are represented explicitly.
+- **Tiered context is automatic** -- when total fresh + cached + created input
+  crosses a catalog entry's threshold, `cost_for()` applies the vendor's
+  published input and output multipliers. This covers GPT-5.6, Gemini Pro and
+  current Grok long-context pricing without asking the caller to choose a tier.
 - **No price at all** -- Ollama (weights pulled onto your own hardware),
   PolarGrid (private edges), Azure and vLLM (no offline catalog). Per-client
   negotiated rates stay with whoever bills; this is the list price.
@@ -1448,8 +1454,11 @@ in `metadata`: `file_id`, `media_type`, plus `duration` / `mime_type` /
 `file_name` / `file_size` when Telegram sends them. `parse_telegram_message()`
 is the layer below `parse_telegram_webhook()`: it returns the message's parts
 and attributes nothing, for consumers whose sender is not `message.from.id`.
-Resolving that id to bytes
-belongs to the provider, which holds the bot token: `get_file(file_id)` returns
+Malformed nested objects and invalid coordinates are rejected at this boundary.
+Webhook messages use `<chat_id>:<message_id>` for `external_id` and
+`idempotency_key`, because Telegram message ids are chat-local. Resolving the
+file id to bytes belongs to the provider, which holds the bot token:
+`get_file(file_id)` returns
 a path and `download_file(path)` returns the bytes, both `None` on failure and
 capped by Telegram at 20 MB. What happens to those bytes — transcription,
 storage — is the application's call.
@@ -1460,9 +1469,10 @@ the Bot API surface an application needs around its sends — `get_me`,
 `send_force_reply`, `send_chat_action`, `answer_callback_query`,
 `edit_message_text`, `edit_message_reply_markup` — so it never writes a second
 HTTP client for the same token. Every call answers with a `ProviderResult`:
-`telegram_<code>` / `http_<status>` / `timeout`, with Telegram's own words under
-`metadata["description"]`, and the two reads carrying its `result` under
-`metadata["result"]`.
+`telegram_<code>` / `http_<status>` / `timeout` / a safe transport exception
+class, with Telegram's own words under `metadata["description"]`, and the two
+reads carrying its `result` under `metadata["result"]`. Transport failures
+never echo the token-bearing Bot API URL.
 
 `parse_telegram_update()` says which form an Update took — `message`,
 `edited_message` (same shape, flagged), or `callback_query`, parsed into a

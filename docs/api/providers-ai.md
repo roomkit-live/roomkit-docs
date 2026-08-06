@@ -22,6 +22,18 @@
 
 ::: roomkit.providers.ai.mock.MockAIProvider
 
+## Modern model request defaults
+
+`OpenAIConfig()` profiles first-party `gpt-5`/o-series models to use
+`max_completion_tokens` and omit a custom temperature. `AnthropicConfig()`
+profiles modern Claude reasoning models to use adaptive thinking and omit
+temperature. These defaults prevent the libraries' current flagship model ids
+from being paired with parameters those models reject.
+
+Explicit compatibility flags always win. A custom `base_url` also keeps the
+conservative legacy defaults, since OpenAI-compatible and Anthropic-compatible
+proxies may implement the older request shape.
+
 ## Per-Room AI Configuration
 
 AI channel settings can be overridden per-room using binding metadata:
