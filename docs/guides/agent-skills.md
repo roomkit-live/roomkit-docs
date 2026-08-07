@@ -307,7 +307,7 @@ skill = registry.get_skill("my-skill")
 content = skill.read_reference("api-spec.md")
 ```
 
-The filename must be a plain name inside the skill's `references/` directory. It is resolved and checked for containment, so a symlink planted in `references/` cannot serve a file from elsewhere — a clean-looking `notes.md` pointing at `/etc/passwd` is rejected. Violations raise `SkillPathError`, which subclasses `ValueError`.
+The filename must be a plain name inside the skill's `references/` directory. It is resolved and checked for containment, so a symlink planted in `references/` cannot serve a file from elsewhere — a clean-looking `notes.md` pointing at `/etc/passwd` is rejected. The directory itself is checked the same way: replacing all of `references/` or `scripts/` with a symlink is refused before anything inside it is listed, read or resolved, since a contained child of an escaped directory proves nothing. Violations raise `SkillPathError`, which subclasses `ValueError`.
 
 ---
 

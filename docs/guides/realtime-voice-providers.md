@@ -85,6 +85,15 @@ channel = RealtimeVoiceChannel(
 | `mute_on_tool_call` | `False` | Mute mic during tool execution |
 | `tool_result_max_length` | `16384` | Max chars for tool results |
 
+The transport is accepted before the AI provider finishes its handshake, so a
+caller on a phone line can already be speaking. That audio is buffered in order
+and flushed the moment the session goes live, up to a bound of roughly thirty
+seconds of 16 kHz mono PCM; past it, input is dropped with a single warning
+rather than growing without limit behind a dead handshake. A failure anywhere in
+that startup — transport, provider, a malformed negotiated sample rate, or the
+client-ready notification — tears the whole session back down instead of leaving
+a connection nobody owns.
+
 ---
 
 ## Passing `provider_config`
@@ -149,7 +158,9 @@ provider_config = {
 ```
 
 Omit the key and the field never reaches the session, which is what
-non-reasoning models need.
+non-reasoning models need. `reasoning_effort` and `image_detail` are validated
+against their allowed values, so a typo raises `ValueError` at connect or
+`reconfigure()` time instead of travelling to the API verbatim.
 
 ### Images
 
@@ -167,7 +178,10 @@ await channel.inject_image(
 
 An `"image_detail": "low"` in `provider_config` trades fidelity for tokens. Left
 unset, the API's own default applies, which resolves to high detail — worth
-setting explicitly on a session that injects frames repeatedly.
+setting explicitly on a session that injects frames repeatedly. It is local
+input policy rather than a `session.update` field, so a `reconfigure()` that
+changes only `image_detail` is applied to the live session without sending
+anything on the wire.
 
 Pass `silent=True` to add the image as context without asking for a spoken
 answer. Providers without image support (xAI Grok) raise `NotImplementedError`,
@@ -471,6 +485,29 @@ provider = ElevenLabsRealtimeProvider(config)
 
 ElevenLabs agents are pre-configured on the [ElevenLabs dashboard](https://elevenlabs.io/conversational-ai) with an LLM, voice, knowledge base, and tools. The `agent_id` identifies which agent to connect to. Runtime overrides for system prompt, voice, and temperature are applied at connection time.
 
+### Audio Format
+
+The ElevenLabs SDK reads and writes 16 kHz mono 16-bit PCM, and neither side of
+that is negotiable. The provider therefore rejects a channel configured for
+anything else at `connect()` time rather than accepting a clock it cannot honour:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    input_sample_rate=16000,      # required
+    output_sample_rate=16000,     # required — the 24000 default raises ValueError
+)
+```
+
+A transport running at another rate is still fine: set `transport_sample_rate`
+and the channel resamples around the provider.
+
+`connect()` also waits until the SDK has installed its audio-input callback
+before reporting the session active, so speech arriving in the first moments of
+a call is buffered and delivered instead of dropped on the floor.
+
 ### Configuration Overrides
 
 Override agent defaults via channel parameters. Provider-specific settings (language, first message, dynamic variables) are passed via session `metadata["provider_config"]`:
@@ -698,7 +735,9 @@ Runnable end to end in `examples/realtime_deepgram_tools.py`.
 
 ### Mid-Session Reconfigure
 
-`reconfigure()` is overridden to patch the live session instead of reconnecting: `UpdateThink` carries the new prompt, model and functions in one message, `UpdateSpeak` swaps the voice. An agent handoff therefore keeps the WebSocket **and** the conversation context. Functions are preserved when the caller does not restate them.
+`reconfigure()` is overridden to patch the live session instead of reconnecting: `UpdateThink` carries the new prompt, model and functions in one message, `UpdateSpeak` swaps the voice. An agent handoff therefore keeps the WebSocket **and** the conversation context.
+
+Both messages replace the whole Think/Speak block on Deepgram's side, so the patch is computed from the *live* session state rather than from provider defaults: a prompt-only handoff preserves the functions, the per-session model, endpoint, temperature and context length already in force. A `provider_config`-only change (`think_model`, `think_endpoint`, `context_length`, `speak_model`, `speak_language`) is applied on its own, without also needing a new prompt or voice.
 
 ### Barge-In
 

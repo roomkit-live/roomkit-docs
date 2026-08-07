@@ -204,8 +204,14 @@ async def select_anthropic_key(event, ctx):
 ```
 
 RoomKit stores the value as a Pydantic secret, so rendering or serializing the
-context redacts it. Per-key clients are cached in a bounded pool; an absent,
-empty, or non-string value falls back to `AnthropicConfig.api_key`.
+context redacts it. An absent, empty, or non-string value — or one equal to the
+configured key — falls back to `AnthropicConfig.api_key` and its shared client.
+
+Per-key clients are cached in a pool bounded by a soft limit: only entries whose
+last turn has finished are evicted and closed. A burst of distinct credentials
+may hold the pool briefly above that limit, and it trims itself as those turns
+end, because closing a client underneath an in-flight stream would break a
+response that has nothing to do with the new caller.
 
 Install with: `pip install roomkit[anthropic]`
 
