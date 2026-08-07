@@ -462,6 +462,97 @@ tts = GradiumTTSProvider(
 
 ---
 
+## Gemini TTS (Cloud API)
+
+Google's generative speech models. The prompt is an *instruction*, so a
+natural-language direction steers delivery — that is what `style_prompt`
+exploits. 30 prebuilt voices and more than 70 documented languages.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
+
+tts = GeminiTTSProvider(
+    config=GeminiTTSConfig(
+        api_key="your-gemini-api-key",
+        model="gemini-3.1-flash-tts-preview",
+        voice="Kore",                                    # 30 prebuilt voices
+        language="fr-CA",                                # optional BCP-47 hint
+        style_prompt="Lis ce texte d'une voix calme",     # optional direction
+    )
+)
+```
+
+Install with `pip install roomkit[gemini]` — the same extra the Gemini AI
+provider and Gemini Live use.
+
+### Latency: not a conversational TTS
+
+Gemini TTS trades latency for expressiveness. Measured against the live API on
+2026-08-06 for a one-sentence French prompt, three runs per model:
+
+| Model | Time to first audio | Streams incrementally |
+|-------|---------------------|-----------------------|
+| `gemini-3.1-flash-tts-preview` | ~5.1 s median (1.2–8.3 s) | Yes — 40 ms frames |
+| `gemini-2.5-flash-preview-tts` | ~3.4 s median | No — one clip |
+| `gemini-2.5-pro-preview-tts` | ~5.3 s median | No — one clip |
+
+Seconds of dead air do not work for live turn-taking. Use Gemini TTS for
+prompts, announcements, voicemail and generated audio messages; for
+conversation reach for a low-latency engine (ElevenLabs, Gradium) or skip the
+text round trip entirely with
+[Gemini Live speech-to-speech](realtime-voice-providers.md).
+
+The default model is the only one that streams as it generates, which is why it
+is the default despite a higher median: playback can start on the first frame
+instead of waiting for the whole clip.
+
+### Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `api_key` | *(required)* | Gemini API key (`GEMINI_API_KEY`) |
+| `model` | `"gemini-3.1-flash-tts-preview"` | One of the three models above |
+| `voice` | `"Kore"` | Prebuilt voice name |
+| `language` | `None` | BCP-47 hint; unset, the model infers it from the text |
+| `style_prompt` | `None` | Delivery direction, separated from a labelled transcript |
+| `timeout` | `120.0` | Per-request timeout in seconds |
+
+### Output format
+
+Always 24 kHz, 16-bit, mono PCM — fixed by the service. The request accepts a
+`sample_rate` field but the service ignores it, so the provider does not expose
+the knob; attach a [resampler stage](resampler.md) when the transport needs
+another rate.
+
+### Voices
+
+`GeminiTTSProvider.available_voices()` returns the 30 prebuilt voices as
+`VoiceInfo` records — the same catalog Gemini Live native audio draws from, so a
+voice chosen for one works in the other.
+
+```python
+for v in GeminiTTSProvider.available_voices():
+    print(v.id, "—", v.description)   # Kore — Firm
+```
+
+### Streaming
+
+`synthesize_stream()` forwards audio deltas as they arrive.
+`synthesize_stream_input()` is **not** supported: the API takes a complete
+prompt, so there is no seam for token deltas. A `VoiceChannel` detects this and
+delivers the finished reply through `synthesize_stream()` instead.
+
+Gemini 3.1 TTS remains a preview model. Google documents rare cases where it
+reads prompt directions aloud or returns a transient HTTP 500 instead of audio;
+keep prompts explicit, split outputs longer than a few minutes, and apply retry
+at the calling workflow boundary when a failed generation is safe to repeat.
+
+See `examples/gemini_tts.py`.
+
+---
+
 ## NeuTTS (Local/GPU, Voice Cloning)
 
 GGUF-quantized LLM-based TTS with native streaming and voice cloning.

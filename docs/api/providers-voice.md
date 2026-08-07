@@ -102,6 +102,31 @@ tts = GrokTTSProvider(GrokTTSConfig(
 
 Install with: `pip install httpx websockets`
 
+### Gemini TTS (Google)
+
+::: roomkit.voice.tts.gemini.GeminiTTSProvider
+
+::: roomkit.voice.tts.gemini.GeminiTTSConfig
+
+#### Usage
+
+```python
+from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
+
+tts = GeminiTTSProvider(GeminiTTSConfig(
+    api_key="your-gemini-api-key",
+    model="gemini-3.1-flash-tts-preview",
+    voice="Kore",
+    style_prompt="Read this calmly and clearly",   # delivery guidance
+))
+```
+
+Time to first audio is measured in seconds, so this fits prompts and generated
+audio messages rather than live turn-taking — see the
+[STT & TTS Providers guide](../guides/stt-tts-providers.md#gemini-tts-cloud-api).
+
+Install with: `pip install roomkit[gemini]`
+
 ## RTP Backend
 
 ::: roomkit.voice.backends.rtp.RTPVoiceBackend
