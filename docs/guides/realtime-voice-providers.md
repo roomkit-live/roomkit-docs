@@ -680,6 +680,7 @@ silently later.
 | `speak_model` | `aura-2-thalia-en` | Aura voice id |
 | `greeting` | `None` | Line the agent speaks as soon as the session opens |
 | `keepalive_interval` | `8.0` | Seconds between `KeepAlive` messages — Deepgram closes silent sockets |
+| `max_prompt_chars` | `25_000` | Warn when the system prompt exceeds this — Deepgram's documented cap for managed LLMs, past which it truncates (`PROMPT_TOO_LONG`). `None` disables; never fires with a `think_endpoint` (no cap there) |
 
 Everything above can be overridden per session through `provider_config`, alongside a few keys with no config equivalent:
 
@@ -689,6 +690,7 @@ Everything above can be overridden per session through `provider_config`, alongs
 | `think_provider`, `think_model`, `think_endpoint`, `context_length` | LLM stage — `think_endpoint` points at your own OpenAI-compatible server |
 | `speak_model`, `speak_language` | TTS stage |
 | `greeting`, `tags` | Session greeting; dashboard labels |
+| `max_prompt_chars` | Per-session override of the prompt-size warning threshold |
 | `input_encoding`, `output_encoding`, `output_container`, `output_bitrate` | Audio codecs (see below) |
 | `settings` | Deep-merged into the final `Settings` payload, last — escape hatch for fields the provider does not model |
 
@@ -751,6 +753,7 @@ Deepgram also has no "user stopped speaking" event: the user's `ConversationText
 - **Transcriptions are final-only.** `ConversationText` carries no interim results.
 - **Sessions are capped at two hours.** A `MAXIMUM_SESSION_LENGTH_APPROACHING` warning arrives at 1 h 55 and a terminal error at 2 h, both surfaced through `on_error`.
 - **Silent injection rewrites the prompt.** Deepgram has no message that adds to the conversation without a reply, so `inject_text(..., silent=True)` appends the text to the system prompt via `UpdatePrompt` — additive, but it lands as an instruction rather than as a turn.
+- **Managed-LLM prompts are capped at 25,000 characters.** Past the cap Deepgram truncates the prompt and keeps the session alive (a non-fatal `PROMPT_TOO_LONG` warning). RoomKit warns client-side before sending — at connect, on `reconfigure()`, and as silent injections grow the prompt — governed by `max_prompt_chars`. Bring-your-own `think_endpoint` sessions have no cap and are never warned.
 
 ### Local speaker and microphone example
 
