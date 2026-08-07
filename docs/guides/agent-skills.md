@@ -232,11 +232,15 @@ The user's `tool_handler` receives calls for user-defined tools; skill tools are
 
 Script execution is intentionally left to the integrator — there is no default implementation. This ensures you control sandboxing, timeouts, and allowed interpreters.
 
+The name comes from the model, so `run_skill_script` resolves it before your executor is called: a name that escapes the skill — including via a symlink planted in `scripts/` — is refused and never reaches your code. Which file runs is the framework's call; how it runs is yours.
+
+Use `skill.resolve_script(script_name)` to get that resolved path rather than joining `skill.path / "scripts" / script_name` yourself.
+
 ### Implementing a ScriptExecutor
 
 ```python
 import asyncio
-from roomkit.skills import ScriptExecutor, ScriptResult, Skill
+from roomkit.skills import ScriptExecutor, ScriptResult, Skill, SkillPathError
 
 class SubprocessExecutor(ScriptExecutor):
     """Example executor using subprocess — customize for your security needs."""
@@ -247,9 +251,10 @@ class SubprocessExecutor(ScriptExecutor):
         script_name: str,
         arguments: dict[str, str] | None = None,
     ) -> ScriptResult:
-        script_path = skill.path / "scripts" / script_name
-        if not script_path.is_file():
-            return ScriptResult(exit_code=1, stderr="Script not found", success=False)
+        try:
+            script_path = skill.resolve_script(script_name)
+        except (SkillPathError, FileNotFoundError) as e:
+            return ScriptResult(exit_code=1, stderr=str(e), success=False)
 
         cmd = [str(script_path)]
         if arguments:
@@ -302,7 +307,7 @@ skill = registry.get_skill("my-skill")
 content = skill.read_reference("api-spec.md")
 ```
 
-Path traversal is blocked — filenames containing `..`, `/`, or `\` are rejected with a `ValueError`.
+The filename must be a plain name inside the skill's `references/` directory. It is resolved and checked for containment, so a symlink planted in `references/` cannot serve a file from elsewhere — a clean-looking `notes.md` pointing at `/etc/passwd` is rejected. Violations raise `SkillPathError`, which subclasses `ValueError`.
 
 ---
 
@@ -310,17 +315,36 @@ Path traversal is blocked — filenames containing `..`, `/`, or `\` are rejecte
 
 ### Parse and validation errors
 
+`discover()` is strict by default: a missing directory or an invalid skill raises, and nothing is committed to the registry.
+
 ```python
-from roomkit.skills import SkillParseError, SkillValidationError, SkillRegistry
+from roomkit.skills import SkillError, SkillRegistry
 
 registry = SkillRegistry()
 
-# discover() warns and skips invalid skills
-count = registry.discover("./skills")  # logs warnings, returns valid count
-
-# register() raises on invalid skills
 try:
-    registry.register("./skills/bad-skill")
+    count = registry.discover("./skills")
+except SkillError as e:
+    raise SystemExit(f"Skills are misconfigured: {e}") from e
+```
+
+A malformed skill is a deployment error, not a runtime condition. Skipping it removes the capability from the catalogue while the agent keeps answering — the model is never told anything is missing, and neither is anyone reading the conversation. Failing at startup puts the error where someone reads it.
+
+Pass `strict=False` when skills come from a source you do not control and a partial catalogue is genuinely better than no service:
+
+```python
+count = registry.discover("./skills", strict=False)  # logs warnings, returns valid count
+```
+
+Each failure keeps its own type, all deriving from `SkillError`:
+
+```python
+from roomkit.skills import SkillDiscoveryError, SkillParseError, SkillValidationError
+
+try:
+    registry.discover("./skills")
+except SkillDiscoveryError as e:
+    print(f"Directory problem: {e}")  # missing or unreadable directory
 except SkillParseError as e:
     print(f"Parse error: {e}")  # missing frontmatter, etc.
 except SkillValidationError as e:
