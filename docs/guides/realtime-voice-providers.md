@@ -204,11 +204,11 @@ provider_config = {"turn_detection_type": None}
 
 Left unset, `turn_detection_type` defaults to `semantic_vad` on a channel whose
 pipeline has no VAD stage (and to no turn detection at all when it has one — see
-the note above). `semantic_vad` is the better default because its turn detection
-model tells real speech from echo residuals, which matters on a laptop mic +
-speaker setup where AEC never suppresses 100% of the echo. `server_vad` is
-energy-based and too trigger-happy there — reach for it on a headset or a phone
-line, where the tail is already clean.
+the note above). RoomKit sends an explicit `turn_detection: null` when local VAD
+is selected; merely omitting the field would leave OpenAI's default server VAD
+active. `semantic_vad` improves semantic end-of-turn timing, but its
+`speech_started` event is not an acoustic echo filter. Speaker leakage must
+still be removed by AEC or gated before the audio reaches OpenAI.
 
 `threshold`, `silence_duration_ms`, `prefix_padding_ms` and `idle_timeout_ms`
 apply to `server_vad` only; `eagerness` applies to `semantic_vad` only.
@@ -230,7 +230,7 @@ OPENAI_API_KEY=... \
 | `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
 | `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
 | `BARGE_IN_GUARD_MS` | `600` | Silence sent to provider-side VAD after physical playback starts while local AEC converges; `0` disables the guard |
-| `MUTE_MIC` | automatic | `0` keeps capture open; `1` mutes it during playback. Automatic mode mutes only without AEC |
+| `MUTE_MIC` | `1` | `1` mutes capture during assistant playback (stable half-duplex); `0` opts into full-duplex/barge-in |
 
 Keep `DENOISE=webrtc` when using open speakers. OpenAI's server VAD cancels an
 active response when it detects new speech; without continuous local noise
@@ -238,11 +238,30 @@ suppression, residual echo at the beginning of a playback turn can therefore
 produce a false interruption. This stage complements OpenAI's `far_field`
 input noise reduction and remains active while AEC is bypassed between turns.
 
-The example also sets `BARGE_IN_GUARD_MS=600`. During that initial interval,
-RoomKit still processes and records the real microphone signal, so AEC and noise
-suppression continue converging, but it forwards equal-duration PCM silence to
-OpenAI. After 600 ms, normal barge-in resumes. Set the value to `0` for a headset
-or another echo-free path if you need interruptions from the very first sample.
+OpenAI may finish generating (`response.done`) several seconds before the local
+speaker drains its buffered audio. Its WebSocket VAD can otherwise hear that
+still-playing response, commit it as a new user turn, and start a reply loop.
+The example therefore defaults to `MUTE_MIC=1`: stable half-duplex operation,
+with no barge-in while the assistant speaks. Use `MUTE_MIC=0` only with
+headphones or a calibrated full-duplex AEC setup. `AEC_DELAY_MS` should include
+the speaker and microphone device latency when a fixed value is used.
+
+In full-duplex mode, `BARGE_IN_GUARD_MS=600` protects only playback onset.
+During that interval, RoomKit still processes and records the real microphone
+signal, so AEC and noise suppression continue converging, but it forwards
+equal-duration PCM silence to OpenAI. After 600 ms, normal barge-in resumes.
+Set the value to `0` for an echo-free path if interruptions must work from the
+first sample.
+
+### WebSocket interruption context
+
+OpenAI generates audio faster than real time, while `RealtimeVoiceChannel`
+controls physical playback. On a true barge-in, RoomKit now measures elapsed
+playback from the transport callback and sends `conversation.item.truncate` for
+the latest assistant audio item. The duration is capped at the amount of audio
+actually received, preventing an API error after a playback underrun. This
+keeps OpenAI's conversation context aligned with what the user heard even when
+`response.done` arrived before the speaker finished.
 
 ### Available Voices
 
