@@ -34,13 +34,17 @@ the conversational list to filter out models it can never use. Entries carry
 `capabilities=["image_gen", "edit"]` for a consumer that combines the lists on
 purpose.
 
-Image models are billed per token, with generated pixels metered apart from
-text and at a rate an order of magnitude higher, so
-[`ModelPricing`](providers-ai.md) carries `image_input_per_million` and
-`image_output_per_million` alongside the text rates. The usage counters an
-`ImageResult` reports — `input_tokens`, `input_image_tokens`, `output_tokens`,
-`output_image_tokens` — are disjoint, so `ModelPricing.cost_for()` prices a
-generation directly:
+The usage counters an `ImageResult` reports — `input_tokens`,
+`input_image_tokens`, `output_tokens`, `output_image_tokens` — are disjoint: a
+token appears under exactly one of them, so summing them counts it once.
+
+Pricing is separate from that report, and optional. The lineups catalogued here
+meter per token, with generated pixels on their own counter at a rate an order
+of magnitude above text, so [`ModelPricing`](providers-ai.md) carries
+`image_input_per_million` and `image_output_per_million` alongside the text
+rates and `cost_for()` applies them. Other vendors charge a flat amount per
+image; a catalog entry for one of those would carry no `pricing` rather than a
+rate in the wrong unit.
 
 ```python
 entry = next(m for m in provider.available_models() if m.id == provider.model_name)

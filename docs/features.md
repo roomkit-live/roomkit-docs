@@ -819,7 +819,7 @@ The separation is the point: the agent holding the conversation is rarely one th
 - **Editing in the same call** -- `reference_images=[result.to_image_part()]` edits rather than redraws; each provider absorbs its vendor's split between generation and edit endpoints
 - **One size string** -- `size="1920x1080"` is translated per vendor (an aspect ratio and a resolution tier for Gemini); a size a model cannot produce raises rather than silently becoming another
 - **Data URI in, room out** -- `MediaContent.url` accepts `data:`, so a generated image enters a room with no conversion
-- **Priced per token** -- image models bill the pixels on their own meter, so `ModelPricing` carries `image_input_per_million` / `image_output_per_million` and `cost_for(result.usage)` prices a generation directly
+- **Usage reported, cost optional** -- the four counters are disjoint, so each token is counted once. Both lineups catalogued today meter per token with the pixels on their own counter, so `ModelPricing` carries `image_input_per_million` / `image_output_per_million` and `cost_for(result.usage)` prices a generation directly; vendors that charge a flat amount per image simply carry no rate
 - **Disjoint catalogs** -- `ImageProvider.available_models()` is separate from the conversational catalog; no id draws *and* converses
 
 See the [Image Generation guide](guides/image-generation.md) and `examples/image_generation.py`.

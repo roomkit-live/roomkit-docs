@@ -97,7 +97,9 @@ await kit.send_event(
 
 ## Cost
 
-Image models are billed **per token**, not per image — with the pixels on their own meter, at roughly an order of magnitude above the text rate. The counters an `ImageResult` reports are disjoint, so pricing is a single call:
+`ImageResult.usage` is a report of what the call consumed, not a price. How that becomes money is the vendor's business and yours: the two lineups catalogued here — OpenAI's and Google's — meter **per token**, with the pixels on their own counter at roughly an order of magnitude above the text rate, while other vendors charge a flat amount per image. RoomKit carries the rates it can state, and `cost_for()` applies them; nothing obliges you to use either.
+
+Because these two meter per token, their counters are disjoint and pricing is a single call:
 
 ```python
 entry = next(m for m in type(images).available_models() if m.id == images.model_name)
