@@ -217,6 +217,90 @@ stt = Qwen3ASRProvider(
 
 ---
 
+## Gemini (Cloud API, batch only)
+
+Gemini has no speech-to-text endpoint. Transcription is an *instruction* to a
+multimodal model that accepts audio, so this provider is batch by construction:
+it takes a complete recording and answers in one pass, in seconds. Google's own
+audio documentation points at Cloud Speech-to-Text for dedicated real-time
+transcription, and that stays the right advice for live turn-taking.
+
+What the batch shape buys is what a streaming recogniser structurally cannot
+give. The model sees the whole recording before it answers, so one pass returns
+the transcript, the speaker turns and the timestamps together — no diarization
+stage, no merge. This is the provider for meeting recordings, voicemail and
+imported audio files.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.stt.gemini import GeminiSTTConfig, GeminiSTTProvider
+
+stt = GeminiSTTProvider(
+    config=GeminiSTTConfig(
+        api_key="your-gemini-api-key",
+        model="gemini-3.6-flash",     # any multimodal model that accepts audio
+        language="fr-CA",              # optional hint; detected otherwise
+        diarize=True,                  # ask for speaker labels
+        prompt="The product is spelled RoomKit.",   # optional vocabulary/format
+    )
+)
+
+transcript = await stt.transcribe_recording("meeting.wav")
+print(transcript.language)                    # "fr-CA"
+for turn in transcript.segments:
+    print(f"[{turn.start}-{turn.end}] {turn.speaker}: {turn.text}")
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `api_key` | *(required)* | Gemini API key (`GEMINI_API_KEY`) |
+| `model` | `"gemini-3.6-flash"` | A multimodal model that accepts audio input |
+| `language` | `None` | BCP-47 hint; unset, the model identifies and reports it |
+| `diarize` | `True` | Ask for `Speaker 1`, `Speaker 2`, … labels |
+| `prompt` | `None` | Extra instruction: vocabulary, formatting rules |
+| `timeout` | `600.0` | Per-request timeout in seconds |
+| `max_inline_bytes` | `15 MiB` | Above this, the recording is uploaded via the Files API |
+
+### Two methods, two shapes
+
+`transcribe()` is the `STTProvider` contract and returns flat text, dropping the
+structure. `transcribe_recording()` returns the whole `Transcript` — the
+detected language plus one `TranscriptSegment` per speaker turn, with `.text`
+(labelled) and `.plain_text` (words only) helpers. It also accepts a file path,
+which `transcribe()` does not.
+
+### Input paths
+
+Raw `AudioChunk`/`AudioFrame` audio is sent inline as PCM; a `data:` URL is sent
+inline as-is; a local path is inlined below `max_inline_bytes` and uploaded
+through the Files API above it (and deleted afterwards, rather than left to
+expire). Arbitrary `http(s)` URLs are **refused**, not fetched: dereferencing a
+caller-supplied URL would make the provider an SSRF vector. Upload the file or
+pass the bytes.
+
+### Limits worth knowing
+
+`supports_streaming` is `False`, so a `VoiceChannel` transcribes on `SPEECH_END`
+instead of streaming partials — mechanically fine, but seconds of model latency
+after every utterance is not a conversation. Use `batch_mode=True` or transcribe
+a finished recording.
+
+Speaker labels are the model's judgement, not an acoustic decision. On a live
+run against a four-turn recording with two voices, the model labelled the fourth
+turn `Speaker 3` although it was the second voice again (2026-08-07). Where the
+speakers are already separated — a conference records **one track per
+participant** — transcribe each track with `diarize=False` and merge on the
+timestamps instead. The labels earn their keep on a single mixed file.
+
+Timestamps are the model's reading, not a forced alignment: good for navigating
+a recording, not for syncing against anything.
+
+See `examples/meeting_transcription.py` — a recording becomes speaker turns,
+enters a room, and an AI channel writes the minutes.
+
+---
+
 ## TTS Provider ABC
 
 ```python

@@ -52,6 +52,34 @@ stt = SherpaOnnxSTTProvider(SherpaOnnxSTTConfig(
 
 Install with: `pip install roomkit[sherpa-onnx]`
 
+### Gemini STT (Google, batch)
+
+::: roomkit.voice.stt.gemini.GeminiSTTProvider
+
+::: roomkit.voice.stt.gemini.GeminiSTTConfig
+
+::: roomkit.voice.stt.gemini.Transcript
+
+::: roomkit.voice.stt.gemini.TranscriptSegment
+
+#### Usage
+
+```python
+from roomkit.voice.stt.gemini import GeminiSTTConfig, GeminiSTTProvider
+
+stt = GeminiSTTProvider(GeminiSTTConfig(api_key="your-gemini-api-key"))
+
+transcript = await stt.transcribe_recording("meeting.wav")
+for turn in transcript.segments:
+    print(f"[{turn.start}-{turn.end}] {turn.speaker}: {turn.text}")
+```
+
+Batch only: the model takes a complete recording and answers in seconds, so this
+fits meetings, voicemail and imported files rather than live turn-taking — see
+the [STT & TTS Providers guide](../guides/stt-tts-providers.md#gemini-cloud-api-batch-only).
+
+Install with: `pip install roomkit[gemini]`
+
 ## TTS (Text-to-Speech)
 
 ::: roomkit.voice.tts.base.TTSProvider
