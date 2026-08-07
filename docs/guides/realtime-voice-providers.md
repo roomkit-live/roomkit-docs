@@ -626,7 +626,10 @@ config = DeepgramAgentConfig(
 provider = DeepgramAgentProvider(config)
 ```
 
-The provider sends one `Settings` message at connect time and waits for Deepgram's `SettingsApplied` acknowledgement before the session goes `ACTIVE`, so a rejected key or a bad model fails in `connect()` rather than silently later.
+The provider first waits for Deepgram's server-side `Welcome`, then sends one
+`Settings` message and waits for `SettingsApplied` before the session goes
+`ACTIVE`, so a rejected key or a bad model fails in `connect()` rather than
+silently later.
 
 ### Configuration
 
@@ -686,6 +689,10 @@ channel = RealtimeVoiceChannel(
 ```
 
 A function carrying an `endpoint` key is called by Deepgram server-side and never reaches RoomKit; without one it arrives as a client-side call for your `tool_handler` to answer.
+
+When a Gemini thinking model attaches a `thought_signature` to a function call,
+RoomKit preserves it and returns it unchanged with the function result. No
+special handling is required in the tool handler.
 
 Runnable end to end in `examples/realtime_deepgram_tools.py`.
 

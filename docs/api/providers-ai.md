@@ -186,6 +186,27 @@ provider = AnthropicAIProvider(config)
 ai_channel = AIChannel("ai", provider=provider)
 ```
 
+### Per-request credentials
+
+The configured key remains the default. In a multi-tenant host where a caller
+uses their own Anthropic subscription, a `BEFORE_AI_GENERATION` hook can select
+that credential for one turn without rebuilding the shared provider:
+
+```python
+from roomkit import HookResult, HookTrigger
+from roomkit.providers.ai import API_KEY_METADATA_KEY
+
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+async def select_anthropic_key(event, ctx):
+    key = await tenant_secrets.anthropic_key(ctx.room.metadata["tenant_id"])
+    event.ai_context.metadata[API_KEY_METADATA_KEY] = key
+    return HookResult.allow()
+```
+
+RoomKit stores the value as a Pydantic secret, so rendering or serializing the
+context redacts it. Per-key clients are cached in a bounded pool; an absent,
+empty, or non-string value falls back to `AnthropicConfig.api_key`.
+
 Install with: `pip install roomkit[anthropic]`
 
 ## OpenAI Provider

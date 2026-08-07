@@ -9,7 +9,7 @@ RoomKit's human-in-the-loop primitive lets AI tool calls **pause execution**, re
 AI agents often need to ask clarifying questions, request approval, or collect data from users mid-conversation. Without a dedicated primitive, developers resort to workarounds:
 
 - **Wrapping tool handlers** — only intercepts tools in the admin chain, not the AI's own tools
-- **BEFORE_TOOL_USE hooks** — can allow/deny but can't provide a result or pause the loop
+- **BEFORE_TOOL_USE hooks** — can allow, deny, or rewrite arguments, but can't provide a result or pause the loop
 - **External state management** — manual `asyncio.Event` tracking scattered across REST endpoints
 
 RoomKit's `HumanInputHandler` solves this as a first-class feature with two layers:
@@ -117,11 +117,17 @@ Three hooks interact during a human-input tool call:
 
 | Order | Hook | Type | Purpose |
 |-------|------|------|---------|
-| 1 | `BEFORE_TOOL_USE` | Sync | Gate: should this tool run at all? |
+| 1 | `BEFORE_TOOL_USE` | Sync | Gate or rewrite the validated arguments before execution |
 | 2 | `ON_USER_INPUT_REQUIRED` | Sync | Notify: broadcast question to user; can deny |
 | 3 | `ON_TOOL_CALL` | Sync | Observe: tool completed with result |
 
-`BEFORE_TOOL_USE` fires before the handler — it can deny the tool (e.g., rate limiting). `ON_USER_INPUT_REQUIRED` is scheduled by `create()` and keeps sync semantics — hooks run in priority order and a `HookResult.block()` rejects the request — but it does not hold up the wait. `ON_TOOL_CALL` fires after `wait()` returns — standard observability.
+`BEFORE_TOOL_USE` fires before the handler — it can deny the tool (e.g., rate
+limiting) or return replacement arguments under `metadata["arguments"]`. RoomKit
+validates the replacement against the declared tool schema before execution.
+`ON_USER_INPUT_REQUIRED` is scheduled by `create()` and keeps sync semantics —
+hooks run in priority order and a `HookResult.block()` rejects the request — but
+it does not hold up the wait. `ON_TOOL_CALL` fires after `wait()` returns —
+standard observability.
 
 ### Who Owns the Cleanup
 
