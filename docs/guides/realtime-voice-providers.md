@@ -228,9 +228,10 @@ OPENAI_API_KEY=... \
 |----------|---------|-------------|
 | `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
 | `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
-| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
-| `BARGE_IN_GUARD_MS` | `600` | Silence sent to provider-side VAD after physical playback starts while local AEC converges; `0` disables the guard |
+| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` lets the local backend seed AEC3 from actual PortAudio latencies |
+| `BARGE_IN_GUARD_MS` | `2000` | Silence sent to provider-side VAD after physical playback starts while local AEC converges; `0` disables the guard |
 | `MUTE_MIC` | `1` | `1` mutes capture during assistant playback (stable half-duplex); `0` opts into full-duplex/barge-in |
+| `OPENAI_LANGUAGE` | automatic | Optional input transcription language such as `fr`; useful when ambiguous noise is decoded in another script |
 
 Keep `DENOISE=webrtc` when using open speakers. OpenAI's server VAD cancels an
 active response when it detects new speech; without continuous local noise
@@ -244,14 +245,23 @@ still-playing response, commit it as a new user turn, and start a reply loop.
 The example therefore defaults to `MUTE_MIC=1`: stable half-duplex operation,
 with no barge-in while the assistant speaks. Use `MUTE_MIC=0` only with
 headphones or a calibrated full-duplex AEC setup. `AEC_DELAY_MS` should include
-the speaker and microphone device latency when a fixed value is used.
+the speaker and microphone device latency when a fixed value is used. With
+`AEC_DELAY_MS=0`, `LocalAudioBackend` now obtains both actual stream latencies
+from PortAudio and supplies their sum to AEC3 before playback.
 
-In full-duplex mode, `BARGE_IN_GUARD_MS=600` protects only playback onset.
+In full-duplex mode, `BARGE_IN_GUARD_MS=2000` protects only playback onset.
 During that interval, RoomKit still processes and records the real microphone
 signal, so AEC and noise suppression continue converging, but it forwards
-equal-duration PCM silence to OpenAI. After 600 ms, normal barge-in resumes.
+equal-duration PCM silence to OpenAI. After two seconds, normal barge-in resumes.
 Set the value to `0` for an echo-free path if interruptions must work from the
 first sample.
+
+Fragments such as `はい`, Cyrillic words, or other unexpected scripts in a user
+transcription are not byte-decoding corruption: they are the transcription
+model interpreting ambiguous residual audio while language detection is
+automatic. Removing the false VAD turn fixes the source. For a monolingual
+session, `OPENAI_LANGUAGE=fr` additionally constrains input transcription and
+improves recognition accuracy.
 
 ### WebSocket interruption context
 
