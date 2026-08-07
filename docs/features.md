@@ -78,6 +78,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Gemini schema cleaning — tool schemas auto-stripped of unsupported fields (`$schema`, `additionalProperties`, `default`, `title`)
 - Auto-reconnect on connection drops with exponential backoff
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
+- Deepgram Voice Agent composes its stages from independent vendors — including a non-Deepgram `speak` voice (ElevenLabs, Cartesia…) via `speak_provider`/`speak_endpoint`
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
 
 #### Images in the Conversation

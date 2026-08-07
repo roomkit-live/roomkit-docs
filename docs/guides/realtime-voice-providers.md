@@ -646,7 +646,7 @@ LANGUAGE=fr                     # Language code
 
 ## Deepgram Voice Agent
 
-Deepgram assembles an agent from three stages you choose independently — `listen` (Nova/Flux transcription), `think` (the LLM) and `speak` (an Aura voice) — instead of one end-to-end model. That is the reason to reach for it: you can put a self-hosted LLM behind a hosted STT/TTS pair, or swap the voice without touching the model.
+Deepgram assembles an agent from three stages you choose independently — `listen` (Nova/Flux transcription), `think` (the LLM) and `speak` (an Aura voice, or another vendor's — see [Non-Deepgram voices](#non-deepgram-voices-elevenlabs-cartesia)) — instead of one end-to-end model. That is the reason to reach for it: you can put a self-hosted LLM behind a hosted STT/TTS pair, or an ElevenLabs voice behind Deepgram's turn-taking, without touching the rest.
 
 ```python
 from __future__ import annotations
@@ -678,6 +678,8 @@ silently later.
 | `listen_version` | `None` | Required by Flux (`"v2"`); leave unset for Nova |
 | `think_provider` / `think_model` | `open_ai` / `gpt-4o-mini` | LLM stage |
 | `speak_model` | `aura-2-thalia-en` | Aura voice id |
+| `speak_provider` | `None` | Full `agent.speak.provider` dict, sent verbatim — selects a non-Deepgram TTS vendor with that vendor's own fields. Takes precedence over `speak_model`/`speak_language` |
+| `speak_endpoint` | `None` | `agent.speak.endpoint` (URL + auth headers) — Deepgram requires one for every non-Deepgram `speak_provider` |
 | `greeting` | `None` | Line the agent speaks as soon as the session opens |
 | `keepalive_interval` | `8.0` | Seconds between `KeepAlive` messages — Deepgram closes silent sockets |
 | `max_prompt_chars` | `25_000` | Warn when the system prompt exceeds this — Deepgram's documented cap for managed LLMs, past which it truncates (`PROMPT_TOO_LONG`). `None` disables; never fires with a `think_endpoint` (no cap there) |
@@ -688,11 +690,46 @@ Everything above can be overridden per session through `provider_config`, alongs
 |-----|-------------|
 | `listen_model`, `listen_version`, `listen_language`, `keyterms`, `smart_format` | STT stage |
 | `think_provider`, `think_model`, `think_endpoint`, `context_length` | LLM stage — `think_endpoint` points at your own OpenAI-compatible server |
-| `speak_model`, `speak_language` | TTS stage |
+| `speak_model`, `speak_language`, `speak_provider`, `speak_endpoint` | TTS stage — `speak_provider`/`speak_endpoint` swap in a non-Deepgram vendor (see below) |
 | `greeting`, `tags` | Session greeting; dashboard labels |
 | `max_prompt_chars` | Per-session override of the prompt-size warning threshold |
 | `input_encoding`, `output_encoding`, `output_container`, `output_bitrate` | Audio codecs (see below) |
-| `settings` | Deep-merged into the final `Settings` payload, last — escape hatch for fields the provider does not model |
+| `settings` | Deep-merged into the final `Settings` payload, last — escape hatch for fields the provider does not model. A nested dict naming a different provider `type` **replaces** the built one instead of merging into it — fields from two vendors never blend |
+
+### Non-Deepgram Voices (ElevenLabs, Cartesia…)
+
+The `speak` stage accepts five provider types — `deepgram`, `eleven_labs`, `cartesia`, `open_ai` and `aws_polly` — and each has its own field shape (`model` vs `model_id`/`voice_id` vs `voice` objects). `speak_provider` therefore carries the full `agent.speak.provider` dict verbatim rather than modelling every vendor:
+
+```python
+config = DeepgramAgentConfig(
+    api_key="...",
+    speak_provider={
+        "type": "eleven_labs",
+        "model_id": "eleven_turbo_v2_5",
+    },
+    speak_endpoint={
+        "url": "wss://api.elevenlabs.io/v1/text-to-speech/<voice-id>/multi-stream-input",
+        "headers": {"xi-api-key": "..."},
+    },
+)
+```
+
+Or per session — including a mid-session vendor swap through `reconfigure()`:
+
+```python
+provider_config = {
+    "speak_provider": {
+        "type": "cartesia",
+        "model_id": "sonic-2",
+        "voice": {"mode": "id", "id": "a167e0f3-df7e-4d52-a9c3-f949145efdab"},
+    },
+}
+```
+
+!!! warning "BYO-key vendors need an endpoint"
+    ElevenLabs runs on your own key: `speak_endpoint` carries the vendor URL (the ElevenLabs voice id rides **in the URL**, not the provider dict) plus your API key in its headers. Deepgram-managed vendors — Cartesia above — need no endpoint. Check [Deepgram's TTS provider docs](https://developers.deepgram.com/docs/voice-agent-tts-models) for each vendor's exact shape; RoomKit passes both dicts through verbatim.
+
+`speak_provider` takes precedence over `voice` and `speak_model`, which name Aura voices: a `voice` argument passed while another vendor holds the stage is ignored with a warning, since that vendor's voice belongs in its own fields.
 
 ### Telephony
 
