@@ -120,6 +120,7 @@ nav:
           - PolarGrid Provider: guides/polargrid.md
           - OpenRouter Provider: guides/openrouter.md
           - Gemini on Vertex AI: guides/gemini-vertex.md
+          - Image Generation: guides/image-generation.md
       - Channels & Content:
           - CLI Channel & Console Mode: guides/cli-channel.md
           - SMS & RCS Providers: guides/sms-providers.md
@@ -182,6 +183,7 @@ nav:
           - Errors: api/errors.md
       - Providers:
           - AI: api/providers-ai.md
+          - Image: api/providers-image.md
           - SMS: api/providers-sms.md
           - RCS: api/providers-rcs.md
           - Email: api/providers-email.md

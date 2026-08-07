@@ -799,6 +799,31 @@ gemini = GeminiAIProvider(GeminiConfig(api_key="..."))
 assert gemini.supports_vision is True  # All Gemini models support vision
 ```
 
+### Image Generation
+
+Vision is the input direction. `ImageProvider` is the output one — an agent that *draws* — and it is a surface of its own (RFC §25), not a mode of the conversational response:
+
+```python
+from roomkit.providers.gemini import GeminiImageConfig, GeminiImageProvider
+
+images = GeminiImageProvider(GeminiImageConfig(api_key="...", model="gemini-3.1-flash-image"))
+[result] = await images.generate("un renard en origami", size="1024x1024")
+
+result.data          # "data:image/png;base64,…" — always a data URI
+result.decoded()     # raw PNG bytes
+```
+
+The separation is the point: the agent holding the conversation is rarely one that draws, so an Anthropic agent draws with a Gemini or OpenAI key exactly as it transcribes with a Deepgram one. Nothing about `AIResponse` changes.
+
+- **Two providers** -- `OpenAIImageProvider` (`/v1/images`) and `GeminiImageProvider` (Interactions API), plus `MockImageProvider`, which returns a real 1×1 PNG so a consumer tests the whole path without a key
+- **Editing in the same call** -- `reference_images=[result.to_image_part()]` edits rather than redraws; each provider absorbs its vendor's split between generation and edit endpoints
+- **One size string** -- `size="1920x1080"` is translated per vendor (an aspect ratio and a resolution tier for Gemini); a size a model cannot produce raises rather than silently becoming another
+- **Data URI in, room out** -- `MediaContent.url` accepts `data:`, so a generated image enters a room with no conversion
+- **Priced per token** -- image models bill the pixels on their own meter, so `ModelPricing` carries `image_input_per_million` / `image_output_per_million` and `cost_for(result.usage)` prices a generation directly
+- **Disjoint catalogs** -- `ImageProvider.available_models()` is separate from the conversational catalog; no id draws *and* converses
+
+See the [Image Generation guide](guides/image-generation.md) and `examples/image_generation.py`.
+
 ### Multi-Agent Orchestration
 
 Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. Four declarative **orchestration strategies** handle the common patterns — pass one to `RoomKit` or `create_room` and all wiring is automatic:
