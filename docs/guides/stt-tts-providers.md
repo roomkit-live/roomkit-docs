@@ -479,7 +479,7 @@ tts = GeminiTTSProvider(
         model="gemini-3.1-flash-tts-preview",
         voice="Kore",                                    # 30 prebuilt voices
         language="fr-CA",                                # optional BCP-47 hint
-        style_prompt="Lis ce texte d'une voix calme",     # optional direction
+        style_prompt="Read this in a calm voice",         # optional direction
     )
 )
 ```
@@ -516,7 +516,7 @@ instead of waiting for the whole clip.
 | `model` | `"gemini-3.1-flash-tts-preview"` | One of the three models above |
 | `voice` | `"Kore"` | Prebuilt voice name |
 | `language` | `None` | BCP-47 hint; unset, the model infers it from the text |
-| `style_prompt` | `None` | Delivery direction, separated from a labelled transcript |
+| `style_prompt` | `None` | Delivery direction. Not an API field — written as a labelled `Delivery direction:` line above the transcript in the same prompt |
 | `timeout` | `120.0` | Per-request timeout in seconds |
 
 ### Output format
@@ -536,6 +536,66 @@ voice chosen for one works in the other.
 for v in GeminiTTSProvider.available_voices():
     print(v.id, "—", v.description)   # Kore — Firm
 ```
+
+### Expressive audio tags
+
+The delivery is steerable from the text itself. Bracketed cues placed inline in
+the transcript are *performed*, not read out — this is what a conventional
+concatenative engine cannot do, and what the latency buys:
+
+```python
+await tts.synthesize("[laughs] Okay, that one was actually funny.")
+await tts.synthesize("[whispers] Can you keep a secret? [excitedly] We shipped!")
+```
+
+Two kinds, both inline: non-verbal sounds (`[laughs]`, `[sighs]`, `[gasp]`,
+`[cough]`) and delivery modifiers (`[whispers]`, `[shouting]`, `[excitedly]`,
+`[bored]`, `[very slowly]`, `[singing]`, `[asmr]`). Google documents no closed
+list — any descriptive cue is interpreted — so listen to an unusual one before
+relying on it: an unrecognised cue can be spoken aloud instead of performed.
+With a non-English transcript, keep the tags in English.
+
+The API has no style field: `model`, `input`, `stream`, `response_format` and
+`speech_config` (voice, language) are all it takes, and style is only
+expressible inside `input`. `style_prompt` is RoomKit's sugar over exactly
+that — it writes a labelled `Delivery direction:` line above the `Transcript:`
+label in the same string, which is what stops the model from reciting the
+direction along with the words.
+
+Tags and `style_prompt` are therefore different tools: a tag steers a word or a
+phrase from inside the transcript, `style_prompt` steers the whole utterance
+from the line above it.
+Google's own guidance also frames a full direction in three parts — audio
+profile (who is speaking), scene (where, what mood), and director's notes
+(style, accent, pacing) — which is the shape `style_prompt` is for. See
+Google's [prompt guide](https://aistudio.google.com/learn/gemini-tts-prompt-guide-with-tags).
+
+Tags travel through a room like any other text, so anything written into a room
+attached to a voice channel is performed: `examples/gemini_tts_room.py` is a
+room that speaks what you type at the CLI.
+
+### SSML is not an input mode here
+
+SSML belongs to Cloud Text-to-Speech, which accepts it in a dedicated field
+(`SynthesisInput(ssml=...)`). The Gemini API endpoint this provider calls has a
+single free-text `input` field and no `ssml` field, and Google's Gemini-TTS page
+documents prompting rather than SSML.
+
+Sent anyway, the markup is not ignored: the model reads it as an instruction and
+follows the *intent*, not the timing. Longest silence produced, measured against
+the live API on 2026-08-07, three runs each:
+
+| Asked for | Runs | Median |
+|-----------|------|--------|
+| `<break time="1500ms"/>` | 1.60 s, 2.46 s, 2.08 s | 2.08 s |
+| `<break time="5000ms"/>` | 3.36 s, 5.70 s, 4.72 s | 4.72 s |
+| `[long pause]`, no duration given | 3.48 s, 4.02 s, 4.46 s | 4.02 s |
+
+Directionally right, never exact — the same request drifts by seconds between
+identical runs, and a bracketed cue gets you the same effect without pretending
+to a contract. Anything that has to line up with something else (a beep, a
+prompt, a recording) needs the silence assembled in the outbound audio instead,
+not requested from the model.
 
 ### Streaming
 
