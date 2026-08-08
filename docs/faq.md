@@ -248,30 +248,28 @@ async def handle_ambiguous(event, ctx):
 
 ### How does RoomKit handle persistence?
 
-RoomKit uses a **pluggable store** abstraction. The default is `InMemoryStore` (for development). For production, implement the `ConversationStore` interface:
+RoomKit uses a **pluggable store** abstraction. The default `InMemoryStore` is
+ephemeral. For persistent deployments, RoomKit ships two backends:
 
 ```python
-from roomkit import Room, RoomEvent
-from roomkit.store.base import ConversationStore
+from roomkit import RoomKit, SQLiteStore
+from roomkit.store import PostgresAdvisoryLockManager, PostgresStore
 
-class PostgresStore(ConversationStore):
-    def __init__(self, connection_string: str):
-        self._db = create_pool(connection_string)
+# Embedded persistence for one process, no optional dependency.
+embedded = RoomKit(store=SQLiteStore("roomkit.db"))
 
-    async def create_room(self, room: Room) -> Room:
-        await self._db.execute("INSERT INTO rooms ...", room.id, ...)
-        return room
-
-    async def get_room(self, room_id: str) -> Room | None:
-        row = await self._db.fetchrow("SELECT * FROM rooms WHERE id = $1", room_id)
-        return self._row_to_room(row) if row else None
-
-    # ... implement all abstract methods
-
-kit = RoomKit(store=PostgresStore(connection_string))
+# Shared persistence for horizontally scaled workers.
+postgres = PostgresStore("postgresql://user:pass@db/roomkit")
+await postgres.init()
+locks = PostgresAdvisoryLockManager(dsn="postgresql://user:pass@db/roomkit")
+await locks.init()
+distributed = RoomKit(store=postgres, lock_manager=locks)
 ```
 
-See the [Store documentation](api/store.md) for the full interface.
+SQLite must remain single-process at the RoomKit level; database write locking
+does not serialize the complete inbound pipeline. See the
+[SQLite guide](guides/sqlite-store.md), [PostgreSQL guide](guides/postgres-store.md),
+and [Store API](api/store.md).
 
 ### Can RoomKit scale horizontally?
 

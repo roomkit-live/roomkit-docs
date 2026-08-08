@@ -55,6 +55,8 @@ graph TB
     subgraph Storage["Storage Layer"]
         STORE["ConversationStore"]
         MEM["InMemoryStore"]
+        SQLITE["SQLiteStore"]
+        PG["PostgresStore"]
     end
 
     WS --> WS_CH
@@ -95,6 +97,8 @@ graph TB
     HE --> STORE
     ER --> STORE
     STORE --> MEM
+    STORE --> SQLITE
+    STORE --> PG
 
     WS_CH -.-> RT
     RT -.-> WS_CH
@@ -222,7 +226,9 @@ The `ConversationStore` ABC defines the complete persistence interface:
 - **Observations** -- Intelligence findings with category and confidence (add, list)
 - **Read tracking** -- Per-channel read markers, mark-all-read, and unread counts
 
-The library ships with `InMemoryStore` for development and testing. The ABC is designed for drop-in replacement with any persistent backend (PostgreSQL, Redis, etc.).
+The library ships with `InMemoryStore` for development and testing,
+`SQLiteStore` for embedded single-process persistence, and `PostgresStore` for
+shared production storage. The ABC remains open to custom backends.
 
 ### Model Layer
 

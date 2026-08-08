@@ -49,7 +49,7 @@ Inbound Message
 - **Async-first** — All I/O is async. No synchronous blocking.
 - **Pluggable everything** — Storage, identity, routing, AI providers, voice backends — all swappable via ABCs with in-memory defaults.
 - **Zero required deps** — Only `pydantic>=2.9`. Everything else is optional extras.
-- **Type-safe** — Strict mypy, full type hints, Pydantic models throughout.
+- **Type-safe** — CI-enforced `ty` checks, full type hints, Pydantic models throughout.
 - **Python 3.12+** — Uses modern syntax (`X | None`, not `Optional[X]`).
 ---
 
@@ -439,9 +439,10 @@ Every core component follows the ABC + default pattern:
 Replace any component at construction:
 
 ```python
-from roomkit import RoomKit
+from roomkit import RoomKit, SQLiteStore
 from roomkit.store.postgres import PostgresStore
 
+embedded = RoomKit(store=SQLiteStore("roomkit.db"))
 kit = RoomKit(store=PostgresStore("postgresql://..."))
 ```
 
@@ -3040,7 +3041,9 @@ async def on_voice_end(event):
 ```
 ---
 
-RoomKit uses the `ConversationStore` ABC for persistence. The default `InMemoryStore` works out of the box. For production, use `PostgresStore`.
+RoomKit uses the `ConversationStore` ABC for persistence. Use `InMemoryStore`
+for ephemeral development state, `SQLiteStore` for an embedded single-process
+deployment, or `PostgresStore` for shared production storage.
 
 ## InMemoryStore (Default)
 
@@ -3051,6 +3054,18 @@ kit = RoomKit()  # Uses InMemoryStore automatically
 ```
 
 Data lives in Python dicts — fast for development, lost on restart.
+
+## SQLiteStore
+
+```python
+from roomkit import RoomKit, SQLiteStore
+
+kit = RoomKit(store=SQLiteStore("roomkit.db"))
+```
+
+SQLiteStore uses only the stdlib, persists all conversation state, and offers
+FTS5 message search through `search_events()`. It must remain single-process at
+the RoomKit level; use PostgreSQL plus distributed locking to scale workers.
 
 ## PostgresStore
 
@@ -3075,20 +3090,21 @@ await store.init(min_size=5, max_size=20)  # Pool sizing via init()
 
 ### Schema
 
-PostgresStore creates 10 tables:
+PostgresStore creates 11 tables:
 
 | Table | Purpose |
 |-------|---------|
 | `rooms` | Room records with status, metadata, timers |
 | `events` | Event timeline with sequential indexing |
+| `event_sequences` | Per-room monotonic event-index high-water marks |
 | `participants` | Room participants with roles and status |
 | `bindings` | Channel-to-room bindings with config |
 | `identities` | Known identity records |
 | `tasks` | AI-extracted tasks |
 | `observations` | AI-extracted observations |
-| `delivery_status` | Message delivery tracking |
-| `read_tracking` | Per-channel read positions |
-| `telemetry_spans` | Telemetry span records |
+| `identity_addresses` | Multi-channel identity address lookup |
+| `read_markers` | Per-channel read positions |
+| `schema_version` | Schema migration tracking |
 
 ### Operations
 
@@ -3724,6 +3740,7 @@ from roomkit.orchestration.handoff import HandoffHandler, HandoffMemoryProvider
 from roomkit.store.base import ConversationStore
 from roomkit.store.memory import InMemoryStore
 from roomkit.store.postgres import PostgresStore
+from roomkit.store.sqlite import SQLiteStore
 ```
 
 ### Content Types

@@ -144,7 +144,9 @@ roomkit/
 │   │       └── mock.py            # MockRealtimeProvider + MockRealtimeTransport
 │   └── store/                     # Persistence layer
 │       ├── base.py                # ConversationStore ABC (30 abstract methods)
-│       └── memory.py              # InMemoryStore implementation
+│       ├── memory.py              # InMemoryStore implementation
+│       ├── sqlite.py              # Embedded single-process persistence
+│       └── postgres.py            # Shared PostgreSQL persistence
 ├── tests/                         # Test suite
 │   ├── conftest.py                # Shared fixtures
 │   ├── test_channels/             # Channel-specific tests (7 files)
@@ -738,7 +740,7 @@ artifacts = ["*.md", "*.txt"]
 | `make install` | `uv sync --extra dev` |
 | `make lint` | `uv run ruff check src/ tests/` |
 | `make format` | `uv run ruff format src/ tests/` |
-| `make typecheck` | `uv run mypy src/roomkit/` |
+| `make typecheck` | `uv run ty check src/roomkit/` |
 | `make test` | `uv run pytest` |
 | `make coverage` | `uv run pytest --cov=roomkit --cov-report=term-missing` |
 | `make all` | `lint + typecheck + test` |
@@ -1006,15 +1008,17 @@ The following providers have implementations but may need enhancement:
 
 ### Storage Layer
 
-- **InMemoryStore only** -- No persistent storage backend ships with the library. Production deployments need a custom `ConversationStore` implementation (PostgreSQL, Redis, etc.).
-- **No migration tooling** -- Schema changes to the store interface require manual migration handling.
+- **Backend-specific migrations** -- SQLite performs guarded versioned
+  migrations and PostgreSQL runs additive schema setup, but custom stores still
+  own their migration tooling.
 
 ### Missing Infrastructure Patterns
 
-- **No distributed locking** -- `InMemoryLockManager` uses `asyncio.Lock`, suitable for single-process deployments only. Multi-process deployments need Redis-based or similar distributed locks.
+- **Distributed locking is PostgreSQL-specific** -- `InMemoryLockManager` is
+  single-process; RoomKit ships `PostgresAdvisoryLockManager`, while other
+  shared stores need a compatible custom lock manager.
 - **No distributed realtime** -- `InMemoryRealtime` is single-process only. Multi-process deployments need Redis pub/sub or similar.
 - **No event bus** -- Events are broadcast in-process. Cross-service event distribution would require an external message broker integration.
-- **No metrics/tracing** -- The `FrameworkEvent` system provides observability hooks, but there is no built-in integration with OpenTelemetry or similar tracing frameworks.
 
 ### Placeholder Channel Types
 

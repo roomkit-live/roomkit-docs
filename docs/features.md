@@ -2926,7 +2926,7 @@ kit = RoomKit(inbound_router=TenantRouter())
 ## Current Limitations
 
 - **Single-process defaults** -- `InMemoryLockManager`, `InMemoryRealtime`, and `InMemoryStatusBackend` use asyncio primitives; distributed deployments must opt in to `PostgresAdvisoryLockManager`, `RedisRealtimeBackend`, and `RedisStatusBackend` (see the [Scaling guide](guides/scaling.md))
-- **In-memory storage only (default)** -- No persistent store ships with the library; production use requires a custom `ConversationStore`
+- **Single-process SQLite** -- The embedded `SQLiteStore` persists data, but the complete inbound pipeline is not coordinated across worker processes; horizontally scaled deployments should use PostgreSQL with distributed locking
 - **No built-in HTTP server** -- RoomKit is a library, not a server; webhook endpoints must be provided by the host application
 - **No file/media storage** -- `MediaContent` stores URLs; actual file hosting must be handled externally
 - **No end-to-end encryption** -- Content is available in plaintext within the pipeline; encryption must be handled at the transport level
@@ -2939,16 +2939,15 @@ kit = RoomKit(inbound_router=TenantRouter())
 
 ## Potential Enhancements
 
-- **Persistent storage backends** -- PostgreSQL, Redis, or MongoDB `ConversationStore` implementations
+- **Additional persistent storage backends** -- Redis or MongoDB `ConversationStore` implementations beyond the shipped SQLite and PostgreSQL stores
 - **Distributed locking** -- Redis-based `RoomLockManager` for multi-process deployments
 - **Event streaming** -- Kafka or Redis Streams integration for cross-service event distribution
-- **OpenTelemetry integration** -- Built-in tracing and metrics via the `FrameworkEvent` system
 - **Voice MediaStore** -- Store-and-forward mode for VoiceChannel (S3/GCS audio hosting)
 - **Additional voice backends** -- Twilio Voice or raw WebRTC backends (LiveKit now ships as a conference backend)
 - **Additional STT/TTS providers** -- Google Cloud Speech, Amazon Polly (local sherpa-onnx now available)
 - **Push notifications** -- Firebase Cloud Messaging or APNs provider
 - **WhatsApp Business API** -- Full provider implementation with template management
-- **Message search** -- Full-text search across room events
+- **Cross-backend message search** -- `SQLiteStore` ships FTS5 search; a common search contract and PostgreSQL implementation remain future work
 - **File storage abstraction** -- S3/GCS integration for media content hosting
 - **Admin dashboard** -- Web UI for room management and monitoring
 - **Rate limit queuing** -- Queue-and-drain instead of drop when rate limited
