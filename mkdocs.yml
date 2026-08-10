@@ -85,6 +85,7 @@ nav:
           - RTP Voice Backend: guides/rtp-backend.md
           - SIP Voice Backend: guides/sip-backend.md
           - WebTransport Backend: guides/webtransport-backend.md
+          - Shared Microphone Capture: guides/shared-mic-capture.md
           - Audio Bridging: guides/audio-bridge.md
       - Video:
           - Overview: guides/video-overview.md
@@ -169,6 +170,7 @@ nav:
           - Voice Channel: api/providers-voice.md
           - Conference: api/conference.md
           - Audio Pipeline: api/voice-pipeline.md
+          - Capture Sources: api/capture.md
           - RTP Backend: api/rtp-backend.md
           - SIP Backend: api/sip-backend.md
           - Realtime Voice: api/providers-realtime-voice.md

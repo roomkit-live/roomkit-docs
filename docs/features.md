@@ -2025,6 +2025,49 @@ backend's periodic and final stats logs.
 See the [SIP Voice Backend guide](guides/sip-backend.md#packet-loss-concealment)
 for details.
 
+#### Shared Microphone Capture (Capture Outliving a Session)
+
+A `VoiceBackend` takes the capture device when a session starts and releases it
+when the session ends. Anything that must listen *before* a session exists — a
+wake word, a level meter — therefore has to hand the device over at the worst
+possible moment: while the person is still talking. `AudioCaptureSource` moves
+device ownership out of the session, and a **mark** taken when speech began lets
+the session replay what was said before it existed:
+
+```python
+from roomkit.voice.capture import LocalMicSource
+from roomkit.voice.backends.local import LocalAudioBackend
+
+mic = LocalMicSource(sample_rate=24000, backlog_seconds=10)
+mic.start()                                      # the device opens once
+detector = mic.subscribe(enqueue, name="wakeword")   # no session in sight
+
+transport = LocalAudioBackend(source=mic)        # a subscriber, not the owner
+
+# … VAD reports SPEECH_START:
+mark = mic.mark()
+# … the trigger matched — the utterance that preceded the session is replayed:
+await channel.start_session(room_id, participant_id, connection=None,
+                            metadata={"capture_since": mark})
+```
+
+Key properties:
+
+- **No new API on the channel.** Replayed frames travel the ordinary inbound
+  path into the realtime channel's pre-connect buffer, and flush in order once
+  the provider handshake completes.
+- **Lifetime is explicit.** `start()`/`stop()` alone acquire and release the
+  device; dropping to zero subscribers never stops capture.
+- **Fan-out is synchronous on the capture thread**, which is what keeps AEC
+  timing correct. A subscriber must enqueue the frame and return — the source
+  times each callback and warns, by name, when one runs long.
+- **Frames are pre-AEC.** Echo cancellation is per-session and applied
+  downstream, so a detector should detach for the duration of a call.
+
+`MockCaptureSource` drives the whole path with no device. See the
+[Shared Microphone Capture guide](guides/shared-mic-capture.md) and
+`examples/shared_mic_capture.py`.
+
 ---
 
 ## Video
