@@ -688,6 +688,35 @@ kit = RoomKit(
 )
 ```
 
+#### What `process_timeout` bounds
+
+One budget for the whole pre-commit phase (RFC Section 13.6) — the context
+build, the channel's `handle_inbound`, identity resolution, the wait for the
+room lock, and the gates inside it. It is a single deadline, not a duration
+re-applied per region: 30 seconds means the caller waits 30 seconds, not 30
+before the lock and 30 after.
+
+Two boundaries are deliberate:
+
+- **Routing sits outside it.** Finding or creating the room is Section 10.1
+  steps 1-2, before the phase this bounds — and it is the only part that
+  writes a room, so a timeout there would leave one behind for a message that
+  was then refused.
+- **The commit sits outside it.** Once the gates pass, the commit and the
+  delivery set it hands to the lane run to completion. A timeout landing
+  mid-commit would report a committed event as blocked, which Section 13.6
+  forbids.
+
+Expiry returns `InboundResult(blocked=True, reason="process_timeout")` and
+emits the `process_timeout` framework event. Nothing durable has been written.
+
+!!! note "Custom lock managers"
+    Because the wait for the room lock is inside the budget, a
+    `RoomLockManager` must release cleanly when acquisition is cancelled.
+    `InMemoryLockManager` does; an implementation backed by Redis or Postgres
+    advisory locks needs to, or a room that timed out once queues every later
+    event behind a lock nobody holds.
+
 ### Optional Dependencies
 
 Dependencies are lazily loaded. Each provider group has its own optional extra:

@@ -499,7 +499,7 @@ graph LR
 | **Retry with Backoff** | `retry_with_backoff` | Exponential backoff (`base * exponential_base^attempt`, capped at `max_delay_seconds`) for transient failures |
 | **Chain Depth Limit** | `max_chain_depth` (default 5) | Prevent infinite event loops from AI reentry; exceeded events stored as BLOCKED with observations |
 | **Idempotency** | `idempotency_key` on events | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races); a redelivery returns the original event |
-| **Process Timeout** | `process_timeout` (default 30s) | Prevent runaway locked processing from starving other rooms |
+| **Process Timeout** | `process_timeout` (default 30s) | One budget for the whole pre-commit phase — context build, `handle_inbound`, identity, the wait for the room lock, and the gates inside it. Routing and the commit sit outside it |
 | **Identity Timeout** | `identity_timeout` (default 10s) | Prevent slow identity resolvers from blocking the pipeline |
 
 ### Horizontal Scaling
