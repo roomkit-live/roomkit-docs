@@ -12,7 +12,10 @@ from roomkit.voice.pipeline.recorder import RecordingConfig
 
 config = AudioPipelineConfig(
     recorder=WavFileRecorder(),
-    recording_config=RecordingConfig(storage="./recordings"),
+    recording_config=RecordingConfig(
+        storage="./recordings",
+        storage_encrypted_at_rest=True,
+    ),
     # ... other providers (vad, denoiser, etc.)
 )
 ```
@@ -35,12 +38,14 @@ from roomkit.voice.pipeline.recorder import RecordingChannelMode, RecordingConfi
 # Stereo: inbound=left, outbound=right
 config = RecordingConfig(
     storage="./recordings",
+    storage_encrypted_at_rest=True,
     channels=RecordingChannelMode.STEREO,
 )
 
 # Separate files per direction
 config = RecordingConfig(
     storage="./recordings",
+    storage_encrypted_at_rest=True,
     channels=RecordingChannelMode.SEPARATE,
 )
 ```
@@ -61,6 +66,7 @@ from roomkit.voice.pipeline.recorder import RecordingConfig, RecordingMode
 # Only capture what the mic picks up
 config = RecordingConfig(
     storage="./recordings",
+    storage_encrypted_at_rest=True,
     mode=RecordingMode.INBOUND_ONLY,
 )
 ```
@@ -82,9 +88,10 @@ In `SEPARATE` mode, two files are created: `{session_id}_{timestamp}_inbound.wav
 
 ## Encryption at rest
 
-Recordings are written in the clear unless you configure a cipher. RFC §17.6
-makes encryption at rest a requirement for stored audio; the framework owns
-*when* it happens, you own *how*:
+`WavFileRecorder` fails closed unless you configure a cipher or explicitly
+declare that its target storage is encrypted. RFC §17.6 makes encryption at
+rest a requirement for stored audio; the framework owns *when* it happens, you
+own *how*:
 
 ```python
 from roomkit.voice.pipeline import RecordingConfig, RecordingEncryption
@@ -104,6 +111,20 @@ class MyEncryption(RecordingEncryption):
 config = RecordingConfig(storage="./recordings", encryption=MyEncryption())
 ```
 
+If filesystem, volume or object-store encryption protects the target from the
+first write, declare that deployment guarantee explicitly:
+
+```python
+config = RecordingConfig(
+    storage="/mnt/encrypted/recordings",
+    storage_encrypted_at_rest=True,
+)
+```
+
+Setting `storage_encrypted_at_rest=True` is an assertion by the application;
+RoomKit cannot inspect volume or object-store policy. Without either setting,
+`WavFileRecorder.start()` raises `ValueError` before creating a file.
+
 The recorder calls `encrypt_file()` once a file is complete, and
 `RecordingResult.urls` then names the encrypted artifacts, with
 `metadata["encryption"]` set to the provider's `name`.
@@ -117,7 +138,7 @@ Two properties worth designing around:
 - **A file that cannot be encrypted is deleted**, not returned in the clear. If
   the cipher raises, the failure is logged and the plaintext removed — a caller
   who asked for encryption at rest is never handed an unencrypted recording.
-- **There is a plaintext window.** Audio is written as it arrives and encrypted
+- **A finalisation cipher has a plaintext window.** Audio is written as it arrives and encrypted
   at finalisation, so the file exists unencrypted on the recorder's storage for
   the duration of the call. If that window is unacceptable, record to an
   encrypted volume, or implement `AudioRecorder` directly with a streaming

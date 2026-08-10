@@ -424,7 +424,10 @@ pipeline = AudioPipelineConfig(
     aec=WebRTCAECProvider(sample_rate=16000),
     denoiser=RNNoiseDenoiserProvider(sample_rate=16000),
     recorder=WavFileRecorder(),
-    recording_config=RecordingConfig(storage="./recordings"),
+    recording_config=RecordingConfig(
+        storage="./recordings",
+        storage_encrypted_at_rest=True,
+    ),
 )
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)

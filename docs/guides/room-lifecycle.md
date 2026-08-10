@@ -86,6 +86,9 @@ room = await kit.check_room_timers("support-123")
 
 # Evaluate every ACTIVE / PAUSED room — returns the ones that transitioned
 transitioned = await kit.check_all_timers()
+
+# Multi-tenant scheduler: never sweep another organization's rooms
+transitioned = await kit.check_all_timers(organization_id="acme")
 ```
 
 `check_room_timers()` computes `elapsed = now - last_activity_at`, applies the close threshold first, then the pause threshold, and persists any status change. `check_all_timers()` sweeps all active and paused rooms and returns just the list that changed.

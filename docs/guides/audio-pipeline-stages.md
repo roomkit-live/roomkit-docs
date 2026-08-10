@@ -109,6 +109,7 @@ config = RecordingConfig(
     trigger=RecordingTrigger.ALWAYS,         # ALWAYS, SPEECH_ONLY
     format="wav",
     storage="/recordings",
+    storage_encrypted_at_rest=True,          # storage encryption is a deployment guarantee
 )
 ```
 

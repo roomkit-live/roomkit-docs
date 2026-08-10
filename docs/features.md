@@ -226,6 +226,33 @@ transitioned = await kit.check_all_timers()
 
 See the [Room Lifecycle & Timers guide](guides/room-lifecycle.md) for statuses, the activity model, and resuming paused rooms.
 
+#### Organization-scoped room operations
+
+Create tenant-owned rooms with `organization_id`, then pass the authenticated
+tenant to room operations. A mismatch is reported as `RoomNotFoundError` so a
+caller cannot probe room ids owned by another organization:
+
+```python
+await kit.create_room(room_id="support-123", organization_id="acme")
+await kit.attach_channel(
+    "support-123", "sms-user", organization_id="acme"
+)
+await kit.set_access(
+    "support-123", "sms-user", Access.READ_ONLY, organization_id="acme"
+)
+events = await kit.get_timeline("support-123", organization_id="acme")
+```
+
+The scope is accepted consistently by room reads/writes, channel binding
+operations, lifecycle/timer operations, participant resolution,
+tasks/observations and read markers. `check_all_timers(organization_id="acme")`
+sweeps only that tenant's rooms.
+
+`organization_id` remains optional for single-tenant compatibility: RoomKit is
+a library and has no request principal from which to infer it. A multi-tenant
+application must derive it from authenticated context and pass it at every
+boundary; never accept the scope itself from untrusted request data.
+
 ### Event Pipeline
 
 Every message passes through a deterministic processing pipeline:
