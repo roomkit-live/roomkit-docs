@@ -77,6 +77,31 @@ av = AudioVideoChannel("av", backend=backend, video_bridge=config)
 | `enabled` | `True` | Whether bridging is active. Set `False` to pause forwarding. |
 | `max_participants` | `10` | Maximum bridged sessions per room. Raises `RuntimeError` if exceeded. |
 | `forwarding_strategy` | `"forward"` | Direct frame forwarding. N-party compositing (`"composite"`) is planned for a future release. |
+| `keyframe_interval_s` | `5.0` | Send a PLI to every session in the room this often, so a decoder stuck after packet loss recovers. `0` disables. |
+| `keyframe_wait_s` | `1.0` | How long a receiver holds delta frames from a sender that has not produced a keyframe yet. `0` forwards unconditionally. |
+
+### Waiting for a keyframe
+
+A decoder handed delta frames from the middle of a stream renders garbage until
+the next keyframe, so the bridge holds a sender's deltas until that sender has
+delivered one keyframe *to that receiver*. Joining a room already requests a
+keyframe from every peer, so a cooperating sender clears the gate almost
+immediately and a late joiner starts on a clean picture instead of a smear.
+
+The wait is bounded on purpose. A sender that never answers PLI — a B2BUA that
+does not relay RTCP feedback, for instance — would otherwise leave the receiver
+black forever, which is worse than a briefly corrupt picture. After
+`keyframe_wait_s` the bridge logs a warning and stops gating that pair:
+
+```
+VideoBridge: no keyframe from 1a2b3c4d for 5e6f7a8b after 1.0s —
+forwarding delta frames anyway (source may not answer PLI)
+```
+
+Seeing that warning routinely means the sender is not responding to keyframe
+requests. Raising `keyframe_wait_s` only lengthens the black period; the fix is
+on the signalling path. Set it to `0` when the topology is known never to relay
+RTCP and you would rather not pay the delay at all.
 
 ### VideoChannel vs AudioVideoChannel
 

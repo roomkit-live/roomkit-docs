@@ -235,7 +235,7 @@ Every message passes through a deterministic processing pipeline:
 3. **Channel conversion** -- `handle_inbound()` converts the raw message to a `RoomEvent`
 4. **Identity resolution** -- Identify the sender (optional, with timeout and channel filtering)
 5. **Room lock** -- Acquire per-room lock for atomic processing
-6. **Idempotency check** -- Reject duplicate messages by `idempotency_key`
+6. **Idempotency check** -- A repeated `idempotency_key` skips processing and returns the event the first delivery committed
 7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST), before any persistence
 8. **Write-permission gate** -- A source whose binding cannot write (`READ_ONLY`/`NONE`, or muted) is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected
 9. **Edit/delete mutation** -- For `EDIT`/`DELETE` events, the target message is mutated only here -- after hooks allow the event -- so a moderation hook that blocks the edit leaves the target untouched
@@ -2494,6 +2494,29 @@ result = await kit.process_inbound(InboundMessage(
 ```
 
 The idempotency check is performed inside the room lock to prevent TOCTOU races.
+
+A redelivery is not reprocessed, and it is not refused either: it comes back
+carrying the event the *first* delivery committed, so the caller can read the
+outcome it missed.
+
+```python
+first = await kit.process_inbound(message)
+again = await kit.process_inbound(message)   # same idempotency_key
+
+assert again.event.id == first.event.id      # the same event, not a new one
+assert not again.blocked                     # the message was accepted, once
+```
+
+That matters for the case idempotency keys exist to serve: a provider retries
+because it never saw the first response, and the retry is how it asks what
+happened. Reporting the redelivery as blocked would answer a question it did
+not ask.
+
+A `ConversationStore` resolves the original through
+`get_event_by_idempotency_key`. It is not abstract and returns `None` by
+default, so a store that only records keys without being able to read them back
+still conforms — a duplicate then comes back as `blocked=True` with
+`reason="duplicate"`, and nothing is reprocessed either way.
 
 ---
 

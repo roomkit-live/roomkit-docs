@@ -498,7 +498,7 @@ graph LR
 | **Rate Limiting** | `TokenBucketRateLimiter` | Per-channel token bucket; configurable per-second/minute/hour limits with wait-based backpressure |
 | **Retry with Backoff** | `retry_with_backoff` | Exponential backoff (`base * exponential_base^attempt`, capped at `max_delay_seconds`) for transient failures |
 | **Chain Depth Limit** | `max_chain_depth` (default 5) | Prevent infinite event loops from AI reentry; exceeded events stored as BLOCKED with observations |
-| **Idempotency** | `idempotency_key` on events | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races) |
+| **Idempotency** | `idempotency_key` on events | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races); a redelivery returns the original event |
 | **Process Timeout** | `process_timeout` (default 30s) | Prevent runaway locked processing from starving other rooms |
 | **Identity Timeout** | `identity_timeout` (default 10s) | Prevent slow identity resolvers from blocking the pipeline |
 

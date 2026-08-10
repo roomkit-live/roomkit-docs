@@ -607,7 +607,7 @@ The storage interface defines 30 abstract methods across 8 categories:
 | Category | Methods |
 |---|---|
 | **Rooms** | `create_room`, `get_room`, `update_room`, `delete_room`, `list_rooms`, `find_rooms`, `find_latest_room`, `find_room_id_by_channel` |
-| **Events** | `add_event`, `get_event`, `list_events`, `check_idempotency`, `get_event_count` |
+| **Events** | `add_event`, `get_event`, `list_events`, `check_idempotency`, `get_event_by_idempotency_key`, `get_event_count` |
 | **Bindings** | `add_binding`, `get_binding`, `update_binding`, `remove_binding`, `list_bindings` |
 | **Participants** | `add_participant`, `get_participant`, `update_participant`, `list_participants` |
 | **Identities** | `create_identity`, `get_identity`, `resolve_identity`, `link_address` |
