@@ -376,8 +376,10 @@ Filter options:
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
-| `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking) |
+| `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
 | `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included |
+| `ON_PLAN_UPDATED` | Async | An agent rewrote its structured task plan. Carries a `PlanUpdatedEvent` with the plan as the agent wrote it |
+| `ON_STATUS_POSTED` | Async | A status reached the inter-agent StatusBus. Fires for the room named in the entry's `metadata["room_id"]` — the bus itself is global |
 
 ### AI Intelligence Layer
 
@@ -2645,15 +2647,30 @@ async def handle_room_created(event: FrameworkEvent) -> None:
 ```
 
 Framework event types:
-- `room_created`, `room_closed`, `room_paused`
-- `room_channel_attached`, `room_channel_detached`
-- `event_blocked`, `event_processed`
-- `delivery_succeeded`, `delivery_failed`
-- `broadcast_partial_failure`
-- `chain_depth_exceeded`
-- `identity_timeout`, `process_timeout`
-- `hook_error`
-- `channel_connected`, `channel_disconnected` (WebSocket)
+
+**Rooms** — `room_created`, `room_paused`, `room_closed`, `room_archived`,
+`room_refused_event` (a room whose status refuses new events turned one away),
+`room_channel_attached`, `room_channel_detached`
+
+**Events** — `event_blocked`, `event_processed`, `chain_depth_exceeded`
+
+**Delivery** — `delivery_succeeded`, `delivery_failed`,
+`broadcast_partial_failure`
+
+**Channels and sources** — `channel_registered`, `channel_unregistered`
+(the registry itself changing), `channel_connected`, `channel_disconnected`
+(WebSocket), `source_connected` / `source_disconnected`, also emitted under
+their original names `source_attached` / `source_detached`
+
+**Identity** — `identity_resolved`, `identity_timeout`
+
+**Hooks** — `hook_error` (a hook raised), `hook_timeout` (a hook never came
+back — a distinct condition, not folded into `hook_error`)
+
+**Resilience** — `circuit_breaker_opened`, `circuit_breaker_closed`, fired once
+per transition rather than per rejected delivery, and `process_timeout`
+
+**Voice** — `voice_session_ready` (the audio path is live)
 
 ### Telemetry Providers
 

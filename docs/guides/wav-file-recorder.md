@@ -80,6 +80,49 @@ Files are named `{session_id}_{timestamp}.wav` where timestamp is `YYYYMMDDTHHMM
 
 In `SEPARATE` mode, two files are created: `{session_id}_{timestamp}_inbound.wav` and `{session_id}_{timestamp}_outbound.wav`.
 
+## Encryption at rest
+
+Recordings are written in the clear unless you configure a cipher. RFC §17.6
+makes encryption at rest a requirement for stored audio; the framework owns
+*when* it happens, you own *how*:
+
+```python
+from roomkit.voice.pipeline import RecordingConfig, RecordingEncryption
+
+
+class MyEncryption(RecordingEncryption):
+    @property
+    def name(self) -> str:
+        return "aes-gcm"
+
+    def encrypt_file(self, path: str) -> str:
+        # Encrypt in place or write alongside, then remove the plaintext.
+        # Return the path of the encrypted artifact.
+        ...
+
+
+config = RecordingConfig(storage="./recordings", encryption=MyEncryption())
+```
+
+The recorder calls `encrypt_file()` once a file is complete, and
+`RecordingResult.urls` then names the encrypted artifacts, with
+`metadata["encryption"]` set to the provider's `name`.
+
+No default cipher ships, deliberately: a default key is not encryption. Which
+algorithm, where the key lives and how it rotates are decisions the framework
+cannot make for you.
+
+Two properties worth designing around:
+
+- **A file that cannot be encrypted is deleted**, not returned in the clear. If
+  the cipher raises, the failure is logged and the plaintext removed — a caller
+  who asked for encryption at rest is never handed an unencrypted recording.
+- **There is a plaintext window.** Audio is written as it arrives and encrypted
+  at finalisation, so the file exists unencrypted on the recorder's storage for
+  the duration of the call. If that window is unacceptable, record to an
+  encrypted volume, or implement `AudioRecorder` directly with a streaming
+  cipher.
+
 ## How mixing works
 
 For `MIXED` and `STEREO` modes, inbound and outbound audio is buffered in memory during the session. On `stop()`:

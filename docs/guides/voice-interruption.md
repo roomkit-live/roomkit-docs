@@ -29,7 +29,7 @@ voice = VoiceChannel(
 | **IMMEDIATE** | Cancel TTS on any speech detection | IVR, command interfaces | Highest |
 | **CONFIRMED** | Wait for `min_speech_ms` before interrupting | General conversation | Low |
 | **SEMANTIC** | Use backchannel detection to distinguish "uh-huh" from real interruptions | Customer support, therapy | Lowest |
-| **DISABLED** | Ignore user speech during playback | Announcements, legal disclaimers | None |
+| **DISABLED** | Never interrupt — queue user speech until playback ends | Announcements, legal disclaimers | None |
 
 ## Configuration
 
@@ -79,6 +79,22 @@ voice = VoiceChannel(
 
 Waits until the user has been speaking for at least `min_speech_ms` before confirming the interruption. Filters out brief noise and accidental sounds.
 
+The evaluation happens twice. At speech onset no duration has accumulated yet,
+so the first look can only say "not yet" — the segment is held as possible echo
+and a second look is taken once the speech has had `min_speech_ms` to sustain.
+If the speech stopped in between, it was a blip and nothing is interrupted. The
+confirmation logs at INFO:
+
+```
+Barge-in confirmed after 300ms of sustained speech (session <id>)
+```
+
+That deferral is audible in one place: with a streaming STT provider, capture
+starts at the confirmation, so roughly the first `min_speech_ms` of the
+utterance does not reach the streaming transcript. The batch fallback receives
+the whole segment, so the text is not lost — but lower `min_speech_ms` if you
+need the leading words on the streaming path.
+
 ```python
 voice = VoiceChannel(
     "voice",
@@ -107,7 +123,9 @@ voice = VoiceChannel(
 
 ### DISABLED
 
-Ignores all user speech during playback. The AI finishes speaking before processing any user input.
+Never interrupts. Speech that arrives while the assistant is talking is
+**queued, not discarded**: the assistant finishes its turn, and the held
+utterance is then processed as if it had just been spoken.
 
 ```python
 voice = VoiceChannel(
@@ -118,6 +136,25 @@ voice = VoiceChannel(
     ),
 )
 ```
+
+The flush happens once the playback's echo-decay drain has elapsed — about two
+seconds after the last audio is sent — and it logs at INFO so a session shows
+plainly that nothing was dropped:
+
+```
+Flushing 1 queued speech segment(s) for <session> (playback finished)
+```
+
+Two consequences to design around:
+
+- The caller's interjection is answered a few seconds late by construction.
+  That delay is the point of the strategy, not a defect.
+- The backlog is bounded. A caller who talks continuously through a very long
+  answer will have their earliest segments dropped, with a warning, rather
+  than growing the queue without limit.
+
+Use it for announcements, legal disclaimers and any turn that must be heard in
+full — while still hearing what the caller said during it.
 
 ## Backchannel Detection
 
@@ -202,6 +239,15 @@ voice = VoiceChannel(
 ## Hook Integration
 
 Three hooks fire during interruption events:
+
+!!! note "Where the speech is detected does not change who decides"
+
+    Speech during playback can be noticed by the pipeline's VAD, by the
+    continuous-STT energy check, or by a transport that does its own detection
+    and calls `on_barge_in`. All three routes consult the same
+    `InterruptionConfig`: a backend with native detection cannot override
+    `DISABLED`, and it is subject to `allow_during_first_ms` like every other
+    route. A transport reports *detected speech*, not a decision.
 
 ### ON_BARGE_IN
 

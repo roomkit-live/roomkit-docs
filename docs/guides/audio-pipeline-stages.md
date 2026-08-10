@@ -145,6 +145,51 @@ The detector emits `DTMFEvent(digit, duration_ms, confidence)` and fires the `ON
 
 **Outbound DTMF**: To *send* DTMF digits to the remote party (e.g., an AI agent navigating an IVR menu), use `VoiceChannel.send_dtmf(session, digit, duration_ms=160)`. This sends RFC 4733 telephone-events via the SIP or RTP backend. See the [SIP backend guide](sip-backend.md#outbound-sending) for details.
 
+### Redaction
+
+DTMF digits carry card numbers, PINs and account numbers. `DTMFRedaction` masks
+them wherever the framework itself exposes a digit:
+
+```python
+from roomkit.voice.pipeline import AudioPipelineConfig, DTMFRedaction
+
+pipeline = AudioPipelineConfig(
+    vad=vad,
+    dtmf=detector,
+    dtmf_redaction=DTMFRedaction(keep_first=4, keep_last=4),
+)
+```
+
+`mask()` is also usable directly on a sequence your own code accumulates:
+
+```python
+DTMFRedaction(keep_first=4, keep_last=4).mask("4111111111111111")
+# '4111********1111'
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `True` | The object exists to turn masking on |
+| `keep_first` | `0` | Leading digits left in the clear |
+| `keep_last` | `0` | Trailing digits left in the clear |
+| `mask_char` | `"*"` | Character substituted for each masked digit |
+
+The defaults mask everything: a redaction that leaks the head of a PIN by
+default would be a worse trap than none at all. A sequence shorter than the
+digits it would keep in the clear is masked entirely — keeping edges gives
+context on a long number, not a peephole onto a short secret.
+
+What redaction covers, and what it deliberately does not:
+
+- **Masked** — `frame.metadata["dtmf"]["digit"]`, which travels to recorders,
+  debug taps and logs, and gains `"redacted": True`.
+- **Masked** — `DTMFDetectedEvent.redacted_digit`, for anything that logs,
+  stores or transcribes from a hook. It equals `digit` when no redaction is
+  configured, so a handler can use it unconditionally.
+- **Not masked** — `DTMFDetectedEvent.digit`. The `ON_DTMF` hook is how an IVR
+  reads the digits it exists to collect; masking it would remove the feature
+  rather than protect it.
+
 ---
 
 ## Stage: AEC (Acoustic Echo Cancellation)

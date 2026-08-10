@@ -19,7 +19,7 @@ Room timers give a conversation a **time-to-live**: pause it after a short idle 
 | `ACTIVE` | Normal operation. The default inbound router only routes messages to active rooms. |
 | `PAUSED` | Soft-idle. The room stopped receiving new traffic but is not yet closed. Reached via `inactive_after_seconds`. |
 | `CLOSED` | Terminal. The room is finished and `closed_at` is set. Reached via `closed_after_seconds` or `close_room()`. |
-| `ARCHIVED` | Terminal storage state, set by your application — never by timers. |
+| `ARCHIVED` | Terminal storage state, reached with `archive_room()` — never by timers. |
 
 ```
                 inactive_after_seconds idle
@@ -152,6 +152,28 @@ Timers are optional. You can always end a room directly, which sets `closed_at` 
 
 ```python
 await kit.close_room("support-123")
+```
+
+## Archiving
+
+`archive_room()` moves a room to `ARCHIVED`, the terminal storage state:
+
+```python
+await kit.archive_room("support-123")
+```
+
+It refuses new events exactly as closing does — the difference is intent.
+A closed room may be reopened by returning it to `ACTIVE`; an archived one is
+done. Reading is unaffected at every status: history, participants and bindings
+stay readable in an archived room.
+
+The call is idempotent, stops any room-level media recorder, and emits the
+`room_archived` framework event:
+
+```python
+@kit.on("room_archived")
+async def on_archived(event):
+    await warehouse.export(event.room_id)
 ```
 
 ## Example
