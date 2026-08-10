@@ -1787,8 +1787,8 @@ Barge-in triggers:
 | `ON_VAD_SILENCE` | Async | Custom silence handling logic |
 | `ON_VAD_AUDIO_LEVEL` | Async | Audio level UI meters |
 | `ON_DTMF` | Async | IVR navigation, call transfer |
-| `BEFORE_BRIDGE_AUDIO` | Sync | Block or monitor per-frame audio bridge forwarding |
-| `BEFORE_BRIDGE_VIDEO` | Sync | Block or monitor per-frame video bridge forwarding |
+| `BEFORE_BRIDGE_AUDIO` | Sync | Block, modify or monitor per-frame audio bridge forwarding |
+| `BEFORE_BRIDGE_VIDEO` | Sync | Block, modify or monitor per-frame video bridge forwarding |
 
 #### DTMF (Touch-Tone Digits)
 
@@ -1854,7 +1854,7 @@ def mute_filter(session, frame):
 voice.set_bridge_filter(mute_filter)
 ```
 
-**BEFORE_BRIDGE_AUDIO hook** fires for each frame before forwarding, with `HookResult.block()` support:
+**BEFORE_BRIDGE_AUDIO hook** fires for each frame before forwarding, with `HookResult.block()` and `HookResult.modify()` support:
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BRIDGE_AUDIO, execution=HookExecution.SYNC)
@@ -1901,7 +1901,7 @@ def hide_video(session, frame):
 av.set_bridge_filter(hide_video)  # VideoChannel method
 ```
 
-**BEFORE_BRIDGE_VIDEO hook** fires for each frame before forwarding, with `HookResult.block()` support:
+**BEFORE_BRIDGE_VIDEO hook** fires for each frame before forwarding, with `HookResult.block()` and `HookResult.modify()` support:
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BRIDGE_VIDEO)

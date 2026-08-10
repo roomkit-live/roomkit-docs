@@ -215,8 +215,8 @@ The filter receives `(source_session, AudioFrame)` and returns:
 ### BEFORE_BRIDGE_AUDIO
 
 The `BEFORE_BRIDGE_AUDIO` hook fires for each audio frame before it is
-forwarded to other sessions.  It supports `HookResult.block()` to drop
-individual frames:
+forwarded to other sessions. It supports `HookResult.block()` to drop
+individual frames, and `HookResult.modify()` to forward a different one:
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BRIDGE_AUDIO, execution=HookExecution.SYNC)
@@ -236,8 +236,29 @@ async def monitor_bridge(event, ctx):
     When hooks are registered, frames are routed through the event loop
     for hook evaluation.
 
+To reshape a frame rather than drop it, return a new `BridgeAudioEvent`
+carrying the replacement — that frame is the one forwarded:
+
+```python
+from roomkit.voice.events import BridgeAudioEvent
+
+@kit.hook(HookTrigger.BEFORE_BRIDGE_AUDIO, execution=HookExecution.SYNC)
+async def duck_when_flagged(event, ctx):
+    if not flagged(event.session):
+        return HookResult.allow()
+    silence = AudioFrame(data=b"\x00" * len(event.frame.data),
+                         sample_rate=event.frame.sample_rate)
+    return HookResult.modify(
+        event=BridgeAudioEvent(
+            session=event.session, frame=silence, room_id=event.room_id
+        )
+    )
+```
+
 For synchronous, ultra-low-latency frame filtering (< 1ms), use
-`set_bridge_filter()` instead.
+`set_bridge_filter()` instead. It runs in the audio thread and builds no
+room context, so it is the right place for a transform applied to *every*
+frame; the hook is for the occasional frame a policy has to reshape.
 
 ### Other Voice Hooks
 

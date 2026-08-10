@@ -51,9 +51,29 @@ config = InterruptionConfig(
 | `strategy` | `CONFIRMED` | Which interruption strategy to use |
 | `min_speech_ms` | `300` | Minimum speech duration (ms) before confirming interruption (CONFIRMED strategy) |
 | `allow_during_first_ms` | `0` | Grace period: don't interrupt during the first N ms of playback |
-| `flush_partial_tts` | `True` | Flush buffered TTS audio on interruption |
-| `keep_partial_transcript` | `True` | Keep the partial transcript when interrupted |
+| `flush_partial_tts` | `True` | Discard audio already handed to the backend. `False` lets the current utterance finish while the user's speech is processed alongside it |
+| `keep_partial_transcript` | `True` | Record what the room actually heard as an internal event when the bot is cut off |
 | `backchannel_detector` | `None` | Required for SEMANTIC strategy |
+
+### What an interruption leaves behind
+
+The AI's response event is written when the text is *produced*, not when it is
+heard, so a bot cut off after two words still has its whole line in the
+timeline. With `keep_partial_transcript` on, the interruption records what the
+room actually heard as an `internal`-visibility event:
+
+```python
+{
+    "interrupted": True,
+    "played_ms": 1840,
+    "voice_session_id": "...",
+    # "played_percentage": 46.0   — only when the utterance's duration is known
+}
+```
+
+The full text is stored rather than a truncated guess: `played_ms` says how far
+playback got, and cutting the string at the same proportion would invent a word
+boundary that TTS timing does not guarantee.
 
 ## Strategy Details
 
