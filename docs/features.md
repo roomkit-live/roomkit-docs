@@ -2480,6 +2480,46 @@ kit = RoomKit(max_chain_depth=5)  # Default: 5
 
 Events exceeding the chain depth limit are stored with `status=BLOCKED` and `blocked_by="event_chain_depth_limit"`. An `Observation` is created documenting the exceeded depth. A framework event `chain_depth_exceeded` is emitted.
 
+### Delivery outcomes
+
+`process_inbound` waits for its event's delivery set to complete, so the result
+carries the per-channel outcome by the time it returns:
+
+```python
+result = await kit.process_inbound(message)
+
+for channel_id, outcome in result.delivery_results.items():
+    if outcome.status == "failed":
+        print(channel_id, outcome.error.code, outcome.error.retryable)
+```
+
+A `DeliveryResult` carries `status` (`"sent"`, `"queued"`, `"failed"`),
+`provider_message_id` where the channel supplies one, and on failure a
+`DeliveryError` with `code`, `message` and `retryable` — `retryable` says what
+the retry loop would decide, read from the provider's own exception rather than
+guessed from its message.
+
+The map covers the caller's own event. An AI reply is a separate event with its
+own delivery set and its own result.
+
+#### What survives the call
+
+`RoomEvent.delivery_results` records the same map **only when at least one
+channel failed**:
+
+```python
+stored = await kit.store.get_event(result.event.id)
+
+stored.delivery_results          # {} — every delivery succeeded
+stored.delivery_results["sms"]   # {"status": "failed", "error": {...}}
+```
+
+The asymmetry is deliberate. A set that all succeeded is its own record, and
+one extra write per event to say so costs the whole message volume. A set with
+a failure is the one someone comes back to hours later, when the live
+`delivery_failed` event is long gone — so that one is written, and written
+whole, successes included: which channels *did* receive it is half the answer.
+
 ### Idempotency
 
 Duplicate message detection via idempotency keys:
@@ -2678,7 +2718,9 @@ Framework event types:
 **Events** — `event_blocked`, `event_processed`, `chain_depth_exceeded`
 
 **Delivery** — `delivery_succeeded`, `delivery_failed`,
-`broadcast_partial_failure`
+`broadcast_partial_failure`. These are *live*: they reach whoever is
+subscribed when the broadcast runs. For the outcome after the fact, see
+[Delivery outcomes](#delivery-outcomes).
 
 **Channels and sources** — `channel_registered`, `channel_unregistered`
 (the registry itself changing), `channel_connected`, `channel_disconnected`
