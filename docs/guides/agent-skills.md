@@ -180,6 +180,8 @@ The prompt block then carries both:
 
 Re-registering a skill clears either mark and makes it fully available again.
 
+See the [skill_visibility.py example](https://github.com/roomkit-live/roomkit/blob/main/examples/skill_visibility.py) for a runnable demo of all three states, including a recommender hook that surfaces an unlisted skill by name.
+
 ---
 
 ## AIChannel integration
