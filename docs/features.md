@@ -755,7 +755,9 @@ When skills are configured, the AI channel automatically:
 
 The `ScriptExecutor` ABC has no default implementation — execution policy (sandboxing, timeouts, interpreters) is always the integrator's responsibility.
 
-See the [Agent Skills guide](guides/agent-skills.md) for full details on skill directory structure, script execution, and configuration.
+A registered skill has one of three visibility states: **available** (listed and activatable, the default), **unlisted** (`mark_unlisted` — absent from the prompt manifest but still activatable by any path that names it, for catalogues where advertising every entry would drown the ones that matter), and **unavailable** (`mark_unavailable` — not activatable, listed with a reason so the model can explain the gap).
+
+See the [Agent Skills guide](guides/agent-skills.md) for full details on skill directory structure, visibility states, script execution, and configuration.
 
 #### AI Thinking / Reasoning
 

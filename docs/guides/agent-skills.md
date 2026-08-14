@@ -127,6 +127,59 @@ xml = registry.to_prompt_xml()
 
 Content is HTML-escaped to prevent prompt injection.
 
+### Visibility states
+
+A registered skill is in one of three states, which differ in who can see it
+and who can activate it:
+
+| State | In `to_prompt_xml()` | `activate_skill` / `get_skill()` | How it gets there |
+|-------|----------------------|----------------------------------|-------------------|
+| **Available** | Yes, in `<available_skills>` | Yes | `discover()` / `register()` — the default |
+| **Unlisted** | No | Yes | `mark_unlisted(name)` |
+| **Unavailable** | Name only, in `<unavailable_skills>` with a reason | No | `mark_unavailable(name, reason)` |
+
+**Unlisted** keeps a skill activatable without advertising it. For catalogues
+where advertising every entry would drown the ones that matter: the host keeps
+quiet about a skill while any path that names it — a recommender nudge, a user
+asking for it — still activates it, which is what lets it earn its listing
+back.
+
+```python
+registry.mark_unlisted("legacy-import")
+
+registry.listed_names   # what the prompt manifest shows
+registry.skill_names    # every registered skill, unlisted included
+```
+
+`mark_unlisted` on an unknown name is ignored — there is nothing to hide.
+
+**Unavailable** removes a skill from use entirely but keeps its name and a
+reason in the prompt, so the model can explain the gap instead of guessing at
+a name that will answer "not found" — for example a `requires` gate dropping a
+skill whose tools are not granted in this execution context:
+
+```python
+registry.mark_unavailable("deploy-helper", "requires tools not granted here")
+
+registry.get_unavailable_reason("deploy-helper")
+registry.unavailable_skills  # {name: reason}
+```
+
+The prompt block then carries both:
+
+```xml
+<available_skills>
+  ...
+</available_skills>
+<unavailable_skills>
+  <skill name="deploy-helper">
+    <reason>requires tools not granted here</reason>
+  </skill>
+</unavailable_skills>
+```
+
+Re-registering a skill clears either mark and makes it fully available again.
+
 ---
 
 ## AIChannel integration
