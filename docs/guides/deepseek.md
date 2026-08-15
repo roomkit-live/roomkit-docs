@@ -73,4 +73,4 @@ DeepSeek also fronts an Anthropic-shaped API at `https://api.deepseek.com/anthro
 `available_models()` carries DeepSeek's own per-million rates so `ModelPricing.price()` can cost a response offline.
 
 !!! note "Peak / off-peak billing"
-    From 2026-08-16 16:00 UTC DeepSeek bills peak and off-peak rates (peak 01:00-04:00 and 06:00-10:00 UTC, off-peak at half). `ModelPricing` carries one rate per model with no time dimension, so the catalog states a single list price. Treat the figure as indicative and check [DeepSeek's pricing page](https://api-docs.deepseek.com/quick_start/pricing) when it has to be exact.
+    From 2026-08-16 16:00 UTC DeepSeek bills peak and off-peak rates (peak 01:00-04:00 and 06:00-10:00 UTC, off-peak at exactly half). `ModelPricing` carries one rate per model with no time dimension, so the catalog states the **peak** column — the undiscounted one, so an off-peak call bills less than quoted rather than more. Treat the figure as indicative and check [DeepSeek's pricing page](https://api-docs.deepseek.com/quick_start/pricing) when it has to be exact.
