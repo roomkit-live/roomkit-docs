@@ -434,7 +434,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, Gemini, Mistral, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, Gemini, Mistral, DeepSeek, Qwen, or custom providers
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
@@ -520,7 +520,7 @@ trusting a stale number.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
   `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
-  Ollama, and PolarGrid. Verified against a live upstream mirror on every
+  DeepSeek, Qwen, Ollama, and PolarGrid. Verified against a live upstream mirror on every
   release (`make check-models`), which is what catches a vendor shipping a new
   flagship — a stale list is internally consistent, so no test can.
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local
@@ -530,6 +530,9 @@ trusting a stale number.
 - **OpenRouter** -- its offline list is a deliberately small slice of current
   flagships; `list_models()` reads OpenRouter's `/models` endpoint (300+ models
   across providers, with live context windows and vision flags).
+- **Qwen** -- the inverse case: Model Studio's OpenAI-compatible deployment
+  serves `/chat/completions` and nothing else, so the offline catalog *is* the
+  discovery surface and `list_models()` returns it unchanged.
 
 See `examples/list_models.py`.
 

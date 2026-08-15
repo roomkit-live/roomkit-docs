@@ -120,6 +120,8 @@ nav:
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
           - PolarGrid Provider: guides/polargrid.md
           - OpenRouter Provider: guides/openrouter.md
+          - DeepSeek Provider: guides/deepseek.md
+          - Qwen Provider: guides/qwen.md
           - Gemini on Vertex AI: guides/gemini-vertex.md
           - Image Generation: guides/image-generation.md
       - Channels & Content:
