@@ -52,7 +52,7 @@ The reasoning trace comes back in a dedicated field and surfaces as `AIResponse.
 
 ## Prompt caching and cost
 
-DeepSeek's context cache is **automatic** — there is nothing to mark, and populating it is free. Cache hits are billed at roughly 2% of the uncached input rate, and the provider maps DeepSeek's own `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` counters onto RoomKit's canonical `cache_read_input_tokens` and `input_tokens`, so a cost dashboard prices them at the cache rate instead of full input.
+DeepSeek's context cache is **automatic** — there is nothing to mark, and populating it is free. Cache hits are billed at roughly 3% of the uncached input rate, and the provider maps DeepSeek's own `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` counters onto RoomKit's canonical `cache_read_input_tokens` and `input_tokens`, so a cost dashboard prices them at the cache rate instead of full input.
 
 ```python
 response = await provider.generate(context)
