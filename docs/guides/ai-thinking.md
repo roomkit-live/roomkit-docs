@@ -46,36 +46,98 @@ Next generation sees prior reasoning (required by Anthropic, useful for all)
 
 ## Configuration
 
-| Parameter | Location | Description |
-|-----------|----------|-------------|
-| `thinking_budget` | `AIChannel()` constructor | Default token budget for reasoning |
-| `thinking_budget` | Binding metadata | Per-room override |
+Three settings steer reasoning, and all three resolve through the same chain:
 
-### Default thinking budget
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `thinking_budget` | `int \| None` | Token budget for reasoning |
+| `enable_thinking` | `bool \| None` | Turn the reasoning block on or off, for providers that expose the switch |
+| `reasoning_effort` | `str \| None` | Reasoning verbosity, for providers that grade it — the accepted values are the provider's own |
 
-Set the default budget when creating the channel:
+`None` everywhere means "not set at this tier", so an unset knob defers
+outward rather than overriding with a default.
+
+### The resolution chain
+
+Each setting is resolved fresh at the start of every turn, from the most
+specific source that has an opinion:
+
+```
+1. Binding metadata          → per-room operator intent, always wins
+2. config_provider result    → resolved by your callback, every turn
+3. AIChannel constructor     → the channel default
+4. Provider config           → the provider's own setting
+5. (nothing set)             → the model's own default
+```
+
+### Channel default
+
+Set the default when creating the channel:
 
 ```python
 ai = AIChannel(
     "ai-thinker",
     provider=provider,
     thinking_budget=8192,
+    enable_thinking=True,
+    reasoning_effort="low",
 )
 ```
 
 ### Per-room override
 
-Override the budget for specific rooms via binding metadata:
+Override for specific rooms via binding metadata:
 
 ```python
 await kit.attach_channel("math-room", "ai-thinker",
     category=ChannelCategory.INTELLIGENCE,
     metadata={
         "system_prompt": "You are a math tutor. Show your work.",
-        "thinking_budget": 16384,  # More budget for complex reasoning
+        "thinking_budget": 16384,   # More budget for complex reasoning
+        "reasoning_effort": "high",
     },
 )
 ```
+
+### Per-turn override (`config_provider`)
+
+A thinking model costs two to three times the tokens and the latency of a
+direct answer, and that trade is not the same in an agent's tool loop — where
+the model is mostly shaping results it already has — as in a chat turn where
+the reasoning *is* the value. `config_provider` lets you decide per turn
+rather than standing up a second channel and a second provider to say so.
+
+The callback runs at the start of every generation and returns an
+`AIChannelTurnConfig`; `None` fields fall through to the tiers below:
+
+```python
+from roomkit import AIChannelTurnConfig
+
+async def per_turn(binding, context) -> AIChannelTurnConfig | None:
+    # Cheap, direct answers while the agent is working through its tools;
+    # full reasoning once it is composing the answer for a person.
+    if context.room.metadata.get("mode") == "agent":
+        return AIChannelTurnConfig(enable_thinking=False)
+    return AIChannelTurnConfig(enable_thinking=True, reasoning_effort="high")
+
+ai = AIChannel("ai-thinker", provider=provider, config_provider=per_turn)
+```
+
+`AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
+`max_tokens`, `thinking_budget`, `enable_thinking` and `reasoning_effort`.
+Because it is resolved every turn, it is the right place for config that
+changes underneath you — admin edits, per-user gating, feature flags — where
+snapshotting into the channel or the binding at attach time would go stale.
+
+### When reasoning eats the output budget
+
+Reasoning and the answer compete for the same `max_tokens`. A model that
+spends its whole budget inside the thinking block returns empty `content`
+with a truncation finish reason — not silence, but a cap that was too small
+for both halves. RoomKit recognises that case and does **not** waste a retry
+re-prompting under the same cap; it logs the real cause instead. If you see
+it, raise `max_tokens`, lower `reasoning_effort`, or set
+`enable_thinking=False` for that turn.
 
 ## Provider support
 
@@ -125,8 +187,7 @@ ai = AIChannel("ai", provider=provider, thinking_budget=8192)
 `create_vllm_provider` wraps `OpenAIAIProvider` — vLLM's online server *is*
 the OpenAI-compatible API, so this is the canonical integration. Set
 `api_key` to match `vllm serve --api-key` (sent as `Authorization: Bearer`).
-`headers` adds proxy/non-Bearer headers; `extra_body` forwards vLLM-specific
-request fields the OpenAI schema omits — guided decoding and extra sampling.
+`headers` adds proxy/non-Bearer headers.
 
 ```python
 provider = create_vllm_provider(VLLMConfig(
@@ -134,13 +195,68 @@ provider = create_vllm_provider(VLLMConfig(
     model="meta-llama/Llama-3.1-8B-Instruct",
     api_key="token-abc123",                  # vllm serve --api-key token-abc123
     headers={"X-Proxy-Region": "eu"},        # optional reverse-proxy headers
-    extra_body={                             # vLLM-native params
-        "top_k": 40,
-        "repetition_penalty": 1.05,
+    top_k=40,                                # typed, no extra_body needed
+    repetition_penalty=1.05,
+    extra_body={
         "guided_choice": ["yes", "no"],      # constrain output to a choice set
     },
 ))
 ```
+
+#### vLLM sampling knobs
+
+`top_p`, `top_k`, `min_p`, `presence_penalty` and `repetition_penalty` are
+declared `VLLMConfig` fields, reaching parity with `OllamaConfig`. They were
+always reachable through `extra_body`, but that left the caller to know which
+are OpenAI fields and which are vLLM extensions; the config now routes all
+five through the request body itself.
+
+Each defaults to `None`, meaning "the server decides" — which is not the same
+as sending the documented default, and is the only honest answer for a model
+RoomKit cannot see. An explicit `0` survives: `min_p=0.0` and
+`presence_penalty=0.0` are values, not absences.
+
+This is what makes a vendor's published sampling profile expressible. Qwen3
+asks for `presence_penalty=1.5` in non-thinking mode, and the failure that
+setting addresses is degenerate repetition:
+
+```python
+provider = create_vllm_provider(VLLMConfig(
+    model="Qwen/Qwen3-8B",
+    enable_thinking=False,
+    presence_penalty=1.5,   # Qwen3's own guidance for non-thinking mode
+    top_p=0.8,
+    top_k=20,
+    min_p=0.0,
+))
+```
+
+#### vLLM reasoning knobs
+
+vLLM renders the model's chat template **server-side**, so reasoning is
+steered through `chat_template_kwargs` rather than a sampling parameter — the
+top-level `reasoning_effort` an OpenAI-compatible client sends is not read by
+a locally rendered template. `enable_thinking` and `reasoning_effort` map onto
+those template kwargs, so a thinking model can be told to answer directly
+without hand-writing `extra_body`:
+
+```python
+provider = create_vllm_provider(VLLMConfig(
+    model="Qwen/Qwen3-8B",
+    enable_thinking=False,     # → chat_template_kwargs
+))
+```
+
+Both default to `None`, leaving the model's own default untouched. That
+default matters: current Qwen builds think at their **most verbose effort**
+unless told otherwise, and in a tool loop that reasoning competes with the
+answer for the same `max_tokens`.
+
+An explicit `extra_body["chat_template_kwargs"]` entry still wins, so the
+escape hatch keeps working for templates this config does not model. A
+per-turn setting resolves *over* the configured one by merging rather than
+replacing, so a turn that switches `enable_thinking` cannot silently drop a
+configured `reasoning_effort` it says nothing about.
 
 #### Native Ollama provider & authentication
 
@@ -328,11 +444,21 @@ delta = StreamThinkingDelta(thinking="Step 1: Consider...")
 | `thinking` | `str \| None` | Accumulated thinking text |
 | `thinking_signature` | `str \| None` | Provider-specific signature (Anthropic) |
 
-### AIContext field
+### AIContext fields
+
+Resolved per turn by the chain above and handed to the provider:
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `thinking_budget` | `int \| None` | Token budget for reasoning |
+| `enable_thinking` | `bool \| None` | Reasoning block on/off; `None` defers to the provider config, then to the model |
+| `reasoning_effort` | `str \| None` | Reasoning verbosity; accepted values are the provider's own |
+| `max_tokens` | `int \| None` | Output cap for this turn; `None` defers to the provider's configured `max_tokens` |
+
+`max_tokens` defaults to `None` rather than a number on purpose. A non-`None`
+default here would shadow every provider config — `context.max_tokens or
+self._config.max_tokens` would never reach the second term, and a configured
+cap would be unreachable.
 
 ## Testing
 
@@ -363,3 +489,5 @@ When `streaming=True`, `MockAIProvider.generate_structured_stream()` yields `Str
 ## Example
 
 See [`examples/ai_thinking.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/ai_thinking.py) for a runnable demo showing thinking with `AIChannel` and per-room configuration.
+
+See [`examples/ai_turn_config.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/ai_turn_config.py) for the per-turn `config_provider` chain, printing what each tier resolved to on the way to the provider.

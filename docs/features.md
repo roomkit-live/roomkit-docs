@@ -611,6 +611,33 @@ await kit.attach_channel("creative-room", "ai-bot",
 )
 ```
 
+Binding metadata is a snapshot taken at attach time. When the configuration
+changes underneath you — admin edits, per-user gating, feature flags — a
+snapshot becomes a second source of truth that goes stale. `config_provider`
+resolves the config fresh at the start of every turn instead:
+
+```python
+from roomkit import AIChannel, AIChannelTurnConfig
+
+async def per_turn(binding, context) -> AIChannelTurnConfig | None:
+    settings = await load_settings(context.room.id)   # your source of truth
+    return AIChannelTurnConfig(
+        system_prompt=settings.prompt,
+        temperature=settings.temperature,
+        enable_thinking=settings.thinking,
+    )
+
+ai = AIChannel("ai-bot", provider=provider, config_provider=per_turn)
+```
+
+Settings resolve from the most specific source that has an opinion: binding
+metadata (per-room operator intent, always wins), then the `config_provider`
+result, then the `AIChannel` constructor default, then the provider config.
+`None` at a tier means "not set here" and defers outward.
+
+`AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
+`max_tokens`, `thinking_budget`, `enable_thinking` and `reasoning_effort`.
+
 #### Function Calling / Tools
 
 AI channels support function calling via the `tools` binding metadata:
@@ -705,6 +732,24 @@ This means downstream channels (WebSocket, Voice/TTS) receive text in real time 
 
 Providers that support structured streaming (`supports_structured_streaming=True`) emit `StreamTextDelta`, `StreamToolCall`, and `StreamDone` events. The Anthropic provider has native support; other providers use a default fallback that wraps `generate()`.
 
+Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls.
+
+The loop yields a final `LoopEndMarker(reason, rounds)` on every exit, `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
+
+```python
+from roomkit.models.streaming import LoopEndMarker
+
+async def _observe(self, inner):
+    async for delta in inner:
+        if isinstance(delta, LoopEndMarker):
+            if delta.reason != "completed":
+                logger.warning("agent stopped: %s after %d rounds", delta.reason, delta.rounds)
+            continue
+        yield delta
+```
+
+`reason` is one of `completed`, `max_rounds`, `timeout`, `truncated`, `empty_response` or `cancelled`. Without it, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
+
 See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture details and the full event protocol.
 
 #### MCP Tool Provider
@@ -771,21 +816,40 @@ ai = AIChannel(
     "ai-thinker",
     provider=provider,
     system_prompt="Think step by step before answering.",
-    thinking_budget=8192,  # Token budget for reasoning
+    thinking_budget=8192,     # Token budget for reasoning
+    enable_thinking=True,     # Reasoning block on/off
+    reasoning_effort="low",   # Verbosity, for providers that grade it
 )
 
 # Per-room override via binding metadata
 await kit.attach_channel("math-room", "ai-thinker",
     category=ChannelCategory.INTELLIGENCE,
-    metadata={"thinking_budget": 16384},
+    metadata={"thinking_budget": 16384, "reasoning_effort": "high"},
 )
 ```
+
+All three settings resolve through the same per-turn chain as sampling —
+binding metadata, then the `config_provider` result, then the channel
+default, then the provider config — so reasoning can be steered per room and
+per turn, not only per provider instance.
+
+That matters because a thinking model costs two to three times the tokens and
+the latency of a direct answer, and the trade is not the same in an agent's
+tool loop, where the model is mostly shaping results it already has, as in a
+chat turn where the reasoning is the value. Steering it only on the provider
+config forced a second channel, and a second provider, to say so.
+
+Reasoning and the answer also compete for the same `max_tokens`. A round that
+spends its whole budget thinking returns empty content with a truncation
+finish reason; RoomKit recognises that case across every provider's spelling
+of it (`length`, `max_tokens`, `MAX_TOKENS`) and does not waste a retry
+re-prompting under the same cap.
 
 Thinking support varies by provider:
 
 - **Anthropic** — Native extended thinking API with signature-based round-trip fidelity
-- **Ollama / vLLM** — `<think>...</think>` tag parsing with streaming support (handles tags split across chunk boundaries)
-- **Gemini** — Accepted but no effect (Gemini does not currently emit thinking content)
+- **Ollama / vLLM** — `<think>...</think>` tag parsing with streaming support (handles tags split across chunk boundaries); vLLM also takes `enable_thinking` / `reasoning_effort` through its server-side chat template
+- **Gemini** — Thought summaries via `thinking_level` or `thinking_budget`, with thought signatures replayed across tool rounds
 
 During streaming, thinking arrives as `StreamThinkingDelta` events before text. The `ON_AI_THINKING` hook fires when reasoning is produced, and `THINKING_START` / `THINKING_END` ephemeral events enable real-time UI indicators.
 

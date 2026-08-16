@@ -161,6 +161,95 @@ The `max_tool_rounds` parameter (default 10) controls how many times tools can b
 
 This matches the non-streaming tool loop semantics and prevents side-effecting tools from executing when their results would be discarded.
 
+### Max tool calls per round
+
+`max_tool_rounds` bounds how many rounds run; it says nothing about how *wide*
+one round may be. A model that degenerates mid-completion spends its whole
+output budget emitting tool calls, and every one of them would be honoured —
+observed on a 27B local model: 164 calls in a single completion, 154 of them
+byte-identical, stopping only at `max_tokens`. That cost 164 executions and
+328 room events for one turn.
+
+A round is capped at **32** tool calls. The cap applies before the assistant
+message is assembled, not just before execution: truncating the execution
+alone would leave a tool call with no matching result in the transcript, which
+is a hard error on every OpenAI-compatible provider — trading a loop for a 400
+on the next round.
+
+The drop is invisible to the model (the calls it keeps are its own, in its own
+order) and loud in the log, which is where an operator diagnoses a looping
+model. The cap lives in the shared loop rules, so the streaming and
+non-streaming loops enforce it identically.
+
+## Knowing why the loop stopped
+
+The loop ends on rules of its own: the round cap, the wall-clock deadline, a
+round truncated at the output cap, a model that answered nothing after its
+tools, a cancellation. It knew which one fired and wrote it to the log — but
+the stream just ended, so a consumer could not tell a finished answer from a
+loop cut mid-work, and had to re-derive the cause by counting tool calls and
+reading a clock. That guess is what reports a stopped agent as a model that
+returned nothing.
+
+The loop yields a final `LoopEndMarker` on **every** exit, `completed`
+included, so the end of the stream is never itself the signal.
+
+Read it at the source, by subclassing `AIChannel` and wrapping
+`ChannelOutput.response_stream`:
+
+```python
+from roomkit.channels.ai import AIChannel
+from roomkit.models.streaming import LoopEndMarker
+
+
+class ObservingAIChannel(AIChannel):
+    async def on_event(self, event, binding, context):
+        output = await super().on_event(event, binding, context)
+        if output.response_stream is None:
+            return output
+        return output.model_copy(
+            update={"response_stream": self._observe(output.response_stream)}
+        )
+
+    async def _observe(self, inner):
+        async for delta in inner:
+            if isinstance(delta, LoopEndMarker):
+                if delta.reason != "completed":
+                    logger.warning("agent stopped: %s after %d rounds",
+                                   delta.reason, delta.rounds)
+                continue          # keep the terminal marker out of the stream
+            yield delta
+```
+
+!!! note "The marker does not reach downstream channels"
+    The framework's inbound streaming path forwards text deltas and the
+    tool-call and thinking markers to a channel's `deliver_stream`, but not
+    the terminal marker — it would arrive at a renderer as noise. So
+    overriding `deliver_stream` on a WebSocket or CLI channel will **not**
+    see it. Wrap the AI channel's own `response_stream`, as above, and act on
+    the reason there.
+
+| `reason` | The loop stopped because |
+|---|---|
+| `completed` | The model produced its answer (or the turn ran no tool at all) |
+| `max_rounds` | `max_tool_rounds` was reached |
+| `timeout` | The wall-clock deadline passed |
+| `truncated` | The final round hit the output cap with no text — often reasoning consuming the whole budget |
+| `empty_response` | The model answered nothing after its tool rounds, and the bounded retries were spent |
+| `cancelled` | The turn was cancelled |
+
+`rounds` is how many tool rounds ran before the stop. The limits each reason
+refers to are your own configuration, so they are not repeated on the marker.
+
+The marker is additive by construction rather than by promise: the streaming
+protocol is a mixed `str | StreamMarker` and its consumers already dispatch on
+the markers they know, so a text-only consumer filtering on
+`isinstance(chunk, str)` is unaffected.
+
+**Streaming only.** The non-streaming loop hands back an `AIResponse` the
+caller already holds, so its end is not silent in the same way; giving it the
+same fact would change that return type.
+
 ### Error handling
 
 Exceptions from tool handlers propagate out of the async generator. The framework's streaming delivery infrastructure catches these and logs them, the same as any other streaming error.
@@ -205,4 +294,4 @@ See [`tests/test_ai_streaming_tool_loop.py`](https://github.com/roomkit-live/roo
 
 ## Example
 
-See [`examples/streaming_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/streaming_tools.py) for a runnable demo showing the streaming tool loop with `AIChannel` and `WebSocketChannel`.
+See [`examples/streaming_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/streaming_tools.py) for a runnable demo showing the streaming tool loop with `AIChannel` and `WebSocketChannel`, including an `AIChannel` subclass that reads the `LoopEndMarker` off `response_stream`.
