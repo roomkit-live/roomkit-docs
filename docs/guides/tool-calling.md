@@ -120,6 +120,78 @@ When both `tools` and `tool_handler` are provided, the channel merges them — T
 !!! tip
     Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
 
+## What a Handler Knows About the Call
+
+The handler protocol is `(name, arguments) -> str` — no room, no speaker, no
+toolset. That omission is deliberate: an `AIChannel` object is registered once
+per `channel_id` and shared by every room it serves, so anything a handler
+closed over when it was built describes whoever attached it, not the turn now
+running. Three accessors read the current turn from a contextvar instead:
+
+| Accessor | Answers |
+|----------|---------|
+| `current_tool_room_id()` | Which room this turn belongs to |
+| `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
+| `current_tool_allowed_names()` | Every tool name the turn resolved, so a call is validated against the live toolset rather than an attach-time snapshot |
+
+Contextvars propagate down the async call chain, so they work at any depth
+without a signature change. Each returns `None` outside a tool loop (realtime
+voice pipelines, direct calls) — keep your own fallback for those paths.
+
+```python
+from roomkit.tools import current_tool_actor_id, current_tool_room_id
+
+
+async def my_handler(name: str, arguments: dict) -> str:
+    room_id = current_tool_room_id()
+    actor_id = current_tool_actor_id()
+    ...
+```
+
+### The Actor Names the Turn, It Does Not Authenticate It
+
+`current_tool_actor_id()` returns a room `Participant.id`. The inbound pipeline
+substitutes the resolved `Identity.id` for it only once identification
+succeeds — a sender still pending, ambiguous or unknown keeps whatever the
+channel supplied, or a synthetic `pending-…`, and reads back just as
+non-`None`. Reaching a person's rows with the raw value trades one wrong
+principal (whoever attached the handler) for another (whoever the channel
+claimed). Resolve it against the roster first:
+
+```python
+import json
+
+from roomkit.models.enums import IdentificationStatus
+from roomkit.tools import current_tool_actor_id, current_tool_room_id
+
+
+async def my_handler(name: str, arguments: dict) -> str:
+    room_id = current_tool_room_id()
+    actor_id = current_tool_actor_id()
+    if room_id is None or actor_id is None:
+        return json.dumps({"error": "No turn to act for"})
+
+    participant = await kit.store.get_participant(room_id, actor_id)
+    if participant is None or participant.identification is not IdentificationStatus.IDENTIFIED:
+        return json.dumps({"error": "Sender not identified"})
+
+    return await fetch_rows_for(participant.identity_id)
+```
+
+The author need not be human, either: in a multi-agent room the waking event may
+be another agent's, and its participant id reads back the same way — compare
+`participant.role` against `ParticipantRole.AGENT` when that matters.
+
+!!! warning
+    `None` is an answer, not a missing value. A system injection, a webhook or a
+    scheduled run has no author; falling back to whoever spoke last is how a
+    tool answers one person with another person's data. Refuse, or use a
+    principal you configured on purpose.
+
+See [Identity Resolution](identity-resolution.md) for how a sender becomes an
+identified participant, and `examples/tool_call_context.py` for a runnable
+two-speaker room.
+
 ## Per-Room Tool Binding
 
 Tools, system prompts, and temperature can be configured per-room via binding metadata:

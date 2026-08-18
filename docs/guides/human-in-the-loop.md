@@ -36,6 +36,19 @@ kit = RoomKit()
 human = HumanInputToolHandler(
     tool_names={"AskUserQuestion", "ConfirmAction"},
     timeout=300,  # 5 minutes
+    # A tool the turn does not offer is dropped before any handler sees it.
+    # Declare the definition here, or on the channel via `tools=`.
+    tool_definitions=[
+        AITool(
+            name="AskUserQuestion",
+            description="Ask the user a question and wait for the answer.",
+            parameters={
+                "type": "object",
+                "properties": {"question": {"type": "string"}},
+                "required": ["question"],
+            },
+        ),
+    ],
 )
 
 ai = AIChannel(
@@ -52,7 +65,9 @@ kit.register_channel(ai)
 @kit.hook(HookTrigger.ON_USER_INPUT_REQUIRED, execution=HookExecution.SYNC)
 async def notify_user(event, ctx):
     # Broadcast to frontend via WebSocket, REST, etc.
-    await ws_manager.broadcast(event.room_id, {
+    # `actor_id` is who to ask: the participant whose turn raised the request.
+    # `None` when the turn had no author — see the note below.
+    await ws_manager.notify(event.actor_id or BROADCAST, {
         "type": "question_pending",
         "pending_id": event.pending_id,
         "tool_name": event.tool_name,
@@ -187,12 +202,19 @@ human = HumanInputToolHandler(
     tool_names={"AskUserQuestion"},  # Tools that need human input
     timeout=300,                      # Seconds before timeout error
     handler=None,                     # Optional: share a HumanInputHandler
+    tool_definitions=[...],           # Definitions that put those tools in the turn
 )
 ```
 
 - Pass to `AIChannel(human_input_handler=human)` — auto-composes with the tool chain
 - Access the inner handler via `human.handler` for `resolve()` / `reject()`
 - Falls through for non-matching tools (works with `compose_tool_handlers`)
+
+!!! warning "`tool_names` gates dispatch; it does not offer the tool"
+    A tool absent from the turn's resolved toolset is dropped by the loop
+    before any handler runs — the agent gets an error and carries on, and no
+    human is ever asked. Either pass `tool_definitions` here or declare the
+    same tools on the channel (`tools=` / binding metadata).
 
 ### PendingInput
 
@@ -210,6 +232,7 @@ Mutable dataclass representing a pending request:
 | `result` | `str \| None` | Answer (set on resolve) |
 | `detached` | `bool` | No one will `wait()` on it — its creator frees it with `release()` |
 | `created_at` | `datetime` | Timestamp |
+| `actor_id` | `str \| None` | Participant whose turn raised the request |
 
 ### PendingInputEvent
 
@@ -222,7 +245,22 @@ async def on_input(event, ctx):
     print(event.tool_name)     # "AskUserQuestion"
     print(event.arguments)     # {"questions": [...]}
     print(event.room_id)       # Room context
+    print(event.actor_id)      # "alice" — whose turn raised it, or None
 ```
+
+### Who the Request Is For
+
+`actor_id` carries the participant whose turn raised the request, taken from
+the tool loop (`current_tool_actor_id()`). One `AIChannel` object serves every
+room and speaker it is attached to, so without it a notification layer can only
+broadcast — and in a room where two people talk to one agent, whoever answers
+first answers for someone else.
+
+It is `None` when the turn had no author (a system injection, a webhook, a
+scheduled run) or when a caller driving its own tool loop did not supply one.
+And like the accessor it comes from, it names the turn without authenticating
+it: resolve it against the room's roster before treating it as a principal —
+see [What a handler knows about the call](tool-calling.md#what-a-handler-knows-about-the-call).
 
 ---
 

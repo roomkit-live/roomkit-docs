@@ -752,6 +752,34 @@ async def _observe(self, inner):
 
 See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture details and the full event protocol.
 
+#### Per-Call Tool Context
+
+A handler receives only `(name, arguments)`. An `AIChannel` object, meanwhile, is registered once per `channel_id` and shared by every room and speaker it serves — so whatever a handler closed over at construction time describes whoever attached it, not the turn now running. `roomkit.tools` exposes the turn itself, read from a contextvar the tool loop sets:
+
+```python
+from roomkit.models.enums import IdentificationStatus
+from roomkit.tools import current_tool_actor_id, current_tool_allowed_names, current_tool_room_id
+
+
+async def my_invoices(name: str, arguments: dict) -> str:
+    room_id, actor_id = current_tool_room_id(), current_tool_actor_id()
+    if room_id is None or actor_id is None:
+        return '{"error": "This turn has no author to answer for."}'
+
+    participant = await kit.store.get_participant(room_id, actor_id)
+    if participant is None or participant.identification is not IdentificationStatus.IDENTIFIED:
+        return '{"error": "Sender is not identified."}'
+
+    return await fetch_rows_for(participant.identity_id)
+```
+
+`current_tool_allowed_names()` completes the set, returning the toolset the turn actually resolved so a call is validated against it rather than against an attach-time snapshot. All three return `None` outside a tool loop (realtime voice pipelines, direct calls).
+
+!!! warning
+    `current_tool_actor_id()` names the turn; it does not authenticate it. The value is a room `Participant.id`, and the inbound pipeline substitutes the resolved `Identity.id` for it only once identification succeeds — a sender still pending, ambiguous or unknown reads back just as non-`None`, and in a multi-agent room the author may be another agent. Resolve it against the roster before treating it as a principal, and treat `None` as an answer rather than a missing value: a system injection, a webhook or a scheduled run has no author, and falling back to whoever spoke last is how a tool answers one person with another's data.
+
+See the [Tool Calling guide](guides/tool-calling.md#what-a-handler-knows-about-the-call) and `examples/tool_call_context.py`.
+
 #### MCP Tool Provider
 
 `MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's tool system. It discovers tools from a remote MCP server and exposes them as `AITool` objects with a standard `ToolHandler` for `AIChannel`:
@@ -1145,7 +1173,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
-- **Human-in-the-loop** — pause the AI tool loop to request user input via `HumanInputToolHandler`. The tool blocks until the user responds, then resumes with the answer. Works with any tool name (`AskUserQuestion`, confirmations, data collection). Uses `ON_USER_INPUT_REQUIRED` sync hook for notifications. See the [Human-in-the-Loop guide](guides/human-in-the-loop.md)
+- **Human-in-the-loop** — pause the AI tool loop to request user input via `HumanInputToolHandler`. The tool blocks until the user responds, then resumes with the answer. Works with any tool name (`AskUserQuestion`, confirmations, data collection), provided the turn actually offers it — `tool_names` gates dispatch, `tool_definitions` (or the channel's `tools=`) is what puts it in the toolset. Uses `ON_USER_INPUT_REQUIRED` sync hook for notifications, and the request carries `actor_id` so a notification layer can ask the person whose turn raised it rather than the whole room. See the [Human-in-the-Loop guide](guides/human-in-the-loop.md)
 - **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely:
 
 ```python
