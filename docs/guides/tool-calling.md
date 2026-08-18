@@ -169,6 +169,12 @@ ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
 
 When both `tools` and `tool_handler` are provided, the channel merges them — Tool object handlers are tried first, then the explicit `tool_handler`.
 
+The pre-execution gates — the declared-catalogue check, argument validation
+against the declared schema, and the `BEFORE_TOOL_USE` hook — are a property of
+the channel, not of the handler. They run before the call is routed, so a tool
+served by an `ON_TOOL_CALL` hook on a `RealtimeVoiceChannel` with no
+`tool_handler` is gated exactly like one served by a handler.
+
 !!! tip
     Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
 
