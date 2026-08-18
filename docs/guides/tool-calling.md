@@ -88,6 +88,58 @@ await kit.attach_channel("room-1", "ai-assistant", metadata={
 })
 ```
 
+### Hub Tools and Hoisted Arguments
+
+A *hub tool* declares one tool per domain behind an `{action, params}` signature:
+
+```python
+BOARDS_TOOL = {
+    "name": "boards",
+    "description": "Board operations.",
+    "parameters": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"action": {"type": "string"}, "params": {"type": "object"}},
+        "required": ["action"],
+    },
+}
+```
+
+Models trained mostly on flat schemas (one tool = its arguments) routinely
+*hoist* the inner keys one level up — the smaller the model, the more often:
+
+```json
+{"action": "list_columns", "board_id": "1a0a495f"}
+```
+
+The schema is closed, so the argument gate would refuse `board_id` and the turn
+would be spent on an error the model can only fix by re-issuing the call.
+RoomKit folds the call back into shape instead, before validation, on both the
+AI and realtime voice channels — the handler receives
+`{"action": "list_columns", "params": {"board_id": "1a0a495f"}}` and the round
+does real work. Each fold is logged at INFO with the tool and the model id, so
+the frequency of the case stays measurable per model.
+
+The repair is deliberately narrow. It applies only when the schema closed
+itself, declares a `params` property of type `object`, and carries at least one
+undeclared root key — and only when `params` is absent or empty:
+
+| Call | Outcome |
+|------|---------|
+| `{"action": "x", "board_id": "1"}` | folded into `params` |
+| `{"action": "x", "params": {}, "board_id": "1"}` | folded into `params` |
+| `{"action": "x", "params": {"a": 1}, "board_id": "1"}` | **refused** — both forms at once is ambiguous; the error says to pass every argument inside `params` |
+| `{"city": "Laval", "units": "metric"}` on a flat tool | **refused** — no container to fold into, so an unknown argument stays an error |
+| any call against a schema without `additionalProperties: false` | untouched — undeclared root keys are already legal there |
+
+Arguments rewritten by a `BEFORE_TOOL_USE` hook are validated but never folded:
+a flat payload out of a hook is that hook's bug, and naming it beats reshaping
+it silently.
+
+Opening the schema (`additionalProperties: true`) would make the error go away
+too — and make a genuine typo silent, handing the tool an argument nobody
+reads. The schema stays closed.
+
 ## Tool Handlers (Advanced)
 
 For most use cases, the `Tool` protocol (shown above) is the recommended approach. The `tool_handler` parameter is available for advanced scenarios: MCP integration, custom auditing/logging wrappers, or dynamic dispatch logic that doesn't fit the per-tool-object model.
