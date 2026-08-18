@@ -216,6 +216,10 @@ human = HumanInputToolHandler(
     human is ever asked. Either pass `tool_definitions` here or declare the
     same tools on the channel (`tools=` / binding metadata).
 
+    `AIChannel` logs a warning (once per channel per name) when it intercepts
+    a tool it never offers, so the misconfiguration shows up in the log rather
+    than as an agent that quietly never asks anything.
+
 ### PendingInput
 
 Mutable dataclass representing a pending request:
