@@ -109,14 +109,14 @@ Models trained mostly on flat schemas (one tool = its arguments) routinely
 *hoist* the inner keys one level up — the smaller the model, the more often:
 
 ```json
-{"action": "list_columns", "board_id": "1a0a495f"}
+{"action": "list_columns", "board_id": "board-1"}
 ```
 
 The schema is closed, so the argument gate would refuse `board_id` and the turn
 would be spent on an error the model can only fix by re-issuing the call.
 RoomKit folds the call back into shape instead, before validation, on both the
 AI and realtime voice channels — the handler receives
-`{"action": "list_columns", "params": {"board_id": "1a0a495f"}}` and the round
+`{"action": "list_columns", "params": {"board_id": "board-1"}}` and the round
 does real work. Each fold is logged at INFO with the tool and the model id, so
 the frequency of the case stays measurable per model.
 
