@@ -1058,6 +1058,57 @@ async def on_tool_call(event, ctx):
 
 ---
 
+### When the Model Speaks the Call Instead of Issuing It
+
+Realtime models sometimes *say* a tool call rather than emit it through the
+function calling API — Gemini Live most often, usually under load or after a
+long turn:
+
+```
+call:get_weather{city:Montreal}
+```
+
+`tool_recovery` (on by default) recognises that shape in an assistant
+transcription, parses the arguments, runs the tool, and suppresses the text so
+the caller never hears it. Speech before the call is kept and still reaches the
+room; a transcription that is only a call produces no room event.
+
+The recovered call is a tool call like any other:
+
+- it passes the same pre-execution gate — the declared catalogue, the argument
+  schema, skill gating and `BEFORE_TOOL_USE`, so a hook that denies it prevents
+  the side effect rather than reporting it afterwards;
+- it fires `ON_TOOL_CALL` through the same dispatch, so a serving hook or a
+  handler answers it normally;
+- its outcome — result *or* refusal — returns as **injected context**, never as
+  a tool result, because the model issued no call and has no
+  `FunctionResponse` waiting on it. It reads the outcome on its next turn.
+
+Two limits follow from the text being text:
+
+| Case | Outcome |
+|------|---------|
+| `call:lookup{city:Paris,limit:3}` on a tool declaring `limit` as an integer | `3` is coerced to an integer |
+| `call:lookup{city:Paris,limit:many}` | refused — `many` is not an integer, and guessing would be worse |
+| a tool declaring an `array` or `object` parameter | not invocable this way — only `boolean`/`integer`/`number` are coerced |
+| `call:lookup{city:Paris,country:FR}` on a closed schema | refused by name — `country` is undeclared |
+| `call:note{text:see you at 3:30}` | intact — a colon inside a value is not a key boundary |
+
+Set `tool_recovery=False` to disable the whole path and let a spoken call stay
+speech.
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tools=[...],
+    tool_recovery=False,
+)
+```
+
+---
+
 ## Session Lifecycle
 
 ```python

@@ -71,6 +71,8 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
 - Text injection from supervisors or other channels into the AI session
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
+- One pre-execution gate for every tool call — declared catalogue, argument schema, skill gating and `BEFORE_TOOL_USE` — whatever serves it: a handler, an `ON_TOOL_CALL` hook, or the channel's own infrastructure tools
+- `tool_recovery` (default on) — a call the model *speaks* as `call:name{args}` instead of issuing is recognised, gated like any other, and its outcome injected as context
 - `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
 - `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
 - `inject_image()` — put a picture in the model's own context (Gemini Live, OpenAI Realtime)
