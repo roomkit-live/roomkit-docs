@@ -132,6 +132,30 @@ key against the [provider reference](../api/providers-realtime-voice.md).
 
 ---
 
+## Which model is speaking
+
+`provider.model_name` names the model behind a session, for a log line, a span
+attribute or a diagnostic. Read it as *the best identifier this provider can
+give*, not as a guaranteed model id: a service that exposes no end-to-end model
+falls back to the provider name.
+
+| Provider | `model_name` |
+|---|---|
+| `OpenAIRealtimeProvider` | the realtime model it connects to (e.g. `gpt-realtime-2.1`) |
+| `GeminiLiveProvider` | the Live model it connects to |
+| `XAIRealtimeProvider` | the Grok realtime model it connects to |
+| `DeepgramAgentProvider` | its **think** model — the stage that decides what the agent says, not its listen or speak stage |
+| `AnamRealtimeProvider` | the persona's `llm_id` when the persona is inline; the provider name when the persona lives in Anam Lab |
+| `ElevenLabsRealtimeProvider` | the provider name — the agent is configured in the dashboard |
+| `PersonaPlexRealtimeProvider` | the provider name — one self-hosted model, no id to give |
+
+A provider written outside RoomKit inherits the default and needs no change;
+override the property when your service names a model. `MockRealtimeProvider()`
+reports the default, and `MockRealtimeProvider(model="…")` stands in for a
+provider that names one — so a test can exercise either shape.
+
+---
+
 ## OpenAI Realtime API
 
 WebSocket-based speech-to-speech with server-side VAD.
