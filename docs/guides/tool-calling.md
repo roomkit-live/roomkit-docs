@@ -121,8 +121,9 @@ does real work. Each fold is logged at INFO with the tool and the model id, so
 the frequency of the case stays measurable per model.
 
 The repair is deliberately narrow. It applies only when the schema closed
-itself, declares a `params` property of type `object`, and carries at least one
-undeclared root key — and only when `params` is absent or empty:
+itself, declares a `params` property of type `object` **that declares no
+properties of its own**, and carries at least one undeclared root key — and only
+when `params` is absent or empty:
 
 | Call | Outcome |
 |------|---------|
@@ -130,7 +131,26 @@ undeclared root key — and only when `params` is absent or empty:
 | `{"action": "x", "params": {}, "board_id": "1"}` | folded into `params` |
 | `{"action": "x", "params": {"a": 1}, "board_id": "1"}` | **refused** — both forms at once is ambiguous; the error says to pass every argument inside `params` |
 | `{"city": "Laval", "units": "metric"}` on a flat tool | **refused** — no container to fold into, so an unknown argument stays an error |
+| `{"titel": "Q3"}` on a tool whose `params` declares its own properties | **refused** by name — that `params` is an options object, not a hub container |
 | any call against a schema without `additionalProperties: false` | untouched — undeclared root keys are already legal there |
+
+The shape condition matters as much as the name, because `params` is an ordinary
+name for an ordinary options object:
+
+```python
+"properties": {
+    "title": {"type": "string"},
+    "params": {"type": "object", "properties": {"width": {"type": "integer"}}},
+}
+```
+
+A hub container **cannot** declare its properties — its shape varies with
+`action` — so a declared shape means the tool is not a hub. Folding into it
+would move a misspelt *root* property (`titel`) inside the container, where the
+gate cannot see it: validation does not recurse into nested objects. The call
+would then reach the tool with a bogus key and no title. Left alone, the same
+call is refused as `unknown argument 'titel' (this tool accepts: params, title)`
+— which is the one thing the model can act on.
 
 Arguments rewritten by a `BEFORE_TOOL_USE` hook are validated but never folded:
 a flat payload out of a hook is that hook's bug, and naming it beats reshaping
