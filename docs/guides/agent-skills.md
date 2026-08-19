@@ -218,7 +218,7 @@ ai = AIChannel(
 
 2. **Tool handler wrapping** — The channel wraps the user's `tool_handler` with an internal dispatcher that intercepts skill tool names and delegates everything else to the user handler.
 
-3. **Streaming guard** — When skills are configured, streaming is disabled to allow the tool call loop. This ensures the AI can call `activate_skill` before responding.
+3. **Streaming keeps working** — a registry with at least one skill counts as a channel tool surface, so a streaming provider takes the *streaming tool loop* rather than dropping to a single non-streaming call. The model can call `activate_skill` and still stream its answer.
 
 ### Activation lifecycle
 
