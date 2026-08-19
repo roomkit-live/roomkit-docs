@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install roomkit[polargrid]   # requires polargrid-sdk>=0.9.0
+pip install roomkit[polargrid]   # requires polargrid-sdk>=0.10.0
 ```
 
 ## Quick start
@@ -17,7 +17,7 @@ from roomkit.providers.polargrid import PolarGridAIProvider, PolarGridConfig
 provider = PolarGridAIProvider(
     PolarGridConfig(
         api_key="pg_...",          # from the PolarGrid Console
-        model="qwen-3.5-27b",      # default; qwen-3.6-35b-a3b on yul-02
+        model="qwen-3.8-27b",      # default; qwen-3.6-35b-a3b on yul-02
         region=None,               # None = auto-route; pin in production
     )
 )
@@ -33,8 +33,8 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | Field | Default | Notes |
 |-------|---------|-------|
 | `api_key` | _(required)_ | `pg_...` Bearer token from the PolarGrid Console |
-| `model` | `qwen-3.5-27b` | Also `qwen-3.6-35b-a3b` (yul-02, thinking-capable). See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
-| `region` | `None` | `toronto` / `vancouver` / `montreal` — or the IDs `yto-01` / `yvr-02` / `yul-01`. `None` auto-routes. |
+| `model` | `qwen-3.8-27b` | Also `qwen-3.6-35b-a3b` (yul-02, vision-capable) and `qwen-3.5-27b` (yul-01 only, mid-rollout). See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
+| `region` | `None` | `toronto` / `vancouver` / `montreal` — or the IDs `yto-01` / `yvr-02` / `yul-01`. `None` auto-routes to an edge already serving the configured model. |
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
 | `top_p` | `0.9` | 0.0-1.0 |
@@ -48,7 +48,9 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 PolarGrid runs three Canadian edges. Two ways to choose one:
 
 ```python
-# Auto-routing — discovers the fastest edge on first call.
+# Auto-routing — on first call, the autorouter picks the nearest edge
+# that already has the configured model loaded (polargrid-sdk 0.10.0);
+# if no edge serves it, routing falls back to the default edge.
 config = PolarGridConfig(api_key="pg_...", region=None)
 
 # Pinned — request always goes to the named edge.
@@ -107,14 +109,15 @@ Availability is **regional** — the chat models are not loaded on every edge:
 
 | Model | Type | Availability |
 |-------|------|--------------|
-| `qwen-3.5-27b` | chat (tools) | yto-01, yul-01, yvr-02, nyc-01/02, sfo-01, dfw-01/02 |
-| `qwen-3.6-35b-a3b` | chat (tools, **thinking**) | **yul-02 only** (Montreal) |
+| `qwen-3.8-27b` | chat (tools, **thinking**) | yto-01, yvr-02, nyc-02, sfo-01, dfw-02 (replaced `qwen-3.5-27b` there) |
+| `qwen-3.5-27b` | chat (tools) | **yul-01 only** — the fleet is mid-rollout to 3.8 |
+| `qwen-3.6-35b-a3b` | chat (tools, **thinking**, **vision**) | **yul-02 only** (Montreal) |
 | `whisper-large-v3-turbo` | STT | all edges except dfw-02 |
 | `cohere-transcribe-03-2026` | STT | all edges except dfw-02 |
 | `kokoro-82m` | TTS | all edges except dfw-02 |
 | `tada-3b-ml` | TTS | all edges |
 
-So `region="yul-02"` is the edge to pin for the reasoning-capable `qwen-3.6-35b-a3b`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
+The default `qwen-3.8-27b` reasons via `enable_thinking`; `region="yul-02"` remains the edge to pin for the vision-capable `qwen-3.6-35b-a3b`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
 
 ## Streaming
 
@@ -181,7 +184,7 @@ context.tools = [
 
 PolarGrid added multimodal chat in `polargrid-sdk>=0.9.0`: `Message.content` now accepts OpenAI-shaped `image_url` parts. The provider renders an `AIImagePart` (in a user turn or split off an image tool result) as an `image_url` block — the URL may be a remote `https://` URL or a base64 `data:` URI.
 
-`supports_vision` is **model-driven**: it reads the configured model's flag from the curated catalog. Only `qwen-3.6-35b-a3b` (served on Montreal-02, `yul-02`) actually reads images — verified live. `qwen-3.5-27b` accepts a multimodal request but answers as if no image was sent, so it (and any unknown model id) is treated as text-only. Vision is the deployed model's capability, not the SDK's.
+`supports_vision` is **model-driven**: it reads the configured model's flag from the curated catalog. Only `qwen-3.6-35b-a3b` (served on Montreal-02, `yul-02`) actually reads images — verified live. `qwen-3.5-27b` accepts a multimodal request but answers as if no image was sent, and the default `qwen-3.8-27b` refuses it outright (`ValidationError`: "does not support image input"), so both — and any unknown model id — are treated as text-only. Vision is the deployed model's capability, not the SDK's.
 
 To analyse an image, pin the vision model and its edge:
 
