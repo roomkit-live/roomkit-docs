@@ -2,16 +2,64 @@
 
 `GeminiVertexProvider` runs Google's Gemini models through **Vertex AI** in a pinned Google Cloud region instead of the public Gemini Developer API. Same models, same code — but the request is processed in the region you choose and is **not retained to train Google's models**. That makes it the backend to reach for when data residency matters (e.g. Québec Law 25 / PIPEDA, EU data boundaries).
 
-It is a thin subclass of `GeminiAIProvider` — only the client construction differs (Vertex mode + Application Default Credentials instead of an API key). Generation, streaming, thinking, and the model catalog are all inherited.
+It is a thin subclass of `GeminiAIProvider` — only the client construction differs (Vertex mode, and an identity that is not an API key). Generation, streaming, thinking, and the model catalog are all inherited.
 
 ## Install & authenticate
 
 ```bash
 pip install roomkit[gemini]              # no extra dependency — same SDK
-gcloud auth application-default login    # provides ADC
+gcloud auth application-default login    # the ambient identity, for local dev
 ```
 
-Vertex uses **Application Default Credentials** — the standard Google Cloud chain (`gcloud auth application-default login`, `GOOGLE_APPLICATION_CREDENTIALS`, or a workload-identity service account). There is no API key.
+There is no API key on Vertex. The caller is authenticated by one of three identities, read in this order:
+
+| Config | Identity | Reach for it when |
+|--------|----------|-------------------|
+| `impersonate_service_account` | a service account you **borrow**, through short-lived tokens | the project's owner cannot, or will not, hand out a key |
+| `service_account_json` | a service account whose **key you hold** | one deployment serves several projects |
+| *(neither set)* | Application Default Credentials — whoever the process is | you own the project you are calling |
+
+The two fields combine rather than exclude each other: when both are set, the key is the identity that borrows.
+
+### Application Default Credentials (the default)
+
+The standard Google Cloud chain — `gcloud auth application-default login`, `GOOGLE_APPLICATION_CREDENTIALS`, or workload identity. Set neither field and nothing changes from earlier releases:
+
+```python
+GeminiVertexConfig(project="my-gcp-project", location="northamerica-northeast1")
+```
+
+ADC answers *"who is this machine"*. That is the right question for a deployment that owns the project it calls, and the wrong one everywhere else — see below.
+
+### A service-account key
+
+```python
+GeminiVertexConfig(
+    project="client-42",
+    location="northamerica-northeast1",
+    service_account_json=os.environ["CLIENT_42_SA_KEY"],   # the key file's contents, as JSON
+)
+```
+
+Pass the JSON **contents**, not a path. The identity then travels with the configuration instead of with the process, which is what lets one server serve one project per tenant: the ambient identity belongs to whoever runs the server, so a caller naming someone else's project gets `PERMISSION_DENIED` no matter what it puts in `project`.
+
+### Borrowing a service account
+
+Recent Google Cloud organizations enforce `constraints/iam.disableServiceAccountKeyCreation` by default, so a project owner often *cannot* give you a key even when willing. Impersonation replaces the secret with a grant:
+
+1. The owner grants your deployment's own identity `roles/iam.serviceAccountTokenCreator` on one of their service accounts.
+2. RoomKit calls Vertex as that account, with short-lived tokens nobody downloads.
+3. The owner revokes the grant from their side, in one command, without telling you.
+
+```python
+GeminiVertexConfig(
+    project="client-42",
+    location="northamerica-northeast1",
+    impersonate_service_account="roomkit@client-42.iam.gserviceaccount.com",
+)
+```
+
+The borrowing identity is `service_account_json` when one is configured, otherwise ADC — so the deployment still needs credentials of its own. Without any, the call fails with `Cannot borrow …: this deployment has no Google credentials of its own to borrow it with.`
 
 ## Quick start
 
@@ -50,7 +98,7 @@ See [Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locati
 | Aspect | Behaviour |
 |--------|-----------|
 | Client | `genai.Client(vertexai=True, project=…, location=…)` — the same `google-genai` SDK as `GeminiAIProvider`, in Vertex mode |
-| Auth | Application Default Credentials (no API key); `GeminiVertexConfig.api_key` is optional and ignored |
+| Auth | No API key. `impersonate_service_account`, else `service_account_json`, else Application Default Credentials; `GeminiVertexConfig.api_key` is optional and ignored |
 | Config | `GeminiVertexConfig` **subclasses** `GeminiConfig`, inheriting every generation field (`model`, `max_tokens`, `temperature`, `thinking_level`) so the two never drift |
 | Models | The same Gemini catalog — `available_models()` / `list_models()` inherited |
 | Thinking | Inherited: `thinking_level` requests thought summaries, surfaced as `StreamThinkingDelta` |
