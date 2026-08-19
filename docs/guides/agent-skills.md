@@ -262,6 +262,33 @@ Realtime voice channels run the same lifecycle per *session*, either by pushing 
 body into `system_instruction` via `provider.reconfigure` (`on_demand`) or by
 pre-loading every body at session start (`inline_full`).
 
+### Reading which skills are already loaded
+
+`skills_in_prompt=False` hands the manifest to the host — and the catalogue is only
+half of what a manifest needs. `AIChannel.active_skill_names(room_id)` supplies the
+other half: the skills whose bodies that room is already carrying.
+
+```python
+active = ai.active_skill_names("support-room")   # {"code-review"}
+
+rows = [
+    f"- {meta.name} ({'loaded' if meta.name in active else 'available'}): {meta.description}"
+    for meta in registry.all_metadata()
+]
+```
+
+Without it every row reads *available*, including the skill whose instructions the
+system prompt is already carrying — so the manifest pushes the model toward rules
+that are in front of it. The model obeys: an `activate_skill` round answered by an
+ack, and a user watching the same skill load twice. The same applies to anything
+else a host writes to steer the model, such as a per-message nudge naming a skill.
+
+It reports what is *binding*, not what was ever called: keyed on the room, empty for
+a room that has activated nothing (and for `None`), and a skill retired by the
+four-per-room limit drops out of it.
+
+See the [skill_active_manifest.py example](https://github.com/roomkit-live/roomkit/blob/main/examples/skill_active_manifest.py), which renders the same room's manifest with and without it.
+
 ### Combining with user tools
 
 Skills work alongside user-defined tools from binding metadata:
@@ -431,6 +458,12 @@ When the AI calls `activate_skill` with an unknown name, the handler returns an 
 |-------|------|---------|-------------|
 | `skills` | `SkillRegistry \| None` | `None` | Registry of available skills |
 | `script_executor` | `ScriptExecutor \| None` | `None` | Executor for skill scripts |
+
+### AIChannel methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `active_skill_names(room_id)` | `set[str]` | Skills binding in that room right now — runtime state, for a host rendering its own manifest |
 
 ---
 
