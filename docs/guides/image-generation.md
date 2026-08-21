@@ -27,6 +27,9 @@ The second reason is narrower and just as decisive: `AIResponse.content` is a `s
 |----------|----------|--------|-------|
 | `OpenAIImageProvider` | `/v1/images` (`images.generate`, `images.edit`) | `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `chatgpt-image-latest` | `roomkit[openai]` |
 | `GeminiImageProvider` | Interactions API (`interactions.create`) | `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | `roomkit[gemini]` |
+| `XAIImageProvider` | `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `grok-imagine-image-2.0`, `grok-imagine-image-quality`, `grok-imagine-image` | `roomkit[xai]` |
+| `OpenRouterImageProvider` | OpenRouter Image API (`POST /api/v1/images`) | 40+ aggregated slugs — `google/gemini-3.1-flash-image`, `x-ai/grok-imagine-image-2.0`, `bytedance-seed/seedream-5-0-pro`, `black-forest-labs/flux.2-pro`, … | `roomkit[openrouter]` |
+| `AzureImageProvider` | Azure OpenAI images endpoint | your deployments (`gpt-image-*` behind user-chosen names) | `roomkit[azure]` |
 | `MockImageProvider` | — | `mock-image` | none — draws a real 1×1 PNG |
 
 ```python
@@ -45,20 +48,28 @@ images = GeminiImageProvider(
 )
 ```
 
-Vendor-specific knobs live on the config, not on `generate()`: OpenAI's `quality` / `background` / `output_format`, Gemini's `image_size` / `output_mime_type`. The call itself stays the same shape everywhere.
+```python
+from roomkit.providers.openrouter import OpenRouterImageConfig, OpenRouterImageProvider
+
+images = OpenRouterImageProvider(
+    OpenRouterImageConfig(api_key=..., model="x-ai/grok-imagine-image-2.0")
+)
+```
+
+Vendor-specific knobs live on the config, not on `generate()`: OpenAI's `quality` / `background` / `output_format`, Gemini's `image_size` / `output_mime_type`, xAI's `quality` / `resolution`, Azure's `azure_endpoint` / `api_version`. The call itself stays the same shape everywhere.
 
 ## One size string, every vendor
 
-`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. OpenAI takes it verbatim from a fixed list. Gemini speaks aspect ratios and resolution tiers, so the provider reduces the fraction and picks the smallest tier that covers the request:
+`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. OpenAI takes it verbatim from a fixed list. Gemini and xAI speak aspect ratios and resolution tiers, so those providers reduce the fraction and pick the smallest tier that covers the request. OpenRouter's Image API takes explicit pixels and maps or refuses them per routed model, and Azure passes pixels through because a deployment name does not say which model's size list applies — the vendor judges:
 
-| `size` | OpenAI | Gemini |
-|--------|--------|--------|
-| `1024x1024` | `1024x1024` | `1:1`, `1K` |
-| `1536x1024` | `1536x1024` | `3:2`, `2K` |
-| `1920x1080` | rejected | `16:9`, `2K` |
-| `3840x2160` | rejected | `16:9`, `4K` |
+| `size` | OpenAI | Gemini | xAI | OpenRouter / Azure |
+|--------|--------|--------|-----|--------------------|
+| `1024x1024` | `1024x1024` | `1:1`, `1K` | `1:1`, `1k` | verbatim |
+| `1536x1024` | `1536x1024` | `3:2`, `2K` | `3:2`, `2k` | verbatim |
+| `1920x1080` | rejected | `16:9`, `2K` | `16:9`, `2k` | verbatim |
+| `3840x2160` | rejected | `16:9`, `4K` | rejected | verbatim |
 
-A size a provider cannot produce **raises** rather than becoming a different one silently — an image of the wrong geometry is a failure the caller can neither see nor correct.
+A size a provider cannot produce **raises** rather than becoming a different one silently — an image of the wrong geometry is a failure the caller can neither see nor correct. Verbatim pass-through keeps the same property: the vendor's rejection surfaces as an error, never as a substituted geometry.
 
 ## Editing
 
@@ -73,7 +84,7 @@ Editing is `generate()` with references, not a second method:
 )
 ```
 
-Under the hood the two vendors disagree — OpenAI routes to `images.edit` with a multipart upload, Gemini puts the images in the same call's content — and the provider absorbs it. A provider that cannot edit reports `supports_editing == False` and raises when handed references, rather than quietly generating from the prompt alone.
+Under the hood the vendors disagree — OpenAI routes to `images.edit` with a multipart upload, Gemini puts the images in the same call's content, xAI wants JSON on a separate `/images/edits` path (its API refuses the SDK's multipart form), OpenRouter takes them as `input_references` on the same request — and each provider absorbs its vendor's split. A provider that cannot edit reports `supports_editing == False` and raises when handed references, rather than quietly generating from the prompt alone; `XAIImageProvider` reads that answer per model off its catalog, since the base `grok-imagine-image` does not edit while its siblings do.
 
 ## The data-URI invariant
 
@@ -97,9 +108,9 @@ await kit.send_event(
 
 ## Cost
 
-`ImageResult.usage` is a report of what the call consumed, not a price. How that becomes money is the vendor's business and yours: the two lineups catalogued here — OpenAI's and Google's — meter **per token**, with the pixels on their own counter at roughly an order of magnitude above the text rate, while other vendors charge a flat amount per image. RoomKit carries the rates it can state, and `cost_for()` applies them; nothing obliges you to use either.
+`ImageResult.usage` is a report of what the call consumed, not a price. How that becomes money is the vendor's business and yours: the OpenAI and Google lineups meter **per token**, with the pixels on their own counter at roughly an order of magnitude above the text rate, while xAI and most of OpenRouter's lineup charge a flat amount per image. RoomKit carries the rates it can state, and `cost_for()` applies them; nothing obliges you to use either.
 
-Because these two meter per token, their counters are disjoint and pricing is a single call:
+Because OpenAI and Google meter per token, their counters are disjoint and pricing is a single call:
 
 ```python
 entry = next(m for m in type(images).available_models() if m.id == images.model_name)
@@ -109,6 +120,8 @@ cost = entry.pricing.cost_for(result.usage)   # USD
 `result.usage` carries `input_tokens`, `input_image_tokens`, `output_tokens` and `output_image_tokens`; each token is counted exactly once, so summing them bills the call once. Where a vendor reports image tokens nested inside a total, the provider subtracts them before reporting.
 
 The catalogs read the vendors' own price lists (verified 2026-08-07). Google's advertised per-image figures are that same token rate restated — a 1K image is 1120 output-image tokens, which at `$120`/M is the `$0.134` Nano Banana Pro advertises.
+
+The per-image-billed catalogs — xAI's and OpenRouter's — deliberately carry **no** `pricing`: a flat per-image charge restated per token would be a wrong number rather than a missing one. OpenRouter closes the gap itself by reporting the amount it billed on every response, which the provider surfaces as `result.usage["cost"]` (USD) alongside the token counters; for xAI, read the current per-image amounts from the vendor's pricing page.
 
 ## Catalogs are disjoint
 
@@ -131,7 +144,7 @@ assert images.calls == [("anything", None, 1, [])]
 
 ## End to end
 
-`examples/image_generation.py` runs the whole path: an `AIChannel` calls a `generate_image` tool, the tool draws through the `ImageProvider`, and the picture lands in the room as `MediaContent` and on disk as a PNG. It runs with no key at all (mock), and with `OPENAI_API_KEY` or `GEMINI_API_KEY` it draws for real.
+`examples/image_generation.py` runs the whole path: an `AIChannel` calls a `generate_image` tool, the tool draws through the `ImageProvider`, and the picture lands in the room as `MediaContent` and on disk as a PNG. It runs with no key at all (mock), and with `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, or `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` it draws for real.
 
 ## What this is not
 
