@@ -436,7 +436,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, Gemini, Mistral, DeepSeek, Qwen, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, or custom providers
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
@@ -532,6 +532,11 @@ trusting a stale number.
 - **OpenRouter** -- its offline list is a deliberately small slice of current
   flagships; `list_models()` reads OpenRouter's `/models` endpoint (300+ models
   across providers, with live context windows and vision flags).
+- **LiteLLM proxy** -- a self-hosted gateway serves whatever aliases its
+  operator configured, so like Azure/vLLM the offline list is empty;
+  `list_models()` reads the proxy's `/model/info`, which reports each alias's
+  context window, vision support, and per-token costs from the deployment's
+  own cost map (see the [LiteLLM guide](guides/litellm.md)).
 - **Qwen** -- the inverse case: Model Studio's OpenAI-compatible deployment
   serves `/chat/completions` and nothing else, so the offline catalog *is* the
   discovery surface and `list_models()` returns it unchanged.

@@ -120,6 +120,7 @@ nav:
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
           - PolarGrid Provider: guides/polargrid.md
           - OpenRouter Provider: guides/openrouter.md
+          - LiteLLM Proxy Provider: guides/litellm.md
           - DeepSeek Provider: guides/deepseek.md
           - Qwen Provider: guides/qwen.md
           - Gemini on Vertex AI: guides/gemini-vertex.md
