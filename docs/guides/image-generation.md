@@ -67,6 +67,7 @@ Vendor-specific knobs live on the config, not on `generate()`: OpenAI's `quality
 | `1024x1024` | `1:1`, `1K` | `1:1`, `1k` | verbatim |
 | `1536x1024` | `3:2`, `2K` | `3:2`, `2k` | verbatim |
 | `1920x1080` | `16:9`, `2K` | `16:9`, `2k` | verbatim |
+| `1300x600` | rejected | `19.5:9`, `2k` | verbatim |
 | `3840x2160` | `16:9`, `4K` | rejected | verbatim |
 
 A size a provider cannot produce **raises** rather than becoming a different one silently — an image of the wrong geometry is a failure the caller can neither see nor correct. Verbatim pass-through keeps the same property: the vendor's rejection surfaces as an error, never as a substituted geometry.
