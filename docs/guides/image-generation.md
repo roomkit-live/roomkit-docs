@@ -60,14 +60,14 @@ Vendor-specific knobs live on the config, not on `generate()`: OpenAI's `quality
 
 ## One size string, every vendor
 
-`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. OpenAI takes it verbatim from a fixed list. Gemini and xAI speak aspect ratios and resolution tiers, so those providers reduce the fraction and pick the smallest tier that covers the request. OpenRouter's Image API takes explicit pixels and maps or refuses them per routed model, and Azure passes pixels through because a deployment name does not say which model's size list applies — the vendor judges:
+`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. Gemini and xAI speak aspect ratios and resolution tiers, so those providers reduce the fraction and pick the smallest tier that covers the request. OpenAI, OpenRouter and Azure pass the pixels through and the vendor judges: OpenAI's `gpt-image-2` takes near-arbitrary geometry (edges in multiples of 16, long edge up to 3840px, ratio up to 3:1) while the `gpt-image-1` series keeps a fixed menu, OpenRouter maps or refuses per routed model, and an Azure deployment name does not say which model's size list applies:
 
-| `size` | OpenAI | Gemini | xAI | OpenRouter / Azure |
-|--------|--------|--------|-----|--------------------|
-| `1024x1024` | `1024x1024` | `1:1`, `1K` | `1:1`, `1k` | verbatim |
-| `1536x1024` | `1536x1024` | `3:2`, `2K` | `3:2`, `2k` | verbatim |
-| `1920x1080` | rejected | `16:9`, `2K` | `16:9`, `2k` | verbatim |
-| `3840x2160` | rejected | `16:9`, `4K` | rejected | verbatim |
+| `size` | Gemini | xAI | OpenAI / OpenRouter / Azure |
+|--------|--------|-----|------------------------------|
+| `1024x1024` | `1:1`, `1K` | `1:1`, `1k` | verbatim |
+| `1536x1024` | `3:2`, `2K` | `3:2`, `2k` | verbatim |
+| `1920x1080` | `16:9`, `2K` | `16:9`, `2k` | verbatim |
+| `3840x2160` | `16:9`, `4K` | rejected | verbatim |
 
 A size a provider cannot produce **raises** rather than becoming a different one silently — an image of the wrong geometry is a failure the caller can neither see nor correct. Verbatim pass-through keeps the same property: the vendor's rejection surfaces as an error, never as a substituted geometry.
 
