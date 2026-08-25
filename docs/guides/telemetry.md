@@ -41,15 +41,40 @@ VOICE_SESSION [session_id=abc123, room_id=room-1, backend=FastRTCBackend]
   └─ INBOUND_PIPELINE (next turn) ...
 ```
 
-Non-voice messages (e.g. SMS inbound) produce a flat tree:
+Non-voice messages (e.g. SMS inbound) produce a flat tree. Everything the
+turn does hangs under the inbound span, including the work the room's
+delivery lane runs after the room lock is released — the AFTER_BROADCAST
+hooks and the AI reply's own commit pass (RFC §10.1 step 14), which the lane
+executes on a fresh context and re-parents explicitly from the plan:
 
 ```
-INBOUND_PIPELINE [room_id=room-1, channel_id=sms-main]
+INBOUND_PIPELINE [room_id=room-1, channel_id=sms-main, deferred=false]
   └─ HOOK_SYNC (before_broadcast) [room_id=room-1]
-  └─ BROADCAST [room_id=room-1]
+  └─ BROADCAST [room_id=room-1]              # the trigger's delivery set
        └─ LLM_GENERATE
        └─ DELIVERY
-       └─ HOOK_ASYNC (after_broadcast)
+  └─ HOOK_ASYNC (after_broadcast)
+  └─ HOOK_SYNC (before_broadcast)            # the AI reply's commit pass
+  └─ BROADCAST                               # the AI reply's delivery set
+       └─ DELIVERY
+  └─ HOOK_ASYNC (after_broadcast)
+```
+
+With `process_inbound(..., defer_delivery=True)` the shape is the same, plus
+one span: `framework.inbound` ends at the return (what the caller waited for
+— the commit, stamped `deferred=true`) and a `framework.detached` child,
+opened at the deferral, covers the rest of the turn so its duration is
+readable. It measures without re-parenting: the reply's spans stay direct
+children of the inbound span, exactly as on the waiting path.
+
+```
+INBOUND_PIPELINE [deferred=true]             # ends at the commit
+  └─ HOOK_SYNC (before_broadcast)
+  └─ BROADCAST                               # the trigger's delivery set
+  └─ HOOK_ASYNC (after_broadcast)
+  └─ BROADCAST                               # the AI reply
+  └─ HOOK_ASYNC (after_broadcast)
+  └─ framework.detached [streams=1]          # ends with the turn; error/cancelled if the tail failed
 ```
 
 For realtime voice (Gemini Live, OpenAI Realtime):
