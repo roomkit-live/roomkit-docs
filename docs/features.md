@@ -965,6 +965,37 @@ gemini = GeminiAIProvider(GeminiConfig(api_key="..."))
 assert gemini.supports_vision is True  # All Gemini models support vision
 ```
 
+#### Speaker Attribution in Multi-Speaker Rooms
+
+Every event that is not the AI's own becomes a `user` turn in the model's history. In a room where several people speak, that erases who said what — the model can only guess the addressee, and it guesses wrong. When the history window holds **two or more distinct speakers**, `AIChannel` prefixes each attributable user turn with its speaker (`"Alice: Tuesday works for me."`) and appends a one-line note to the system prompt telling the model the prefix is transcript metadata, never to be echoed in its own replies. A single-speaker room builds a byte-identical prompt.
+
+The speaker is a fact of the event: `metadata["sender_name"]` first (the Teams webhook parser and the WhatsApp Personal source stamp it; a host passes it on `InboundMessage`), then the room's `Participant.display_name` for `event.source.participant_id`. A turn with no name anywhere stays bare.
+
+```python
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="teams-main",
+        sender_id="u-alice",
+        content=TextContent(body="Tuesday works for me."),
+        metadata={"sender_name": "Alice"},
+    )
+)
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="teams-main",
+        sender_id="u-bob",
+        content=TextContent(body="Who proposed what?"),
+        metadata={"sender_name": "Bob"},
+    )
+)
+# The model receives:
+#   user: "Alice: Tuesday works for me."
+#   user: "Bob: Who proposed what?"
+# plus the attribution note at the end of the system prompt.
+```
+
+Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-rooms.md) and `examples/ai_multi_speaker.py`.
+
 ### Image Generation
 
 Vision is the input direction. `ImageProvider` is the output one — an agent that *draws* — and it is a surface of its own (RFC §25), not a mode of the conversational response:
