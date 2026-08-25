@@ -211,6 +211,8 @@ running. Three accessors read the current turn from a contextvar instead:
 | `current_tool_room_id()` | Which room this turn belongs to |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
 | `current_tool_allowed_names()` | Every tool name the turn resolved, so a call is validated against the live toolset rather than an attach-time snapshot |
+| `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
+| `current_response_metadata()` | The turn's response-metadata record — what the reply's MESSAGE events will carry (see below) |
 
 Contextvars propagate down the async call chain, so they work at any depth
 without a signature change. Each returns `None` outside a tool loop (realtime
@@ -225,6 +227,38 @@ async def my_handler(name: str, arguments: dict) -> str:
     actor_id = current_tool_actor_id()
     ...
 ```
+
+### What a Handler Can Tell the Turn
+
+A handler's return value is what the model reads. Two things it learns belong
+to the turn instead, and both travel through the per-call context:
+
+- **`current_response_metadata()`** is the turn's one `ResponseMetadata` record
+  (`roomkit.models`): a dict-like mapping created with the turn and merged into
+  every MESSAGE event the turn produces, as it stands when each event is
+  created. A memory provider writes it while the context is built, a
+  `BEFORE_AI_GENERATION` hook writes `event.ai_context.response_metadata`, and a
+  tool handler writes here — all three reach the same object. A document the
+  tool read mid-loop can therefore be named as a source of the reply.
+- **`current_tool_call().structured_content`** is the structured copy of an MCP
+  result that the tool-call events persist verbatim for UI surfaces. A handler
+  that rewrites the text before the model reads it (a provider's private
+  address turned into a relay link, say) rewrites the copy here too.
+
+```python
+from roomkit.tools import current_response_metadata
+
+
+async def my_handler(name: str, arguments: dict) -> str:
+    result = await call_my_tool(name, arguments)
+    record = current_response_metadata()
+    if record is not None:
+        record.setdefault("cited", []).append({"tool": name, "id": result["id"]})
+    return result["text"]
+```
+
+Segments streamed before a tool round carry what was known then; the answer,
+persisted after it, carries what the handler wrote. `None` outside a turn.
 
 ### The Actor Names the Turn, It Does Not Authenticate It
 

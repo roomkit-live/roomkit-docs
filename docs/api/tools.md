@@ -22,6 +22,17 @@ it is running under from a contextvar — see
 
 ::: roomkit.tools.context.current_tool_allowed_names
 
+::: roomkit.tools.context.current_tool_call
+
+::: roomkit.tools.context.current_response_metadata
+
+## Turn Response Metadata
+
+The record every writer of a turn shares — see
+[What a handler can tell the turn](../guides/tool-calling.md#what-a-handler-can-tell-the-turn).
+
+::: roomkit.models.response_metadata.ResponseMetadata
+
 ## Human-in-the-Loop
 
 ::: roomkit.tools.human_input.HumanInputHandler
