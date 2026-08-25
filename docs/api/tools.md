@@ -24,6 +24,8 @@ it is running under from a contextvar — see
 
 ::: roomkit.tools.context.current_tool_call
 
+::: roomkit.tools.context.ToolCallContext
+
 ::: roomkit.tools.context.current_response_metadata
 
 ## Turn Response Metadata
