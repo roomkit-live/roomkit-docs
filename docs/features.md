@@ -298,7 +298,13 @@ await result.delivery.wait()   # DeliveryHandle: resolves once the whole turn
 result.delivery_results        # ran (streamed responses included), backfilled
 ```
 
-`InboundResult.delivery` is `None` on the waiting path. See
+`InboundResult.delivery` is `None` on the waiting path — and on a deferred
+call refused **before** the commit region (rate limited, pre-commit timeout,
+identity block), which has no delivery to follow. Whenever `blocked` is
+`False` the handle is there; a hook refusal, decided inside the commit
+region, gets one too. Awaited from a context the delivery lane cannot
+progress past (a sync hook under the room lock, a tool handler inside the
+lane), `wait()` returns unwaited instead of deadlocking. See
 `examples/deferred_inbound.py` for a runnable end-to-end demonstration.
 
 ### Message Threading
