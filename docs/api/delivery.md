@@ -6,6 +6,8 @@
 
 ::: roomkit.InboundResult
 
+::: roomkit.DeliveryHandle
+
 ::: roomkit.DeliveryResult
 
 ::: roomkit.ProviderResult

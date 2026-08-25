@@ -275,6 +275,32 @@ Every message passes through a deterministic processing pipeline:
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
 
+### Deferred Delivery
+
+`process_inbound()` normally returns once its event's delivery set has
+completed. Pass `defer_delivery=True` to return at the **commit point**
+instead: the result carries the committed event immediately — a hook refusal
+is still decided under the room lock, so a refused message still refuses the
+call synchronously — while the delivery set, the reentry passes it spawns (an
+AI reply included) and any streamed responses follow in the room's delivery
+lane, in FIFO order like every other turn.
+
+Built for HTTP surfaces: the route answers `200` with the created message
+while the agent's turn runs on, instead of publishing a second, synthetic
+copy of the message just to solicit the agent.
+
+```python
+result = await kit.process_inbound(message, room_id="r1", defer_delivery=True)
+result.event         # committed -- the body of the 200
+result.blocked       # still synchronous: a hook refusal reports here
+
+await result.delivery.wait()   # DeliveryHandle: resolves once the whole turn
+result.delivery_results        # ran (streamed responses included), backfilled
+```
+
+`InboundResult.delivery` is `None` on the waiting path. See
+`examples/deferred_inbound.py` for a runnable end-to-end demonstration.
+
 ### Message Threading
 
 RoomKit supports **flat, two-level threads** (Slack / Teams style) on the
