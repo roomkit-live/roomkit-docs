@@ -239,11 +239,13 @@ more:
 {"tool_calls": [], "round": 0, "channel_id": "ai-agent"}
 ```
 
-Clear the indicator on it. It always arrives, including on the rounds that
-never reach `TOOL_CALL_START` at all: cancelled mid-composition, out of tool
-rounds, out of time, or handed to an external tool provider. Without it a host
-would simply be stuck on "composing" instead of stuck on "working", which is
-the defect the event exists to remove.
+Clear the indicator on it. It always arrives, including on attempts that never
+reach `TOOL_CALL_START` at all: cancelled mid-composition, out of tool rounds,
+out of time, handed to an external tool provider, failed by the provider,
+retried, or replaced by a fallback provider. A retry starts a fresh composition,
+so its cumulative character counts do not include the failed attempt. Without
+the terminal frame a host would simply be stuck on "composing" instead of stuck
+on "working", which is the defect the event exists to remove.
 
 Use these to display "AI is searching..." indicators in a chat UI.
 

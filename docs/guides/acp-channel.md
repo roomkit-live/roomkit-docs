@@ -227,6 +227,29 @@ prompt to finish. The visible granularity still depends on the agent: when
 Claude sends its final summary as one ACP chunk, RoomKit renders that chunk at
 once instead of manufacturing a fake typewriter animation.
 
+### Reading how a turn ended
+
+Every ACP output owns a live response record containing the negotiated protocol
+version. When the agent returns a stop reason other than `end_turn`, RoomKit
+adds it as `response_metadata["acp"]["stop_reason"]`. If the prompt never
+returns because of an exception or cancellation, it adds `interrupted: true`.
+A clean turn carries neither marker.
+
+Read the final record from the inbound result instead of relying on the last
+message: a turn can end on a tool call, with no later `MESSAGE` in which to
+persist its outcome.
+
+```python
+result = await kit.process_inbound(message)
+acp_outcome = result.response_metadata.get("acp", {})
+
+# For a deferred HTTP-style call, wait for the turn before reading the record.
+deferred = await kit.process_inbound(message, defer_delivery=True)
+if deferred.delivery is not None:
+    await deferred.delivery.wait()
+acp_outcome = deferred.response_metadata.get("acp", {})
+```
+
 Recent Claude models may omit visible thought text in their adaptive-thinking
 mode. The example therefore forwards `MAX_THINKING_TOKENS` through
 `--thinking-tokens` (default: `1024`) so the adapter requests a visible fixed

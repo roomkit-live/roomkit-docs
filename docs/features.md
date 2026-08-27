@@ -296,7 +296,14 @@ result.blocked       # still synchronous: a hook refusal reports here
 
 await result.delivery.wait()   # DeliveryHandle: resolves once the whole turn
 result.delivery_results        # ran (streamed responses included), backfilled
+result.response_metadata       # final AI/ACP response record, also backfilled
 ```
+
+`response_metadata` merges the root intelligence outputs for the turn. It is
+available after ordinary streaming or non-streaming delivery and can contain
+citations, provenance, or protocol-specific outcomes. A deferred result may be
+empty at the commit point; `DeliveryHandle.wait()` backfills the same result
+object after the stream and every reentry pass have completed.
 
 `InboundResult.delivery` is `None` on the waiting path — and on a deferred
 call refused **before** the commit region (rate limited, pre-commit timeout,
@@ -504,6 +511,14 @@ readable and settable — `agent.session_config(room_id)` returns
 `{"model": "sonnet", "mode": "auto", ...}` and
 `await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
 with every change published as an ephemeral event.
+
+The turn's live response record starts with the negotiated ACP protocol
+version. A prompt that returns for any reason other than `end_turn` adds
+`response_metadata["acp"]["stop_reason"]`; one that never returns adds
+`interrupted: true`. Clean turns add neither marker. The final record reaches
+`InboundResult.response_metadata` even when a tool call was the last activity
+and there is no final message to inspect; for deferred delivery, await the
+delivery handle first.
 
 An agent that is not addressed is skipped entirely — not asked, and not told
 (RFC §19.3.2). Because an ACP session holds its history inside the agent's

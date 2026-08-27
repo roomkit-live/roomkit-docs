@@ -477,6 +477,12 @@ async def on_tool_event(event: EphemeralEvent) -> None:
 sub_id = await kit.subscribe_room("room-1", on_tool_event)
 ```
 
+The streaming-only `TOOL_CALL_DELTA` reports the tool name and cumulative
+argument size, never the argument content. An empty `tool_calls` terminal frame
+closes every composition attempt, including cancellation, provider failure,
+retry, or fallback. Counts restart when a retry begins; the complete arguments
+still arrive once in `TOOL_CALL_START`.
+
 ## Cross-turn tool memory
 
 The AI context rebuilt for each turn contains MESSAGE events only — tool-call
