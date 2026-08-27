@@ -394,6 +394,8 @@ Two ephemeral events bracket the thinking phase:
 
 These are published via the `RealtimeBackend` and do not persist in the conversation store. Use them for real-time UI indicators (e.g., "AI is thinking...").
 
+A round can bracket **more than one** reasoning phase. A model that reasons, answers, then reasons again — the shape Anthropic's interleaved thinking produces — opens and closes a window per switch, so subscribers see several `THINKING_START` / `THINKING_END` pairs for a single round. Each `THINKING_END` carries **its own block only**, never the blocks the earlier ones already delivered: a client appends what it receives and never has to de-duplicate. The reasoning kept in conversation history stays whole, all blocks of the round concatenated.
+
 ## Tool loop integration
 
 Thinking is preserved across tool-loop rounds. When the AI calls a tool and then continues generating, the thinking from each round is kept in the conversation history:
