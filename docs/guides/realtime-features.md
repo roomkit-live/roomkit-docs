@@ -232,6 +232,19 @@ signal — and the rest are batched on the same windows as thinking deltas
 that deliver whole tool calls (Gemini, Ollama) never emit it, and neither does
 the non-streaming path.
 
+**An empty `tool_calls` is the terminal frame** — nothing is being composed any
+more:
+
+```json
+{"tool_calls": [], "round": 0, "channel_id": "ai-agent"}
+```
+
+Clear the indicator on it. It always arrives, including on the rounds that
+never reach `TOOL_CALL_START` at all: cancelled mid-composition, out of tool
+rounds, out of time, or handed to an external tool provider. Without it a host
+would simply be stuck on "composing" instead of stuck on "working", which is
+the defect the event exists to remove.
+
 Use these to display "AI is searching..." indicators in a chat UI.
 
 ## Custom Ephemeral Events
