@@ -447,11 +447,13 @@ ai = AIChannel(
 )
 ```
 
-The streaming loop emits `StreamEvent` objects: `StreamTextDelta`, `StreamThinkingDelta`, `StreamToolCall`, and `StreamDone`. Tools are executed concurrently via `asyncio.gather()`.
+The streaming loop emits `StreamEvent` objects: `StreamTextDelta`, `StreamThinkingDelta`, `StreamToolCallDelta`, `StreamToolCall`, and `StreamDone`. Tools are executed concurrently via `asyncio.gather()`.
+
+`StreamToolCallDelta` carries one fragment of a call's arguments as the model composes them, so a long composition is observable while it happens; `StreamToolCall` still follows and remains the unit of execution and persistence.
 
 ## Tool Call Events
 
-AIChannel automatically publishes ephemeral `TOOL_CALL_START` and `TOOL_CALL_END` events that you can subscribe to:
+AIChannel automatically publishes ephemeral `TOOL_CALL_DELTA`, `TOOL_CALL_START` and `TOOL_CALL_END` events that you can subscribe to:
 
 ```python
 from __future__ import annotations
@@ -460,7 +462,12 @@ from roomkit.realtime import EphemeralEvent, EphemeralEventType
 
 
 async def on_tool_event(event: EphemeralEvent) -> None:
-    if event.type == EphemeralEventType.TOOL_CALL_START:
+    if event.type == EphemeralEventType.TOOL_CALL_DELTA:
+        # The call being composed: its name and how far along, never the
+        # argument content. See the realtime-features guide.
+        call = event.data["tool_calls"][0]
+        print(f"Composing {call['name']}: {call['arguments_chars']} chars")
+    elif event.type == EphemeralEventType.TOOL_CALL_START:
         tools = event.data["tool_calls"]
         print(f"Calling: {[t['name'] for t in tools]}")
     elif event.type == EphemeralEventType.TOOL_CALL_END:

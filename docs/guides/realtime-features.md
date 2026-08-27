@@ -106,7 +106,7 @@ await kit.unsubscribe_room(sub_id)
 
 ## EphemeralEventType
 
-All 12 ephemeral event types:
+All 14 ephemeral event types:
 
 | Type | Published by |
 |------|-------------|
@@ -116,11 +116,13 @@ All 12 ephemeral event types:
 | `PRESENCE_AWAY` | `publish_presence(status="away")` |
 | `PRESENCE_OFFLINE` | `publish_presence(status="offline")` |
 | `READ_RECEIPT` | `publish_read_receipt()` |
-| `REACTION` | `publish_reaction()` |
+| `TOOL_CALL_DELTA` | Automatic from AIChannel |
 | `TOOL_CALL_START` | Automatic from AIChannel |
 | `TOOL_CALL_END` | Automatic from AIChannel |
 | `THINKING_START` | Automatic from AIChannel |
+| `THINKING_DELTA` | Automatic from AIChannel |
 | `THINKING_END` | Automatic from AIChannel |
+| `REACTION` | `publish_reaction()` |
 | `CUSTOM` | Direct publish |
 
 ---
@@ -185,11 +187,14 @@ await kit.process_inbound(InboundMessage(
 
 ## Tool Call Events
 
-AIChannel automatically publishes `TOOL_CALL_START` and `TOOL_CALL_END` — subscribe to observe:
+AIChannel automatically publishes `TOOL_CALL_DELTA`, `TOOL_CALL_START` and `TOOL_CALL_END` — subscribe to observe:
 
 ```python
 async def on_tool(event: EphemeralEvent) -> None:
-    if event.type == EphemeralEventType.TOOL_CALL_START:
+    if event.type == EphemeralEventType.TOOL_CALL_DELTA:
+        call = event.data["tool_calls"][0]
+        print(f"Composing {call['name']}: {call['arguments_chars']} chars so far")
+    elif event.type == EphemeralEventType.TOOL_CALL_START:
         tools = event.data["tool_calls"]
         print(f"Calling: {[t['name'] for t in tools]}")
     elif event.type == EphemeralEventType.TOOL_CALL_END:
@@ -197,6 +202,35 @@ async def on_tool(event: EphemeralEvent) -> None:
 
 sub_id = await kit.subscribe_room("room-1", on_tool)
 ```
+
+### Watching a call being composed
+
+A model calling a tool spends the whole composition of its arguments producing
+tokens. For a large argument — a document, an SVG, base64 — that is minutes
+during which `TOOL_CALL_START` has not fired yet and nothing else reaches the
+bus either. `TOOL_CALL_DELTA` fills that gap:
+
+```json
+{
+  "tool_calls": [{"id": "tc1", "name": "publish_artifact", "arguments_chars": 3218}],
+  "round": 0,
+  "channel_id": "ai-agent"
+}
+```
+
+`arguments_chars` is cumulative per call, so a frame is the round's snapshot and
+a dropped one costs nothing. A client that ignores the event loses nothing
+either — everything it carries also arrives, complete, in `TOOL_CALL_START`.
+
+**It never carries the argument content.** Only the tool's name and how much has
+been composed. Arguments can be megabytes or hold personal data, and
+`TOOL_CALL_START` already delivers them in full once the call is complete.
+
+The first fragment of a call publishes immediately — the tool's name is the
+signal — and the rest are batched on the same windows as thinking deltas
+(`thinking_coalesce_ms`, `thinking_coalesce_chars` on `AIChannel`). Providers
+that deliver whole tool calls (Gemini, Ollama) never emit it, and neither does
+the non-streaming path.
 
 Use these to display "AI is searching..." indicators in a chat UI.
 
