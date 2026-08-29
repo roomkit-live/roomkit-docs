@@ -619,6 +619,32 @@ await kit.close()
 Session identifiers are process-local in this first implementation. A restart
 creates new sessions; persistent ACP load/resume is not yet enabled.
 
+### Retiring a channel object without cutting its turn
+
+`close()` ends whatever turn the channel is running: an `ACPChannel` cancels
+it on both sides of the wire, an `AIChannel` tears its provider down under it.
+A channel object taken out of the registry — displaced by
+`unregister_channel` + `register_channel` on a rebuild, or removed with the
+agent it served — may still be answering for a turn that captured it, so the
+caller waits for the channel's own word before closing it:
+
+```python
+old = kit.unregister_channel("agent:coder")
+kit.register_channel(rebuilt)
+
+while old.active_turns:          # 0 once every turn it was producing has ended
+    await asyncio.sleep(10)
+await old.close()
+```
+
+`Channel.active_turns` counts the turns a channel is producing, from their
+first consumption to their end. `ACPChannel` counts from the prompt going out
+until the stream closes; `AIChannel` counts a tool loop through its steering
+registry and a text-only stream through its generator. A channel that does not
+count answers 0 and is treated as idle — keep a floor before the first read,
+and a ceiling on the wait, in the caller. Both channels also report the count
+in `info["active_turns"]`.
+
 ## Current scope
 
 - Stable ACP protocol v1, over stdio or any transport you supply

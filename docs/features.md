@@ -22,7 +22,7 @@ RoomKit separates channels into two categories:
 - **Transport** — Delivers messages to external systems (SMS, Email, WebSocket, etc.)
 - **Intelligence** — Generates content (AI providers)
 
-This clean separation means AI isn't bolted on as an afterthought. Intelligence channels participate in conversations as first-class citizens with their own lifecycle, muting, and configuration.
+This clean separation means AI isn't bolted on as an afterthought. Intelligence channels participate in conversations as first-class citizens with their own lifecycle, muting, and configuration — and they say when that lifecycle may end: `Channel.active_turns` counts the turns a channel is producing, so a caller retiring a displaced object waits for zero instead of closing under a turn (see [Retiring a channel object](guides/acp-channel.md#retiring-a-channel-object-without-cutting-its-turn)).
 
 ### Identity Resolution Pipeline
 
