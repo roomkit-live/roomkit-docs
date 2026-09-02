@@ -17,10 +17,16 @@ class STTProvider(ABC):
     @property
     def supports_streaming(self) -> bool: ...
 
-    async def transcribe(self, audio) -> TranscriptionResult:
+    @property
+    def supports_language_override(self) -> bool: ...
+        """Whether transcribe/transcribe_stream honour a per-call language."""
+
+    async def transcribe(self, audio, *, language=None) -> TranscriptionResult:
         """Batch transcription — send all audio, get full text."""
 
-    async def transcribe_stream(self, audio_stream) -> AsyncIterator[TranscriptionResult]:
+    async def transcribe_stream(
+        self, audio_stream, *, language=None
+    ) -> AsyncIterator[TranscriptionResult]:
         """Streaming transcription — get partial results in real time."""
 
     async def warmup(self) -> None:
@@ -29,6 +35,12 @@ class STTProvider(ABC):
     async def close(self) -> None:
         """Release resources."""
 ```
+
+`language` on a call overrides the provider's configured language for that
+call only. A provider that cannot honour it answers `False` to
+`supports_language_override`, and `VoiceChannel` never passes a language to
+such a provider — an implementation written against the older signature
+keeps working unchanged.
 
 ### TranscriptionResult
 
@@ -42,6 +54,11 @@ class TranscriptionResult:
     words: list[dict[str, Any]] = []
     is_speech_start: bool = False
 ```
+
+`language` is what the provider **reports** — what it detected when it was
+asked to detect — never an echo of the language it was configured with. A
+Deepgram stream pinned to `fr-CA` reports nothing; one opened in `multi`
+reports the language most words carried.
 
 ---
 
@@ -70,8 +87,8 @@ stt = DeepgramSTTProvider(
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `model` | `"nova-3"` | Model name |
-| `language` | `"en"` | Language code |
+| `model` | `"nova-2"` | Model name (`"nova-3"` for `multi` and keyterms) |
+| `language` | `"en"` | Language code — `"multi"` detects and code-switches (Nova-3) |
 | `punctuate` | `True` | Add punctuation |
 | `smart_format` | `True` | Smart formatting (dates, numbers) |
 | `numerals` | `False` | Convert numbers to digits |
@@ -92,6 +109,76 @@ stt = DeepgramSTTProvider(
 **Batch mode**: HTTP POST to `/listen` endpoint.
 
 **Streaming mode**: WebSocket with real-time partials and finals.
+
+### Language: detect, then lock
+
+Nova-3 transcribes code-switched speech with `language="multi"`, and reports
+what it heard — `TranscriptionResult.language` carries the language most words
+were tagged with. A stream pinned to the speaker's language (`fr-CA`) is
+measurably better than `multi`, but Deepgram fixes the language in the
+WebSocket URL: it holds for the life of a stream. RoomKit opens one stream per
+utterance (VAD mode) or per turn (continuous mode), so the language can change
+between them — never inside one.
+
+`VoiceChannel.set_stt_language` chooses the language for one session from its
+next stream on; `None` returns to the provider's configuration. The typical
+caller is an `ON_TRANSCRIPTION` hook reading `event.language`:
+
+```python
+stt = DeepgramSTTProvider(DeepgramConfig(api_key="...", model="nova-3", language="multi"))
+voice = VoiceChannel("voice", stt=stt, backend=backend, pipeline=AudioPipelineConfig())
+
+@kit.hook(HookTrigger.ON_TRANSCRIPTION)
+async def pin_language(event, ctx):
+    # A code while the stream detects, None once it is pinned
+    if event.language == "fr":
+        voice.set_stt_language(event.session, "fr-CA")
+    return HookResult.allow()
+```
+
+`STTLanguageLock` packages that loop, with a way back:
+
+```python
+from roomkit import STTLanguageLock
+
+voice = VoiceChannel(
+    "voice",
+    stt=stt,
+    backend=backend,
+    pipeline=AudioPipelineConfig(),
+    stt_language_lock=STTLanguageLock(
+        detect_language="multi",     # every session starts here
+        prefer={"fr": "fr-CA"},      # reported -> locked
+        lock_after=1,                # agreeing finals before locking
+        release_after=2,             # consecutive misses before detecting again
+        min_confidence=0.5,          # a final below this is a miss
+    ),
+)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `detect_language` | `"multi"` | Language every session starts in, and returns to |
+| `prefer` | `{}` | Reported code → locked code (Deepgram reports `fr`, you want `fr-CA`) |
+| `lock_after` | `1` | Consecutive finals reporting the same language before locking |
+| `release_after` | `2` | Consecutive misses before releasing back to `detect_language` |
+| `min_confidence` | `0.5` | A final below this confidence is a miss |
+
+A miss is a final with no text, a confidence below `min_confidence`, or a
+reported language other than the lock; a fitting final resets the count. A
+locked stream reports no language, so the way back is noise: a caller who
+switches to English on a `fr-CA` stream produces empties and low-confidence
+finals, and two of those in a row reopen the session in `multi`.
+
+Where the change lands:
+
+- **VAD mode** — the next utterance. A stream already open stays open, so the
+  utterance in progress is not cut in two.
+- **Continuous mode** — right away: the current cycle is ended and the loop
+  reconnects with the new language. Audio arriving in the gap is kept.
+- **Batch mode** — the next `flush_stt()`.
+
+Runnable: `examples/voice_deepgram_language_lock.py`.
 
 ---
 

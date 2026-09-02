@@ -57,6 +57,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 - Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, Gemini, sherpa-onnx, or custom)
+- STT language chosen per session at runtime (`set_stt_language`), with `STTLanguageLock` to start in Deepgram `multi` and pin the next stream to the language the caller uses
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
@@ -1934,7 +1935,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 
 | Provider | Features | Dependency |
 |----------|----------|------------|
-| `DeepgramSTTProvider` | Streaming STT, interim results, VAD, punctuation, diarization | `roomkit[httpx,websocket]` |
+| `DeepgramSTTProvider` | Streaming STT, interim results, VAD, punctuation, diarization, language detection (Nova-3 `multi`) and a per-call language | `roomkit[deepgram]` |
 | `SherpaOnnxSTTProvider` | Local transducer/Whisper, streaming, batch | `roomkit[sherpa-onnx]` |
 | `GeminiSTTProvider` | Batch only — one pass over a whole recording returns transcript, speaker turns and timestamps together. For meetings, voicemail and audio files, not live turn-taking | `roomkit[gemini]` |
 | `MockSTTProvider` | Configurable responses, cycling transcripts | None |

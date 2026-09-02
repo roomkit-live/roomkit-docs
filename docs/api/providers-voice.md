@@ -20,6 +20,8 @@
 
 ::: roomkit.voice.stt.mock.MockSTTProvider
 
+::: roomkit.voice.stt.language.STTLanguageLock
+
 ### Sherpa-ONNX STT
 
 ::: roomkit.voice.stt.sherpa_onnx.SherpaOnnxSTTProvider
