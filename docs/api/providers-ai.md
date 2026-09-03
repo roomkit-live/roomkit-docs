@@ -119,6 +119,10 @@ for tool_call in response.tool_calls:
 
 ::: roomkit.providers.gemini.config.GeminiConfig
 
+::: roomkit.providers.gemini.vertex.GeminiVertexProvider
+
+::: roomkit.providers.gemini.vertex.GeminiVertexConfig
+
 ### Usage
 
 ```python
