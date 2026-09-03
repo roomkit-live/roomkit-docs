@@ -33,7 +33,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | Field | Default | Notes |
 |-------|---------|-------|
 | `api_key` | _(required)_ | `pg_...` Bearer token from the PolarGrid Console |
-| `model` | `qwen-3.8-27b` | Also `qwen-3.6-35b-a3b` (yul-02, vision-capable) and `qwen-3.5-27b` (yul-01 only, mid-rollout). See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
+| `model` | `qwen-3.8-27b` | The one LLM on the public fleet. `qwen-3.5-27b` was retired on 2026-08-20; `qwen-3.6-35b-a3b` (vision) is a customer pilot with no public edge. See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
 | `region` | `None` | `toronto` / `vancouver` / `montreal` — or the IDs `yto-01` / `yvr-02` / `yul-01`. `None` auto-routes to an edge already serving the configured model. |
 | `max_tokens` | `None` | API cap is 4096. |
 | `temperature` | `0.7` | 0.0-2.0 |
@@ -70,24 +70,24 @@ from roomkit.providers.polargrid import PolarGridAIProvider
 # All edges, filtered to the Canadian ones (Law 25 / PIPEDA).
 canadian = [r for r in PolarGridAIProvider.available_regions()
             if (r.location or "").startswith("Canada")]
-# → yto-01 Toronto, yul-01 Montreal, yul-02 Montreal 02, yvr-02 Vancouver
+# → yto-01 Toronto, yul-01 Montreal, yul-02 Montreal 02 (pilot), yvr-02 Vancouver
 
 # Which edge am I actually hitting (esp. under auto-routing)?
 here = await provider.connected_region()
-print(here.id, here.name, here.location)   # e.g. "yul-02" "Montreal 02" "Canada East"
+print(here.id, here.name, here.location)   # e.g. "yul-01" "Montreal" "Canada East"
 ```
 
 | Region | Name | Location |
 |--------|------|----------|
 | `yto-01` | Toronto | Canada Central |
 | `yul-01` | Montreal | Canada East |
-| `yul-02` | Montreal 02 | Canada East |
+| `yul-02` | Montreal 02 | Canada East (customer-pilot edge, no longer in the published list) |
 | `yvr-02` | Vancouver | Canada West |
-| `nyc-01` / `nyc-02` | New York | US East |
-| `dfw-01` / `dfw-02` | Dallas | US Central |
-| `sfo-01` | San Francisco | US West |
+| `nyc-01` / `nyc-02` / `was-01` / `mia-01` | New York, Washington DC, Miami | US East |
+| `dfw-01` / `dfw-02` / `chi-01` | Dallas, Chicago | US Central |
+| `sfo-01` / `sfo-03` / `lax-01` / `sea-01` / `phx-01` | San Francisco, Los Angeles, Seattle, Phoenix | US West |
 
-`available_regions()` is a static snapshot from PolarGrid's [regions guide](https://polargrid.mintlify.app/guides/regions) — there is **no live full-region endpoint** (`/v1/status` 404s on edges), so `connected_region()` reports only the routed edge (its `location` is backfilled from the catalog).
+`available_regions()` mirrors the SDK's own routing table (16 edges in polargrid-sdk 0.10.0). PolarGrid's [regions guide](https://polargrid.mintlify.app/guides/regions) publishes 15 of them: `yul-02` left the public fleet with the `qwen-3.6-35b-a3b` pilot, but the SDK still routes it and the edge still answers, so pinning it is not refused. There is **no live full-region endpoint** (`/v1/status` 404s on edges), so `connected_region()` reports only the routed edge (its `location` is backfilled from the catalog). Every edge answered `/health` on 2026-09-02 except `yto-01`, down at the time.
 
 ## Models
 
@@ -99,26 +99,24 @@ for m in PolarGridAIProvider.available_models():
     print(m.id, m.display_name, m.capabilities)
 
 # Live query against the connected edge (region-specific).
-provider = PolarGridAIProvider(PolarGridConfig(api_key="pg_...", region="yul-02"))
+provider = PolarGridAIProvider(PolarGridConfig(api_key="pg_...", region="yul-01"))
 for m in await provider.list_models():
     print(m.id)
 ```
 
-`available_models()` is the curated snapshot of the **chat** models (sourced from PolarGrid's [model availability guide](https://polargrid.mintlify.app/guides/model-availability)); `list_models()` returns whatever is actually loaded on the connected edge, **including the STT/TTS models**, and backfills display names from the catalog.
-
-Availability is **regional** — the chat models are not loaded on every edge:
+`available_models()` is the curated snapshot of the **chat** models on the public edges (sourced from PolarGrid's [model pages](https://polargrid.mintlify.app/models) and [model availability guide](https://polargrid.mintlify.app/guides/model-availability), cross-checked against the autorouter on 2026-09-02); `list_models()` returns whatever is actually loaded on the connected edge, **including the STT/TTS models**, and backfills display names, context windows and vision flags from the catalog.
 
 | Model | Type | Availability |
 |-------|------|--------------|
-| `qwen-3.8-27b` | chat (tools, **thinking**) | yto-01, yvr-02, nyc-02, sfo-01, dfw-02 (replaced `qwen-3.5-27b` there) |
-| `qwen-3.5-27b` | chat (tools) | **yul-01 only** — the fleet is mid-rollout to 3.8 |
-| `qwen-3.6-35b-a3b` | chat (tools, **thinking**, **vision**) | **yul-02 only** (Montreal) |
+| `qwen-3.8-27b` | chat (tools, **thinking**), 256K context, $0.20 / $0.75 per 1M tokens | fleet-wide (every public edge) |
+| `qwen-3.6-35b-a3b` | chat (tools, **thinking**, **vision**), 8K served context | **customer pilot**: no public edge; recognised (`supports_vision`, `list_models` backfill) but not advertised |
+| `qwen-3.5-27b` | chat | **retired 2026-08-20**: `404 model_not_loaded` everywhere, dropped from the catalog |
 | `whisper-large-v3-turbo` | STT | all edges except dfw-02 |
 | `cohere-transcribe-03-2026` | STT | all edges except dfw-02 |
 | `kokoro-82m` | TTS | all edges except dfw-02 |
 | `tada-3b-ml` | TTS | all edges |
 
-The default `qwen-3.8-27b` reasons via `enable_thinking`; `region="yul-02"` remains the edge to pin for the vision-capable `qwen-3.6-35b-a3b`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
+The autorouter answers `GET https://autorouter.polargrid.ai/v1/route?model=<id>` with `404` when no edge serves an id, which is how the catalog is checked without a key. The default `qwen-3.8-27b` reasons via `enable_thinking`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
 
 ## Streaming
 
@@ -185,15 +183,15 @@ context.tools = [
 
 PolarGrid added multimodal chat in `polargrid-sdk>=0.9.0`: `Message.content` now accepts OpenAI-shaped `image_url` parts. The provider renders an `AIImagePart` (in a user turn or split off an image tool result) as an `image_url` block — the URL may be a remote `https://` URL or a base64 `data:` URI.
 
-`supports_vision` is **model-driven**: it reads the configured model's flag from the curated catalog. Only `qwen-3.6-35b-a3b` (served on Montreal-02, `yul-02`) actually reads images — verified live. `qwen-3.5-27b` accepts a multimodal request but answers as if no image was sent, and the default `qwen-3.8-27b` refuses it outright (`ValidationError`: "does not support image input"), so both — and any unknown model id — are treated as text-only. Vision is the deployed model's capability, not the SDK's.
+`supports_vision` is **model-driven**: it reads the configured model's flag from the curated catalog, pilot models included. Only `qwen-3.6-35b-a3b` actually reads images — verified live on `yul-02` while that edge was public. The default `qwen-3.8-27b` refuses image input outright (`ValidationError`: "does not support image input"), so it — and any unknown model id — is treated as text-only. Vision is the deployed model's capability, not the SDK's, and as of 2026-09-02 no public edge serves a vision-capable model: `qwen-3.6-35b-a3b` is a customer pilot.
 
-To analyse an image, pin the vision model and its edge:
+With pilot access, pin the vision model and the pilot edge you were given:
 
 ```python
 PolarGridConfig(api_key="pg_...", model="qwen-3.6-35b-a3b", region="yul-02")
 ```
 
-[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) accepts a `/image <path> [question]` command: it embeds the local file as a base64 `data:` URI and sends it as an `image_url` part (defaulting to "Analyse this image." when no question is given). Run it with `POLARGRID_MODEL=qwen-3.6-35b-a3b POLARGRID_REGION=yul-02` for vision.
+[`examples/polargrid_ai.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/polargrid_ai.py) accepts a `/image <path> [question]` command: it embeds the local file as a base64 `data:` URI and sends it as an `image_url` part (defaulting to "Analyse this image." when no question is given). Run it with `POLARGRID_MODEL=qwen-3.6-35b-a3b POLARGRID_REGION=<pilot edge>` for vision.
 
 ## Error handling
 

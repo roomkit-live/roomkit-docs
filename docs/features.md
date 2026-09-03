@@ -573,7 +573,10 @@ trusting a stale number.
   `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
   DeepSeek, Qwen, Ollama, and PolarGrid. Verified against a live upstream mirror on every
   release (`make check-models`), which is what catches a vendor shipping a new
-  flagship — a stale list is internally consistent, so no test can.
+  flagship — a stale list is internally consistent, so no test can. PolarGrid
+  is the exception: absent from that mirror, its catalog is checked by hand
+  against the vendor's autorouter (`/v1/route?model=<id>`, 404 when no edge
+  serves the id).
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local
   models, so neither has a meaningful offline list and both return an empty
   one. `context_window` is `None` there by design; `list_models()` asks the
@@ -632,7 +635,8 @@ file, and nothing fails while that is true.
   Gemini Pro and current Grok long-context pricing without asking the caller to
   choose a tier. GPT-5.6 Luna has its separate 400k window and no such tier.
 - **No price at all** -- Ollama (weights pulled onto your own hardware),
-  PolarGrid (private edges), Azure and vLLM (no offline catalog). Per-client
+  PolarGrid's customer-pilot model (no public edge, no list price; its public
+  model is priced), Azure and vLLM (no offline catalog). Per-client
   negotiated rates stay with whoever bills; this is the list price.
 - **Two guards** -- every model in a priced catalog must carry a rate (a test,
   so it fails on the commit that adds one without), and the rates are compared
