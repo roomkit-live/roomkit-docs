@@ -115,12 +115,14 @@ differently:
 - `SSESource.timeout` bounds write and pool only. Its read side is left
   unbounded on purpose, so the stream survives idle periods between events;
   `connect_timeout` is what gives up on a dead host.
-- Gemini TTS and STT set the split on the SDK's httpx client (through
-  `HttpOptions.async_client_args`) rather than per request: google-genai
-  flattens a per-request `httpx.Timeout` to its largest value, which would
-  hand the read budget back to the connect. The STT provider's Files API
-  calls go through the SDK's classic path, which takes one value in
-  milliseconds, so they carry the flat `timeout` and no connect split.
+- Gemini TTS and STT hand the SDK their own httpx client (through
+  `HttpOptions.httpx_async_client`) rather than a per-request timeout:
+  google-genai flattens a per-request `httpx.Timeout` to its largest value,
+  which would hand the read budget back to the connect. That client also
+  keeps every SDK call on httpx when aiohttp is installed. The STT
+  provider's Files API calls go through the SDK's classic path, which takes
+  one value in milliseconds, so they carry the flat `timeout` and no
+  connect split.
 
 !!! tip
     With a `RetryPolicy` of four attempts, a provider whose host is down now
