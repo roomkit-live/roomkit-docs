@@ -101,10 +101,11 @@ the kernel exhausts its SYN retries first — about two minutes per attempt,
 whatever the value.
 
 The default `connect_timeout` is 5 s, the same as the OpenAI and Anthropic
-SDKs' own. It applies to every config in `roomkit.providers` that has a
-`timeout`: the AI providers (OpenAI and its derivatives, Azure, Anthropic,
-Ollama, vLLM, PolarGrid), the image providers, and the SMS, RCS, email,
-Telegram, Messenger and webhook transports.
+SDKs' own. It applies to every httpx-backed config in `roomkit.providers`:
+the AI providers (OpenAI and its derivatives, Azure, Anthropic, Ollama, vLLM,
+PolarGrid), the image providers, and the SMS, RCS, email, Telegram, Messenger
+and webhook transports. `AnamConfig.timeout` has no counterpart because it
+bounds the SDK's connect call itself, not an HTTP client.
 
 !!! tip
     With a `RetryPolicy` of four attempts, a provider whose host is down now
