@@ -108,14 +108,14 @@ and webhook transports. `AnamConfig.timeout` has no counterpart because it
 bounds the SDK's connect call itself, not an HTTP client.
 
 Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
-`OpenAIVisionConfig`, `GeminiTTSConfig` and `GeminiSTTConfig`, and is a
-keyword on `WebSocketAvatarProvider` and `SSESource`. Two of them read
-differently:
+`OpenAIVisionConfig`, `GeminiVisionConfig`, `GeminiTTSConfig` and
+`GeminiSTTConfig`, and is a keyword on `WebSocketAvatarProvider` and
+`SSESource`. Two of them read differently:
 
 - `SSESource.timeout` bounds write and pool only. Its read side is left
   unbounded on purpose, so the stream survives idle periods between events;
   `connect_timeout` is what gives up on a dead host.
-- Gemini TTS and STT hand the SDK their own httpx client (through
+- The Gemini providers (TTS, STT, vision) hand the SDK their own httpx client (through
   `HttpOptions.httpx_async_client`) rather than a per-request timeout:
   google-genai flattens a per-request `httpx.Timeout` to its largest value,
   which would hand the read budget back to the connect. That client also
