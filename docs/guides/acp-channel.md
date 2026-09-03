@@ -456,8 +456,12 @@ therefore behave like other intelligence-channel output.
 An agent that owns its own turn still reports it finished. When a turn reaches
 its end, the channel fires `ON_AI_RESPONSE` with the text it produced, how many
 tools it called, and how long it took — the same trigger, and the same
-`AIResponseEvent`, an in-process AI channel fires. Post-processing an
-integrator hangs off that hook therefore runs for a conversation an agent held:
+`AIResponseEvent`, an in-process AI channel fires. `response_content` is the
+turn's transcript: every text segment the agent produced, separated by a blank
+line where a tool call cut them, and `segments` carries them one by one, so
+`segments[-1]` is the final report without the narration before it.
+Post-processing an integrator hangs off that hook therefore runs for a
+conversation an agent held:
 
 ```python
 @kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC)
