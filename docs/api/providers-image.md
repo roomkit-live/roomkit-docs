@@ -15,6 +15,8 @@ it transcribes through Deepgram.
 
 ::: roomkit.providers.image.base.to_data_uri
 
+::: roomkit.providers.image.base.parse_data_uri
+
 ::: roomkit.providers.image.base.sniff_mime_type
 
 ## Vendor implementations

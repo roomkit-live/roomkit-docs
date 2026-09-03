@@ -27,6 +27,20 @@ producing a negative or non-finite cost.
 
 ::: roomkit.providers.ai.mock.MockAIProvider
 
+## Image parts
+
+Every provider turns an `AIImagePart` into what its API takes through one
+reader: media type from the header, then the part's `mime_type`, then
+`image/png`; a payload an encoder wrapped or left unpadded is repaired; a
+corrupt one is refused before the request leaves, as a non-retryable
+`ProviderError` that names the cause.
+
+::: roomkit.providers.ai.image_parts.image_part_payload
+
+::: roomkit.providers.ai.image_parts.image_part_base64
+
+::: roomkit.providers.ai.image_parts.image_part_uri
+
 ## Explicit models and modern request profiling
 
 `model=` is required by both `OpenAIConfig` and `AnthropicConfig`, so a RoomKit
