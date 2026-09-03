@@ -102,10 +102,11 @@ whatever the value.
 
 The default `connect_timeout` is 5 s, the same as the OpenAI and Anthropic
 SDKs' own. It applies to every httpx-backed config in `roomkit.providers`:
-the AI providers (OpenAI and its derivatives, Azure, Anthropic, Ollama, vLLM,
-PolarGrid), the image providers, and the SMS, RCS, email, Telegram, Messenger
-and webhook transports. `AnamConfig.timeout` has no counterpart because it
-bounds the SDK's connect call itself, not an HTTP client.
+the AI providers (OpenAI and its derivatives, Azure, Anthropic, Gemini and
+Gemini on Vertex, Ollama, vLLM, PolarGrid), the image providers, and the SMS,
+RCS, email, Telegram, Messenger and webhook transports. `AnamConfig.timeout`
+has no counterpart because it bounds the SDK's connect call itself, not an
+HTTP client.
 
 Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
 `OpenAIVisionConfig`, `GeminiVisionConfig`, `GeminiTTSConfig` and
@@ -115,14 +116,18 @@ Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
 - `SSESource.timeout` bounds write and pool only. Its read side is left
   unbounded on purpose, so the stream survives idle periods between events;
   `connect_timeout` is what gives up on a dead host.
-- The Gemini providers (TTS, STT, vision) hand the SDK their own httpx client (through
-  `HttpOptions.httpx_async_client`) rather than a per-request timeout:
-  google-genai flattens a per-request `httpx.Timeout` to its largest value,
-  which would hand the read budget back to the connect. That client also
-  keeps every SDK call on httpx when aiohttp is installed. The STT
-  provider's Files API calls go through the SDK's classic path, which takes
-  one value in milliseconds, so they carry the flat `timeout` and no
-  connect split.
+- The Gemini providers (chat, Vertex, image, TTS, STT, vision) hand the SDK
+  their own httpx client (through `HttpOptions.httpx_async_client`) rather
+  than a per-request timeout: google-genai flattens a per-request
+  `httpx.Timeout` to its largest value, which would hand the read budget
+  back to the connect. That client also keeps every SDK call on httpx when
+  aiohttp is installed, and puts the budget back on the streamed request
+  the SDK builds with `timeout=None` (the chat providers' only call), which
+  httpx would otherwise read as no timeout at all. `GeminiConfig.timeout`
+  (60 s) is therefore the budget between chunks of a streamed answer, not
+  for the whole of it. The STT provider's Files API calls go through the
+  SDK's classic path, which takes one value in milliseconds, so they carry
+  the flat `timeout` and no connect split.
 
 !!! tip
     With a `RetryPolicy` of four attempts, a provider whose host is down now
