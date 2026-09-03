@@ -2,7 +2,7 @@
 
 `GeminiVertexProvider` runs Google's Gemini models through **Vertex AI** in a pinned Google Cloud region instead of the public Gemini Developer API. Same models, same code — but the request is processed in the region you choose and is **not retained to train Google's models**. That makes it the backend to reach for when data residency matters (e.g. Québec Law 25 / PIPEDA, EU data boundaries).
 
-It is a thin subclass of `GeminiAIProvider` — only the client construction differs (Vertex mode, and an identity that is not an API key). Generation, streaming, thinking, and the model catalog are all inherited.
+It is a thin subclass of `GeminiAIProvider` — only the client construction (Vertex mode, and an identity that is not an API key) and the [billing labels](#billing-labels) on each request differ. Generation, streaming, thinking, and the model catalog are all inherited.
 
 ## Install & authenticate
 
