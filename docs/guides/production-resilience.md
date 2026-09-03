@@ -121,13 +121,16 @@ Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
   than a per-request timeout: google-genai flattens a per-request
   `httpx.Timeout` to its largest value, which would hand the read budget
   back to the connect. That client also keeps every SDK call on httpx when
-  aiohttp is installed, and puts the budget back on the streamed request
-  the SDK builds with `timeout=None` (the chat providers' only call), which
-  httpx would otherwise read as no timeout at all. `GeminiConfig.timeout`
-  (60 s) is therefore the budget between chunks of a streamed answer, not
-  for the whole of it. The STT provider's Files API calls go through the
-  SDK's classic path, which takes one value in milliseconds, so they carry
-  the flat `timeout` and no connect split.
+  aiohttp is installed, and carries a request hook: the SDK's classic
+  request path (streamed generation, model listing, the Files API) builds
+  its request with `timeout=None`, which httpx would read as no timeout at
+  all, so the hook puts the client's budget back on a request that names
+  none; only the Interactions API path leaves the client default in place.
+  `GeminiConfig.timeout` (60 s) is therefore the budget between chunks of a
+  streamed answer, not for the whole of it. The STT provider's Files API
+  calls set a per-call `timeout`, one value in milliseconds the SDK spreads
+  over the connect too; the hook caps that connect at `connect_timeout`, so
+  they carry the flat read budget and the client's connect.
 
 !!! tip
     With a `RetryPolicy` of four attempts, a provider whose host is down now
