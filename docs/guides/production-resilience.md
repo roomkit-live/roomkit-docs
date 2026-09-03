@@ -107,6 +107,21 @@ PolarGrid), the image providers, and the SMS, RCS, email, Telegram, Messenger
 and webhook transports. `AnamConfig.timeout` has no counterpart because it
 bounds the SDK's connect call itself, not an HTTP client.
 
+Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
+`OpenAIVisionConfig`, `GeminiTTSConfig` and `GeminiSTTConfig`, and is a
+keyword on `WebSocketAvatarProvider` and `SSESource`. Two of them read
+differently:
+
+- `SSESource.timeout` bounds write and pool only. Its read side is left
+  unbounded on purpose, so the stream survives idle periods between events;
+  `connect_timeout` is what gives up on a dead host.
+- Gemini TTS and STT set the split on the SDK's httpx client (through
+  `HttpOptions.async_client_args`) rather than per request: google-genai
+  flattens a per-request `httpx.Timeout` to its largest value, which would
+  hand the read budget back to the connect. The STT provider's Files API
+  calls go through the SDK's classic path, which takes one value in
+  milliseconds, so they carry the flat `timeout` and no connect split.
+
 !!! tip
     With a `RetryPolicy` of four attempts, a provider whose host is down now
     fails in about 20 s instead of 9 minutes.
