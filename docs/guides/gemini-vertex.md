@@ -93,6 +93,26 @@ kit.register_channel(ai)
 
 See [Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locations) for the full list and which models each region serves.
 
+## Billing labels
+
+One Google Cloud project often serves several tenants or partners, and Cloud Billing reports the project's Vertex spend as one number. `labels` splits it: the dict rides every request, and the billing report groups the charges by label key and value.
+
+```python
+GeminiVertexConfig(
+    project="my-gcp-project",
+    location="northamerica-northeast1",
+    labels={"tenant": "acme", "partner": "north-reseller"},
+)
+```
+
+What to expect from it:
+
+- **Metadata only.** A label sets no quota and no limit, and it changes nothing in the answer.
+- **Late.** Labelled charges reach the billing report 24 to 48 hours after the request. Meter what a tenant consumed from the usage each response carries; the report is for attribution, never a source of truth.
+- **Constant per provider.** A provider serves one channel, a channel one agent, an agent one tenant, so the label belongs on the configuration, not on the turn.
+- **Validated at configuration.** Google's rules are enforced when `GeminiVertexConfig` is built, so a bad label fails at startup rather than on a tenant's first message: at most 64 labels; keys 1 to 63 characters starting with a lowercase letter, values 0 to 63; lowercase letters, digits, `_` and `-` only (international characters allowed).
+- **Vertex only.** The Gemini Developer API refuses the field, which is why it lives on `GeminiVertexConfig` and not on `GeminiConfig`.
+
 ## How it works
 
 | Aspect | Behaviour |
@@ -102,5 +122,6 @@ See [Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locati
 | Config | `GeminiVertexConfig` **subclasses** `GeminiConfig`, inheriting every generation field (`model`, `max_tokens`, `temperature`, `thinking_level`) so the two never drift |
 | Models | The same Gemini catalog — `available_models()` / `list_models()` inherited |
 | Thinking | Inherited: `thinking_level` requests thought summaries, surfaced as `StreamThinkingDelta` |
+| Labels | `labels` rides every request as `GenerateContentConfig.labels`; Cloud Billing groups the charges by them. Vertex only: the Developer API refuses the field |
 
 See `examples/gemini_vertex_ai.py` for an end-to-end run.
