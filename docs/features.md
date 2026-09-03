@@ -447,7 +447,7 @@ Filter options:
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
-| `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included |
+| `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included |
 | `ON_PLAN_UPDATED` | Async | An agent rewrote its structured task plan. Carries a `PlanUpdatedEvent` with the plan as the agent wrote it |
 | `ON_STATUS_POSTED` | Async | A status reached the inter-agent StatusBus. Fires for the room named in the entry's `metadata["room_id"]` — the bus itself is global |
 
