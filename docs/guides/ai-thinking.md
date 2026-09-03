@@ -396,6 +396,8 @@ These are published via the `RealtimeBackend` and do not persist in the conversa
 
 A round can bracket **more than one** reasoning phase. A model that reasons, answers, then reasons again — the shape Anthropic's interleaved thinking produces — opens and closes a window per switch, so subscribers see several `THINKING_START` / `THINKING_END` pairs for a single round. Each `THINKING_END` carries **its own block only**, never the blocks the earlier ones already delivered: a client appends what it receives and never has to de-duplicate. The reasoning kept in conversation history stays whole, all blocks of the round concatenated.
 
+The window also closes on every abnormal exit of a round: a turn cancelled through `Cancel` steering, a provider that fails mid-reasoning, a consumer that stops reading the stream. The `THINKING_END` then carries the block reasoned so far, with the deltas still buffered flushed ahead of it, so a subscriber never stays on "thinking" for a turn that is over.
+
 ## Tool loop integration
 
 Thinking is preserved across tool-loop rounds. When the AI calls a tool and then continues generating, the thinking from each round is kept in the conversation history:
