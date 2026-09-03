@@ -1227,7 +1227,7 @@ For tool-only auditing, `JSONLToolAuditor` and `ConsoleToolAuditor` are also ava
 
 ### Memory Providers
 
-The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:
+The `MemoryProvider` ABC controls how conversation history is retrieved for AI context. By default, `AIChannel` uses a sliding window of recent events. The framework loads a room's tail for the channels that declare a `recent_events_window` (an `AIChannel` declares its memory provider's, an `ACPChannel` its `room_history`) and, while a hook is registered, a 50-event floor for the hooks; a custom channel or memory provider that reads `context.recent_events` must declare its window, or a room with no hook hands it an empty list. Custom providers can inject summaries, retrieve from vector stores, or combine strategies:
 
 ```python
 from roomkit import AIChannel
