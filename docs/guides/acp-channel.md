@@ -379,8 +379,10 @@ ACPChannel("codex", command=[...], cwd=workspace, room_history=0)  # opt out
 
 `recent_events_window` follows `room_history`. The framework sizes the room tail
 it loads to the largest window any bound channel declares, under a floor it keeps
-for hooks (50 events) — so the default reads a tail that was loaded anyway, and
-raising `room_history` past the floor grows the tail the catch-up draws on.
+for hooks (50 events, while a hook is registered) — so the default reads a tail
+that was loaded anyway, and raising `room_history` past the floor grows the tail
+the catch-up draws on. Declaring the window is what keeps the tail loaded on a
+room with no hook at all.
 
 ## Contributing context the agent cannot fetch
 
