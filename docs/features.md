@@ -49,6 +49,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 - **Circuit breakers** — Failing providers don't take down the whole room
 - **Rate limiting** — Per-channel token bucket with configurable limits
 - **Retry with backoff** — Exponential backoff for transient failures
+- **Connect timeout apart from read** — Every HTTP provider hands its client an `httpx.Timeout` with `connect_timeout` (5 s) beside `timeout`, so a host that no longer accepts connections fails in seconds rather than after the read budget (see [Connect vs Read Timeout](guides/production-resilience.md#connect-vs-read-timeout))
 - **Chain depth limiting** — Prevents AI-to-AI infinite loops
 - **Idempotency** — Duplicate detection inside the room lock
 

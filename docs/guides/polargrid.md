@@ -40,6 +40,7 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | `top_p` | `0.9` | 0.0-1.0 |
 | `thinking` | `None` | Toggle qwen reasoning via the `enable_thinking` request flag (sdk 0.8.5+) — `True` on, `False` off, `None` leaves it unset. See [Thinking / reasoning](#thinking-reasoning). |
 | `timeout` | `30.0` | Seconds. |
+| `connect_timeout` | `5.0` | Seconds, TCP connect alone. `timeout` stays the read budget, so a dead edge is refused in seconds rather than after it. See [Connect vs Read Timeout](production-resilience.md#connect-vs-read-timeout). |
 | `max_retries` | `0` | Defaults to 0 so RoomKit's `RetryPolicy` controls retries. |
 | `debug` | `False` | Verbose SDK logging. |
 

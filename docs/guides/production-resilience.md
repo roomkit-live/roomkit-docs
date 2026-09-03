@@ -75,6 +75,41 @@ Used by `AIChannel` for provider calls (see [AI Steering guide](ai-steering.md) 
 !!! tip
     Only retryable errors (5xx, timeouts) trigger retries. Non-retryable errors (4xx) fail immediately.
 
+## Connect vs Read Timeout
+
+Every HTTP provider config carries two timeouts, and its adapter hands the
+client an `httpx.Timeout` built from both rather than a bare float:
+
+```python
+from __future__ import annotations
+
+from roomkit.providers.polargrid import PolarGridConfig
+
+config = PolarGridConfig(
+    api_key="pg_...",
+    timeout=240.0,  # read/write/pool: sized for the slowest generation
+    connect_timeout=5.0,  # TCP connect alone (the default)
+)
+```
+
+`timeout` is the read budget — how long a slow model may take before the
+first byte and between chunks. `connect_timeout` bounds the TCP connect
+alone: a host that no longer accepts connections is given up on in seconds,
+not after the read budget. Passing one float for both (what a bare
+`httpx.AsyncClient(timeout=240.0)` does) never trips on a dead host, because
+the kernel exhausts its SYN retries first — about two minutes per attempt,
+whatever the value.
+
+The default `connect_timeout` is 5 s, the same as the OpenAI and Anthropic
+SDKs' own. It applies to every config in `roomkit.providers` that has a
+`timeout`: the AI providers (OpenAI and its derivatives, Azure, Anthropic,
+Ollama, vLLM, PolarGrid), the image providers, and the SMS, RCS, email,
+Telegram, Messenger and webhook transports.
+
+!!! tip
+    With a `RetryPolicy` of four attempts, a provider whose host is down now
+    fails in about 20 s instead of 9 minutes.
+
 ## Rate Limiting
 
 Token bucket rate limiting for inbound messages:
