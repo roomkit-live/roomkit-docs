@@ -2325,9 +2325,7 @@ Key properties:
 
 ---
 
-## Video
-
-#### Voice test bench
+### Voice test bench
 
 `roomkit.voice.testing` is what a voice scenario is written with, at every
 fidelity level. `ScenarioVoiceBackend` extends `MockVoiceBackend` into a
@@ -2349,7 +2347,9 @@ trace = VoiceTrace(kit)                  # before the first session
 await backend.play(session, tone(300), realtime=False)
 heard = await trace.wait_for(HookTrigger.ON_TRANSCRIPTION, timeout=2)
 await trace.wait_for(HookTrigger.AFTER_TTS)
-print(trace.elapsed_ms(trace.first(HookTrigger.ON_SPEECH_END), heard))   # STT latency
+speech_end = trace.first(HookTrigger.ON_SPEECH_END)
+assert speech_end is not None
+print(trace.elapsed_ms(speech_end, heard))              # STT latency, ms
 backend.write_capture(session, "reports/bot.wav")                         # what the bot said
 ```
 
@@ -2357,6 +2357,8 @@ backend.write_capture(session, "reports/bot.wav")                         # what
 WAV and PCM helpers around `PCMAudio`. See the
 [Testing Patterns guide](guides/testing-patterns.md#scenariovoicebackend-and-voicetrace)
 and `examples/voice_scenario_backend.py`.
+
+## Video
 
 ### Video Channel
 
