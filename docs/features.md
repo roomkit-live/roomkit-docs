@@ -2946,7 +2946,11 @@ either — an AI channel's prompt is built from *its* view of the room, never th
 whole timeline. Two things this deliberately does not cover: a channel always
 keeps its own events (or an assistant bound `visibility="advisor-ws"` would lose
 its own answers from its own context), and hooks receive the full timeline
-(they are your code, running in your process, holding the store anyway).
+(they are your code, running in your process, holding the store anyway). The
+same holds for an event the room refused: a message a hook blocked is stored
+`BLOCKED` and delivered to nobody, so it is not handed to any channel as
+history either, its own source included; hooks and `get_conversation` still
+see it.
 
 Because a source's visibility is resolved from its binding when the history is
 read, visibility is a **live** policy: widening a binding widens its past too.
