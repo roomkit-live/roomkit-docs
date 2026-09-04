@@ -213,9 +213,11 @@ A `CLOSED` or `ARCHIVED` room refuses every write, at every entry (RFC §5.1):
 `send_event()` raises `RoomClosedError`, and `regenerate_response()` is refused
 the same way *before* the agent runs, so a closed room costs no generation for
 an answer nothing could commit. Each refusal emits the `room_refused_event`
-framework event; a regenerate's carries `data={"status": ..., "operation":
-"regenerate"}` and, as `event_id`, the message it would have replayed (`None`
-when nothing qualified).
+framework event with one `data` shape whichever path refused (RFC §8.2):
+`status` (the room status that refused), `operation` (`inbound`, `reentry` or
+`regenerate`) and `event_type` (the refused event's type; `None` when a
+regenerate had nothing to replay). `event_id` is the refused event; for a
+regenerate, the message it would have replayed (`None` when nothing qualified).
 
 Timer-based automation:
 
