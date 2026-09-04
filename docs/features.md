@@ -1069,7 +1069,6 @@ between the delete and the regenerate short, and re-read `regenerate_target`
 right before deleting rather than after the refusal. Without `trigger_id`,
 the call regenerates whatever the selection is.
 
-
 Runnable: `examples/regenerate_answer.py`.
 
 Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
@@ -2951,14 +2950,18 @@ await kit.set_visibility("room-1", "ai-channel", "intelligence")
 **Visibility holds on the next turn, not just at delivery.** An event a channel
 was not allowed to see is not handed back to it later as reconstructed history
 either — an AI channel's prompt is built from *its* view of the room, never the
-whole timeline. Two things this deliberately does not cover: a channel always
-keeps its own events (or an assistant bound `visibility="advisor-ws"` would lose
-its own answers from its own context), and hooks receive the full timeline
-(they are your code, running in your process, holding the store anyway). The
-same holds for an event the room refused: a message a hook blocked is stored
-`BLOCKED` and delivered to nobody, so it is not handed to any channel as
-history either, its own source included; hooks and `get_conversation` still
-see it.
+whole timeline (`visible_events(context, channel_id)` is that view, exported
+for host code that rebuilds history itself). Two things this deliberately does
+not cover: a channel always keeps its own accepted events (or an assistant
+bound `visibility="advisor-ws"` would lose its own answers from its own
+context), and hooks receive the full timeline (they are your code, running in
+your process, holding the store anyway). An event the room refused is the
+other side of the same rule: stored `BLOCKED` and delivered to nobody — a
+message a hook blocked, a read-only source's message, a muted channel's own
+answers, a response over the chain-depth cap — it is not handed to any channel
+as history either, its own source included, so a muted agent keeps tracking
+the room but does not carry its silenced answers into its prompt; hooks and
+`get_conversation` still see it.
 
 Because a source's visibility is resolved from its binding when the history is
 read, visibility is a **live** policy: widening a binding widens its past too.
