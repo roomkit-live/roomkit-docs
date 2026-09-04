@@ -214,7 +214,8 @@ A `CLOSED` or `ARCHIVED` room refuses every write, at every entry (RFC §5.1):
 the same way *before* the agent runs, so a closed room costs no generation for
 an answer nothing could commit. Each refusal emits the `room_refused_event`
 framework event; a regenerate's carries `data={"status": ..., "operation":
-"regenerate"}` and, as `event_id`, the message it would have replayed.
+"regenerate"}` and, as `event_id`, the message it would have replayed (`None`
+when nothing qualified).
 
 Timer-based automation:
 
@@ -1029,7 +1030,8 @@ Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-r
 #### Regenerating the last answer
 
 `regenerate_response(room_id)` re-runs the room's intelligence channel on the
-newest message a transport wrote, without ingesting anything: the user's
+newest message a transport wrote and the room accepted (a message a hook
+blocked is never replayed), without ingesting anything: the user's
 message keeps its id, index and timestamp, and only the agent reacts (the
 re-broadcast is scoped to `visibility="intelligence"`, so no transport sees
 the message twice). It generates; removing the answer it replaces is the
@@ -1041,9 +1043,13 @@ copy of its selection:
 ```python
 trigger = await kit.regenerate_target("support-123")   # None: nothing to re-run
 if trigger is not None:
-    await remove_answers_after(trigger.index)
+    for event in await kit.store.list_events("support-123", after_index=trigger.index):
+        if event.type == EventType.MESSAGE and event.source.channel_id == "agent":
+            await kit.delete_event("support-123", event.id)
     result = await kit.regenerate_response("support-123")
 ```
+
+Runnable: `examples/regenerate_answer.py`.
 
 Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
 `regenerate_response()` returns `InboundResult(blocked=True, reason="room_closed")`
