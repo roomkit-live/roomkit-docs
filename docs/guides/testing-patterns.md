@@ -159,6 +159,49 @@ assert len(backend.sent_audio) > 0
 session_id, audio_bytes = backend.sent_audio[0]
 ```
 
+### ScenarioVoiceBackend and VoiceTrace
+
+The voice test bench (`roomkit.voice.testing`) replaces frame-by-frame
+injection and `asyncio.sleep` with a simulated phone and a hook timeline.
+`ScenarioVoiceBackend` extends `MockVoiceBackend`: it plays a WAV or a
+`PCMAudio` clip as 20 ms frames, paced like a real transport (or as fast as
+possible with `realtime=False`), and captures what the bot sends per session.
+`VoiceTrace` subscribes to the voice hooks of a kit and records when each
+fired, so a test waits for the hook it needs and reads the turn's order and
+latencies off the timeline:
+
+```python
+from __future__ import annotations
+
+from roomkit import HookTrigger, RoomKit, VoiceChannel
+from roomkit.voice.testing import ScenarioVoiceBackend, VoiceTrace, tone
+
+backend = ScenarioVoiceBackend()
+kit = RoomKit(stt=stt, tts=tts, voice=backend)
+trace = VoiceTrace(kit)   # before the first session: ON_SESSION_STARTED fires at connect
+kit.register_channel(
+    VoiceChannel("voice-1", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
+)
+# ... create the room, attach the channel ...
+session = await kit.join(room.id, "voice-1", participant_id="user-1")
+
+await backend.play(session, tone(300), realtime=False)   # 15 frames, or a WAV path
+heard = await trace.wait_for(HookTrigger.ON_TRANSCRIPTION, timeout=2)
+assert heard.payload.text == "hello there"
+await trace.wait_for(HookTrigger.AFTER_TTS)
+
+speech_end = trace.first(HookTrigger.ON_SPEECH_END)
+print(trace.elapsed_ms(speech_end, heard))          # STT latency, ms
+print(trace.sequence())                             # the hooks, in order
+backend.write_capture(session, "reports/bot.wav")   # what the bot said
+```
+
+A `wait_for` that times out raises `TimeoutError` naming the triggers that did
+fire. `VoiceTrace(kit, triggers=(*VOICE_TRIGGERS, HookTrigger.AFTER_BROADCAST))`
+adds any other trigger to the timeline. `read_wav`, `write_wav`, `pcm_frames`,
+`silence` and `tone` are the stdlib WAV and PCM helpers around `PCMAudio`.
+Runnable: `examples/voice_scenario_backend.py`.
+
 ### MockSTTProvider
 
 ```python

@@ -2327,6 +2327,37 @@ Key properties:
 
 ## Video
 
+#### Voice test bench
+
+`roomkit.voice.testing` is what a voice scenario is written with, at every
+fidelity level. `ScenarioVoiceBackend` extends `MockVoiceBackend` into a
+simulated phone: `play()` cuts a WAV or a `PCMAudio` clip into 20 ms frames
+delivered at a transport's cadence (or back to back with `realtime=False`),
+and everything the bot sends is captured per session, readable as a clip or
+written to a WAV. `VoiceTrace` subscribes to the voice hooks of a kit and
+records when each fired, so a test waits for the hook it needs instead of
+sleeping and reads the turn's order and latencies off the timeline:
+
+```python
+from roomkit import HookTrigger, RoomKit, ScenarioVoiceBackend, VoiceTrace
+from roomkit.voice.testing import tone
+
+backend = ScenarioVoiceBackend()
+kit = RoomKit(stt=stt, tts=tts, voice=backend)
+trace = VoiceTrace(kit)                  # before the first session
+...
+await backend.play(session, tone(300), realtime=False)
+heard = await trace.wait_for(HookTrigger.ON_TRANSCRIPTION, timeout=2)
+await trace.wait_for(HookTrigger.AFTER_TTS)
+print(trace.elapsed_ms(trace.first(HookTrigger.ON_SPEECH_END), heard))   # STT latency
+backend.write_capture(session, "reports/bot.wav")                         # what the bot said
+```
+
+`read_wav`, `write_wav`, `pcm_frames`, `silence` and `tone` are the stdlib
+WAV and PCM helpers around `PCMAudio`. See the
+[Testing Patterns guide](guides/testing-patterns.md#scenariovoicebackend-and-voicetrace)
+and `examples/voice_scenario_backend.py`.
+
 ### Video Channel
 
 Real-time video capture and AI-powered frame analysis:

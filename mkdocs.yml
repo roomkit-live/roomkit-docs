@@ -178,6 +178,7 @@ nav:
           - RTP Backend: api/rtp-backend.md
           - SIP Backend: api/sip-backend.md
           - Realtime Voice: api/providers-realtime-voice.md
+          - Voice Test Bench: api/voice-testing.md
       - Models:
           - Room & Timers: api/room.md
           - Events & Content: api/events.md
