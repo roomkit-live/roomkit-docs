@@ -208,6 +208,14 @@ stateDiagram-v2
 - **CLOSED** -- Conversation is ended; no new messages accepted
 - **ARCHIVED** -- Final state for long-term storage
 
+A `CLOSED` or `ARCHIVED` room refuses every write, at every entry (RFC §5.1):
+`process_inbound()` returns `InboundResult(blocked=True, reason="room_closed")`,
+`send_event()` raises `RoomClosedError`, and `regenerate_response()` is refused
+the same way *before* the agent runs, so a closed room costs no generation for
+an answer nothing could commit. Each refusal emits the `room_refused_event`
+framework event; a regenerate's carries `data={"status": ..., "operation":
+"regenerate"}` and, as `event_id`, the message it would have replayed.
+
 Timer-based automation:
 
 ```python
@@ -1017,6 +1025,29 @@ await kit.process_inbound(
 ```
 
 Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-rooms.md) and `examples/ai_multi_speaker.py`.
+
+#### Regenerating the last answer
+
+`regenerate_response(room_id)` re-runs the room's intelligence channel on the
+newest message a transport wrote, without ingesting anything: the user's
+message keeps its id, index and timestamp, and only the agent reacts (the
+re-broadcast is scoped to `visibility="intelligence"`, so no transport sees
+the message twice). It generates; removing the answer it replaces is the
+caller's job, and `regenerate_target(room_id)` names the message it would
+re-run on, so that removal, or a refusal of the host's own (a runner's prompt
+that must not be replayed), is keyed on the primitive's choice rather than on a
+copy of its selection:
+
+```python
+trigger = await kit.regenerate_target("support-123")   # None: nothing to re-run
+if trigger is not None:
+    await remove_answers_after(trigger.index)
+    result = await kit.regenerate_response("support-123")
+```
+
+Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
+`regenerate_response()` returns `InboundResult(blocked=True, reason="room_closed")`
+before the agent runs, and `regenerate_target()` raises `RoomClosedError`.
 
 ### Image Generation
 

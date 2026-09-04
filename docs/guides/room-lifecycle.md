@@ -170,6 +170,11 @@ A closed room may be reopened by returning it to `ACTIVE`; an archived one is
 done. Reading is unaffected at every status: history, participants and bindings
 stay readable in an archived room.
 
+`regenerate_response()` is refused the same way at either status, before the
+agent runs: it returns `InboundResult(blocked=True, reason="room_closed")`, and
+`regenerate_target()` raises `RoomClosedError`, so a host learns the room is
+closed before it acts on a trigger.
+
 The call is idempotent, stops any room-level media recorder, and emits the
 `room_archived` framework event:
 

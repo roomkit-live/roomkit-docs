@@ -33,6 +33,8 @@
         - leave
         - process_inbound
         - send_event
+        - regenerate_response
+        - regenerate_target
         - ensure_participant
         - resolve_participant
         - connect_websocket
