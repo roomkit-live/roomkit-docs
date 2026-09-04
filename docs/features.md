@@ -1059,8 +1059,16 @@ regenerate: the pipeline answers it, and a regenerate that re-selected under
 the lock would answer it a second time, with the earlier answer already
 deleted. Naming the trigger refuses that case with
 `InboundResult(blocked=True, reason="trigger_moved")`, before the agent runs
-and with nothing written; the host re-reads `regenerate_target`. Without
-`trigger_id`, the call regenerates whatever the selection is.
+and with nothing written; an empty selection (the source can no longer write)
+is refused the same way. What the guard promises is exactly that the message
+that landed in between is not answered twice. It does not undo the host's own
+step: the answer it deleted stays deleted, and the newer message already has
+its own, so the host is left with an earlier question the room no longer
+answers. Deleting is the irreversible half of the two steps: keep the window
+between the delete and the regenerate short, and re-read `regenerate_target`
+right before deleting rather than after the refusal. Without `trigger_id`,
+the call regenerates whatever the selection is.
+
 
 Runnable: `examples/regenerate_answer.py`.
 
