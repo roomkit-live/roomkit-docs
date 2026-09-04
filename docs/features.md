@@ -1048,14 +1048,26 @@ if trigger is not None:
     for event in await kit.store.list_events("support-123", after_index=trigger.index):
         if event.type == EventType.MESSAGE and event.source.channel_id == "agent":
             await kit.delete_event("support-123", event.id)
-    result = await kit.regenerate_response("support-123")
+    result = await kit.regenerate_response("support-123", trigger_id=trigger.id)
+    if result is not None and result.reason == "trigger_moved":
+        ...  # a message landed in between and the pipeline answered it
 ```
+
+`trigger_id` makes the call a compare-and-regenerate. The target is read
+outside the room lock, so a message can land between that read and the
+regenerate: the pipeline answers it, and a regenerate that re-selected under
+the lock would answer it a second time, with the earlier answer already
+deleted. Naming the trigger refuses that case with
+`InboundResult(blocked=True, reason="trigger_moved")`, before the agent runs
+and with nothing written; the host re-reads `regenerate_target`. Without
+`trigger_id`, the call regenerates whatever the selection is.
 
 Runnable: `examples/regenerate_answer.py`.
 
 Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
 `regenerate_response()` returns `InboundResult(blocked=True, reason="room_closed")`
-before the agent runs, and `regenerate_target()` raises `RoomClosedError`.
+before the agent runs (`room_closed` wins over `trigger_moved`), and
+`regenerate_target()` raises `RoomClosedError`.
 
 ### Image Generation
 
