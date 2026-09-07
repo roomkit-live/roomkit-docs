@@ -560,20 +560,30 @@ across a reset. Notifications between prompts are published through `CUSTOM`
 prompt's response. Even a notification received during a prompt remains a
 session observation, never a claim that this prompt caused the cost.
 
-A transport that has durable facts can put them in the SDK extension
+A transport that owns and validates durable facts opts in by overriding
+`ACPTransport.provides_usage_metadata` to return `True`. It can then put them
+in the SDK extension
 `_meta["roomkit.live/usage"]` (`field_meta` in Python), on a `PromptResponse`
 and on each `UsageUpdate` it relays. This envelope carries the available
 `session_id`, `session_epoch`, `usage_protocol`, `node_id`, `agent_id`,
+`adapter_info` (the adapter handshake identity, relayed unchanged),
 `result_id`, `turn_id`, `generation`, `replayed`, and `usage_report`. The report
 has `report_id`, `observed_at_ms`, `source="session/update"`, `scope="session"`,
 optional `source_result_id`, and the raw `update`. A terminal `model`, if
 known, is copied to `prompt.model`; current configuration is never used to
 label a recovered result's tokens. The transport validates these facts and
-supplies node/adapter identity from its authenticated connection.
+supplies node/adapter identity from its authenticated connection. These reported
+metadata are not authorization credentials. On a native connection, RoomKit
+also includes the available `adapter_info` from the ACP handshake. The default
+is `False`: stdio and other transports that do not opt in ignore this extension
+for identity attribution, so an agent cannot promote its own metadata into
+authenticated transport provenance.
 
 A terminal envelope is authoritative, including an absent report: RoomKit
 discards any live cost that would otherwise be paired with the recovered
-result. It copies identities unchanged and marks `identity_source="transport"`.
+result. The snapshot is sealed before the terminal stream item is consumed;
+later notifications remain ephemeral and cannot change the hook report.
+It copies identities unchanged and marks `identity_source="transport"`.
 A report's `source_result_id` may differ from the response's `result_id`, or be
 absent: keep that distinction when persisting or deduplicating. Live
 notifications never establish the current prompt's result identity. Scope

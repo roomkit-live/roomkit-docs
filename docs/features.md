@@ -526,6 +526,15 @@ readable and settable — `agent.session_config(room_id)` returns
 `await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
 with every change published as an ephemeral event.
 
+Completed ACP responses also carry `AIResponseEvent.usage_metadata`: native
+session identity, measurement source/scope, model snapshots and the available
+session report, separate from prompt token counters. Transports that opt in
+with `provides_usage_metadata` can preserve durable identities across recovery;
+terminal snapshots cannot be overwritten by late notifications. Missing
+measurements stay absent, zero stays zero, and session costs are never turned
+into prompt prices. See [usage provenance and recovered results](guides/acp-channel.md#usage-provenance-and-recovered-results)
+for the transport contract and interruption policy.
+
 The turn's live response record starts with the negotiated ACP protocol
 version. A prompt that returns for any reason other than `end_turn` adds
 `response_metadata["acp"]["stop_reason"]`; one that never returns adds
