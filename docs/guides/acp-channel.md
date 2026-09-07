@@ -509,11 +509,85 @@ on that turn rather than a sum over turns. A client cannot tell the two apart
 from one reading, and reinterpreting either way corrupts the figure where
 nothing downstream can notice, so RoomKit does no arithmetic on them at all. If
 an integrator knows which convention its agent follows, that is where the
-subtraction belongs. Only `context_used`, `context_size` and `cost` are
-dependably cumulative — they climb turn after turn.
+subtraction belongs. `cost` is a session cumulative amount. `context_used` and `context_size`
+describe occupancy and capacity, not consumed tokens; they may decrease after
+compaction or a configuration change.
 
 An agent that reports no usage at all leaves `usage` empty rather than
 inventing zeros.
+
+### Usage provenance and recovered results
+
+`AIResponseEvent.usage_metadata` is optional and defaults to `{}` for existing
+providers. ACP fills it independently of the numeric `usage` map:
+
+```python
+{
+    "protocol": "acp", "transport": "stdio",
+    "session_id": "native-session", "event_id": "host-trigger-event",
+    "prompt": {
+        "source": "session/prompt", "scope": "unspecified",
+        "model_at_start": "opus", "stop_reason": "end_turn",
+    },
+    "usage_report": {
+        "report_id": "local-receipt-id", "identity_source": "roomkit",
+        "observed_at_ms": 1780000000000,
+        "source": "session/update", "scope": "session",
+        "model_at_observation": "opus",
+        "update": {
+            "sessionUpdate": "usage_update", "used": 0, "size": 200000,
+            "cost": {"amount": 0, "currency": "USD"},
+        },
+    },
+}
+```
+
+`event_id` identifies the host request being observed; it does **not** identify
+the source prompt of the session cost. The cost is cumulative for the session;
+`used` and `size` describe context occupancy/capacity, which can decrease after
+compaction. Token counters come from `session/prompt`, but their accounting
+scope remains `unspecified`: RoomKit cannot infer an adapter's convention.
+The model snapshots describe when the model was observed, not which model
+incurred the entire cumulative cost. Absent fields stay absent; a reported
+zero stays zero. No cost delta, tariff or credits are computed.
+
+A standard ACP usage notification names a session, not a prompt. RoomKit gives
+its receipt a local ID and timestamp, marked `identity_source="roomkit"`;
+it never manufactures `source_result_id`. Such an ID is not durable across
+reconnection/replay, and a missing session epoch establishes no continuity
+across a reset. Notifications between prompts are published through `CUSTOM`
+`acp_usage` with the same `usage_metadata`, but are not carried into the next
+prompt's response. Even a notification received during a prompt remains a
+session observation, never a claim that this prompt caused the cost.
+
+A transport that has durable facts can put them in the SDK extension
+`_meta["roomkit.live/usage"]` (`field_meta` in Python), on a `PromptResponse`
+and on each `UsageUpdate` it relays. This envelope carries the available
+`session_id`, `session_epoch`, `usage_protocol`, `node_id`, `agent_id`,
+`result_id`, `turn_id`, `generation`, `replayed`, and `usage_report`. The report
+has `report_id`, `observed_at_ms`, `source="session/update"`, `scope="session"`,
+optional `source_result_id`, and the raw `update`. A terminal `model`, if
+known, is copied to `prompt.model`; current configuration is never used to
+label a recovered result's tokens. The transport validates these facts and
+supplies node/adapter identity from its authenticated connection.
+
+A terminal envelope is authoritative, including an absent report: RoomKit
+discards any live cost that would otherwise be paired with the recovered
+result. It copies identities unchanged and marks `identity_source="transport"`.
+A report's `source_result_id` may differ from the response's `result_id`, or be
+absent: keep that distinction when persisting or deduplicating. Live
+notifications never establish the current prompt's result identity. Scope
+report IDs by their node, adapter, native session and epoch when available.
+Old transports need no new methods and can omit this extension entirely.
+
+**Interruption policy:** a consumed `PromptResponse` still fires the existing
+hook, including `cancelled`, `refusal` or `max_tokens`; `prompt.stop_reason`
+records the distinction. A response observation is not proof of successful
+work. Exceptions and abandoned streams fire no response hook. Reports already
+received remain available to subscribers of `CUSTOM` `acp_usage`; a missing
+terminal report is never fabricated. Hosts needing durable error/restart
+accounting must persist those observations or recover a transport's durable
+result. The hook itself is not an exactly-once accounting journal.
 
 ### A turn never outlives its tool calls
 
