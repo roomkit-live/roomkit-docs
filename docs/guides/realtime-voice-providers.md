@@ -1283,3 +1283,42 @@ await provider.simulate_tool_call(session, "call-1", "get_weather", {"city": "NY
 # Assert transport received audio
 assert len(transport.sent_audio) > 0
 ```
+
+## Sharing a transport between channels
+
+When each caller needs a separate provider or prompt, channels can share one
+`FastRTCRealtimeTransport`. Pass `owns_transport=False` to each channel:
+
+```python
+channel = RealtimeVoiceChannel(
+    "voice-user-123",
+    provider=provider,
+    transport=shared_transport,
+    owns_transport=False,
+)
+```
+
+`await channel.close()` ends that channel's sessions, closes its provider and
+removes its transport callbacks. Other channels remain connected. The service
+that created the shared transport calls `await shared_transport.close()` once
+at shutdown. The default `owns_transport=True` preserves exclusive ownership.
+
+FastRTC and SIP realtime audio/disconnect registrations return an idempotent
+unsubscribe function. Invoke it when disposing a custom subscriber. SIP adapters
+use `SIPVoiceBackend.subscribe_audio_received()` to listen alongside the primary
+pipeline callback; `await adapter.close()` detaches the adapter without closing
+the SIP listener. Custom shared backends must likewise support unsubscribe
+functions for their audio, playback and disconnect registrations.
+
+FastRTC declares capture and playback rates independently in session metadata
+(`transport_sample_rate` and `transport_output_sample_rate`). The channel
+resamples each direction to its provider's configured format. SIP declares the
+negotiated codec rate. Configure provider rates using the provider's accepted
+formats; for OpenAI PCM, use 24 kHz rather than Gemini's usual 16 kHz input.
+
+`await channel.wait_idle(room_id)` waits for generation to finish and audio to
+reach the transport. A queued SIP transport may still be playing: before a
+conversational hangup, also wait until `backend.is_playing(carrier_session)` is
+false. Bound this wait and stop it when the call disconnects. SIP reports RTP
+emission and an estimated playback boundary; remote speaker playback cannot be
+observed directly.
