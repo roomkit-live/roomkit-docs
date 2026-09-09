@@ -488,7 +488,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Cerebras, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, or custom providers
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Cost attribution** -- `GeminiVertexConfig.labels` rides every Vertex request as a billing label, so Cloud Billing splits one project's Gemini spend per tenant or partner; validated against Google's label rules at configuration
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
@@ -592,10 +592,11 @@ trusting a stale number.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
   `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
-  DeepSeek, Qwen, Ollama, and PolarGrid. Verified against a live upstream mirror on every
+  DeepSeek, Qwen, Cerebras, Ollama, and PolarGrid. Most catalogs are verified against a live upstream mirror on every
   release (`make check-models`), which is what catches a vendor shipping a new
-  flagship — a stale list is internally consistent, so no test can. PolarGrid
-  is the exception: absent from that mirror, its catalog is checked by hand
+  flagship — a stale list is internally consistent, so no test can. Cerebras
+  is checked against its public models endpoint and model cards. PolarGrid,
+  also absent from that mirror, is checked by hand
   against the vendor's autorouter (`/v1/route?model=<id>`, 404 when no edge
   serves the id).
 - **Azure / vLLM** -- these serve user-named deployments or arbitrary local
@@ -613,6 +614,10 @@ trusting a stale number.
 - **Qwen** -- the inverse case: Model Studio's OpenAI-compatible deployment
   serves `/chat/completions` and nothing else, so the offline catalog *is* the
   discovery surface and `list_models()` returns it unchanged.
+- **Cerebras** -- uses the shared OpenAI-compatible transport with its own
+  reasoning parameters and assistant history format. Supports streaming tool
+  calls and usage accounting; `list_models()` queries the account's `/v1/models`.
+  See the [Cerebras provider reference](api/providers-ai.md#cerebras-provider).
 
 See `examples/list_models.py`.
 
@@ -1331,6 +1336,10 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Planning tools** — opt-in `enable_planning=True` gives the AI a `plan_tasks` tool for structured task tracking (up to 100 tasks, 500 characters per title) with real-time UI updates via ephemeral events
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
+- **Chat E2E benchmarks** — A source-checkout CLI exercises 27 chat scenarios
+  with real providers or an offline mock, on memory or SQLite. Reports include
+  functional checks, first-text latency, provider wait time and raw usage.
+  See [Chat E2E Benchmarks](guides/chat-benchmarks.md) for coverage and limits.
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
 - **Human-in-the-loop** — pause the AI tool loop to request user input via `HumanInputToolHandler`. The tool blocks until the user responds, then resumes with the answer. Works with any tool name (`AskUserQuestion`, confirmations, data collection), provided the turn actually offers it — `tool_names` gates dispatch, `tool_definitions` (or the channel's `tools=`) is what puts it in the toolset. Uses `ON_USER_INPUT_REQUIRED` sync hook for notifications, and the request carries `actor_id` so a notification layer can ask the person whose turn raised it rather than the whole room. See the [Human-in-the-Loop guide](guides/human-in-the-loop.md)
 - **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely:

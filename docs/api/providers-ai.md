@@ -254,6 +254,58 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[openai]`
 
+## Cerebras Provider
+
+::: roomkit.providers.cerebras.ai.CerebrasAIProvider
+
+::: roomkit.providers.cerebras.config.CerebrasConfig
+
+Install with `pip install "roomkit[cerebras]"`. The provider uses the shared
+OpenAI-compatible async transport and supports text, streaming, reasoning,
+function calls and image input on vision-capable models.
+
+```python
+import os
+
+from roomkit import AIChannel, CerebrasAIProvider, CerebrasConfig
+
+provider = CerebrasAIProvider(CerebrasConfig(
+    api_key=os.environ["CEREBRAS_API_KEY"],
+    model="gpt-oss-120b",
+    reasoning_effort="low",
+))
+ai = AIChannel("assistant", provider=provider)
+```
+
+Choose `model` explicitly. `await provider.list_models()` queries the models
+available to the account; `CerebrasAIProvider.available_models()` supplies
+offline capabilities, context limits and dated prices. The snapshot includes
+GPT OSS 120B, Qwen 3.8 27B and Gemma 4 31B; Gemma may require a dedicated
+endpoint. Qwen uses a conservative 65,536-token limit covering the trial tier.
+Its model card advertises a larger window on paid tiers. Unknown model ids
+remain usable, with unknown context size and vision disabled.
+
+`reasoning_effort` remains active when tools are supplied; a per-turn
+`AIContext.reasoning_effort` overrides the provider setting. GPT OSS accepts
+`low`, `medium` or `high`. Qwen 3.8 also accepts `none` to disable reasoning.
+`thinking_budget` is not translated into an effort level. Available values
+depend on the selected model, as described in the
+[Cerebras reasoning guide](https://inference-docs.cerebras.ai/capabilities/reasoning).
+
+`reasoning_format="parsed"` is the default, keeping thinking separate from
+answer text. Historical `AIThinkingPart` values are sent in the assistant's
+`reasoning` field, including across tool rounds. `clear_thinking` is optional
+and should only be set for a model supporting it. Selecting `raw` can mix
+reasoning into visible text; GPT OSS supplies no separator in that mode.
+
+The output cap uses `max_completion_tokens`. Token usage is collected from
+Cerebras's final streaming chunk without requesting `stream_options`.
+Cache reads are reported separately and priced at the ordinary input rate.
+Errors and latency metrics identify the provider as `cerebras`; SDK retries
+default to zero so RoomKit's retry policy remains in control.
+
+See `examples/cerebras_ai.py` for a complete conversation.
+
 ## Mistral Provider
 
 ::: roomkit.providers.mistral.ai.MistralAIProvider

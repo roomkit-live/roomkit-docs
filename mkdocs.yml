@@ -150,6 +150,7 @@ nav:
           - Telemetry: guides/telemetry.md
       - Development:
           - Testing Patterns: guides/testing-patterns.md
+          - Chat E2E Benchmarks: guides/chat-benchmarks.md
   - RFC: https://github.com/roomkit-live/roomkit-specs/blob/main/roomkit-rfc.md
   - API Reference:
       - api/index.md
