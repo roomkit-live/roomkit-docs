@@ -258,9 +258,40 @@ Consequences worth knowing:
   *catalogue* — a host rendering its own `<available_skills>` manifest. Active bodies
   are runtime state a host cannot know, so they are injected either way.
 
-Realtime voice channels run the same lifecycle per *session*, either by pushing the
-body into `system_instruction` via `provider.reconfigure` (`on_demand`) or by
-pre-loading every body at session start (`inline_full`).
+Realtime voice channels run the same lifecycle per *session*. `inline_full`
+preloads every body at connection time. `on_demand` advertises metadata and loads
+only activated bodies: reconfigurable providers receive system instructions;
+fixed providers receive the full instructions and reference inventory in the tool
+result. Activation also returns the exact schemas of `requires` prerequisites
+from the session's authorized catalogue. This metadata describes dependencies,
+not permission grants; applications still resolve skill availability first.
+
+For fixed providers, `on_demand` requires
+`provider.supports_context_preservation`. The channel requests
+`provider_config={"preserve_context": True}` and refuses unsupported providers.
+Gemini Live disables sliding-window compression for these sessions and stops
+with `context_preservation_ended` before reconnecting with uncertain history.
+The existing error callback reports that termination; pending operations are
+never replayed. Server duration limits still apply (roughly ten minutes per
+connection, potentially less). Start a new session after an explicit stop.
+
+```python
+voice = RealtimeVoiceChannel(
+    "voice", provider=gemini_provider, transport=transport,
+    skills=registry, skill_delivery_mode="on_demand",
+)
+```
+
+The default stays `inline_full` for fixed providers and `on_demand` for native
+reconfiguration. Gates open only after successful delivery. Fixed-provider gates
+automatically enable [Tool Search](realtime-voice-providers.md#tool-search-with-fixed-declarations),
+including for small catalogues; explicitly setting `tool_search=False` in that
+configuration is an error. Activation never declares unsupported provider tools.
+Skill bodies and references bypass the business-result length limit.
+
+See `examples/realtime_skills.py` for a bounded Live session with the bundled
+code-review skill, its unmodified reference, a trace and captured speech. Text
+input in this example exercises the Live protocol rather than speech recognition.
 
 ### Reading which skills are already loaded
 

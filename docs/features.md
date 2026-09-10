@@ -922,6 +922,12 @@ A registered skill has one of three visibility states: **available** (listed and
 
 See the [Agent Skills guide](guides/agent-skills.md) for full details on skill directory structure, visibility states, script execution, and configuration.
 
+Realtime channels also support full on-demand skill delivery on fixed providers
+that can preserve context. Gemini Live uses bounded sessions without compression
+or uncertain reconnection; gates open after successful delivery. The activation
+result carries complete instructions, reference names and authorized prerequisite
+schemas. Existing inline and native reconfiguration modes remain available.
+
 #### AI Thinking / Reasoning
 
 AI models with chain-of-thought reasoning (Claude 3.5+, DeepSeek-R1, QwQ) can expose their internal thinking. RoomKit captures this reasoning, preserves it across tool-loop rounds, and exposes it through hooks and ephemeral events.
