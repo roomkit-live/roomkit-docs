@@ -96,6 +96,51 @@ a connection nobody owns.
 
 ---
 
+## Tool Search with fixed declarations
+
+Tool Search activates automatically when the catalogue exceeds
+`tool_search_threshold` (20 by default). Set `tool_search=True` to enable it for
+a smaller catalogue or `False` to expose the catalogue directly.
+`tool_search_pinned` keeps selected tools directly callable alongside discovery.
+
+Providers that support mid-session reconfiguration receive native declarations
+for the tools matched by `find_tools`. Providers with fixed declarations, such
+as Gemini 3.1 Live, use three stable functions instead:
+
+| Function | Result |
+| --- | --- |
+| `find_tools(query)` | Matching tool names and short descriptions; queries use English keywords |
+| `list_tools(name="calendar")` | One tool's complete description and parameter schema |
+| `call_tool(name="calendar", arguments_json='{"action":"list"}')` | The result of calling the named tool with the decoded arguments |
+
+Without `name`, `list_tools(category=...)` returns the compact catalogue
+overview. A schema lookup returns one complete JSON document and is not cut by
+the business tool-result length limit. The tool name and an operation such as
+`list` are separate: the operation belongs in the tool's arguments when its
+schema declares one.
+
+This transport does not reconnect the session after a search and does not add
+permissions. Supply only the session's authorized catalogue. Unknown and
+excluded names both return an unavailable-in-this-session refusal. Arguments,
+skill gates, and `BEFORE_TOOL_USE` are checked before the same handler used by
+native calls. `ON_TOOL_CALL` observes the real tool name and arguments with the
+provider's original call ID. Invalid arguments, explicit gate refusals, and
+execution failures remain distinguishable.
+
+`call_tool` is reserved when fixed-declaration Tool Search is active; a caller
+catalogue containing that name is rejected. Infrastructure functions are called
+directly rather than recursively through `call_tool`.
+
+Ending a session cancels its in-flight tool tasks and rejects late calls. It
+does not cancel another session's tasks or undo external effects that have
+already occurred.
+
+The [realtime Tool Search example](https://github.com/roomkit-live/roomkit/blob/main/examples/realtime_tool_search.py)
+runs Gemini Live against 112 fictional tools, captures tool-call traces and
+speech, and verifies calendar and project operations in one connection. Its
+input is injected text; it checks the Live tool protocol rather than speech
+recognition. It requires `GEMINI_API_KEY` and performs no business mutations.
+
 ## Passing `provider_config`
 
 Everything provider-specific — VAD tuning, transcription model, Gemini's
