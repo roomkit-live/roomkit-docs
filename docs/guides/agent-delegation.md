@@ -375,8 +375,10 @@ kit = RoomKit(task_runner=RedisTaskRunner(redis_url="..."))
 
 When a background result follows a realtime tool's spoken acknowledgement, use
 `strategy="wait_for_idle"` with that explicit channel ID. Realtime idle detection
-includes pending tool calls and the provider response after submission, then
-waits for its audio to reach the transport. `WaitForIdle` retains its bounded
+includes pending tool calls and a provider response starting after submission,
+then waits for its audio to reach the transport. Audio from an already started
+response does not prove that a newer tool result was processed; a provider that
+resumes that response without a fresh start signal uses the timeout fallback. `WaitForIdle` retains its bounded
 playback timeout and best-effort fallback; it is not a guarantee that a model
 will produce an acknowledgement or a result. Inspect the voice trace and audio
 when verifying that conversational contract.
