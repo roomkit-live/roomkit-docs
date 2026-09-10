@@ -24,6 +24,14 @@ RoomKit separates channels into two categories:
 
 This clean separation means AI isn't bolted on as an afterthought. Intelligence channels participate in conversations as first-class citizens with their own lifecycle, muting, and configuration — and they say when that lifecycle may end: `Channel.active_turns` counts the turns a channel is producing, so a caller retiring a displaced object waits for zero instead of closing under a turn (see [Retiring a channel object](guides/acp-channel.md#retiring-a-channel-object-without-cutting-its-turn)).
 
+### Responses Attributed to Their Inbound Call
+
+`InboundResult.response_events` carries the persisted response events from one
+call's delivery cascade, including streaming segments and broadcast-hook edits.
+Background consumers can read their call's answer even after another turn in the
+same room. Deferred callers await `delivery.wait()` for the complete collection.
+See [attributing a direct inbound response](guides/agent-delegation.md#attributing-a-direct-inbound-response).
+
 ### Identity Resolution Pipeline
 
 The "who is this sender?" problem gets a dedicated pipeline with:

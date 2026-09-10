@@ -219,6 +219,47 @@ task = await kit.delegate(
 )
 ```
 
+## Attributing a direct inbound response
+
+Hosts that dispatch work through `process_inbound()` can read
+`InboundResult.response_events` to identify the responses belonging to that call.
+Reading the room after the inbound index can include another turn that committed
+or completed while the host was waiting.
+
+```python
+result = await kit.process_inbound(message, room_id="worker-room", defer_delivery=True)
+if result.delivery is not None:
+    result = await result.delivery.wait()
+
+if not result.blocked and result.error is None:
+    replies = [
+        event for event in result.response_events
+        if isinstance(event.content, TextContent)
+        and event.source.channel_id == "worker"
+    ]
+    if replies:
+        answer = max(replies, key=lambda event: event.index).content.body
+```
+
+Import `TextContent` from `roomkit`. The collection contains persisted, delivered
+response events from the call's delivery cascade, including streamed segments.
+It excludes the initial inbound, blocked responses and other calls' events;
+broadcast-hook edits are reflected in the returned content. Events retain their
+indices, source and visibility. A host still applies its own access policy when
+presenting them to a user. An empty collection means no persisted response, and
+a partial response does not override `result.error` or the turn's end metadata.
+
+With deferred delivery, wait for `result.delivery.wait()` before treating the
+collection as complete. The runnable
+[`deferred_inbound.py` example](https://github.com/roomkit-live/roomkit/blob/main/examples/deferred_inbound.py)
+reads the first call's answer after a second call has completed, without credentials.
+
+For a voice destination that is reused across calls, pass the original call's
+unique `channel_id` to `kit.deliver()`. A room-only destination auto-selects its
+current transport; that may be a different call by the time background work ends.
+The host owns the call lifetime and may keep the result in its text conversation
+when that voice channel has ended.
+
 ## Delivery strategies
 
 Control how task results are delivered back to the parent conversation:
