@@ -5,7 +5,7 @@ conversation and nothing else: it has no tools of its own. When the user asks
 for something that needs a lookup, a tool, or careful thought, the model
 *delegates* — it hands the work to a backend model and keeps talking while the
 backend works. RoomKit calls this **reasoning delegation** (RFC §12.4.1), as
-opposed to [task delegation](../features.md#task-delegation), which dispatches
+opposed to [task delegation](../features.md#agent-delegation), which dispatches
 a described task to an agent in a child room.
 
 There are two ways to run the backend.
