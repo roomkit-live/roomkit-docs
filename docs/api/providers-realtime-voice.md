@@ -39,6 +39,8 @@ See [`VoiceSession`](providers-voice.md#roomkit.voice.base.VoiceSession) and [`V
 
 ::: roomkit.voice.realtime.events.RealtimeErrorEvent
 
+::: roomkit.voice.realtime.events.RealtimeDelegationEvent
+
 ## Callback Types
 
 | Callback | Signature |
@@ -51,6 +53,7 @@ See [`VoiceSession`](providers-voice.md#roomkit.voice.base.VoiceSession) and [`V
 | `RealtimeResponseStartCallback` | `(RealtimeSession) -> Any` |
 | `RealtimeResponseEndCallback` | `(RealtimeSession) -> Any` |
 | `RealtimeErrorCallback` | `(RealtimeSession, str, str) -> Any` |
+| `RealtimeDelegationCallback` | `(RealtimeSession, str, str) -> Any` — `(session, delegation_id, target)` |
 
 ## Concrete Providers
 
@@ -86,6 +89,32 @@ Supports `provider_config` metadata keys: `codec`, `stt_model`, `language`,
 `interrupt_response`, `create_response`, `speed`, `reasoning_effort`.
 
 Install with: `pip install roomkit[realtime-openai]`
+
+### OpenAI GPT-Live (full-duplex)
+
+```python
+from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+
+provider = OpenAILiveProvider(
+    api_key="...",
+    model="gpt-live-1",
+    delegation=HostedReasoning(model="gpt-5.6-terra", instructions="..."),
+)
+```
+
+A different API from OpenAI Realtime: full-duplex, no tools on the live model,
+reasoning delegated to a backend (RFC §12.4.1). `full_duplex` is `True`, so the
+channel runs no barge-in path; response and speech boundaries are synthesized
+from transcript deltas with `turn_gap_ms` of quiet. Supports `provider_config`
+metadata keys: `codec`, `history`. See the [guide](../guides/realtime-voice-providers.md#openai-gpt-live-full-duplex).
+
+Install with: `pip install roomkit[realtime-openai]`
+
+::: roomkit.providers.openai.live.OpenAILiveProvider
+
+::: roomkit.providers.openai.live.HostedReasoning
+
+::: roomkit.providers.openai.live.IntegratorReasoning
 
 ### xAI Grok Realtime
 
@@ -135,6 +164,21 @@ Turn detection is always Deepgram's (`server_vad=False` is ignored with a warnin
 ::: roomkit.providers.deepgram.realtime.DeepgramAgentProvider
 
 ::: roomkit.providers.deepgram.config.DeepgramAgentConfig
+
+## Reasoning Delegation
+
+The integrator-side backend a full-duplex model's delegations are served
+through (RFC §12.4.1). See the [Reasoning Delegation guide](../guides/reasoning-delegation.md).
+
+::: roomkit.voice.realtime.reasoning.ReasoningBackend
+
+::: roomkit.voice.realtime.reasoning.ReasoningRequest
+
+::: roomkit.voice.realtime.reasoning.ReasoningOutput
+
+::: roomkit.voice.realtime.reasoning.TranscriptLine
+
+::: roomkit.voice.realtime.reasoning.AIProviderReasoningBackend
 
 ## Transports
 

@@ -75,7 +75,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 ### Speech-to-Speech AI (Realtime Voice)
 
-`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, xAI Grok Realtime, ElevenLabs Conversational AI, Deepgram Voice Agent) as a first-class channel:
+`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, OpenAI GPT-Live, xAI Grok Realtime, ElevenLabs Conversational AI, Deepgram Voice Agent) as a first-class channel:
 
 - Audio flows directly between the user and the AI provider -- no intermediate STT/TTS
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
@@ -93,6 +93,8 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
 - Deepgram Voice Agent composes its stages from independent vendors — including a non-Deepgram `speak` voice (ElevenLabs, Cartesia…) via `speak_provider`/`speak_endpoint`
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
+- Full-duplex providers (OpenAI GPT-Live) — the model listens and speaks at once and handles being talked over itself; the channel reads `provider.full_duplex` and leaves interruption to it: no playback flush, no gating of the model's audio on user speech, pipeline VAD in the observation role (RFC §12.4.1)
+- Reasoning delegation — a full-duplex model hands reasoning and tool use to a backend while it keeps talking: hosted by OpenAI (`HostedReasoning`, the channel's tools served as usual) or yours (`ReasoningBackend`, default `AIProviderReasoningBackend` over any `AIProvider`, tool calls through the channel gate); `ON_REALTIME_DELEGATION` announces every hand-over — see the [Reasoning Delegation guide](guides/reasoning-delegation.md)
 
 #### Images in the Conversation
 
@@ -464,6 +466,7 @@ Filter options:
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
 | `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
+| `ON_REALTIME_DELEGATION` | Async | Voice: a full-duplex model handed reasoning or tool use to a backend, hosted or integrator-side (`RealtimeDelegationEvent`) |
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |

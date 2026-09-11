@@ -371,6 +371,92 @@ provider_config = {
 
 ---
 
+## OpenAI GPT-Live (full-duplex)
+
+GPT-Live (`gpt-live-1`) is a different API from OpenAI Realtime. The model
+listens and speaks at the same time, handles being interrupted by itself, and
+holds no tools: it *delegates* reasoning and tool use to a backend model while
+the conversation continues (RFC §12.4.1).
+
+```python
+from __future__ import annotations
+
+from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+
+provider = OpenAILiveProvider(
+    api_key="sk-...",
+    model="gpt-live-1",                    # default
+    delegation=HostedReasoning(            # OpenAI runs the backend model
+        model="gpt-5.6-terra",
+        instructions="You are the backend of a voice assistant. ...",
+        reasoning_effort="low",
+    ),
+    turn_gap_ms=800,                       # quiet that closes a synthesized turn
+)
+```
+
+Install with `pip install roomkit[realtime-openai]` (the `websockets` extra).
+
+### What changes on a full-duplex session
+
+- **No barge-in path.** `RealtimeVoiceChannel` reads `provider.full_duplex`
+  and leaves interruption to the model: no playback flush, no `interrupt()` or
+  `truncate_audio()`, no gating of the model's audio while the user speaks.
+  Keep an AEC (or headphones) so the model does not hear itself; the
+  microphone must stay open during playback for the model to be talked over.
+- **Boundaries are synthesized.** The wire carries no response or speech
+  events. The provider groups transcript deltas per speaker and closes a turn
+  after `turn_gap_ms` of quiet; that is when the final transcription and
+  `on_response_end` fire. Partial transcriptions carry deltas for both roles.
+- **A pipeline VAD is observation only.** Its events still reach
+  `ON_SPEECH_START` / `ON_SPEECH_END`, but they never interrupt the model, and
+  `InterruptionConfig` has no effect.
+- **The session is fixed at start.** Model, instructions, voice, audio format
+  and delegation mode are set once by `session.start`. `reconfigure()` appends
+  a changed system prompt to the instructions and, in hosted mode, updates the
+  backend's tools without replacing the session; a voice change reconnects.
+  `supports_mid_session_reconfigure` is `False`, so skills default to
+  `inline_full`.
+- **Text injection is paraphrased.** `inject_text(role="system")` appends
+  instructions; `role="user"` adds spoken context the model relays in its own
+  words, or silent context with `silent=True`. Long texts are split at the
+  API's 500-token per-append bound. `inject_image()` is not available.
+- **One audio format for both directions**, chosen from the channel's
+  `output_sample_rate`: PCM at 16 or 24 kHz, or G.711 at 8 kHz with
+  `provider_config={"codec": "pcmu"}` or `"pcma"`. A different
+  `input_sample_rate` is resampled by the provider.
+- **Usage is seconds, not tokens.** `session._last_usage["live_seconds"]`
+  carries the cumulative live duration; a hosted backend's tokens land under
+  `session._last_usage["backend"]` with the backend model's name.
+
+### Two delegation modes
+
+| Mode | Who runs the backend | Tools | Results |
+|---|---|---|---|
+| `HostedReasoning(model=...)` | OpenAI (Responses API) | the channel's `tools`, served by `tool_handler` / `ON_TOOL_CALL` as usual | function results via `submit_tool_result`; the backend resumes once every call of a response is answered |
+| `IntegratorReasoning()` (default) | your `ReasoningBackend` on the channel | the channel's `tools`, executed by the backend through the channel gate | text, relayed as spoken or silent context |
+
+See the [Reasoning Delegation guide](reasoning-delegation.md) for the
+integrator mode. `ON_REALTIME_DELEGATION` fires for both modes with the
+delegation id and its target (`"hosted"` or `"integrator"`).
+
+### provider_config keys
+
+`codec` (`pcm`, `pcmu`, `pcma`) and `history` (a list of `{"role", "text"}`
+text messages seeding the session, at most 128).
+
+### Available Voices
+
+marin (default), cedar.
+
+### Local speaker and microphone example
+
+`examples/realtime_voice_local_openai_live.py` (hosted backend, weather tools)
+and `examples/realtime_voice_local_openai_live_backend.py` (Claude backend,
+three-step rebooking).
+
+---
+
 ## Google Gemini Live
 
 Persistent streaming connection with session resumption and advanced features.

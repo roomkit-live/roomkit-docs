@@ -73,6 +73,7 @@ nav:
           - Audio Pipeline Stages: guides/audio-pipeline-stages.md
           - STT & TTS Providers: guides/stt-tts-providers.md
           - Realtime Voice (Speech-to-Speech): guides/realtime-voice-providers.md
+          - Reasoning Delegation (GPT-Live): guides/reasoning-delegation.md
           - Audio Resampler: guides/resampler.md
           - ai|coustics Denoiser: guides/aicoustics-denoiser.md
           - sherpa-onnx Providers: guides/sherpa-onnx.md
