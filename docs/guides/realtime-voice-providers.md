@@ -445,9 +445,35 @@ delegation id and its target (`"hosted"` or `"integrator"`).
 `codec` (`pcm`, `pcmu`, `pcma`) and `history` (a list of `{"role", "text"}`
 text messages seeding the session, at most 128).
 
-### Available Voices
+### Voices, pace and tone
 
-marin (default), cedar.
+The voice is fixed for the session (`voice=` on the channel or in the
+session metadata); changing it means a new session, which is what
+`reconfigure(voice=...)` does. Fourteen voices: marin (default) and cedar,
+plus regional ones — quartz, ripple (Australian), vesper (British), willow,
+stone (Irish), gleam, meridian (North American), delta, cinder (Southern US),
+beacon (Filipino), bossa, tempo (Brazilian Portuguese). `available_voices()`
+lists them with language and gender. Custom voices from your own recording
+exist on the API but need OpenAI's approval.
+
+There is no speed parameter. Delivery is steered through the instructions,
+and GPT-Live follows them closely — OpenAI's own prompting guide suggests:
+
+```text
+Speak warmly and naturally, at an unhurried pace. Be clear and direct, not
+overly cheerful. For routine questions, give one or two short sentences.
+Use moderate backchannels. Stop speaking when the user interrupts.
+```
+
+Pace and tone can also be adjusted mid-session, since instructions are
+appended rather than replaced:
+
+```python
+await channel.inject_text(session, "Slow down and speak more calmly.", role="system")
+```
+
+Pronunciation follows the same route ("Say Rosalia as roh-sah-LEE-ah"), and
+instructions written in the target language steer the spoken language.
 
 ### Local speaker and microphone example
 
