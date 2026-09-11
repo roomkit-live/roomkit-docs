@@ -338,6 +338,43 @@ progress past (a sync hook under the room lock, a tool handler inside the
 lane), `wait()` returns unwaited instead of deadlocking. See
 `examples/deferred_inbound.py` for a runnable end-to-end demonstration.
 
+### Cancelling a Delivery
+
+Cancelling the task awaiting `process_inbound()` cancels that call's delivery
+cascade, including generation, tools, reentry and streams. RoomKit waits for
+the owned work's cleanup before propagating `asyncio.CancelledError`. It keeps
+the committed inbound event and any persisted response segments. Other calls,
+rooms and shared providers continue; the next turn can use a new tool handler
+once cleanup has finished.
+
+For a deferred call, cancel explicitly through its handle:
+
+```python
+result = await kit.process_inbound(message, room_id="r1", defer_delivery=True)
+if result.delivery is not None:
+    result = await result.delivery.cancel(reason="hangup", timeout=5.0)
+    assert result.cancellation_reason == "hangup"
+    assert result.delivery.done
+    # Now the turn's resources can be detached and disposed.
+```
+
+`cancel()` returns the same `InboundResult` after cleanup; repeated calls
+preserve the first reason. Cancelling an already completed handle leaves its
+result unchanged. `wait()` joins the same completion and backfills the result;
+cancelling a waiter alone leaves the deferred work running.
+
+The cleanup budget defaults to five seconds, including on the awaited path.
+`TimeoutError` means work is **still unwinding**: retain the resources it uses.
+A deferred handle remains available to await later. Repeated cancellation of
+the cancelling caller does not interrupt the owned finalizers. Cancellation
+cannot reverse an external effect already committed by a tool, or stop a task
+the application's handler detached without awaiting it. A caller in the room's
+own delivery lane or under its room lock cannot drain it: `cancel()` raises
+`RuntimeError` there, rather than deadlocking. Cancellation applies to work
+owned by this process; it does not stop delivery in another worker.
+
+See `examples/cancel_delivery.py` for an executable example.
+
 ### Message Threading
 
 RoomKit supports **flat, two-level threads** (Slack / Teams style) on the
