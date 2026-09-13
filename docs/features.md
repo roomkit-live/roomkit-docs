@@ -437,6 +437,15 @@ Hook features:
 - **Task/observation creation** -- Hooks can create side-effect tasks and observations
 - **Event filtering** -- Hooks can be filtered by channel type, channel ID, and direction
 
+Streamed AI message segments also run `BEFORE_BROADCAST`. Tasks, observations
+and injected events returned by these hooks are collected even when the hook
+blocks the segment. For allowed segments, tasks and observations are persisted
+after delivery and before `AFTER_BROADCAST`; each successfully stored task
+fires `ON_TASK_CREATED`. Injected events follow the segment and reach their
+specified targets, including when the segment itself is blocked. These hooks
+operate on assembled segments: text chunks already sent to a streaming
+transport cannot be changed or withdrawn by the hook.
+
 **Hook filtering** allows hooks to run only for specific event sources:
 
 ```python
