@@ -114,6 +114,11 @@ present on an unavailable/failed result: publication may succeed while agent
 solicitation or delivery fails. A failure after publication is not retried by
 the worker as a new text event.
 
+Text destination availability comes from the committed delivery plan and its
+execution, so an agent leaving after processing does not turn a successful
+delivery into a failure. `inbound.unavailable_targets` is updated when its
+deferred handle finishes; replays do not re-evaluate the original destinations.
+
 `sent` does not establish that the agent completed its turn. Direct `Immediate`
 and `WaitForIdle` calls wait for the existing text delivery handle when doing so
 cannot deadlock the room. `Queued` returns at publication, so its drain can accept
@@ -189,6 +194,11 @@ result = await kit.deliver(
 `session_id` requires an explicit realtime `channel_id` and cannot be combined
 with `addressed_to`. Without a session id, an explicitly selected realtime
 channel needs exactly one active session; otherwise the result is unavailable.
+
+Idle strategies wait only for the selected realtime sessions. A busy session
+outside that selection does not delay delivery. Each pinned session is checked
+again immediately before injection; any sessions already reached remain listed
+if a later injection fails or becomes unavailable.
 Idle strategies pin that session before waiting and verify it again at injection.
 An ended/replaced session never selects a replacement. For deferred delivery,
 provide the original session id: resolution otherwise happens when the worker
