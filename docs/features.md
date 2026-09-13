@@ -1235,7 +1235,7 @@ Key features:
 - **HandoffMemoryProvider** — Injects handoff context (summary, reason) into the receiving agent's prompt
 - **ConversationPipeline** — Lower-level API for complex workflows with loops (`can_return_to`) and custom stages
 - **Custom strategies** — Subclass `Orchestration` ABC to build your own
-- **Delivery service** — `kit.deliver()` with `WaitForIdle`, `Immediate`, `Queued` strategies
+- **Delivery service** — `kit.deliver()` with `WaitForIdle`, `Immediate`, `Queued` strategies, explicit intelligence addressing and voice session targets, room-scoped text idempotency, and observable `DeliveryOutcome` results ([guide](guides/delivery.md))
 - **Delivery hooks** — `BEFORE_DELIVER` / `AFTER_DELIVER` for observability
 
 See the [Orchestration guide](guides/orchestration.md) for strategies, state management, routing rules, and handoff configuration.
