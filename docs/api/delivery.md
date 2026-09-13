@@ -8,6 +8,8 @@
 
 ::: roomkit.DeliveryHandle
 
+::: roomkit.DeliveryOutcome
+
 ::: roomkit.DeliveryResult
 
 ::: roomkit.ProviderResult
