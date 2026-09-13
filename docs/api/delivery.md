@@ -10,6 +10,10 @@
 
 ::: roomkit.DeliveryOutcome
 
+::: roomkit.VoiceDeliveryRecord
+
+::: roomkit.VoiceInjectionResult
+
 ::: roomkit.DeliveryResult
 
 ::: roomkit.ProviderResult

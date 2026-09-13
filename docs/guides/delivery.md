@@ -106,7 +106,7 @@ Every call returns a `DeliveryOutcome`:
 | `blocked` | A hook, room state or permission refused the request. |
 | `unavailable` | A channel, addressed agent or voice session could not be reached. |
 | `failed` | Enqueue, strategy, provider or delivery execution failed. |
-| `unknown` | A custom strategy executed without returning an outcome. |
+| `unknown` | Voice submission is uncertain, or a custom strategy returned no outcome. |
 
 Read `reason` for a machine-readable explanation, `error` for structured failure
 information and `unavailable_targets` for unresolved addresses. `event_id` can be
@@ -209,13 +209,77 @@ Unaddressed room-only calls retain realtime fanout. Supplying a non-null
 turns that intelligence address into direct session injection. Transport delivery
 and visibility still follow the room's ordinary broadcast rules.
 
-Realtime injection has **no idempotency guarantee**. Supplying a key does not
-suppress repeated speech; the outcome states `voice_not_deduplicated` and lists
-accepted `session_ids`. A provider can accept text and then fail before the
-caller receives confirmation. Retries, queue redelivery and restarts can repeat
-injection; no exactly-once agent execution or turn completion is promised.
 Muted/read-only bindings receive silent context injection; unreadable bindings
-are refused.
+are refused. Anam cannot inject context silently and explicitly refuses these
+injections (`voice_silent_injection_unsupported`) instead of triggering speech.
+
+### Voice idempotency and uncertainty
+
+Supply an `idempotency_key` to deduplicate proactive realtime injection:
+
+```python
+result = await kit.deliver(
+    "call-room", "Your result is ready.", channel_id="voice-main",
+    session_id=session.id, idempotency_key="task-result:42",
+)
+session_result = result.session_outcomes.get(session.id)
+```
+
+The identity is `(room_id, channel_id, session_id, idempotency_key)`. Concurrent
+calls and later replays reuse the recorded result with `duplicate=True`. The
+store atomically reserves the identity before calling the provider; a unique
+attempt token prevents a former owner from changing another attempt's result.
+Reusing the same identity for different effective text (after `BEFORE_DELIVER`)
+returns `blocked` with `voice_idempotency_conflict`. Use a stable key and body
+for each external event.
+
+`sent` means the adapter's send operation completed; it does not prove audio was
+heard or a turn finished. When an exception, cancellation, abandoned reservation
+or lost persistence confirmation makes submission uncertain, the outcome is
+`unknown`. Replaying that key does **not** inject again. This can leave an
+announcement undelivered when a crash occurred before submission; the remote
+service and the store do not share an atomic transaction. Inspect an uncertain
+result instead of automatically issuing a new key, which would authorize a new
+delivery.
+
+Only an explicit provider `VoiceInjectionResult(status="not_sent", retryable=True)`
+permits a retry after calling the provider: it guarantees no submission or pending
+submission exists. The worker dead-letters uncertain injections without retrying
+them. Gemini input queued locally during a tool call is reported as `unknown`
+(`voice_provider_queued`); its later flush does not update the receipt.
+
+`session_outcomes` retains each selected session's outcome, including successes,
+duplicates, failures and uncertainty. `session_ids` lists successful submissions.
+A retry can submit to a session that safely refused while skipping successful
+or uncertain sessions. The aggregate status prioritizes uncertainty, failure,
+unavailability and refusal over success; inspect individual outcomes for partial
+delivery. Room-only fanout resolves active sessions on each execution. Supply
+both `channel_id` and the original `session_id` to keep retries tied to one call;
+its known receipt remains replayable after that session ends.
+
+Receipts last until their room is deleted. The memory store loses them when its
+process ends. SQLite and Postgres retain them across restart; a Redis delivery
+queue alone does not make an in-memory `ConversationStore` durable. Multi-worker
+deployments need a shared durable store. Shared application locks allow callers
+to wait for an active attempt; the store's atomic claim prevents duplicate
+submission even without those locks. Reservations have no automatic expiry or
+reclamation that could reauthorize an uncertain submission.
+
+Custom stores must implement `get_voice_delivery`, `claim_voice_delivery` and
+`complete_voice_delivery` with the same atomic semantics. Unsupported stores
+refuse keyed voice delivery before sending (`voice_idempotency_unsupported`).
+Custom realtime providers may still return `None`, but this reports `unknown`
+(`voice_acceptance_unreported`); return `VoiceInjectionResult` to report a known
+submission boundary. `ON_REALTIME_TEXT_INJECTED` fires only for a provider's
+explicit `sent` result. `AFTER_DELIVER` exposes all ordinary attempt outcomes.
+
+Calls without a key and direct `channel.inject_text()` calls do not use these
+reservations. The feature does not resume interrupted agent turns.
+
+Run the [voice idempotency example](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_delivery_idempotency.py)
+with `uv run python examples/voice_delivery_idempotency.py`. It demonstrates
+concurrent delivery, a lost confirmation, a safe retry and a SQLite restart using
+mock audio providers, with no credentials or network service.
 
 ### Queued grouping
 
@@ -301,7 +365,7 @@ When a `delivery_backend` is configured:
 1. `kit.deliver()` serializes the request into a `DeliveryItem` and calls `backend.enqueue()`
 2. A background worker loop calls `backend.dequeue()` to claim items
 3. The worker deserializes the strategy and executes `strategy.deliver()`
-4. Consume sent/refused items with `ack()`; retry transient unavailable/failed outcomes with `nack()`; dead-letter non-retryable failures.
+4. Consume sent/refused items with `ack()`; retry transient unavailable/failed outcomes with `nack()`; dead-letter non-retryable failures and uncertain voice submissions.
 
 ```
 kit.deliver()
