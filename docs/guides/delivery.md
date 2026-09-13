@@ -210,7 +210,8 @@ turns that intelligence address into direct session injection. Transport deliver
 and visibility still follow the room's ordinary broadcast rules.
 
 Muted/read-only bindings receive silent context injection; unreadable bindings
-are refused.
+are refused. Anam cannot inject context silently and explicitly refuses these
+injections (`voice_silent_injection_unsupported`) instead of triggering speech.
 
 ### Voice idempotency and uncertainty
 
