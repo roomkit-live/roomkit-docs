@@ -164,6 +164,47 @@ All transport channels (SMS, RCS, Email, WhatsApp, Messenger, HTTP) use the unif
 
 The `TransportChannel` class is data-driven: it reads a `recipient_key` from binding metadata for the delivery address, and passes configurable `defaults` to the provider's `send()` method. This eliminates the need for per-channel subclasses.
 
+#### AI streaming tool loop
+
+`AIChannel` separates the lifetime of a conversation turn from the generation
+rounds and provider attempts within it. Each turn and round owns its mutable
+state, so concurrent rooms sharing a channel keep separate transcripts, tool
+contexts and token counters.
+
+| Module under `channels/` | Responsibility |
+|---|---|
+| `_ai_streaming.py` | Orchestrates rounds, applies termination decisions and emits local tool lifecycle markers. Owns turn registration, cumulative usage and the final response report. |
+| `_ai_stream_round.py` | Consumes one generation on demand. Tracks raw text and delivered text separately, filters repeated prefixes, and closes reasoning and tool-composition windows. |
+| `_ai_stream_external_tools.py` | Handles provider-served tool calls. Pending calls receive their pre-execution check; calls carrying an existing result are observed after execution. |
+| `_ai_loop_rules.py` | Supplies the rules shared with non-streaming generation: context preparation, bounded empty-response retries, budgets, message assembly and tool execution. |
+| `_ai_tools.py` | Validates and authorizes local calls, dispatches them concurrently and joins abandoned calls before propagating an abort. |
+| `_ai_resilience.py`, `_ai_coalescers.py` | Own provider retries, compaction and fallback, and batch observable reasoning/composition events respectively. |
+
+The streaming orchestrator follows a short sequence: prepare a round, forward its
+fragments, decide whether the turn is over, execute local tools if needed, then
+prepare the next round. Provider event handling belongs in the round component;
+rules applying to both generation modes belong in `_ai_loop_rules.py`.
+
+```mermaid
+flowchart LR
+    Consumer["Stream consumer"] --> Turn["Turn orchestrator"]
+    Turn --> Round["Generation round"]
+    Round --> Recovery["Retry / fallback wrapper"]
+    Recovery --> Provider["Provider stream"]
+    Turn --> Tools["Local tool execution"]
+```
+
+Every layer closes the iterator it consumes and awaits its finalizer. A round
+closes any open reasoning/composition window when it completes or is interrupted;
+the turn then reports its outcome and releases its activity registration. A retry
+closes the previous composition attempt before restarting its character counts.
+Argument contents never appear in composition progress events.
+
+Fragments remain demand-driven. The provider's complete text is retained for
+subsequent model context, while `ON_AI_RESPONSE` reports only the text actually
+delivered to the consumer. An anti-loop stop permits one final generation and
+ends there, even if that generation asks for another tool or returns no text.
+
 ### Voice Stack
 
 The voice subsystem provides real-time audio support via three pluggable abstractions:
