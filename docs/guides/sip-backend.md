@@ -289,7 +289,9 @@ From RoomKit 0.74.1, expiry sends SIP BYE, releases the media and session state,
 then invokes the disconnection callbacks. The session carries
 `metadata["disconnect_reason"]`: `media_not_established` or `media_lost`.
 Concurrent remote BYE and expiry notify once. RTP expiry has a two-second
-budget; a timeout still releases session tracking. Applications can persist
+budget; a media teardown timeout still releases session tracking. BYE is sent
+before audio cancellation. If an outgoing BYE cannot be sent, the session stays
+tracked for retry and disconnection is not reported. Applications can persist
 the reason separately from their business outcome.
 
 ## DTMF
