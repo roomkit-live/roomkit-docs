@@ -1022,7 +1022,7 @@ from roomkit.voice.realtime.ws_transport import WebSocketRealtimeTransport
 
 transport = WebSocketRealtimeTransport(
     authenticate=my_auth_callback,             # Optional auth
-    audio_format="base64_json",                # or "binary"
+    audio_format="binary",                     # default; "base64_json" for legacy clients
 )
 ```
 

@@ -1,6 +1,6 @@
 # FastRTC Voice Backend
 
-RoomKit provides two FastRTC-based voice backends for browser-to-server real-time audio. Both use the [FastRTC](https://fastrtc.org/) library (by Gradio) as the underlying transport.
+RoomKit provides two FastRTC-based voice backends for browser-to-server real-time audio. Both use RoomKit’s vendored headless FastRTC transport; Gradio is not required.
 
 | Backend | Transport | Use case | VAD |
 |---------|-----------|----------|-----|
@@ -13,7 +13,7 @@ RoomKit provides two FastRTC-based voice backends for browser-to-server real-tim
 pip install roomkit[fastrtc] fastapi uvicorn
 ```
 
-This installs `fastrtc` and `numpy` as dependencies.
+This installs the WebRTC and audio dependencies, including aiortc and numpy.
 
 ## FastRTCVoiceBackend (WebSocket)
 
@@ -114,7 +114,6 @@ When mounted at `/voice`, FastRTC creates:
 
 - **`/voice/websocket/offer`** — WebSocket endpoint for audio streaming
 - **`/voice/webrtc/offer`** — WebRTC offer endpoint (POST)
-- **`/voice/ui`** — Built-in Gradio UI (useful for quick testing)
 
 ### Session lifecycle
 
@@ -137,8 +136,22 @@ The speech-to-speech path. Audio passes through to the AI provider (Gemini Live,
 Browser mic → WebRTC → FastRTCRealtimeTransport
   → Raw PCM bytes → Provider (Gemini Live / OpenAI Realtime)
   → Provider generates audio + transcriptions
-  → mu-law encode → DataChannel → Browser speaker
+  → PCM playback FIFO → Opus encode → RTP audio track → Browser speaker
 ```
+
+RoomKit 0.75 sends realtime audio on the remote WebRTC track by default,
+with Opus preferred during SDP negotiation. The DataChannel carries controls
+and transcriptions. Playback has one bounded PCM FIFO, a 40 ms startup reserve
+and 20 ms frames; interruption clears queued PCM before the next frame is read.
+A short fade softens starts, stops and starvation without altering every chunk.
+An underrun is logged when provider audio runs out during a response.
+
+For clients released before RTP playback support, use
+`FastRTCRealtimeTransport(audio_transport="datachannel")`. On a shared transport,
+pass `session_metadata={"audio_transport": "datachannel"}` to
+`channel.start_session(...)` for those clients. Negotiate this in your app’s
+session-start API before submitting the WebRTC offer. A client consumes either
+RTP audio or legacy media messages for that session.
 
 ### Quick start
 
@@ -200,6 +213,7 @@ app = FastAPI(lifespan=lifespan)
 |-----------|------|---------|-------------|
 | `input_sample_rate` | `int` | `16000` | Browser microphone sample rate. |
 | `output_sample_rate` | `int` | `24000` | Provider output sample rate. |
+| `audio_transport` | `"webrtc" \| "datachannel"` | `"webrtc"` | RTP audio (Opus preferred), or legacy mu-law media messages. |
 
 ### mount_fastrtc_realtime parameters
 
@@ -215,7 +229,6 @@ app = FastAPI(lifespan=lifespan)
 When mounted at `/rtc-realtime`:
 
 - **`/rtc-realtime/webrtc/offer`** — WebRTC SDP offer endpoint (POST)
-- **`/rtc-realtime/ui`** — Built-in Gradio UI
 
 ### Connection flow
 
@@ -232,17 +245,17 @@ When mounted at `/rtc-realtime`:
 
 ## Audio format
 
-Both backends use **mu-law (G.711)** encoding for outbound audio sent to the browser:
+`FastRTCRealtimeTransport` uses the negotiated WebRTC codec (Opus preferred)
+for audio in both directions. The provider interface remains PCM16; RoomKit
+resamples when the provider and transport PCM rates differ. Browser and native
+WebRTC implementations handle packet jitter and decoding.
 
-- PCM-16 LE → mu-law (4:1 compression ratio)
-- Encoded as base64, wrapped in JSON: `{"event": "media", "media": {"payload": "..."}}`
-- Pure-Python encoder (no `audioop` dependency, compatible with Python 3.13+)
-- Pre-computed 16384-entry lookup table for O(1) per-sample encoding
-
-Inbound audio from the browser arrives as:
-
-- **WebSocket mode**: mu-law encoded, same JSON format
-- **WebRTC mode**: PCM via WebRTC media tracks (decoded by FastRTC to numpy arrays)
+The legacy DataChannel option and `FastRTCVoiceBackend` WebSocket protocol
+retain mu-law, base64-wrapped as
+`{"event": "media", "media": {"payload": "..."}}`. This is separate from the
+generic `WebSocketRealtimeTransport`, whose default is binary PCM16 as of 0.75;
+set `audio_format="base64_json"` there for existing JSON clients. SIP continues
+to prefer G.722 with negotiated G.711 fallbacks.
 
 ## Browser client
 
@@ -306,15 +319,12 @@ dc.onmessage = (event) => {
   if (data.type === 'transcription') {
     console.log(`${data.data.role}: ${data.data.text}`);
   }
-  if (data.event === 'media') {
-    // Decode mu-law audio and play
-  }
 };
 
 // Remote audio
 pc.ontrack = (event) => {
   const audio = new Audio();
-  audio.srcObject = event.streams[0];
+  audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
   audio.play();
 };
 
