@@ -288,7 +288,7 @@ conversation or absolute-duration limits.
 From RoomKit 0.74.1, expiry sends SIP BYE, releases the media and session state,
 then invokes the disconnection callbacks. The session carries
 `metadata["disconnect_reason"]`: `media_not_established` or `media_lost`.
-Concurrent remote BYE and expiry notify once. Media close has a two-second
+Concurrent remote BYE and expiry notify once. RTP expiry has a two-second
 budget; a timeout still releases session tracking. Applications can persist
 the reason separately from their business outcome.
 
