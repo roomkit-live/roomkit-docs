@@ -277,6 +277,23 @@ await backend.disconnect(session)
 # SIP BYE is sent, RTP session is closed, session state → ENDED
 ```
 
+### Network expiry
+
+The SIP backend also ends sessions that never establish inbound RTP
+(`rtp_establishment_timeout`, default 60 seconds) or stop receiving RTP
+(`rtp_inactivity_timeout`, default 30 seconds). Checks run every five seconds.
+RTP containing silence still counts as network activity; these are not
+conversation or absolute-duration limits.
+
+From RoomKit 0.74.1, expiry sends SIP BYE, releases the media and session state,
+then invokes the disconnection callbacks. The session carries
+`metadata["disconnect_reason"]`: `media_not_established` or `media_lost`.
+Concurrent remote BYE and expiry notify once. RTP expiry has a two-second
+budget; a media teardown timeout still releases session tracking. BYE is sent
+before audio cancellation. If an outgoing BYE cannot be sent, the session stays
+tracked for retry and disconnection is not reported. Applications can persist
+the reason separately from their business outcome.
+
 ## DTMF
 
 ### Inbound (receiving)
