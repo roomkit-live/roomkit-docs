@@ -223,6 +223,39 @@ app = FastAPI(lifespan=lifespan)
 | `transport` | `FastRTCRealtimeTransport` | required | The transport instance. |
 | `path` | `str` | `"/rtc-realtime"` | Base path for WebRTC endpoints. |
 | `auth` | `async (context) → dict \| None` | `None` | Authentication callback. Receives the FastRTC context (with `webrtc_id`, connection info). Return metadata dict to accept, `None` to reject. |
+| `rtc_configuration` | `dict \| callable \| None` | `None` | Server ICE configuration, or a zero-argument sync/async callback returning it for each new peer. |
+| `concurrency_limit` | `int \| None` | `None` | Maximum simultaneous connections; `None` uses the stream default of 1. |
+
+### Short-lived TURN credentials
+
+Pass a callback when TURN credentials expire. Mounting performs no credential
+lookup; each new offer resolves the callback before creating its server peer.
+Keep any shared cache in the callback or credential provider and refresh it before
+credentials expire. Existing peers keep their own configuration.
+
+```python
+import httpx
+
+async def rtc_configuration():
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        response = await client.get("https://credentials.example/ice-servers")
+        response.raise_for_status()
+        return response.json()  # {"iceServers": [...]}
+
+mount_fastrtc_realtime(app, transport, rtc_configuration=rtc_configuration)
+```
+
+If resolution fails, the offer returns
+`{"status": "failed", "meta": {"error": "rtc_configuration_failed"}}`.
+No peer or connection slot is allocated. Display a retryable connection error;
+a subsequent offer can succeed on the same route when the provider recovers.
+Exceptions and credential details are not included in this response.
+
+The underlying `Stream(server_rtc_configuration=...)` accepts the same callbacks.
+Static dictionaries remain supported; `None` uses aiortc defaults, while
+`{"iceServers": []}` disables server STUN/TURN. See
+[`examples/realtime_voice_fastrtc.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/realtime_voice_fastrtc.py)
+for a runnable application using `TURN_CREDENTIALS_URL`.
 
 ### Endpoints created
 
