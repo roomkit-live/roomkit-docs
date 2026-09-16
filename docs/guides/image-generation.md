@@ -181,7 +181,14 @@ An OpenAI edit can supply `mask=AIImagePart(...)` alongside ordered
 `reference_images`. Masks must be PNG and match the first reference's geometry
 as required by the vendor. Gemini continuity uses
 `ImageOptions(previous_interaction_id=...)`; authorize the prior interaction in
-your application before forwarding its id.
+your application before forwarding its id. Set `store=False` for stateless
+Gemini requests, or explicitly choose `store=True` when you want to continue
+that interaction later. Omitting `store` preserves the SDK default (stored).
+Retention depends on the provider account and configuration; see the
+[Interactions storage contract](https://ai.google.dev/gemini-api/docs/interactions-overview).
+Keep the same credential identity and check access to prior inputs before reuse.
+`GeminiImageProvider.resolve_size(size)` exposes the adapter’s portable-size
+conversion for applications that need matching preflight and execution geometry.
 
 Gemini Flash supports `search_types=["web_search", "image_search"]`; Pro
 supports web search; Lite supports neither. Result metadata retains response
