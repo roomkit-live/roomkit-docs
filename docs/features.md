@@ -1177,6 +1177,8 @@ The separation is the point: the agent holding the conversation is rarely one th
 - **Data URI in, room out** -- `MediaContent.url` accepts `data:`, so a generated image enters a room with no conversion
 - **Usage reported, cost optional** -- the four counters are disjoint, so each token is counted once. The OpenAI and Gemini lineups meter per token with the pixels on their own counter, so `ModelPricing` carries `image_input_per_million` / `image_output_per_million` and `cost_for(result.usage)` prices a generation directly; vendors that charge a flat amount per image carry no rate, and OpenRouter reports the billed amount itself as `result.usage["cost"]`
 - **Disjoint catalogs** -- `ImageProvider.available_models()` is separate from the conversational catalog; no id draws *and* converses
+- **Advanced image controls** -- OpenAI and Gemini accept typed per-request options, validated against model capabilities: geometry, quality, format, masks, interaction continuity and search where supported
+- **Observable partial outcomes** -- `generate_with_options()` emits per-call progress and preserves results, original usage and request identifiers in `ImageGenerationError`; interrupted calls remain distinguishable from unbilled refusals
 
 See the [Image Generation guide](guides/image-generation.md) and `examples/image_generation.py`.
 

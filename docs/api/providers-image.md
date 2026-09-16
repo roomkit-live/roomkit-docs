@@ -9,6 +9,16 @@ it transcribes through Deepgram.
 
 ::: roomkit.providers.image.base.ImageResult
 
+::: roomkit.providers.image.options.ImageOptions
+
+::: roomkit.providers.image.options.ImageCapabilities
+
+::: roomkit.providers.image.options.ImageModelInfo
+
+::: roomkit.providers.image.base.ImageAttempt
+
+::: roomkit.providers.image.base.ImageGenerationError
+
 ::: roomkit.providers.image.mock.MockImageProvider
 
 ::: roomkit.providers.image.base.parse_size

@@ -25,7 +25,7 @@ The second reason is narrower and just as decisive: `AIResponse.content` is a `s
 
 | Provider | Endpoint | Models | Extra |
 |----------|----------|--------|-------|
-| `OpenAIImageProvider` | `/v1/images` (`images.generate`, `images.edit`) | `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `chatgpt-image-latest` | `roomkit[openai]` |
+| `OpenAIImageProvider` | `/v1/images` (`images.generate`, `images.edit`) | `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `chatgpt-image-latest` | `roomkit[openai]` |
 | `GeminiImageProvider` | Interactions API (`interactions.create`) | `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | `roomkit[gemini]` |
 | `XAIImageProvider` | `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `grok-imagine-image-2.0`, `grok-imagine-image-quality`, `grok-imagine-image` | `roomkit[xai]` |
 | `OpenRouterImageProvider` | OpenRouter Image API (`POST /api/v1/images`) | 40+ aggregated slugs — `google/gemini-3.1-flash-image`, `x-ai/grok-imagine-image-2.0`, `bytedance-seed/seedream-5-0-pro`, `black-forest-labs/flux.2-pro`, … | `roomkit[openrouter]` |
@@ -56,11 +56,11 @@ images = OpenRouterImageProvider(
 )
 ```
 
-Vendor-specific knobs live on the config, not on `generate()`: OpenAI's `quality` / `background` / `output_format`, Gemini's `image_size` / `output_mime_type`, xAI's `quality` / `resolution`, Azure's `azure_endpoint` / `api_version`. The call itself stays the same shape everywhere.
+Connection settings and deployment defaults live on the provider config. OpenAI and Gemini also support per-request `ImageOptions` through `generate_with_options()`. Existing `generate()` calls keep their shape. Other providers reject unsupported advanced controls before making a request.
 
 ## One size string, every vendor
 
-`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. Gemini and xAI speak aspect ratios and resolution tiers, so those providers reduce the fraction and pick the smallest tier that covers the request. OpenAI, OpenRouter and Azure pass the pixels through and the vendor judges: OpenAI's `gpt-image-2` takes near-arbitrary geometry (edges in multiples of 16, long edge up to 3840px, ratio up to 3:1) while the `gpt-image-1` series keeps a fixed menu, OpenRouter maps or refuses per routed model, and an Azure deployment name does not say which model's size list applies:
+`generate(size=...)` takes `"WIDTHxHEIGHT"` and the provider translates. Gemini and xAI speak aspect ratios and resolution tiers, so those providers reduce the fraction and pick the smallest tier that covers the request. OpenAI validates known model geometry before sending it. OpenRouter and Azure pass pixels through and the vendor judges: OpenAI's `gpt-image-2` takes near-arbitrary geometry (edges in multiples of 16, long edge up to 3840px, ratio up to 3:1) while the `gpt-image-1` series keeps a fixed menu, OpenRouter maps or refuses per routed model, and an Azure deployment name does not say which model's size list applies:
 
 | `size` | Gemini | xAI | OpenAI / OpenRouter / Azure |
 |--------|--------|-----|------------------------------|
@@ -150,3 +150,89 @@ assert images.calls == [("anything", None, 1, [])]
 ## What this is not
 
 Image generation defines no hook triggers and is not a pipeline stage. It is called by a tool handler or an application, and its result enters a room as ordinary message content — which the inbound and broadcast pipelines already govern. Video generation and avatar synthesis are elsewhere; image *understanding* is already covered by multimodal message parts (`AIImagePart`).
+
+
+## Advanced controls and model capabilities
+
+Use the structured `image` field on an `ImageModelInfo` returned by
+`available_models()`. It describes the controls verified on that model's image
+endpoint, including allowed values and reference limits. Unknown models have no
+inferred capabilities. Verified dated OpenAI aliases resolve to the same entry.
+
+```python
+from roomkit import ImageOptions
+
+results = await images.generate_with_options(
+    "A cutout of an origami fox",
+    options=ImageOptions(quality="high", background="transparent", output_format="webp",
+                         output_compression=85),
+)
+```
+
+For Gemini, use `ImageOptions(aspect_ratio="16:9", image_size="2K")` to request
+native geometry. A tier is not an exact pixel count. Do not combine this with
+`size`. Flash supports 512, 1K, 2K and 4K; Lite supports 1K; Pro supports 1K, 2K
+and 4K. Flash and Lite expose `thinking_level="minimal"` or `"high"` through the
+Interactions `generation_config`; Pro has no advertised thinking control.
+OpenAI 2.5 adds `xhigh` and `max` quality. Gemini 2.5 Flash Image is marked
+deprecated with retirement scheduled for 2026-10-02.
+
+An OpenAI edit can supply `mask=AIImagePart(...)` alongside ordered
+`reference_images`. Masks must be PNG and match the first reference's geometry
+as required by the vendor. Gemini continuity uses
+`ImageOptions(previous_interaction_id=...)`; authorize the prior interaction in
+your application before forwarding its id.
+
+Gemini Flash supports `search_types=["web_search", "image_search"]`; Pro
+supports web search; Lite supports neither. Result metadata retains response
+steps, citations and `search_suggestions`. Applications enabling search must
+display the required attribution and suggestions. Search can carry charges
+beyond the token counters; preserve the original usage rather than treating an
+unmeasured search charge as zero.
+
+See the official [OpenAI Images reference](https://developers.openai.com/api/reference/resources/images/methods/generate),
+[image edit reference](https://developers.openai.com/api/reference/resources/images/methods/edit),
+and [Gemini image guide](https://ai.google.dev/gemini-api/docs/image-generation)
+for the provider constraints verified by this catalogue.
+
+## Partial results, progress and cancellation
+
+```python
+from roomkit import ImageAttempt, ImageGenerationError, ImageOptions
+
+async def progress(attempt: ImageAttempt) -> None:
+    # Persist a snapshot under attempt.id; updates reuse the same id.
+    # Preview results are provisional, not completed images.
+    logger.info("Image request %s: %s", attempt.id, attempt.status)
+
+try:
+    results = await images.generate_with_options(
+        "An origami fox", n=2, on_progress=progress,
+    )
+except ImageGenerationError as error:
+    results = error.results
+    # error.attempts includes available usage even without usable pixels.
+```
+
+Each vendor call emits `started` followed by `succeeded`, `failed` or `unknown`.
+OpenAI `partial_images=0..3` enables streaming; values above zero request previews
+emitted with status `preview`. Previews can incur provider charges. The same
+attempt id identifies all events for a call. Callback failure preserves the
+available outcome in `ImageGenerationError` and never triggers a second call.
+
+Concurrent Gemini calls settle independently. A failed call does not erase a
+successful sibling. Cancellation remains `CancelledError`: callbacks preserve
+completed outcomes and mark in-flight calls unknown. Local cancellation does not
+promise vendor cancellation or a refund. These errors have `retryable=False`;
+reconcile the known outcomes before explicitly generating again.
+
+`ImageAttempt.usage` measures a complete vendor call. OpenAI reports batch usage
+once; the first result carries it for compatibility. Do not add attempt usage
+and result usage together. `raw_usage` retains the provider's original report,
+while metadata excludes inline pixel payloads and credentials. Missing counters
+remain absent. Unclassified totals use `unclassified_input_tokens` or
+`unclassified_output_tokens`: per-modality pricing cannot be inferred from them.
+A catalogue's `cost_for({})` is arithmetic, not proof of a free generation.
+
+Run `examples/image_generation_options.py` without a key for its offline path;
+select OpenAI or Gemini explicitly to make a paid request.
