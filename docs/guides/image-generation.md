@@ -236,3 +236,7 @@ A catalogue's `cost_for({})` is arithmetic, not proof of a free generation.
 
 Run `examples/image_generation_options.py` without a key for its offline path;
 select OpenAI or Gemini explicitly to make a paid request.
+
+Image generation disables SDK retries to avoid repeating a paid request with an
+unknown outcome. The Gemini extra requires `google-genai>=2.18.0`, whose
+Interactions adapter honors the status retry configuration.
