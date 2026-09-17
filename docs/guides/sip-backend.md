@@ -483,7 +483,7 @@ answer is supported: transport audio uses the channel's bounded input buffer
 until the provider is ready. Started events are published only once both sides
 are connected. Provider callbacks (including tools and greeting audio) wait
 until the transport, binding and authorization context are ready, then replay
-in arrival order. The startup journal is bounded to 2 MiB of audio and 2048
+in arrival order. The startup journal is bounded to 2 MiB of audio and 500
 events; overflow fails the join instead of emitting a clipped greeting. A fatal
 provider error also aborts the pending join immediately. Cancellation discards
 the journal before any queued tool can execute.
