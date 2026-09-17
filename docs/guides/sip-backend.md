@@ -440,3 +440,57 @@ See the [SIP Backend API Reference](../api/sip-backend.md) for auto-generated cl
 ## Example
 
 See [`examples/voice_sip.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_sip.py) for a complete runnable example with incoming call handling and cleanup.
+
+### Prepare the provider during ringing
+
+`RoomKit.join(..., connection=...)` and `RealtimeVoiceChannel.start_session`
+accept an awaitable connection. The channel connects its provider while waiting
+for that awaitable, then accepts the resolved SIP `VoiceSession`. The ordinary
+connection form keeps its transport-first ordering.
+
+```python
+connection = asyncio.get_running_loop().create_future()
+carrier = None
+
+async def dial_once():
+    nonlocal carrier  # this example runs inside the application's call coroutine
+    carrier = await backend.dial(
+        to_uri=to_uri, from_uri=from_uri, proxy_addr=proxy_addr,
+        channel_id=channel_id, timeout=30,
+    )
+    if not connection.done():
+        connection.set_result(carrier)
+
+try:
+    async with asyncio.TaskGroup() as tasks:
+        tasks.create_task(dial_once())
+        joining = tasks.create_task(
+            kit.join(room_id, channel_id, participant_id=call_id, connection=connection)
+        )
+    await handle_call(joining.result(), carrier)  # application's conversation lifetime
+finally:
+    if carrier is not None:
+        await backend.disconnect(carrier)
+    await channel.close()  # the channel is private to this call
+```
+
+Keep one owner for the dial and join tasks. An application using `on_call`
+resolves the connection from that handler; it must not also start another join
+there. Cancel the dial as well if provider preparation fails. On refusal,
+no-answer, cancellation or BYE, cancel the pending join and close the per-call
+channel. A join cancellation drains both setup branches before rollback. A fast
+answer is supported: transport audio uses the channel's bounded input buffer
+until the provider is ready. Started events are published only once both sides
+are connected; provider audio is not delivered while the client is absent.
+
+The session's `metadata["connection_timing"]` contains monotonic timestamps
+`provider_connect_started_at`, `provider_ready_at`, and `transport_ready_at`.
+Outbound SIP sessions also expose `metadata["sip_answered_at"]`, captured when
+the SIP answer arrives, before RTP setup. These clocks are local to the process.
+Measure the provider-ready time before answer (or cancellation) to account for
+additional provider occupancy while ringing; this is elapsed time, not a billing
+receipt. Each preparation belongs to one call and must not be shared across
+participants or tenants.
+
+A runnable example using mock peers is
+[`examples/realtime_deferred_connection.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/realtime_deferred_connection.py).
