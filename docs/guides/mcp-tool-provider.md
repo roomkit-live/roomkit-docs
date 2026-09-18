@@ -87,7 +87,17 @@ async with provider as mcp:
 | `get_tools_as_dicts()` | `list[dict]` | Tools as plain dicts for binding metadata |
 | `tool_names` | `list[str]` | Names of all discovered tools |
 | `call_tool(name, args)` | `str` | Call a tool directly and get the result |
-| `as_tool_handler()` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
+| `as_tool_handler(gate_discovery=True)` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
+
+By default the handler answers `{"error": "Unknown tool: ..."}` for a name this
+connection did not discover, which is what lets `compose_tool_handlers` fall
+through to the next handler. `as_tool_handler(gate_discovery=False)` forwards
+every name to the server instead. That is for a gateway that routes by name
+prefix and authenticates the caller per call: it serves tools its `tools/list`
+never showed this connection, and a host with its own allow-list in front has
+already decided what the model may call. A server refusal raises
+`ToolRefusedError` on either side of the gate. Such a handler produces no
+unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
 
 ### Result serialization
 
