@@ -262,7 +262,7 @@ async def tool_auditor(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
         event.name,
         event.arguments,
         ctx.room.id,
-        "refused" if event.is_error else "ok",
+        "cancelled" if event.cancelled else "refused" if event.is_error else "ok",
     )
     return HookResult.allow()
 ```
@@ -280,9 +280,17 @@ every tool it asked for.
     no `tool_handler` asking its hooks to serve the call. That is a dispatch,
     not an outcome — skip it and wait for the firing that carries a result.
 
+A third outcome exists on realtime channels: the model abandoned the call.
+Gemini Live sends `tool_call_cancellation` when the caller interrupts while a
+tool is outstanding; RoomKit cancels the handler still running, sends nothing
+back, and fires the observers with `cancelled=True` beside `is_error=True`.
+Read `cancelled` first when the distinction matters: an abandoned call is not a
+refusal, and a ledger that counts refusals must not count it as one.
+
 `examples/tool_call_audit.py` runs it end to end: four calls — one served, one
 denied by the policy, one tool the agent does not have, one handler that raises
-— and prints the ledger both hooks saw.
+— and prints the ledger both hooks saw. `examples/realtime_tool_call_cancelled.py`
+adds the abandoned call, on the mock realtime provider.
 
 ---
 

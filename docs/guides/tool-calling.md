@@ -202,6 +202,13 @@ refusal, while a hook that could have served the call does not, so a denial
 prevents the side effect instead of hiding it. Read the outcome from `is_error`
 rather than from the result text, which is written for the model.
 
+On a realtime channel the model can also abandon a call it issued: Gemini Live
+sends `tool_call_cancellation` when the caller interrupts while the tool runs.
+The channel cancels the handler (it sees `asyncio.CancelledError` at its next
+`await`), sends nothing back, and fires the observers with `cancelled=True`
+beside `is_error=True`. The provider-level callback is described in the
+[realtime providers guide](realtime-voice-providers.md#background-tool-calls).
+
 A handler that declines a call it owns raises `ToolRefusedError`. A refusal
 returned as a body reads as work that was done, and a plain `raise` replaces
 the wording with `Error executing tool '<name>': <exc>`. Raising

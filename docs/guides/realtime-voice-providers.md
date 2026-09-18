@@ -615,6 +615,18 @@ six-second lookup, with every turn that overlapped the call marked in the
 terminal. `examples/realtime_background_tools.py` proves the same thing without
 a microphone, for CI and for a machine with no audio device.
 
+A background call can be overtaken by the caller. Talk over the model while
+the lookup runs and Gemini sends `tool_call_cancellation`: it will not read
+the result. RoomKit cancels the handler's task (your handler sees
+`asyncio.CancelledError` at its next `await`), drops any result that still
+arrives, and reports the call to `ON_TOOL_CALL`'s async observers with
+`cancelled=True` beside `is_error=True`. A blocking call orphaned by a
+reconnect takes the same path. Driving the provider directly, register
+`provider.on_tool_call_cancelled(callback)`, called as `(session, call_ids)`.
+`examples/realtime_tool_call_cancelled.py` walks the whole path on the mock
+provider, with no key needed. OpenAI, ElevenLabs, xAI, PersonaPlex and
+Deepgram carry no such event, so the callback never fires there.
+
 ### Available Voices
 
 Aoede, Fenrir, Kore, Pax, Breeze, Charon, Ember, Orion, Stella, and more.
@@ -1386,6 +1398,7 @@ Realtime-specific hooks fired during voice sessions:
 |------|------|-------------|
 | `ON_TRANSCRIPTION` | Sync | Transcription received (can block/modify) |
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (return result via metadata) |
+| `ON_TOOL_CALL` | Async | Audit of every call: served, refused, failed, or abandoned by the model (`is_error`, `cancelled`) |
 | `ON_SPEECH_START` | Async | User started speaking |
 | `ON_SPEECH_END` | Async | User stopped speaking |
 | `ON_SESSION_STARTED` | Async | Voice session activated |
