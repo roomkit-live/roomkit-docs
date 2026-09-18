@@ -299,7 +299,7 @@ And [`examples/buzz_voice_agent.py`](https://github.com/roomkit/roomkit/blob/mai
 for a speech-to-speech huddle agent (Gemini Live):
 
 ```bash
-GOOGLE_API_KEY=... \
+GEMINI_API_KEY=... \
 BUZZ_RELAY_URL=wss://your-community.communities.buzz.xyz \
 BUZZ_NSEC=nsec1... \
 BUZZ_CHANNEL_ID=<channel-uuid> \

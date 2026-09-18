@@ -347,7 +347,7 @@ ANTHROPIC_API_KEY=sk-... OPENAI_API_KEY=sk-... \
     uv run python examples/webcam_assistant.py
 
 # Screen assistant with Gemini voice + vision
-GOOGLE_API_KEY=AIza... \
+GEMINI_API_KEY=AIza... \
     uv run python examples/screen_assistant_ai.py
 ```
 
