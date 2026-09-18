@@ -543,8 +543,11 @@ provider_config = {
     # on a video session.
     "turn_coverage": "TURN_INCLUDES_ONLY_ACTIVITY",
 
-    # When a background tool result is delivered:
-    # WHEN_IDLE (default) | INTERRUPT | SILENT
+    # When a background tool result is delivered. Opt-in, and nothing is
+    # sent by default: gemini-3.8-live-extended-thinking closes the session
+    # with 1007 over this field, and the models that take it deliver a
+    # background result sensibly without it.
+    # WHEN_IDLE | INTERRUPT | SILENT
     "tool_response_scheduling": "WHEN_IDLE",
 
     # Inbound transcription
@@ -589,9 +592,10 @@ provider_config = {
 ### Background tool calls
 
 From 3.8 a tool call no longer freezes the conversation. RoomKit declares the
-tools `NON_BLOCKING` and schedules the response `WHEN_IDLE`, so the model can
-say it is checking and carry on while the work runs, and the result lands
-between sentences rather than cutting one in half.
+tools `NON_BLOCKING`, so the model can say it is checking and carry on while
+the work runs. The result's delivery is left to the model: `scheduling` is
+sent only if you ask for it, because `gemini-3.8-live-extended-thinking`
+refuses the field outright and closes the session over it.
 
 A single tool can opt back into the old behaviour where the model allows it,
 by carrying `behavior` in its declaration:
