@@ -306,11 +306,11 @@ stt = Qwen3ASRProvider(
 
 ## Gemini (Cloud API, batch only)
 
-Gemini has no speech-to-text endpoint. Transcription is an *instruction* to a
-multimodal model that accepts audio, so this provider is batch by construction:
-it takes a complete recording and answers in one pass, in seconds. Google's own
-audio documentation points at Cloud Speech-to-Text for dedicated real-time
-transcription, and that stays the right advice for live turn-taking.
+Transcription here is an *instruction* to a multimodal model that accepts
+audio, so this provider is batch by construction: it takes a complete recording
+and answers in one pass, in seconds. For live turn-taking use
+[Gemini Transcribe](#gemini-transcribe-cloud-api-streaming) below, which drives
+Google's dedicated recogniser over a WebSocket.
 
 What the batch shape buys is what a streaming recogniser structurally cannot
 give. The model sees the whole recording before it answers, so one pass returns
@@ -385,6 +385,69 @@ a recording, not for syncing against anything.
 
 See `examples/meeting_transcription.py` — a recording becomes speaker turns,
 enters a room, and an AI channel writes the minutes.
+
+---
+
+## Gemini Transcribe (Cloud API, streaming)
+
+`gemini-3.5-transcribe-live` is a dedicated recogniser reached over the Live
+API, not a chat model asked to write down what it hears. It takes a PCM stream
+over a WebSocket and answers with interim transcripts while the speaker is
+still talking, then a final one per utterance — the shape a `VoiceChannel`
+wants for live turn-taking, and the opposite of the batch provider above.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.stt.gemini_transcribe import (
+    GeminiTranscribeConfig,
+    GeminiTranscribeProvider,
+)
+
+stt = GeminiTranscribeProvider(
+    GeminiTranscribeConfig(
+        api_key="your-gemini-key",
+        # Empty is not a missing value: it asks the model to identify the
+        # language itself, across the 85+ locales it covers.
+        language_codes=[],
+        custom_vocabulary=["RoomKit", "Aubervilliers"],
+        mode="VERBATIM",
+    )
+)
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `api_key` | *(required)* | Gemini API key (`GEMINI_API_KEY`) |
+| `model` | `gemini-3.5-transcribe-live` | Live transcription model id |
+| `language_codes` | `[]` | BCP-47 hints; empty means automatic detection |
+| `custom_vocabulary` | `[]` | Up to 1000 terms to bias towards; best below ~100 |
+| `mode` | `VERBATIM` | `VERBATIM` keeps what was said, `SMART` removes disfluencies and formats |
+| `timeout` | `60.0` | Read budget in seconds |
+| `connect_timeout` | `5.0` | TCP connect timeout in seconds |
+
+Install with `pip install roomkit[realtime-gemini]` — the Live API extra, the
+same one Gemini Live uses.
+
+### Limits worth knowing
+
+Audio must be raw 16-bit PCM, 16 kHz, mono, little-endian. Another rate is sent
+as it is, with its true rate in the MIME type and one warning: guessing a
+resample inside the provider would hide a pipeline that is misconfigured
+upstream. Resample before you get here — `examples/stt_gemini_transcribe_live.py`
+shows it with RoomKit's own resampler.
+
+Speaker diarization and word-level timestamps are **not** available over the
+Live API, whatever the batch model offers, so the config carries no knob for
+either. A session is capped at ten minutes. Both are reasons a long recording
+belongs to the batch provider above, which also returns the speaker turns.
+
+`transcribe()` works and runs the audio through the same socket, which keeps
+one client, one auth path and one config; the ten-minute cap applies to it too.
+
+See `examples/stt_gemini_transcribe_live.py` — a sentence is synthesized,
+resampled and streamed, and the interim and final transcripts are printed as
+they arrive.
 
 ---
 

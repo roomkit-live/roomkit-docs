@@ -549,7 +549,7 @@ provider_config = {
     "transcription": {
         "language_auto": True,               # switch language mid-conversation
         "language_hints": ["fr-FR", "en-US"],
-        "custom_vocabulary": ["RoomKit", "Luge"],
+        "custom_vocabulary": ["RoomKit", "Aubervilliers"],
         "diarization": True,
     },
 
@@ -1437,7 +1437,7 @@ kit = RoomKit()
 
 provider = GeminiLiveProvider(
     api_key="your-gemini-key",
-    model="gemini-2.5-flash-native-audio-preview-12-2025",
+    model="gemini-3.8-live",
 )
 
 transport = FastRTCRealtimeTransport(

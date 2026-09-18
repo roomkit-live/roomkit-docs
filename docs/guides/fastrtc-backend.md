@@ -170,7 +170,7 @@ kit = RoomKit()
 
 provider = GeminiLiveProvider(
     api_key="...",
-    model="gemini-2.5-flash-native-audio-preview-12-2025",
+    model="gemini-3.8-live",
 )
 
 transport = FastRTCRealtimeTransport(

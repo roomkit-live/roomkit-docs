@@ -89,6 +89,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - `inject_image()` — put a picture in the model's own context (Gemini Live, OpenAI Realtime)
 - Task delivery via `inject_text()` — `ImmediateDelivery` and `WaitForIdleDelivery` auto-detect RealtimeVoiceChannel
 - Gemini schema cleaning — tool schemas auto-stripped of unsupported fields (`$schema`, `additionalProperties`, `default`, `title`)
+- Gemini streaming STT on `gemini-3.5-transcribe-live` — a dedicated recogniser over the Live API, with interim and final transcripts, automatic language detection across 85+ locales and custom-vocabulary biasing. The batch `GeminiSTTProvider` stays the one for finished recordings, where seeing the whole file buys speaker turns and timestamps in one pass. See [STT providers](guides/stt-tts-providers.md#gemini-transcribe-cloud-api-streaming).
 - Gemini 3.8 Live background tool calls — declarations go out `NON_BLOCKING` and results are scheduled `WHEN_IDLE`, so the model keeps the floor while a tool runs; the end of a response follows `interaction_status` rather than `turn_complete`, which 3.8 emits several times per request. Setup fields the target model no longer accepts (affective dialog, proactive audio, thinking budget) are dropped with a warning instead of failing the session. See [Gemini Live](guides/realtime-voice-providers.md#google-gemini-live).
 - Auto-reconnect on connection drops with exponential backoff
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
