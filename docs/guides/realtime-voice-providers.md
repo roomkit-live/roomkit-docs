@@ -494,9 +494,31 @@ from roomkit.providers.gemini.realtime import GeminiLiveProvider
 
 provider = GeminiLiveProvider(
     api_key="your-gemini-key",
-    model="gemini-2.5-flash-native-audio-preview-12-2025",
+    model="gemini-3.8-live",
 )
 ```
+
+`gemini-3.8-live` is the default. `gemini-3.8-live-extended-thinking` is the
+same model with configurable reasoning; both replaced
+`gemini-3.1-flash-live-preview`, which stays in the catalog flagged deprecated
+so an existing deployment keeps resolving.
+
+### What changed with the 3.8 generation
+
+Google changed four contracts. RoomKit absorbs all four, so a configuration
+written for 3.1 keeps working on 3.8 — but knowing which is which explains why
+some settings silently stop applying.
+
+| Contract | Through 3.1 | From 3.8 |
+|----------|-------------|----------|
+| End of response | `turn_complete` | the model speaks several times per request; only `interaction_status` IDLE ends it |
+| Affective dialog | `enable_affective_dialog` | removed from the API |
+| Proactive audio | `proactive_audio` toggled it | permanently on, stating it is an error |
+| Tool calls | blocking by default | run in the background while the model keeps talking |
+
+A field the target model no longer accepts is dropped with a `WARNING` naming
+the field and the model, never forwarded — a refused setup takes the whole
+session down, and an inherited config is not a reason to lose the session.
 
 ### Advanced Configuration
 
@@ -510,14 +532,26 @@ provider_config = {
     "end_of_speech_sensitivity": "LOW",
     "silence_duration_ms": 500,
 
-    # Proactive audio (AI speaks without prompt)
-    "proactive_audio": True,
+    # Reasoning — gemini-3.8-live-extended-thinking only.
+    # low | medium | high. `minimal` is refused before the round trip.
+    "thinking_level": "medium",
 
-    # Affective dialog (emotional responses)
-    "enable_affective_dialog": True,
+    # Which input the server folds into a turn. 3.8 defaults to
+    # TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO, which bills every frame
+    # on a video session.
+    "turn_coverage": "TURN_INCLUDES_ONLY_ACTIVITY",
 
-    # Extended thinking
-    "thinking_budget": 1024,
+    # When a background tool result is delivered:
+    # WHEN_IDLE (default) | INTERRUPT | SILENT
+    "tool_response_scheduling": "WHEN_IDLE",
+
+    # Inbound transcription
+    "transcription": {
+        "language_auto": True,               # switch language mid-conversation
+        "language_hints": ["fr-FR", "en-US"],
+        "custom_vocabulary": ["RoomKit", "Luge"],
+        "diarization": True,
+    },
 
     # Generation parameters
     "top_p": 0.8,
@@ -529,16 +563,49 @@ provider_config = {
 
     # Language
     "language": "en-US",
+
+    # Pre-3.8 only — dropped with a warning on the 3.8 family
+    "proactive_audio": True,
+    "enable_affective_dialog": True,
+    "thinking_budget": 1024,
 }
 ```
 
 | Feature | Description |
 |---------|-------------|
-| **Proactive audio** | AI can initiate speech without user prompt |
-| **Affective dialog** | Emotional, expressive responses |
-| **Thinking budget** | Extended reasoning before responding |
+| **Background tool calls** | 3.8 runs tools while the model keeps speaking |
+| **Thinking level** | Reasoning depth on extended-thinking |
+| **Automatic language switch** | `language_auto` follows the caller mid-call |
+| **Custom vocabulary** | Bias transcription towards your own terms |
+| **Turn coverage** | Which input the server bills into a turn |
 | **Session resumption** | Preserves context across reconfiguration |
 | **Non-interruptible** | Prevent user barge-in during responses |
+| **Proactive audio** | Pre-3.8 toggle; permanently on from 3.8 |
+| **Affective dialog** | Pre-3.8 only; removed from the API |
+| **Thinking budget** | Pre-3.8 only; replaced by `thinking_level` |
+
+### Background tool calls
+
+From 3.8 a tool call no longer freezes the conversation. RoomKit declares the
+tools `NON_BLOCKING` and schedules the response `WHEN_IDLE`, so the model can
+say it is checking and carry on while the work runs, and the result lands
+between sentences rather than cutting one in half.
+
+A single tool can opt back into the old behaviour where the model allows it,
+by carrying `behavior` in its declaration:
+
+```python
+tools = [{"name": "charge_card", "description": "...", "parameters": {...},
+          "behavior": "BLOCKING"}]
+```
+
+`gemini-3.8-live-extended-thinking` answers a hard error to `BLOCKING`, so
+RoomKit downgrades the request there and says so in a warning rather than
+losing the session.
+
+`examples/realtime_background_tools.py` runs it end to end: a deliberately slow
+tool, and a report showing the assistant turns that happened while the call was
+still outstanding.
 
 ### Available Voices
 
