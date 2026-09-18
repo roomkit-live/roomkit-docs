@@ -532,7 +532,9 @@ provider_config = {
     "end_of_speech_sensitivity": "LOW",
     "silence_duration_ms": 500,
 
-    # Reasoning — gemini-3.8-live-extended-thinking only.
+    # Reasoning — gemini-3.8-live-extended-thinking only, where it is
+    # REQUIRED: that model answers a missing level with 1007 and closes the
+    # socket. RoomKit falls back to `low` when you name none.
     # low | medium | high. `minimal` is refused before the round trip.
     "thinking_level": "medium",
 
@@ -574,7 +576,7 @@ provider_config = {
 | Feature | Description |
 |---------|-------------|
 | **Background tool calls** | 3.8 runs tools while the model keeps speaking |
-| **Thinking level** | Reasoning depth on extended-thinking |
+| **Thinking level** | Reasoning depth on extended-thinking, where it is required (RoomKit defaults it to `low`) |
 | **Automatic language switch** | `language_auto` follows the caller mid-call |
 | **Custom vocabulary** | Bias transcription towards your own terms |
 | **Turn coverage** | Which input the server bills into a turn |
