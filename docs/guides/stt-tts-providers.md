@@ -445,9 +445,12 @@ belongs to the batch provider above, which also returns the speaker turns.
 `transcribe()` works and runs the audio through the same socket, which keeps
 one client, one auth path and one config; the ten-minute cap applies to it too.
 
-See `examples/stt_gemini_transcribe_live.py` — a sentence is synthesized,
-resampled and streamed, and the interim and final transcripts are printed as
-they arrive.
+Two examples. `examples/stt_gemini_transcribe_mic.py` is the one to run first:
+speak into your microphone and the caption line rewrites itself while you talk,
+committing on a pause. That is what the streaming shape buys, and real speech
+exercises the hesitation, accent and language detection a synthesized sentence
+cannot. `examples/stt_gemini_transcribe_live.py` does the same from a file or a
+synthesized sentence, for a machine with no audio device.
 
 ---
 

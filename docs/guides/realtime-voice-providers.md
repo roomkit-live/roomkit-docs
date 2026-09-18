@@ -609,9 +609,11 @@ tools = [{"name": "charge_card", "description": "...", "parameters": {...},
 RoomKit downgrades the request there and says so in a warning rather than
 losing the session.
 
-`examples/realtime_background_tools.py` runs it end to end: a deliberately slow
-tool, and a report showing the assistant turns that happened while the call was
-still outstanding.
+`examples/realtime_background_tools_mic.py` is the one that makes it obvious:
+ask for a stock level out loud and you *hear* the agent keep talking through a
+six-second lookup, with every turn that overlapped the call marked in the
+terminal. `examples/realtime_background_tools.py` proves the same thing without
+a microphone, for CI and for a machine with no audio device.
 
 ### Available Voices
 
