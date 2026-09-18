@@ -219,33 +219,70 @@ See the [Tool Calling guide](tool-calling.md#tool-policy-access-control) for mor
 
 ### Tool Call Auditing
 
-Use the `ON_TOOL_CALL` hook to log, audit, or conditionally block specific tool invocations at runtime:
+`ON_TOOL_CALL` carries a `ToolCallEvent`, and its execution mode decides what
+the hook is for.
+
+**Sync — decide.** A sync hook runs before the result reaches the model, and
+can block the call or replace its result:
 
 ```python
 from __future__ import annotations
 
 import logging
 
-from roomkit import HookResult, HookTrigger, RoomContext, RoomEvent, RoomKit
+from roomkit import HookResult, HookTrigger, RoomContext, RoomKit, ToolCallEvent
 
 logger = logging.getLogger("roomkit.guardrails")
 
 kit = RoomKit()
 
 
-@kit.hook(HookTrigger.ON_TOOL_CALL, name="tool_auditor")
-async def tool_auditor(event: RoomEvent, ctx: RoomContext) -> HookResult:
-    tool_name = event.metadata.get("tool_name", "unknown")
-    arguments = event.metadata.get("arguments", {})
-
-    logger.info("Tool call: %s(%s) in room %s", tool_name, arguments, ctx.room.id)
-
+@kit.hook(HookTrigger.ON_TOOL_CALL, name="tool_gate")
+async def tool_gate(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
     # Block tools that access sensitive resources without authorization
-    if tool_name == "query_database" and "users" in arguments.get("table", ""):
+    if event.name == "query_database" and "users" in event.arguments.get("table", ""):
         return HookResult.block(reason="Direct user table access not permitted")
 
     return HookResult.allow()
 ```
+
+**Async — audit.** An audit hook wants the calls a sync hook never sees. A tool
+denied by the policy, a name the agent does not have, a handler that raised, a
+call nothing served: none of them run, so none of them reach a hook that could
+serve one. They fire the async observers instead, with `is_error=True`:
+
+```python
+from roomkit import HookExecution
+
+
+@kit.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC, name="tool_auditor")
+async def tool_auditor(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
+    logger.info(
+        "Tool call: %s(%s) in room %s — %s",
+        event.name,
+        event.arguments,
+        ctx.room.id,
+        "refused" if event.is_error else "ok",
+    )
+    return HookResult.allow()
+```
+
+Read the outcome from `is_error`, never from the result body. A refusal's body
+is a body like any other — RoomKit's own refusals are `{"error": ...}`
+envelopes, a handler that raised leaves the sentence the model is meant to
+read, an external tool leaves whatever it printed. An audit that pattern-matches
+that text records a refused call as a completed one, which is how a friction
+metric ends up reporting a healthy conversation for an agent that was denied
+every tool it asked for.
+
+!!! note
+    `event.result` is `None` on one firing only: a `RealtimeVoiceChannel` with
+    no `tool_handler` asking its hooks to serve the call. That is a dispatch,
+    not an outcome — skip it and wait for the firing that carries a result.
+
+`examples/tool_call_audit.py` runs it end to end: four calls — one served, one
+denied by the policy, one tool the agent does not have, one handler that raises
+— and prints the ledger both hooks saw.
 
 ---
 
@@ -849,7 +886,8 @@ Each layer is independent and composable. Add or remove hooks without changing t
 | Hook Trigger | Execution | Can Block/Modify | Use Case |
 |---|---|---|---|
 | `BEFORE_BROADCAST` | Sync | Yes | Input filtering, output filtering, PII redaction, jailbreak detection |
-| `ON_TOOL_CALL` | Sync | Yes | Tool call auditing, conditional blocking |
+| `ON_TOOL_CALL` | Sync | Yes | Conditional blocking, result override |
+| `ON_TOOL_CALL` | Async | No | Tool call auditing — every call, refusals and failures included (`is_error`) |
 | `ON_TRANSCRIPTION` | Sync | Yes | Transcript filtering (noise, filler words) |
 | `BEFORE_TTS` | Sync | Yes | Text sanitization before speech synthesis |
 | `ON_AI_RESPONSE` | Async | No | AI response monitoring, latency tracking |

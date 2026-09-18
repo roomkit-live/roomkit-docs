@@ -83,6 +83,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
 - Tool Search keeps large catalogues behind discovery. Reconfigurable providers receive native tool declarations; fixed-declaration providers use `list_tools(name=...)` for complete schemas and `call_tool` for execution through the same gates and hooks.
 - One pre-execution gate for every tool call — declared catalogue, argument schema, skill gating and `BEFORE_TOOL_USE` — whatever serves it: a handler, an `ON_TOOL_CALL` hook, or the channel's own infrastructure tools
+- Every tool call is auditable, the refused ones included: `ON_TOOL_CALL` reports the outcome of each call and states it with `is_error` instead of leaving it to be read out of the result text
 - `tool_recovery` (default on) — a call the model *speaks* as `call:name{args}` instead of issuing is recognised, gated like any other, and its outcome injected as context
 - `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
 - `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
@@ -514,7 +515,7 @@ Filter options:
 | `ON_VAD_SILENCE` | Async | Voice: silence detected |
 | `ON_VAD_AUDIO_LEVEL` | Async | Voice: audio level updates |
 | `ON_SESSION_STARTED` | Async | Session started on any channel (voice or text), safe to greet |
-| `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block |
+| `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block. Registered **async** it also sees the calls that never ran: a tool denied by policy, an unknown tool, a handler that raised, a call nothing served. Those fire with `is_error=True` and reach async observers only, so a refusal can be audited without a hook being able to serve it |
 | `ON_REALTIME_DELEGATION` | Async | Voice: a full-duplex model handed reasoning or tool use to a backend, hosted or integrator-side (`RealtimeDelegationEvent`) |
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |

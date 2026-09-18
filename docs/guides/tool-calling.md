@@ -195,6 +195,13 @@ the channel, not of the handler. They run before the call is routed, so a tool
 served by an `ON_TOOL_CALL` hook on a `RealtimeVoiceChannel` with no
 `tool_handler` is gated exactly like one served by a handler.
 
+A call one of those gates refuses never reaches the handler, and a handler that
+raises never returns — but both are still reported. They fire `ON_TOOL_CALL`
+with `is_error=True`, on the async observers only: an audit hook sees the
+refusal, while a hook that could have served the call does not, so a denial
+prevents the side effect instead of hiding it. Read the outcome from `is_error`
+rather than from the result text, which is written for the model.
+
 !!! tip
     Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
 
