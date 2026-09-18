@@ -245,5 +245,5 @@ Run `examples/image_generation_options.py` without a key for its offline path;
 select OpenAI or Gemini explicitly to make a paid request.
 
 OpenAI and Gemini image generation disable SDK retries to avoid repeating a paid request with an
-unknown outcome. The Gemini extra requires `google-genai>=2.18.0`, whose
+unknown outcome. The Gemini extra requires `google-genai>=2.24.0`, whose
 Interactions adapter honors the status retry configuration.

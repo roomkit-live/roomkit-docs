@@ -202,6 +202,25 @@ refusal, while a hook that could have served the call does not, so a denial
 prevents the side effect instead of hiding it. Read the outcome from `is_error`
 rather than from the result text, which is written for the model.
 
+A handler that declines a call it owns raises `ToolRefusedError`. A refusal
+returned as a body reads as work that was done, and a plain `raise` replaces
+the wording with `Error executing tool '<name>': <exc>`. Raising
+`ToolRefusedError` keeps both: the call is marked `is_error`, the observers
+fire, and the message reaches the model verbatim.
+`MCPToolProvider.as_tool_handler()` raises it when the server refuses a call.
+An unknown tool is a different case: return the `{"error": "Unknown tool: ..."}`
+envelope so a composed handler can pass the call on (see below).
+
+```python
+from roomkit import ToolRefusedError
+
+
+async def my_handler(name: str, arguments: dict) -> str:
+    if name == "delete_account" and not arguments.get("confirmed"):
+        raise ToolRefusedError("Refused: deleting an account needs confirmed=true.")
+    ...
+```
+
 !!! tip
     Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
 

@@ -83,7 +83,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
 - Tool Search keeps large catalogues behind discovery. Reconfigurable providers receive native tool declarations; fixed-declaration providers use `list_tools(name=...)` for complete schemas and `call_tool` for execution through the same gates and hooks.
 - One pre-execution gate for every tool call — declared catalogue, argument schema, skill gating and `BEFORE_TOOL_USE` — whatever serves it: a handler, an `ON_TOOL_CALL` hook, or the channel's own infrastructure tools
-- Every tool call is auditable, the refused ones included: `ON_TOOL_CALL` reports the outcome of each call and states it with `is_error` instead of leaving it to be read out of the result text
+- Every tool call is auditable, the refused ones included: `ON_TOOL_CALL` reports the outcome of each call and states it with `is_error` instead of leaving it to be read out of the result text; a handler declines a call in its own words by raising `ToolRefusedError`
 - `tool_recovery` (default on) — a call the model *speaks* as `call:name{args}` instead of issuing is recognised, gated like any other, and its outcome injected as context
 - `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
 - `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
