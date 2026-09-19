@@ -435,10 +435,13 @@ kit = RoomKit()
 @kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC, name="ai_monitor")
 async def ai_monitor(event, ctx: RoomContext) -> None:
     logger.info(
-        "AI response in room %s | tools=%s | latency=%sms",
+        "AI response in room %s | tools=%s | latency=%sms | offered=%s",
         ctx.room.id,
         event.tool_calls_count,
         event.latency_ms,
+        # Every tool the provider received this turn, the ones find_tools
+        # revealed mid-turn included, with why each was there.
+        [f"{t.name}:{t.origin}" for t in event.declared_tools],
     )
 ```
 
