@@ -242,7 +242,7 @@ running. These accessors read the current turn from a contextvar instead:
 | Accessor | Answers |
 |----------|---------|
 | `current_tool_room_id()` | Which room this turn belongs to |
-| `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `status` without a store round trip. It is the room as the store loaded it when the turn began, shared with the whole turn: a patch written to the store mid-turn is not in it, and the object itself must not be mutated (room changes go through the store) |
+| `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `status` without a store round trip. It is the room as the store loaded it when the turn began, shared with the whole turn: a patch written to the store mid-turn is not in it, and the object itself must not be mutated (room changes go through the store); on a realtime tool call, which runs no turn, the room as loaded for that call |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
 | `current_tool_allowed_names()` | Every tool name the turn resolved, so a call is validated against the live toolset rather than an attach-time snapshot |
 | `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
@@ -251,10 +251,12 @@ running. These accessors read the current turn from a contextvar instead:
 Contextvars propagate down the async call chain, so they work at any depth
 without a signature change. The realtime voice channel installs the same
 context around each tool call it serves (the session's room and participant
-as the turn's room and actor), so one handler works on both paths;
-`current_tool_call()` and its structured-result channel stay the AI channel's.
-Each returns `None` outside a tool call (a direct call) — keep your own
-fallback there.
+as the turn's room and actor), so one handler works on both paths for the
+room id, the `Room` and the actor; `current_tool_call()`,
+`current_tool_allowed_names()` and `current_response_metadata()` return `None`
+there (no turn merges a record on that path, so the `if record is not None`
+guard below skips a write nothing would carry). Each returns `None` outside a
+tool call (a direct call) — keep your own fallback there.
 
 ```python
 from roomkit.tools import current_tool_actor_id, current_tool_room, current_tool_room_id
