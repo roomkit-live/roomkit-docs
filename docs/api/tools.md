@@ -18,6 +18,8 @@ it is running under from a contextvar — see
 
 ::: roomkit.tools.context.current_tool_room_id
 
+::: roomkit.tools.context.current_tool_room
+
 ::: roomkit.tools.context.current_tool_actor_id
 
 ::: roomkit.tools.context.current_tool_allowed_names

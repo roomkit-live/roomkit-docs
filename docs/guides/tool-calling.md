@@ -242,6 +242,7 @@ running. Three accessors read the current turn from a contextvar instead:
 | Accessor | Answers |
 |----------|---------|
 | `current_tool_room_id()` | Which room this turn belongs to |
+| `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `type` without a store round trip. A snapshot of the turn's start, so a metadata patch made mid-turn is not in it |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
 | `current_tool_allowed_names()` | Every tool name the turn resolved, so a call is validated against the live toolset rather than an attach-time snapshot |
 | `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
@@ -252,12 +253,14 @@ without a signature change. Each returns `None` outside a tool loop (realtime
 voice pipelines, direct calls) — keep your own fallback for those paths.
 
 ```python
-from roomkit.tools import current_tool_actor_id, current_tool_room_id
+from roomkit.tools import current_tool_actor_id, current_tool_room, current_tool_room_id
 
 
 async def my_handler(name: str, arguments: dict) -> str:
     room_id = current_tool_room_id()
     actor_id = current_tool_actor_id()
+    room = current_tool_room()  # the same object the turn's RoomContext.room holds
+    tenant = room.metadata.get("tenant") if room is not None else None
     ...
 ```
 

@@ -921,7 +921,7 @@ async def my_invoices(name: str, arguments: dict) -> str:
     return await fetch_rows_for(participant.identity_id)
 ```
 
-`current_tool_allowed_names()` completes the set, returning the toolset the turn actually resolved so a call is validated against it rather than against an attach-time snapshot. All three return `None` outside a tool loop (realtime voice pipelines, direct calls).
+`current_tool_room()` returns the turn's `Room` object itself, not only its id: the one the turn's `RoomContext.room` holds for its hooks, memory provider and config provider, so a handler that decides whom a call acts for reads the room's `organization_id` or `metadata` there instead of re-reading the room by id on every call. It is a snapshot of the turn's start, exactly like `RoomContext.room`: a metadata patch made during the turn is not in it. `current_tool_allowed_names()` completes the set, returning the toolset the turn actually resolved so a call is validated against it rather than against an attach-time snapshot. All of them return `None` outside a tool loop (realtime voice pipelines, direct calls).
 
 !!! warning
     `current_tool_actor_id()` names the turn; it does not authenticate it. The value is a room `Participant.id`, and the inbound pipeline substitutes the resolved `Identity.id` for it only once identification succeeds — a sender still pending, ambiguous or unknown reads back just as non-`None`, and in a multi-agent room the author may be another agent. Resolve it against the roster before treating it as a principal, and treat `None` as an answer rather than a missing value: a system injection, a webhook or a scheduled run has no author, and falling back to whoever spoke last is how a tool answers one person with another's data.
