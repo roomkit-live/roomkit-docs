@@ -237,12 +237,12 @@ The handler protocol is `(name, arguments) -> str` — no room, no speaker, no
 toolset. That omission is deliberate: an `AIChannel` object is registered once
 per `channel_id` and shared by every room it serves, so anything a handler
 closed over when it was built describes whoever attached it, not the turn now
-running. Three accessors read the current turn from a contextvar instead:
+running. These accessors read the current turn from a contextvar instead:
 
 | Accessor | Answers |
 |----------|---------|
 | `current_tool_room_id()` | Which room this turn belongs to |
-| `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `type` without a store round trip. A snapshot of the turn's start, so a metadata patch made mid-turn is not in it |
+| `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `status` without a store round trip. It is the room as the store loaded it when the turn began, shared with the whole turn: a patch written to the store mid-turn is not in it, and the object itself must not be mutated (room changes go through the store) |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
 | `current_tool_allowed_names()` | Every tool name the turn resolved, so a call is validated against the live toolset rather than an attach-time snapshot |
 | `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
