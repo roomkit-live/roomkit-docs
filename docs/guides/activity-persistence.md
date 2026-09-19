@@ -79,6 +79,25 @@ for event in timeline:
         print(f"[{event.created_at}] Tool done: {event.content.tool_name} ({event.content.duration_ms}ms)")
 ```
 
+### Which Way a Page Reads
+
+Every read on the store answers two questions separately: *which* events the
+page holds, and *in what order* they come back. `newest_first=True` and
+`before_index=` choose the **window** -- the room's tail, or the `limit` events
+just before a cursor. The page itself is **always ascending**: the first element
+is the oldest event of the window, the last element the newest. Read the most
+recent event as `page[-1]`, never as `page[0]`:
+
+```python
+# Seven events msg1..msg7 in the room
+page = await store.list_events(room_id, limit=5, newest_first=True)
+# page -> [msg3, msg4, msg5, msg6, msg7]
+latest = page[-1]  # msg7
+```
+
+The same holds for `get_timeline(..., newest_first=True)` and for
+`get_conversation()`, which are built on `list_events` (RFC §14.1).
+
 ### Conversation Only (AI Context)
 
 For rebuilding AI context, use `get_conversation()` which returns only `MESSAGE` events -- no tool call noise:
