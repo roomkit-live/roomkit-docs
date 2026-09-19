@@ -65,7 +65,8 @@ ToolCallContent(
 
 ### Full Timeline
 
-Retrieve everything that happened in a room, in order:
+Retrieve everything the room received, in order (a row a hook refused is
+served on request, see [Rows the Room Refused](#rows-the-room-refused)):
 
 ```python
 timeline = await store.get_timeline(room_id)

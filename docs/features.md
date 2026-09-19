@@ -3051,7 +3051,9 @@ answers, a response over the chain-depth cap — it is not handed to any channel
 as history either, its own source included, so a muted agent keeps tracking
 the room but does not carry its silenced answers into its prompt; hooks and
 `get_conversation` still see it, while a `list_events` or `get_timeline` read
-skips it unless `EventFilter(include_blocked=True)` asks for it.
+skips it unless `EventFilter(include_blocked=True)` asks for it (or
+`include_blocked=True` on `RoomKit.get_timeline`). Thread summaries follow the
+same rule: a refused reply is not counted.
 
 Because a source's visibility is resolved from its binding when the history is
 read, visibility is a **live** policy: widening a binding widens its past too.

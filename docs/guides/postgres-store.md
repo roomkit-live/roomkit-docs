@@ -234,7 +234,7 @@ from roomkit import EventFilter, EventType
 # Messages only (for AI context) -- the 50 most recent, ascending
 messages = await store.get_conversation("room-1", limit=50)
 
-# Full activity timeline (messages + tool calls + everything), from the head
+# Full activity timeline (messages + tool calls + everything the room received), from the head
 timeline = await store.get_timeline("room-1")
 
 # ...or the most recent page of it, still ascending
