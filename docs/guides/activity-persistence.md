@@ -190,6 +190,21 @@ everything = await store.list_events(room_id, event_filter=EventFilter(include_b
 refused = [e for e in everything if e.status == EventStatus.BLOCKED]
 ```
 
+The count follows the same rule as the page it stands for (RFC §14.1):
+`get_event_count(room_id)` counts every committed row, the refused ones
+included (a refused row consumed an index), while `get_event_count(room_id,
+event_filter)` counts exactly the rows a `list_events` page would serve under
+that filter, with no page and no cap:
+
+```python
+from roomkit import ChannelType, EventFilter, EventType
+
+everything = await store.get_event_count(room_id)  # refused rows included
+ai_turns = await store.get_event_count(
+    room_id, EventFilter(event_types=[EventType.MESSAGE], source_channel_type=ChannelType.AI)
+)  # received rows only, like the page
+```
+
 `get_conversation()` is the exception: it fills `RoomContext.recent_events`,
 which hooks read whole (RFC §7.5 rule 8), so it returns the refused messages
 too. Channels never see them: `visible_events` drops them per reader.

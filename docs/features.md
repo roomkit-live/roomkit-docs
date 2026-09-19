@@ -3053,7 +3053,10 @@ the room but does not carry its silenced answers into its prompt; hooks and
 `get_conversation` still see it, while a `list_events` or `get_timeline` read
 skips it unless `EventFilter(include_blocked=True)` asks for it (or
 `include_blocked=True` on `RoomKit.get_timeline`). Thread summaries follow the
-same rule: a refused reply is not counted.
+same rule: a refused reply is not counted, and so does a filtered
+`get_event_count`: it counts exactly what the page under that filter would
+serve, while the count without a filter stays the timeline's size, refused
+rows included.
 
 Because a source's visibility is resolved from its binding when the history is
 read, visibility is a **live** policy: widening a binding widens its past too.

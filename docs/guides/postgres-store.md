@@ -258,6 +258,11 @@ ai_events = await store.list_events("room-1", event_filter=EventFilter(
     source_channel_id="ai-assistant",
 ))
 
+# Count a subset exactly, with no page: what the page under that filter would serve
+ai_turns = await store.get_event_count("room-1", EventFilter(
+    event_types=[EventType.MESSAGE], source_channel_id="ai-assistant",
+))
+
 # Combine multiple filters
 from datetime import datetime, UTC, timedelta
 recent_tools = await store.list_events("room-1", event_filter=EventFilter(
