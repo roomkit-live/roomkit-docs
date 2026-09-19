@@ -249,8 +249,12 @@ running. These accessors read the current turn from a contextvar instead:
 | `current_response_metadata()` | The turn's response-metadata record — what the reply's MESSAGE events will carry (see below) |
 
 Contextvars propagate down the async call chain, so they work at any depth
-without a signature change. Each returns `None` outside a tool loop (realtime
-voice pipelines, direct calls) — keep your own fallback for those paths.
+without a signature change. The realtime voice channel installs the same
+context around each tool call it serves (the session's room and participant
+as the turn's room and actor), so one handler works on both paths;
+`current_tool_call()` and its structured-result channel stay the AI channel's.
+Each returns `None` outside a tool call (a direct call) — keep your own
+fallback there.
 
 ```python
 from roomkit.tools import current_tool_actor_id, current_tool_room, current_tool_room_id
