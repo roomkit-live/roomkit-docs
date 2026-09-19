@@ -81,12 +81,14 @@ for event in timeline:
 
 ### Which Way a Page Reads
 
-Every read on the store answers two questions separately: *which* events the
-page holds, and *in what order* they come back. `newest_first=True` and
-`before_index=` choose the **window** -- the room's tail, or the `limit` events
-just before a cursor. The page itself is **always ascending**: the first element
-is the oldest event of the window, the last element the newest. Read the most
-recent event as `page[-1]`, never as `page[0]`:
+Every `list_events` read, and every read built on it, answers two questions
+separately: *which* events the page holds, and *in what order* they come back.
+`newest_first=True` and `before_index=` choose the **window** -- the room's
+tail, or the `limit` events just before a cursor; under `newest_first`,
+`offset` counts back from the newest end. The page itself is **always
+ascending by index**: the first element is the oldest event of the window, the
+last element the newest. Read the most recent event of a page as `page[-1]`,
+never as `page[0]`:
 
 ```python
 # Seven events msg1..msg7 in the room
