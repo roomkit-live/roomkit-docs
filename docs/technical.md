@@ -575,7 +575,8 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
 
     # --- Hook registration ---
     def hook(self, trigger, execution=SYNC, priority=0, name="", timeout=30.0,
-             channel_types=None, channel_ids=None, directions=None) -> decorator
+             channel_types=None, channel_ids=None, directions=None,
+             event_types=None) -> decorator
     def on(self, event_type: str) -> decorator      # Framework event handler
     def identity_hook(self, trigger, channel_types=None, channel_ids=None,
                        directions=None) -> decorator    # Identity resolution hook

@@ -605,7 +605,7 @@ RoomKit operates at the **library level** and delegates authentication to the ho
 - **Async hooks** run concurrently with configurable timeouts (default 30s), preventing runaway hook functions from blocking the pipeline.
 - **Hook errors** are logged and collected as `hook_errors` in the pipeline result, then emitted as framework events, but do not crash the pipeline.
 - **Per-room hooks** allow dynamic hook management scoped to specific conversations.
-- **Hook filtering** -- Hooks can be filtered by `channel_types`, `channel_ids`, and `directions` to run only for specific event sources.
+- **Hook filtering** -- Hooks can be filtered by `channel_types`, `channel_ids`, and `directions` to run only for specific event sources, and by `event_types` to run only for given `EventType` values. Every filter must pass; a filtered-out hook is not called at all, so it costs neither its body nor its timeout budget.
 
 ### Identity Resolution
 
