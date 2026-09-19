@@ -245,9 +245,9 @@ The non-streaming tool loop tracks each round (text + tool calls + results + dur
 
 ### Broadcast Behavior
 
-Tool call events (`TOOL_CALL_START`, `TOOL_CALL_END`) are **persisted but not broadcast** through the event router. This prevents intelligence channels (other AI agents) from trying to respond to tool call events. Text segments are broadcast normally.
+Tool call events (`TOOL_CALL_START`, `TOOL_CALL_END`) are committed and delivered like the turn's other events: every bound channel receives them, streaming transports included (a stream renders text, not tool cards). AI channels ignore them on the way in, so no intelligence channel answers another agent's tool call. On the streaming path they cross the `BEFORE_BROADCAST` sync hooks before they commit, as the text segments do: a hook can modify or block them, and its tasks, observations and injected events are kept either way.
 
-`AFTER_BROADCAST` hooks fire for all event types, so hook authors can observe tool calls for analytics, logging, or auditing.
+`BEFORE_BROADCAST` and `AFTER_BROADCAST` hooks fire for all event types, so hook authors can shape tool call events before they are stored and observe them for analytics, logging, or auditing.
 
 ## Related
 
