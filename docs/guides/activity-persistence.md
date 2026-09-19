@@ -169,6 +169,28 @@ recent_tools = await store.list_events(
 )
 ```
 
+### Rows the Room Refused
+
+An event a `BEFORE_BROADCAST` hook blocked, or that a read-only or muted source
+sent, is committed with `status=BLOCKED` and delivered to nobody. A timeline
+read skips those rows by default: `list_events()` and `get_timeline()` return
+what the room received, and the filter applies before the page is cut, so a
+page of `limit` events is full whatever was refused around them. An audit,
+copy or deletion reader asks for the refused rows explicitly, and `get_event()`
+always answers by id:
+
+```python
+from roomkit import EventFilter, EventStatus
+
+received = await store.list_events(room_id)  # no BLOCKED row
+everything = await store.list_events(room_id, event_filter=EventFilter(include_blocked=True))
+refused = [e for e in everything if e.status == EventStatus.BLOCKED]
+```
+
+`get_conversation()` is the exception: it fills `RoomContext.recent_events`,
+which hooks read whole (RFC §7.5 rule 8), so it returns the refused messages
+too. Channels never see them: `visible_events` drops them per reader.
+
 ## Persistence Policy
 
 Control which event types are persisted with `PersistencePolicy`:

@@ -240,6 +240,9 @@ timeline = await store.get_timeline("room-1")
 # ...or the most recent page of it, still ascending
 latest = await store.get_timeline("room-1", limit=50, newest_first=True)
 
+# Rows a hook refused (status BLOCKED) are skipped by default; ask for them
+audit = await store.list_events("room-1", event_filter=EventFilter(include_blocked=True))
+
 # Filter by event type
 tools = await store.list_events("room-1", event_filter=EventFilter(
     event_types=[EventType.TOOL_CALL_START, EventType.TOOL_CALL_END],
