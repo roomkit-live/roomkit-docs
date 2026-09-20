@@ -201,6 +201,64 @@ provider that names one — so a test can exercise either shape.
 
 ---
 
+## What a session reports as usage
+
+What a spoken turn consumed is known to the service that billed it, so the
+provider reports it and RoomKit relays it unaltered (RFC §12.4.2). Two public
+surfaces carry that report.
+
+**`on_usage(callback)` — fired on every report.** This is the one to bill a
+call from:
+
+```python
+def record(session, usage):
+    cached = usage.get("cached_content_token_count", 0)
+    ledger.add(session.id, fresh=usage["input_tokens"] - cached, cached=cached)
+
+provider.on_usage(record)
+```
+
+The callback takes `(session, usage)`, may be sync or async, and runs on a task
+of its own — a slow listener never holds up the provider's event loop, and one
+that raises is logged without reaching the others or the session.
+
+**`session.last_usage` — the snapshot the last report left behind.** Empty until
+the first report, and a copy: writing to it changes nothing.
+
+```python
+async def turn_done(session):
+    logger.info("turn cost %s", session.last_usage)
+
+provider.on_response_end(turn_done)
+```
+
+Read it at the end of a turn, and only there. The next report replaces it, and
+the realtime channel clears it once it has closed the turn's telemetry span, so
+a ledger built by polling comes out short — that is what `on_usage` is for.
+
+### What the keys mean
+
+`input_tokens` and `output_tokens` are the only two keys the framework fixes.
+Everything beside them is the provider's own, under the names its API uses, and
+**an absent key means unreported, not zero**.
+
+| Provider | Keys beside the two totals |
+|---|---|
+| `OpenAIRealtimeProvider` | `input_token_details`, `output_token_details` — the API's own dicts (cached, text and audio tokens) |
+| `GeminiLiveProvider` | `cached_content_token_count`, `thoughts_token_count`, `tool_use_prompt_token_count`, `total_token_count`, plus the modality maps `prompt_tokens_details`, `cache_tokens_details`, `response_tokens_details` and `tool_use_prompt_tokens_details`, each `{"AUDIO": n, "TEXT": n}` |
+| `OpenAILiveProvider` (GPT-Live) | `live_seconds` — this model bills session duration, never restated as tokens — and, in hosted delegation, `backend` with the backend model's own tokens |
+| Other providers | none: the two totals, when the service reports them at all |
+
+A spoken turn is mostly audio, the modalities are priced apart and the cached
+share is priced apart again, so the two totals alone cannot say what a session
+spent its context on. A host that prices a call reads the breakdown; one that
+only logs a number does not have to.
+
+`examples/realtime_usage_accounting.py` runs the whole thing on the mock
+provider — no key, no microphone — including what a poller misses.
+
+---
+
 ## OpenAI Realtime API
 
 WebSocket-based speech-to-speech with server-side VAD.
@@ -425,9 +483,11 @@ Install with `pip install roomkit[realtime-openai]` (the `websockets` extra).
   `output_sample_rate`: PCM at 16 or 24 kHz, or G.711 at 8 kHz with
   `provider_config={"codec": "pcmu"}` or `"pcma"`. A different
   `input_sample_rate` is resampled by the provider.
-- **Usage is seconds, not tokens.** `session._last_usage["live_seconds"]`
+- **Usage is seconds, not tokens.** `session.last_usage["live_seconds"]`
   carries the cumulative live duration; a hosted backend's tokens land under
-  `session._last_usage["backend"]` with the backend model's name.
+  `session.last_usage["backend"]` with the backend model's name. Both are
+  reported through `on_usage` as they land — see
+  [What a session reports as usage](#what-a-session-reports-as-usage).
 
 ### Two delegation modes
 
