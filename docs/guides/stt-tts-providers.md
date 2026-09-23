@@ -505,7 +505,7 @@ class AudioChunk:
 
 ## ElevenLabs (Cloud API)
 
-High-quality cloud TTS with streaming input support — starts speaking while the AI is still generating text.
+High-quality cloud TTS with streaming output, and request stitching from the conversation context.
 
 ```python
 from __future__ import annotations
@@ -523,6 +523,7 @@ tts = ElevenLabsTTSProvider(
         use_speaker_boost=True,
         output_format="mp3_44100_128",
         optimize_streaming_latency=3,         # 0-4, higher = faster
+        use_context=True,                     # request stitching (see below)
     )
 )
 
@@ -541,12 +542,28 @@ for v in voices:
 | `style` | `0.0` | Style exaggeration (0–1) |
 | `output_format` | `"mp3_44100_128"` | Output format |
 | `optimize_streaming_latency` | `3` | Latency optimization level (0–4) |
+| `use_context` | `True` | Request stitching from the conversation context |
 
-**Three synthesis modes**:
+**Two synthesis modes**:
 
-- `synthesize()` — Batch: returns complete audio as base64 data URL
-- `synthesize_stream()` — Streaming output: yields audio chunks via HTTP
-- `synthesize_stream_input()` — Streaming input: WebSocket accepts async text, yields audio in real time
+- `synthesize()`: batch, returns complete audio as a base64 data URL
+- `synthesize_stream()`: streaming output, yields audio chunks over HTTP
+
+Streaming *input* is not supported (`supports_streaming_input` is `False`): a
+voice channel synthesizes each AI response as a whole.
+
+**Request stitching.** With `use_context=True` (the default) the provider
+declares `TTSContextLevel.SELF` and receives its own previous turns in the
+voice session ([TTS Conversation Context](tts-context.md)). Each request then
+carries the `request_id` of the up to three previous responses the user heard
+to the end (`previous_request_ids`, ids younger than two hours), so ElevenLabs
+continues the voice from one response to the next. A response with no usable
+id is passed as `previous_text`. After a response cut off by a barge-in,
+nothing is sent: an interrupted stream leaves no id ElevenLabs can continue
+from. The user's words are never sent. v3 models (`expressive=True` or an
+`eleven_v3*` `model_id`) do not support stitching and receive no context.
+`examples/voice_elevenlabs_context.py` writes the same conversation with and
+without stitching to two WAV files for comparison.
 
 ---
 

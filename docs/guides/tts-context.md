@@ -65,6 +65,13 @@ segment classified as a backchannel is not a turn.
 In continuous STT mode there is no captured utterance, so user turns carry
 text only.
 
+## Built-in providers
+
+| Provider | Level | What it does with the context |
+|---|---|---|
+| ElevenLabs | `SELF` (`NONE` on v3 models or with `use_context=False`) | Sends the `request_id` of the previous responses heard to the end, or their text ([details](stt-tts-providers.md#elevenlabs-cloud-api)) |
+| Every other built-in provider | `NONE` | Nothing |
+
 ## Configuring it
 
 ```python
