@@ -468,15 +468,16 @@ async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
   `hook_timeout:<name>`, `hook_error:<name>` or `hook_invalid_result:<name>` —
   so the sender can be told why it did not go out. Without the flag a failing
   hook is logged and skipped, except on `BEFORE_TTS` and `ON_TRANSCRIPTION`,
-  which always fail closed.
+  which always fail closed. The flag is refused on an ASYNC hook.
 - `needs_lock=False` (sync `BEFORE_BROADCAST` only): the check runs before
   the room lock, so the scans of successive messages overlap instead of
   queueing — two messages one second apart with a 3 s scan go out at 3 s and
   4 s instead of 3 s and 6 s. A per-room admission ticket keeps arrival order
   within a process. The check receives the context built before the lock, so
   a hook that reads the room's state rather than the event must keep the
-  lock. An event sent from inside the check (a "scan in progress" notice)
-  commits right away, ahead of the message being checked. Reentry passes,
+  lock. An event sent from inside the check (a "scan in progress" notice),
+  or from a locked hook, commits right away, ahead of the message being
+  processed. Reentry passes,
   streamed segments and regeneration still run the hook, under the lock.
 - Off-lock hooks run first, so registration refuses a locked hook with a
   lower priority than an off-lock one (`ValueError` naming both): a consent
