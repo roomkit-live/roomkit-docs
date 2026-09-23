@@ -556,11 +556,11 @@ voice channel synthesizes each AI response as a whole.
 declares `TTSContextLevel.SELF` and receives its own previous turns in the
 voice session ([TTS Conversation Context](tts-context.md)). Each request then
 carries the `request_id` of the up to three previous responses the user heard
-to the end (`previous_request_ids`, ids younger than two hours), so ElevenLabs
-continues the voice from one response to the next. A response with no usable
-id is passed as `previous_text`. After a response cut off by a barge-in,
-nothing is sent: an interrupted stream leaves no id ElevenLabs can continue
-from. The user's words are never sent. v3 models (`expressive=True` or an
+to the end, in the same voice (`previous_request_ids`, ids younger than two
+hours), so ElevenLabs continues the voice from one response to the next. When
+no id is usable, the last response's text is passed as `previous_text`. After
+a response the user cut off with a barge-in, nothing is sent and the next
+response starts afresh. The user's words are never sent. v3 models (`expressive=True` or an
 `eleven_v3*` `model_id`) do not support stitching and receive no context.
 `examples/voice_elevenlabs_context.py` writes the same conversation with and
 without stitching to two WAV files for comparison.
