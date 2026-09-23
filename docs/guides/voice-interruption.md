@@ -54,6 +54,7 @@ config = InterruptionConfig(
 | `flush_partial_tts` | `True` | Discard audio already handed to the backend. `False` lets the current utterance finish while the user's speech is processed alongside it |
 | `keep_partial_transcript` | `True` | Record what the room actually heard as an internal event when the bot is cut off |
 | `backchannel_detector` | `None` | Required for SEMANTIC strategy |
+| `transcript_wait_ms` | `1000` | SEMANTIC: how long transcribed speech may run without words before it is judged on duration alone |
 
 ### What an interruption leaves behind
 
@@ -143,6 +144,17 @@ speech (nothing reaches the AI) until it has something to judge:
   `min_speech_ms`, as CONFIRMED does. A keyword detector sees an empty
   transcript there and lets the interruption through; a detector working on
   `speech_duration_ms` or `audio_bytes` can still recognise a backchannel.
+
+A streaming STT often needs longer than `min_speech_ms` for its first words.
+While one is transcribing the speech, SEMANTIC waits for them up to
+`transcript_wait_ms` (default 1000) before judging on duration alone. Raise it
+for a slow STT; lower it if a real interruption with no words should still cut
+quickly.
+
+In continuous-STT mode (no local VAD), the energy barge-in classifies the
+words of the burst under way: a burst recognized as "uh-huh" fires
+`ON_BACKCHANNEL` once and is not cut for running long, while words that turn
+into a request still interrupt.
 
 A backchannel lets the assistant keep talking, and its speech segment is discarded: the "uh-huh" does not become a user message (RFC §12.6).
 
