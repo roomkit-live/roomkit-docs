@@ -441,6 +441,49 @@ Hook features:
 - **Event injection** -- Hooks can inject synthetic events via `HookResult.injected_events`
 - **Task/observation creation** -- Hooks can create side-effect tasks and observations
 - **Event filtering** -- Hooks can be filtered by channel type, channel ID, and direction
+- **Fail-closed hooks** -- `fail_closed=True` blocks the payload when that hook times out, raises or returns something unusable (see below)
+- **Off-lock checks** -- `needs_lock=False` runs a `BEFORE_BROADCAST` check before the room lock is taken (see below)
+
+**Content checks that call out.** A PII scan or a moderation API is a
+`BEFORE_BROADCAST` sync hook with a network round trip. Two flags make it
+safe and cheap:
+
+```python
+@kit.hook(
+    HookTrigger.BEFORE_BROADCAST,
+    name="pii_scan",
+    priority=-200,
+    timeout=5.0,
+    fail_closed=True,   # a timeout or an error blocks, never delivers unchecked
+    needs_lock=False,   # the scan does not hold the room lock
+)
+async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
+    findings = await scanner.scan(Channel.extract_text(event))
+    return HookResult.block("pii") if findings else HookResult.allow()
+```
+
+- `fail_closed=True`: a hook that times out, raises or returns something
+  unusable blocks the message instead of letting it through. The block names
+  the hook in `blocked_by` and the outcome in the reason —
+  `hook_timeout:<name>`, `hook_error:<name>` or `hook_invalid_result:<name>` —
+  so the sender can be told why it did not go out. Without the flag a failing
+  hook is logged and skipped, except on `BEFORE_TTS` and `ON_TRANSCRIPTION`,
+  which always fail closed.
+- `needs_lock=False` (sync `BEFORE_BROADCAST` only): the check runs before
+  the room lock, so the scans of successive messages overlap instead of
+  queueing — two messages one second apart with a 3 s scan go out at 3 s and
+  4 s instead of 3 s and 6 s. A per-room admission ticket keeps arrival order
+  within a process. The check receives the context built before the lock, so
+  a hook that reads the room's state rather than the event must keep the
+  lock. An event sent from inside the check (a "scan in progress" notice)
+  commits right away, ahead of the message being checked. Reentry passes,
+  streamed segments and regeneration still run the hook, under the lock.
+- Off-lock hooks run first, so registration refuses a locked hook with a
+  lower priority than an off-lock one (`ValueError` naming both): a consent
+  gate ordered before the scan must not silently run after it. RoomKit's
+  orchestration routers (`Pipeline`, `Swarm`, `Supervisor`) are locked hooks
+  at priority -100, so an off-lock hook in an orchestrated room goes at -100
+  or below.
 
 Streamed AI message segments also run `BEFORE_BROADCAST`. Tasks, observations
 and injected events returned by these hooks are collected even when the hook
