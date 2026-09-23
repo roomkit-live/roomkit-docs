@@ -936,9 +936,12 @@ What the provider does with the context:
   without `include_audio`, as text only;
 - after a barge-in, the cache is cut back to the frame the user stopped
   hearing (`played_ms`, 80 ms frames), and a reply nobody heard is dropped;
-- a call for another voice session, or another voice, restarts the cache
-  from the voice prompt with the user turns awaiting a reply; that session's
-  earlier turns are not replayed.
+- a call for another voice session, another voice, or `synthesize()` (no
+  conversation), and a cache about to run out of room (about 16 minutes of
+  dialogue), restart it from the voice prompt with the user turns awaiting a
+  reply; earlier turns are not replayed;
+- when the session is unbound, the cache is emptied (`release_context`), user
+  audio included.
 
 **Constraints**:
 
@@ -949,8 +952,12 @@ What the provider does with the context:
   real time on an RTX 4070 without flash-attn).
 - One active conversation per provider: `Engine(max_rows=1)` gives it a single
   cache, and calls are serialized.
+- A reply longer than `max_secs` (30 s by default) is cut off there.
 - Two private `vui-tts` attributes are used (the mid-turn rewind and a preset's
   speaker token), so the dependency is pinned to `vui-tts>=1.1.4,<1.2`.
+- `vui-tts` prints the first 40 characters of every user turn to stdout
+  (`[Engine._add_user] ...`). Route or silence stdout in production if
+  transcripts must not reach the logs.
 
 **Troubleshooting**: `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` from the codec
 means a system cuDNN (for example under `/lib/x86_64-linux-gnu`) is loaded
