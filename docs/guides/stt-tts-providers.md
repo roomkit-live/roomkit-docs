@@ -898,6 +898,70 @@ tts = NeuTTSProvider(
 
 ---
 
+## Vui Nano (Local/GPU, Conversational)
+
+[Vui Nano](https://huggingface.co/fluxions/vui) (fluxions.ai, Apache 2.0) is a
+305M-parameter TTS that generates each reply *inside* the conversation: the
+dialogue so far, including the audio of the user's turns, lives in its KV
+cache. The provider declares `TTSContextLevel.AUDIO` and keeps that cache in
+step with the voice session ([TTS Conversation Context](tts-context.md)).
+
+```python
+from __future__ import annotations
+
+from roomkit import TTSContextConfig, VoiceChannel
+from roomkit.voice.tts.vui import VuiTTSConfig, VuiTTSProvider, VuiVoice
+
+tts = VuiTTSProvider(
+    VuiTTSConfig(
+        voices={
+            "maeve": VuiVoice(preset="maeve"),        # maeve, abraham, rhian, harry
+            "me": VuiVoice(ref_audio="me.wav", ref_text="Exact transcript of me.wav."),
+        },
+        temperature=0.7,
+    )
+)
+await tts.warmup()  # loads the model, the codec and the voices
+
+voice = VoiceChannel(
+    "voice", stt=stt, tts=tts, backend=backend,
+    tts_context=TTSContextConfig(include_audio=True),  # let Vui hear the user
+)
+```
+
+What the provider does with the context:
+
+- each user turn is written to the cache as its transcript, then its audio
+  (re-encoded with the Qwen3-TTS-12Hz codec) when the context carries audio;
+  without `include_audio`, as text only;
+- after a barge-in, the cache is cut back to the frame the user stopped
+  hearing (`played_ms`, 80 ms frames), and a reply nobody heard is dropped;
+- a call for another voice session, or another voice, restarts the cache
+  from the voice prompt with the user turns awaiting a reply; that session's
+  earlier turns are not replayed.
+
+**Constraints**:
+
+- English only.
+- Python 3.12 only (a `vui-tts` requirement): `pip install roomkit[vui]` on
+  another Python installs nothing, and the provider says so at `warmup()`.
+- A CUDA GPU for real-time streaming (about 3.4 GB of VRAM, measured at 2.6x
+  real time on an RTX 4070 without flash-attn).
+- One active conversation per provider: `Engine(max_rows=1)` gives it a single
+  cache, and calls are serialized.
+- Two private `vui-tts` attributes are used (the mid-turn rewind and a preset's
+  speaker token), so the dependency is pinned to `vui-tts>=1.1.4,<1.2`.
+
+**Troubleshooting**: `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` from the codec
+means a system cuDNN (for example under `/lib/x86_64-linux-gnu`) is loaded
+instead of PyTorch's. Set `torch.backends.cudnn.enabled = False` before
+`warmup()`, or remove the system copy from the loader path.
+
+**Output**: Fixed 24kHz PCM. `examples/voice_vui_context.py` plays a dialogue
+with a barge-in and writes what the user heard to a WAV file.
+
+---
+
 ## TTS Filters
 
 Filters clean AI-generated text before it reaches the TTS provider. Essential for removing reasoning markers, annotations, or bracketed instructions.
@@ -987,12 +1051,13 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Gradium** | Cloud STT | Yes | Low | Per-minute | Real-time with server-side VAD |
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
-| **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
+| **ElevenLabs** | Cloud TTS | Yes | Low | Per-character | Highest voice quality |
 | **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
 | **SherpaOnnx** | Local TTS | Yes | Medium | Free | Privacy, offline, VITS/Piper |
 | **Qwen3 TTS** | Local TTS | Post-gen | Medium | Free | Voice cloning, GPU |
 | **NeuTTS** | Local TTS | GGUF only | Medium | Free | Voice cloning, GGUF quantized |
+| **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
 
 ## Using with VoiceChannel
 

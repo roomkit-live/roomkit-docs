@@ -2195,7 +2195,7 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend,
                      tts_context=TTSContextConfig(include_audio=True, max_turns=20))
 ```
 
-A provider left at `NONE` is called exactly as before. ElevenLabs declares `SELF` and uses its previous responses for request stitching. See the [TTS Conversation Context guide](guides/tts-context.md).
+A provider left at `NONE` is called exactly as before. ElevenLabs declares `SELF` and uses its previous responses for request stitching. Vui Nano (`roomkit[vui]`) declares `AUDIO` and generates each reply inside the dialogue, the user's voice included. See the [TTS Conversation Context guide](guides/tts-context.md).
 
 #### Voice Hook Triggers
 

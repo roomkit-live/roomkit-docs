@@ -98,6 +98,16 @@ Install with: `pip install roomkit[gemini]`
 
 ::: roomkit.voice.tts.context.TTSContextConfig
 
+### Vui Nano TTS
+
+::: roomkit.voice.tts.vui.VuiTTSProvider
+
+::: roomkit.voice.tts.vui.VuiTTSConfig
+
+::: roomkit.voice.tts.vui.VuiVoice
+
+Install with: `pip install roomkit[vui]` (Python 3.12, CUDA GPU).
+
 ### Sherpa-ONNX TTS
 
 ::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSProvider

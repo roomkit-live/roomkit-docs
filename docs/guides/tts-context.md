@@ -70,6 +70,7 @@ text only.
 | Provider | Level | What it does with the context |
 |---|---|---|
 | ElevenLabs | `SELF` (`NONE` on v3 models or with `use_context=False`) | Sends the `request_id` of the previous responses heard to the end, or their text ([details](stt-tts-providers.md#elevenlabs-cloud-api)) |
+| Vui Nano | `AUDIO` | Keeps the dialogue in its KV cache: user turns with their audio, its replies cut to what was heard ([details](stt-tts-providers.md#vui-nano-localgpu-conversational)) |
 | Every other built-in provider | `NONE` | Nothing |
 
 ## Configuring it
