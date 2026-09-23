@@ -130,6 +130,8 @@ voice = VoiceChannel(
 
 Uses a `BackchannelDetector` to distinguish backchannels ("uh-huh", "yeah", "ok") from real interruptions. Falls back to CONFIRMED if no detector is configured.
 
+A backchannel lets the assistant keep talking, and its speech segment is discarded: the "uh-huh" does not become a user message (RFC §12.6).
+
 ```python
 voice = VoiceChannel(
     "voice",

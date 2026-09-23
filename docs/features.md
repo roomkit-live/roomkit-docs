@@ -2184,6 +2184,19 @@ With `keep_partial_transcript=True` (default), the cut-off utterance is also sto
 
 When a barge-in stops every session playing a **streamed** AI response, the framework closes the response stream: no further token is generated and no tool call starts after the stop. A tool already executing is let finish, its result is stored, and the model's next round is not requested. The text the AI had already produced is stored as its response event with `metadata.cancelled = true`, so its next turn knows what it had started to say. If only one of several sessions barges in, the others keep listening and the response is stored whole. With `InterruptionConfig(flush_partial_tts=False)` the audio keeps playing, the stream is read to its end, and nothing is cancelled.
 
+#### TTS Conversation Context
+
+A TTS provider that declares a `context_level` other than `NONE` receives, on every streaming call, the dialogue of its voice session: what the user said (after `ON_TRANSCRIPTION`) and what it said itself, cut to what was actually played. Audio is included only at `TTSContextLevel.AUDIO` with `TTSContextConfig(include_audio=True)`, kept in memory, bounded, and released with the session (RFC §12.2.2, §17.6).
+
+```python
+from roomkit import TTSContextConfig, VoiceChannel
+
+voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend,
+                     tts_context=TTSContextConfig(include_audio=True, max_turns=20))
+```
+
+A provider left at `NONE` (every built-in provider today) is called exactly as before. See the [TTS Conversation Context guide](guides/tts-context.md).
+
 #### Voice Hook Triggers
 
 | Trigger | Execution | Use Case |

@@ -88,6 +88,16 @@ Install with: `pip install roomkit[gemini]`
 
 ::: roomkit.voice.tts.mock.MockTTSProvider
 
+### Conversation Context
+
+::: roomkit.voice.tts.context.TTSContextLevel
+
+::: roomkit.voice.tts.context.TTSContext
+
+::: roomkit.voice.tts.context.ConversationTurn
+
+::: roomkit.voice.tts.context.TTSContextConfig
+
 ### Sherpa-ONNX TTS
 
 ::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSProvider

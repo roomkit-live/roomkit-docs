@@ -72,6 +72,7 @@ nav:
           - Voice Interruption & Barge-In: guides/voice-interruption.md
           - Audio Pipeline Stages: guides/audio-pipeline-stages.md
           - STT & TTS Providers: guides/stt-tts-providers.md
+          - TTS Conversation Context: guides/tts-context.md
           - Realtime Voice (Speech-to-Speech): guides/realtime-voice-providers.md
           - Reasoning Delegation (GPT-Live): guides/reasoning-delegation.md
           - Audio Resampler: guides/resampler.md
