@@ -2182,7 +2182,7 @@ Barge-in triggers:
 
 With `keep_partial_transcript=True` (default), the cut-off utterance is also stored in the timeline as an internal event with `metadata.interrupted = true` and `metadata.played_ms`. For a streamed AI response, its text is the sentences already handed to TTS.
 
-When a barge-in stops every session playing a **streamed** AI response, the framework closes the response stream: no further token is generated and no tool call starts after the stop. The text the AI had already produced is stored as its response event with `metadata.cancelled = true`, so its next turn knows what it had started to say. If only one of several sessions barges in, the others keep listening and the response is stored whole. With `InterruptionConfig(flush_partial_tts=False)` the audio keeps playing, the stream is read to its end, and nothing is cancelled.
+When a barge-in stops every session playing a **streamed** AI response, the framework closes the response stream: no further token is generated and no tool call starts after the stop. A tool already executing is let finish, its result is stored, and the model's next round is not requested. The text the AI had already produced is stored as its response event with `metadata.cancelled = true`, so its next turn knows what it had started to say. If only one of several sessions barges in, the others keep listening and the response is stored whole. With `InterruptionConfig(flush_partial_tts=False)` the audio keeps playing, the stream is read to its end, and nothing is cancelled.
 
 #### Voice Hook Triggers
 
