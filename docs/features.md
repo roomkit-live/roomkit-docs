@@ -2171,7 +2171,7 @@ async def handle_barge_in(event, ctx):
     # event is a BargeInEvent with:
     #   event.session - the voice session
     #   event.interrupted_text - what the AI was saying
-    #   event.audio_position_ms - how far into playback
+    #   event.audio_position_ms - audio the user heard (ms), latency excluded
     logger.info("User interrupted at %dms: %s", event.audio_position_ms, event.interrupted_text)
 ```
 

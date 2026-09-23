@@ -50,7 +50,7 @@ config = InterruptionConfig(
 |-------|---------|-------------|
 | `strategy` | `CONFIRMED` | Which interruption strategy to use |
 | `min_speech_ms` | `300` | Minimum speech duration (ms) before confirming interruption (CONFIRMED strategy) |
-| `allow_during_first_ms` | `0` | Grace period: don't interrupt during the first N ms of playback |
+| `allow_during_first_ms` | `0` | Grace period: don't interrupt until N ms of audio were played (synthesis latency does not count) |
 | `flush_partial_tts` | `True` | Discard audio already handed to the backend. `False` lets the current utterance finish while the user's speech is processed alongside it |
 | `keep_partial_transcript` | `True` | Record what the room actually heard as an internal event when the bot is cut off |
 | `backchannel_detector` | `None` | Required for SEMANTIC strategy |
@@ -129,6 +129,20 @@ voice = VoiceChannel(
 ### SEMANTIC
 
 Uses a `BackchannelDetector` to distinguish backchannels ("uh-huh", "yeah", "ok") from real interruptions. Falls back to CONFIRMED if no detector is configured.
+
+The detector is never asked about an empty speech onset: when the pipeline VAD
+reports speech start there are no words yet and no duration. SEMANTIC holds the
+speech (nothing reaches the AI) until it has something to judge:
+
+- **With a streaming STT**, the held speech is transcribed while the assistant
+  talks and each partial transcript is classified. "uh-huh" fires
+  `ON_BACKCHANNEL` once, the assistant keeps talking and the segment is
+  discarded. "wait, stop" cuts the assistant off and becomes the user's turn,
+  from its first word.
+- **Without one**, the speech is judged on duration alone once it has lasted
+  `min_speech_ms`, as CONFIRMED does. A keyword detector sees an empty
+  transcript there and lets the interruption through; a detector working on
+  `speech_duration_ms` or `audio_bytes` can still recognise a backchannel.
 
 A backchannel lets the assistant keep talking, and its speech segment is discarded: the "uh-huh" does not become a user message (RFC §12.6).
 
@@ -283,6 +297,7 @@ from roomkit import HookTrigger, HookExecution
 @kit.hook(HookTrigger.ON_BARGE_IN, execution=HookExecution.ASYNC)
 async def on_barge_in(event, ctx):
     # event is a BargeInEvent
+    # audio_position_ms: audio the user heard, the timeline's played_ms
     print(f"User interrupted at {event.audio_position_ms}ms")
     print(f"AI was saying: {event.interrupted_text}")
 ```
@@ -313,7 +328,7 @@ async def on_backchannel(event, ctx):
 
 ## Grace Period: allow_during_first_ms
 
-The `allow_during_first_ms` field prevents interruptions during the first N milliseconds of playback. This is useful for:
+The `allow_during_first_ms` field prevents interruptions during the first N milliseconds of playback. It counts audio actually played: a response still waiting for its first TTS chunk has played 0 ms, however long synthesis takes. This is useful for:
 
 - **Echo prevention**: When AEC isn't perfect, the first few hundred ms of playback can echo back and trigger false interruptions
 - **Critical content**: Ensure the AI's opening words are always heard
