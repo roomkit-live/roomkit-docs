@@ -145,11 +145,13 @@ When a turn completes:
 
 ### When the user stops on an unfinished sentence
 
-A turn judged incomplete does not wait forever. The channel waits for more
-speech for `suggested_wait_ms` when the detector gives one, otherwise for
+A turn judged incomplete does not wait forever. The channel waits for
+`suggested_wait_ms` of silence when the detector gives one, otherwise for
 `AudioPipelineConfig.turn_incomplete_wait_ms` (1.5 s by default; Smart Turn
-gives none). Speech that starts in that window cancels the wait and joins the
-turn. If none starts, the accumulated turn is routed as complete
+gives none). Speech keeps the turn open, even speech that starts while the
+detector is still judging, and its transcript joins the turn; a cough that
+yields no text does not. Once the silence lasts the wait, the accumulated turn
+is routed as complete
 (`ON_TURN_COMPLETE` with confidence 0, logged as `long_pause`), so the user is
 answered rather than ignored (RFC §12):
 
