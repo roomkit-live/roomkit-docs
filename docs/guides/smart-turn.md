@@ -143,6 +143,29 @@ When a turn completes:
 - The audio buffer is cleared for the next turn
 - `ON_TURN_COMPLETE` hook fires with the combined text and confidence
 
+### When the user stops on an unfinished sentence
+
+A turn judged incomplete does not wait forever. The channel waits for more
+speech for `suggested_wait_ms` when the detector gives one, otherwise for
+`AudioPipelineConfig.turn_incomplete_wait_ms` (1.5 s by default; Smart Turn
+gives none). Speech that starts in that window cancels the wait and joins the
+turn. If none starts, the accumulated turn is routed as complete
+(`ON_TURN_COMPLETE` with confidence 0, logged as `long_pause`), so the user is
+answered rather than ignored (RFC §12):
+
+```
+User speaks: "Tell me about the..."  → SPEECH_END → SmartTurn: incomplete (0.3)
+User stays silent for 1.5 s                        → routed: "Tell me about the..."
+```
+
+```python
+config = AudioPipelineConfig(
+    vad=vad,
+    turn_detector=turn_detector,
+    turn_incomplete_wait_ms=2000,  # give slow speakers more room
+)
+```
+
 ### Inference pipeline
 
 For each evaluation:
