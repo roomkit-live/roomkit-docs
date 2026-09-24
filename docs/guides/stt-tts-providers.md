@@ -953,8 +953,10 @@ What the provider does with the context:
 - One active conversation per provider: `Engine(max_rows=1)` gives it a single
   cache, and calls are serialized.
 - A reply longer than `max_secs` (30 s by default) is cut off there.
-- Two private `vui-tts` attributes are used (the mid-turn rewind and a preset's
-  speaker token), so the dependency is pinned to `vui-tts>=1.1.4,<1.2`.
+- Three private `vui-tts` attributes are used (the mid-turn rewind, a preset's
+  speaker token, and re-seeding the audio decoder at the start of each reply
+  so its 10 s restart never lands mid-reply), so the dependency is pinned to
+  `vui-tts>=1.1.4,<1.2`.
 - `vui-tts` prints the first 40 characters of every user turn to stdout
   (`[Engine._add_user] ...`). Route or silence stdout in production if
   transcripts must not reach the logs.
