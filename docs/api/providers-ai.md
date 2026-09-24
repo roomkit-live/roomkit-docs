@@ -185,6 +185,29 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[vllm]`
 
+## llama.cpp Provider (Local LLM, nothing to run beside it)
+
+RoomKit downloads the llama.cpp build for the machine and the model, runs
+`llama-server`, and stops it on `close()`. See the
+[llama.cpp guide](../guides/llamacpp.md).
+
+::: roomkit.providers.llamacpp.LlamaCppConfig
+
+::: roomkit.providers.llamacpp.LlamaCppAIProvider
+
+### Usage
+
+```python
+from roomkit.providers.llamacpp import LlamaCppAIProvider, LlamaCppConfig
+
+provider = LlamaCppAIProvider(
+    LlamaCppConfig(model="unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M")
+)
+await provider.start()  # optional: load the model before the first request
+```
+
+Install with: `pip install roomkit[llamacpp]`
+
 ## Anthropic Provider
 
 ::: roomkit.providers.anthropic.ai.AnthropicAIProvider

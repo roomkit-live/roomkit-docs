@@ -126,6 +126,7 @@ nav:
           - OpenRouter Provider: guides/openrouter.md
           - LiteLLM Proxy Provider: guides/litellm.md
           - DeepSeek Provider: guides/deepseek.md
+          - llama.cpp Local Provider: guides/llamacpp.md
           - Qwen Provider: guides/qwen.md
           - Gemini on Vertex AI: guides/gemini-vertex.md
           - Image Generation: guides/image-generation.md

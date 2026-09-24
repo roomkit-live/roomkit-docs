@@ -596,12 +596,31 @@ AI features:
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
 - **Provider-agnostic** -- Swap between Anthropic, OpenAI, Cerebras, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, or custom providers
+- **Local models with nothing to run beside them** -- `LlamaCppAIProvider` downloads the llama.cpp build for the machine (CUDA, Metal or CPU, SHA-256 pinned) and a GGUF model, runs `llama-server` itself and stops it on close; tools use the model's native format (see [Local models with llama.cpp](#local-models-with-llamacpp))
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Cost attribution** -- `GeminiVertexConfig.labels` rides every Vertex request as a billing label, so Cloud Billing splits one project's Gemini spend per tenant or partner; validated against Google's label rules at configuration
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
 - **Vision support** -- Providers with vision capability can receive and process images
 - **Function calling** -- Tools can be defined for AI to call external functions
+
+#### Local Models with llama.cpp
+
+`pip install roomkit[llamacpp]`, then one line:
+
+```python
+from roomkit.providers.llamacpp import LlamaCppAIProvider, LlamaCppConfig
+
+provider = LlamaCppAIProvider(LlamaCppConfig(model="unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M"))
+```
+
+- **Nothing to install or start** -- the first request (or `await provider.start()`) downloads the pinned llama.cpp build for this OS, CPU and GPU driver, verifies its SHA-256, downloads the model into the Hugging Face cache, and starts `llama-server` on a free local port; `close()` stops it
+- **Tools in the model's own format** -- `--jinja` renders each model's chat template, and replies go through the same OpenAI-compatible path as vLLM: `AIChannel` tools, MCP tools, streaming and `enable_thinking` work unchanged
+- **GPU or CPU** -- as many layers on the GPU as fit by default, `gpu_layers=0` for the CPU; builds for Linux (CUDA 12/13, Vulkan, CPU, arm64), macOS (Metal) and Windows
+- **Your own server** -- `binary=` runs a `llama-server` you built; one merely present on the `PATH` is never picked up on its own
+- **Measured** -- Qwen3-4B-Instruct Q4 on an RTX 4070: tool choice in 0.2–0.5 s, answers in 1.4–3.6 s, ~4 GB of VRAM, beside Vui TTS on a 12 GB card
+
+See the [llama.cpp guide](guides/llamacpp.md).
 
 #### ACP Coding Agents
 
