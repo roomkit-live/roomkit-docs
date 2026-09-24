@@ -287,7 +287,7 @@ All parameters are set via `SherpaOnnxVADConfig`:
 |---|---|---|
 | `model` | `""` | Path to the `.onnx` model file. |
 | `model_type` | `"ten"` | Model architecture: `"ten"` or `"silero"`. |
-| `threshold` | `0.5` | Speech probability threshold (0–1). Lower = more sensitive. |
+| `threshold` | `0.35` | Speech probability threshold (0–1). Lower = more sensitive. Suits denoised audio; raise to `0.5` without a denoiser. |
 | `silence_threshold_ms` | `500` | Consecutive silence in ms to trigger `SPEECH_END`. |
 | `min_speech_duration_ms` | `250` | Minimum speech duration to emit. Shorter segments are discarded. |
 | `speech_pad_ms` | `1000` | Pre-roll buffer — audio from before detection included in the segment. TEN-VAD detects speech 0.4–0.9 s after it starts, so a shorter pre-roll cuts the first word. |
