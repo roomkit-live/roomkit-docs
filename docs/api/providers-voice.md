@@ -108,6 +108,14 @@ Install with: `pip install roomkit[gemini]`
 
 Install with: `pip install roomkit[vui]` (Python 3.12, CUDA GPU).
 
+### Pocket TTS
+
+::: roomkit.voice.tts.pocket.PocketTTSProvider
+
+::: roomkit.voice.tts.pocket.PocketTTSConfig
+
+Install with: `pip install roomkit[pocket-tts]` (CPU or CUDA GPU).
+
 ### Sherpa-ONNX TTS
 
 ::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSProvider

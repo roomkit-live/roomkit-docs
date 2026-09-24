@@ -898,6 +898,27 @@ tts = NeuTTSProvider(
 
 ---
 
+## Pocket TTS (Local/CPU or GPU, Multilingual)
+
+Kyutai's 100M-parameter model: 24 kHz streaming in 80 ms chunks, faster than
+real time on two CPU cores, English, French, German, Portuguese, Italian and
+Spanish, voice cloning from a clip. Install with `pip install roomkit[pocket-tts]`.
+
+```python
+from roomkit.voice.tts.pocket import PocketTTSConfig, PocketTTSProvider
+
+tts = PocketTTSProvider(PocketTTSConfig(
+    language="french",               # one language per loaded model
+    voices={"estelle": "estelle"},   # pre-made name, clip, hf:// or .safetensors
+    device="cpu",                    # or "cuda"
+))
+```
+
+See the [Pocket TTS guide](pocket-tts.md) for voices, CPU/GPU numbers and the
+local French assistant example.
+
+---
+
 ## Vui Nano (Local/GPU, Conversational)
 
 [Vui Nano](https://huggingface.co/fluxions/vui) (fluxions.ai, Apache 2.0) is a
@@ -1073,6 +1094,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Qwen3 TTS** | Local TTS | Post-gen | Medium | Free | Voice cloning, GPU |
 | **NeuTTS** | Local TTS | GGUF only | Medium | Free | Voice cloning, GGUF quantized |
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
+| **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Six languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
 

@@ -2147,6 +2147,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `GrokTTSProvider` | REST + WebSocket streaming, 5 voices, 20 languages, expressive tags | `httpx`, `websockets` |
 | `GeminiTTSProvider` | Generative speech, natural-language style direction, 30 voices, 80+ languages. Seconds of latency — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
+| `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
 #### Proactive Audio: `say()` and `play()`
