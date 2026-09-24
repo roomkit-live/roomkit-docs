@@ -186,7 +186,7 @@ voice = VoiceChannel(
 ```
 
 The flush happens once the playback has ended — as soon as the last audio is
-sent when the pipeline runs an AEC, after the two-second echo-decay drain
+sent when an AEC runs (the pipeline's or the backend's), after the two-second echo-decay drain
 otherwise — and it logs at INFO so a session shows plainly that nothing was
 dropped:
 

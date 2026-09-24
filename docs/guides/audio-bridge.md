@@ -172,7 +172,7 @@ await voice.say(session, "This call may be recorded for quality purposes.")
 ```
 
 !!! note "Echo suppression during TTS"
-    Without an AEC in the pipeline, TTS playback is followed by a 2-second
+    Without an AEC (in the pipeline or the backend), TTS playback is followed by a 2-second
     echo decay window during which speech detection is suppressed.
     Schedule AI interjections before or well after participant speech
     segments. With an AEC, the playback ends as soon as its audio has
