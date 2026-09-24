@@ -475,6 +475,44 @@ keyboard picker, a Slack payload carrying its own mentions — how a user names
 an agent is your application's business. Parse it at the edge, pass channel
 ids.
 
+### Directing an agent: instructions
+
+Sometimes the application, not a participant, needs an agent to speak: a
+handoff asks the new agent to introduce itself, a schedule nudges it. Sent as
+an ordinary message, that direction is stored as someone's words, shown in the
+transcript as theirs, and read by the model as a user turn. Send it as an
+`INSTRUCTION` instead:
+
+```python
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="voice",
+        sender_id="system",
+        event_type=EventType.INSTRUCTION,
+        content=TextContent(body="Handoff complete. Introduce yourself to the caller."),
+        addressed_to=["advisor"],   # required: which agent is directed
+    ),
+    room_id=room_id,
+)
+# The room now holds one message: the advisor's own introduction.
+```
+
+It goes through the same pipeline — hooks, the room's order, addressing — and:
+
+- **is never stored**, blocked or not, and consumes no index;
+- **reaches only the agents it addresses** (an unaddressed one is refused,
+  `reason="instruction_unaddressed"`), never a transport, so no voice channel
+  speaks it;
+- **is the agent's input for one turn**, marked as the application's, never as
+  a participant's line, and absent from later turns' history;
+- **is recorded on the reply**: `metadata["instruction"]` says why the agent
+  spoke.
+
+It takes no `idempotency_key` (refused, `instruction_not_idempotent`): there is
+no stored event to find it again by. A realtime session is directed with
+`inject_text(role="system")` instead — see
+[What `inject_text`'s role means](realtime-voice-providers.md#what-inject_texts-role-means).
+
 ### Do agents answer each other?
 
 An agent's output is an event like any other, so by default it solicits the
