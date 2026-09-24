@@ -40,7 +40,7 @@ A runnable version with two tools: [`examples/llamacpp_tools.py`](https://github
 | Download the model (`llama-server -hf`) | the Hugging Face cache, `~/.cache/huggingface/hub` | depends on the model: ~2.5 GB for a 4B Q4 |
 | Load the model, answer `/health` | GPU memory, or RAM | ~20 s for a 4B model |
 
-The next runs reuse both caches and start in seconds. Every download is logged at `INFO` on the `roomkit.providers.llamacpp` logger; the server's own output is logged at `DEBUG` on the same logger.
+The next runs reuse both caches and start in seconds. The llama.cpp download and the chosen variant are logged at `INFO` on the `roomkit.providers.llamacpp` logger; the server's own output, model download progress included, is logged at `DEBUG` on the same logger.
 
 !!! note "Pinned and verified"
     RoomKit downloads one exact llama.cpp release, pinned in the package with the SHA-256 of every archive. A download whose checksum does not match is refused and nothing from it is extracted or run. Upgrading RoomKit is how the pinned build moves forward.
@@ -145,19 +145,19 @@ LlamaCppConfig(model="…", extra_args=["--threads", "8"])
 
 **The first start takes minutes.** The model is downloading: the server reports its progress on the `roomkit.providers.llamacpp` logger at `DEBUG`. Raise `startup_timeout` for a large model on a slow link.
 
-**`llama-server exited with code N`.** The error carries the last lines the server printed: a model reference that does not exist, a file that is not a GGUF, not enough memory. Fix what it says; to see the whole output, set the `roomkit.providers.llamacpp` logger to `DEBUG`.
+**`llama-server exited with code N`.** The error carries the last lines the server printed: a model reference that does not exist, a file that is not a GGUF, not enough memory. Fix what it says; to see the whole output, set the `roomkit.providers.llamacpp` logger to `DEBUG`. A `.gguf` path that does not exist and a configured `port` already in use are refused before the server starts.
 
-**It runs on the CPU although there is a GPU.** Check `nvidia-smi` shows a driver: the CUDA build is chosen from the CUDA version the driver reports. Then force `variant="linux-x64-cuda-13"` (or 12) if detection picked the CPU build.
+**It runs on the CPU although there is a GPU.** The log names the variant it picked and, when it falls back to the CPU, why. The CUDA build is chosen from the CUDA version `nvidia-smi` reports; force `variant="linux-x64-cuda-13"` (or 12) if detection picked the CPU build.
 
 **Out of GPU memory.** Lower `gpu_layers`, choose a smaller quantization, or a smaller `context_size`.
 
-**A `llama-server` process is left after a crash.** The provider stops the server on `close()` and when Python exits normally; a process killed with `SIGKILL` cannot clean up. `pkill -x llama-server` removes it.
+**A `llama-server` process is left after a crash.** The provider stops the server on `close()` and when Python exits normally. The server stays in Python's process group, so Ctrl+C or a closed terminal stops it too; a Python process killed on its own (`kill -9 <pid>`, or `kill <pid>` with no handler) cannot clean up. Find the leftover by the port the provider logged (`ss -ltnp | grep <port>`) and stop that process.
 
 ## Maintainers: moving the pinned build
 
 ```bash
-make update-llamacpp            # the newest llama.cpp build
-uv run python scripts/update_llamacpp_build.py b11160   # or a given one
+make update-llamacpp              # the newest llama.cpp build
+make update-llamacpp BUILD=b11160 # or a given one
 ```
 
 It rewrites `src/roomkit/providers/llamacpp/_builds.py` with every variant's archive and SHA-256 from the GitHub release. Run the provider tests, then try the new build on a GPU machine before releasing.
