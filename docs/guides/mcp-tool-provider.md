@@ -88,7 +88,7 @@ async with MCPToolProvider.from_command(
 # the server process is stopped here
 ```
 
-The arguments are passed as a list, with no shell. The MCP SDK starts the server with a **minimal environment** (`HOME`, `PATH`, `SHELL`, `TERM`, `USER`, `LOGNAME`), not the whole of your process's: whatever the server needs beyond that, an API key or a config path, goes in `env=`, which is added to that minimum. The server's own stderr goes to yours.
+The arguments are passed as a list, with no shell. The MCP SDK starts the server with a **minimal environment** (on POSIX `HOME`, `PATH`, `SHELL`, `TERM`, `USER`, `LOGNAME`; on Windows the system and profile variables), not the whole of your process's: whatever the server needs beyond that, an API key or a config path, goes in `env=`, which is added to that minimum. The server's own stderr goes to yours. The provider logs the server's command without its arguments, which may carry secrets; entering a provider that is already connected is refused.
 
 A runnable version with a local model and a small notes server: [`examples/mcp_stdio_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_stdio_tools.py).
 
@@ -143,7 +143,7 @@ MCP tool results are serialized to strings for RoomKit's `ToolHandler` protocol:
 pip install roomkit[mcp]
 ```
 
-The import is lazy — `mcp` is only required when you actually connect. RoomKit supports `mcp` 1.24 and later in the 1.x line; `mcp` 2 renames its model fields and moves to `httpx2`, and is not supported yet.
+The import is lazy — `mcp` is only required when you actually connect. RoomKit supports `mcp` 1.24 and later in the 1.x line; `mcp` 2 renames its model fields and moves to `httpx2`, and is not supported.
 
 ## compose_tool_handlers
 
