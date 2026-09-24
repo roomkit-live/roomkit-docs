@@ -104,7 +104,8 @@ class MyRelayTransport(ACPTransport):
 
     async def open(self, client, *, queue):
         reader, writer = await connect_to_my_relay()
-        return acp.connect_to_agent(client, writer, reader, queue=queue)
+        kwargs = {} if queue is None else {"queue": queue}
+        return acp.connect_to_agent(client, writer, reader, **kwargs)
 
     async def close(self) -> None:
         ...                                    # must not raise
@@ -119,6 +120,10 @@ agent = ACPChannel(
     cwd="/srv/workspaces/my-project",          # a path on the AGENT's machine
 )
 ```
+
+`queue` is the SDK's notification queue, which the channel joins before it
+closes a turn. SDK 0.12.1 removed it and rejects the keyword, so under that
+release the channel passes `None` and the transport forwards nothing.
 
 `command` and `transport` are mutually exclusive, and one is required. `env` and
 `inherit_env` configure the subprocess spawn, so they are refused next to a
