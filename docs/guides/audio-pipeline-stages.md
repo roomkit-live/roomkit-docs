@@ -348,12 +348,15 @@ is built. A field you set replaces the provider's own value; a field you leave
 out keeps it, so above `speech_pad_ms` stays at the provider's 1000 ms. `extra`
 takes the provider's own setting names (any `SherpaOnnxVADConfig` field, or any
 `EnergyVADProvider` constructor argument), and an unknown name raises
-`ValueError` when the pipeline is built. A third-party provider that does not
-implement `VADProvider.configure()` logs a warning instead of ignoring it.
+`ValueError` when the pipeline is built (a `RealtimeVoiceChannel` builds it at
+its first session). A third-party provider that does not implement
+`VADProvider.configure()` logs a warning instead of ignoring it. `vad_config`
+changes the provider itself: give each pipeline its own VAD instance when their
+`vad_config` differ.
 
 | Provider | Method | Notes |
 |----------|--------|-------|
-| `SherpaOnnxVADProvider` | Neural network (Silero) | Accurate, recommended |
+| `SherpaOnnxVADProvider` | Neural network (TEN-VAD or Silero) | Accurate, recommended |
 | `EnergyVADProvider` | RMS energy threshold | Simple, fast, less accurate |
 
 ### VAD Events
