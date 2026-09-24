@@ -540,11 +540,15 @@ tool usage — no configuration needed:
 - **A "what you did" digest** — recent tool calls (name + arguments) are
   appended to the system prompt, so the model knows what it already did and
   what it got. The three most recent keep their result, up to 6,000 characters
-  each: a follow-up question ("and the fifteenth board?") is answered from the
-  data instead of invented. A longer result is cut and marked so, telling the
-  model to call the tool again rather than guess; older calls shrink to one
-  line with a short preview. The result kept is what the tool returned, even
-  when eviction gave the model a placeholder for it. Bounded by recent *calls*.
+  each and never more than the eviction threshold (`evict_threshold_tokens`)
+  lets through: a follow-up question ("and the fifteenth board?") is answered
+  from the data instead of invented. Each result sits in a `<tool_result>`
+  block the model is told to read as data, never as instructions, since it
+  comes from a tool and not from the prompt's author. A longer result is cut
+  and marked so, telling the model to call the tool again rather than guess;
+  older calls shrink to one line with a short preview. In a live conversation
+  the result kept is what the tool returned, even when eviction gave the model
+  a placeholder for it. Bounded by recent *calls*.
 - **Sticky re-exposure** — the distinct tool names called recently are
   re-revealed each turn, so a tool used once stays callable even while Tool
   Search hides the rest of the catalogue. Bounded by recent distinct *tools* —
@@ -553,7 +557,9 @@ tool usage — no configuration needed:
 
 The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
-conversation that outlives its channel object keeps its tool memory.
+conversation that outlives its channel object keeps its tool memory. Those
+events hold what the model was given: a result that had been evicted comes back
+as a one-line preview, not as data.
 
 ## Tool Loop Configuration
 
