@@ -95,7 +95,7 @@ from roomkit.voice.pipeline.denoiser import (
     AICousticsDenoiserConfig,
     AICousticsDenoiserProvider,
 )
-from roomkit.voice.pipeline.vad import SherpaOnnxVADProvider
+from roomkit.voice.pipeline.vad import SherpaOnnxVADConfig, SherpaOnnxVADProvider
 
 kit = RoomKit()
 
@@ -108,7 +108,7 @@ denoiser = AICousticsDenoiserProvider(
 
 pipeline = AudioPipelineConfig(
     denoiser=denoiser,
-    vad=SherpaOnnxVADProvider(model_path="silero_vad.onnx"),
+    vad=SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="silero_vad.onnx", model_type="silero")),
 )
 
 voice = VoiceChannel(
