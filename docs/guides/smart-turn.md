@@ -160,6 +160,11 @@ User speaks: "Tell me about the..."  → SPEECH_END → SmartTurn: incomplete (0
 User stays silent for 1.5 s                        → routed: "Tell me about the..."
 ```
 
+A turn judged complete is also held when the user has already started speaking
+again by the time the detector decides: the new speech joins it, as LiveKit
+Agents and Pipecat do. Only a turn judged complete in silence is answered at
+once.
+
 ```python
 config = AudioPipelineConfig(
     vad=vad,
