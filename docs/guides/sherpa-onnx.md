@@ -415,6 +415,7 @@ stt = SherpaOnnxSTTProvider(
 | `rule1_min_trailing_silence` | `2.4` | Endpoint rule 1 — trailing silence threshold (seconds). |
 | `rule2_min_trailing_silence` | `1.2` | Endpoint rule 2 — trailing silence with text (seconds). |
 | `rule3_min_utterance_length` | `20.0` | Endpoint rule 3 — minimum utterance length (seconds). |
+| `tail_padding_s` | `0.66` | Silence fed to a streaming transducer before its input ends. The model decodes its last frames only with audio behind them; without it the last word is cut ("Hello" → "Hell"). |
 
 ### Streaming vs offline
 
