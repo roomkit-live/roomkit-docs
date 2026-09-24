@@ -961,6 +961,12 @@ What the provider does with the context:
   (`[Engine._add_user] ...`). Route or silence stdout in production if
   transcripts must not reach the logs.
 
+**Paralinguistic tags**: Vui was trained with inline tags such as `[breath]`,
+`[laugh]`, `[sigh]`, `[hesitate]` or `[tut]` (`"So [breath] the thing is..."`).
+They reach the model as written, so an LLM asked to emit them makes the voice
+breathe, laugh or hesitate. `StripBrackets` removes every `[...]`: do not set
+it as the channel's `tts_filter` with Vui.
+
 **Troubleshooting**: `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` from the codec
 means a system cuDNN (for example under `/lib/x86_64-linux-gnu`) is loaded
 instead of PyTorch's. Set `torch.backends.cudnn.enabled = False` before
