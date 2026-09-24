@@ -165,6 +165,11 @@ again by the time the detector decides: the new speech joins it, as LiveKit
 Agents and Pipecat do. Only a turn judged complete in silence is answered at
 once.
 
+Resuming after the turn was routed, before its answer is heard, is covered too:
+the answer waits while the user speaks, and a continuation of at least
+`min_speech_ms` with a transcript supersedes it, so the model answers the two
+messages once. See [Resuming before the answer is heard](../features.md#resuming-before-the-answer-is-heard).
+
 ```python
 config = AudioPipelineConfig(
     vad=vad,

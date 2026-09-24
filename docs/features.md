@@ -2205,6 +2205,10 @@ With `keep_partial_transcript=True` (default), the cut-off utterance is also sto
 
 When a barge-in stops every session playing a **streamed** AI response, the framework closes the response stream: no further token is generated and no tool call starts after the stop. A tool already executing is let finish, its result is stored, and the model's next round is not requested. The text the AI had already produced is stored as its response event with `metadata.cancelled = true`, so its next turn knows what it had started to say. If only one of several sessions barges in, the others keep listening and the response is stored whole. With `InterruptionConfig(flush_partial_tts=False)` the audio keeps playing, the stream is read to its end, and nothing is cancelled.
 
+#### Resuming Before the Answer Is Heard
+
+A turn is routed, and until the first audio of its answer goes out, the user has heard nothing. Speech that starts in that window is not a barge-in: the answer **waits** while the user speaks, and the speech is a user turn. When it ends with at least `InterruptionConfig.min_speech_ms` of speech (300 ms by default) and a transcript, the routed turn is cancelled as `superseded` and the new transcript is routed on its own: "How many boards do I have… and cards?" gets one answer, with the model seeing both messages in turn. The unheard answer is marked `metadata.cancelled = true` and `metadata.cancellation_reason = "superseded"`, and `AIChannel` leaves it out of the next context. A cough, or speech with no transcript, releases the held answer, which plays as it would have. Once the first audio has gone out, speech is a barge-in again (RFC §12.3.12).
+
 #### TTS Conversation Context
 
 A TTS provider that declares a `context_level` other than `NONE` receives, on every streaming call, the dialogue of its voice session: what the user said (after `ON_TRANSCRIPTION`) and what it said itself, cut to what was actually played. Audio is included only at `TTSContextLevel.AUDIO` with `TTSContextConfig(include_audio=True)`, kept in memory, bounded, and released with the session (RFC §12.2.2, §17.6).
