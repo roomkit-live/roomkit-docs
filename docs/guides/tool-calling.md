@@ -537,18 +537,23 @@ ago because the catalogue is re-hidden every turn.
 `AIChannel` closes both gaps automatically with a per-room, in-memory record of
 tool usage — no configuration needed:
 
-- **A "what you did" digest** — a compact summary of recent tool calls (name +
-  arguments + a short result preview) is appended to the system prompt, so the
-  model knows what it already did. Bounded by recent *calls*.
+- **A "what you did" digest** — recent tool calls (name + arguments) are
+  appended to the system prompt, so the model knows what it already did and
+  what it got. The three most recent keep their result, up to 6,000 characters
+  each: a follow-up question ("and the fifteenth board?") is answered from the
+  data instead of invented. A longer result is cut and marked so, telling the
+  model to call the tool again rather than guess; older calls shrink to one
+  line with a short preview. The result kept is what the tool returned, even
+  when eviction gave the model a placeholder for it. Bounded by recent *calls*.
 - **Sticky re-exposure** — the distinct tool names called recently are
   re-revealed each turn, so a tool used once stays callable even while Tool
   Search hides the rest of the catalogue. Bounded by recent distinct *tools* —
   the conversation's working set — since this is the part that costs full tool
   schemas.
 
-The record is in-memory and scoped per room: a process restart clears it (the
-model simply rediscovers tools on next use), which is fine for continuity
-within a live conversation.
+The record is scoped per room and kept in memory; after a process restart it is
+rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
+conversation that outlives its channel object keeps its tool memory.
 
 ## Tool Loop Configuration
 
