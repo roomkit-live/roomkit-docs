@@ -1040,6 +1040,24 @@ clean = f("Sure [laughs] I can help [pause] with that.")
 # → "Sure  I can help  with that."
 ```
 
+### StripEmoji
+
+Removes emoji. Language models add them to replies even when the prompt forbids
+it, and a TTS then names them or makes a stray sound. Composed emoji (skin
+tones, flags, families, keycaps) go whole; accents, `€`, `°` and punctuation
+stay. On a streamed reply, an emoji split across chunks is removed too. The
+response stored in the conversation keeps the model's text.
+
+```python
+from __future__ import annotations
+
+from roomkit import VoiceChannel
+from roomkit.voice.tts.filters import StripEmoji
+
+voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=StripEmoji())
+# "C'est rapide et super bon ! 😊" is spoken as "C'est rapide et super bon !"
+```
+
 ### Using Filters with Streaming TTS
 
 ```python

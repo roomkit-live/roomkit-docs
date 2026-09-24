@@ -70,6 +70,8 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ::: roomkit.voice.tts.filters.StripBrackets
 
+::: roomkit.voice.tts.filters.StripEmoji
+
 ::: roomkit.voice.tts.filters.StripInternalTags
 
 ## Events & Callbacks

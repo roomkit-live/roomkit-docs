@@ -126,6 +126,10 @@ uv run --extra local-audio --extra webrtc-aec --extra ollama \
 POCKET_DEVICE=cuda uv run ... python examples/voice_local_pocket_fr.py   # on the GPU
 ```
 
+The example passes `tts_filter=StripEmoji()`: the LLM adds emoji to its
+replies despite the prompt, and spoken they sound wrong (see
+[TTS Filters](stt-tts-providers.md#stripemoji)).
+
 The Kroko French transducer drops the last word of an utterance unless it gets
 about 1.5 s of tail silence, so the example sets `tail_padding_s=1.5` on
 `SherpaOnnxSTTConfig`. The padding costs compute, not waiting time.
