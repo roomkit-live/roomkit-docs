@@ -172,9 +172,11 @@ await voice.say(session, "This call may be recorded for quality purposes.")
 ```
 
 !!! note "Echo suppression during TTS"
-    After TTS playback completes, there is a 2-second echo decay window
-    during which speech detection is suppressed.  Schedule AI
-    interjections before or well after participant speech segments.
+    Without an AEC in the pipeline, TTS playback is followed by a 2-second
+    echo decay window during which speech detection is suppressed.
+    Schedule AI interjections before or well after participant speech
+    segments. With an AEC, the playback ends as soon as its audio has
+    drained and the AEC cancels the echo tail instead.
 
 ## Bridge + Interruption
 

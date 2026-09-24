@@ -133,7 +133,7 @@ It pops the playback state, calls `cancel_audio()` on the backend (SIP flushes t
 Two behaviours to know about:
 
 - **Barge-in cuts prompts too.** With `enable_barge_in=True` (the default), a caller who speaks during a prompt interrupts it, exactly as with TTS. For an announcement that must be heard in full, mute the voice channel for its duration (`deafen=True` above) — dropped frames never reach the VAD, so barge-in cannot fire.
-- **A prompt stays "live" for ~2 s after the audio drains.** That window lets continuous STT discard echo of your own prompt instead of transcribing it as caller speech. `interrupt()` ends the window immediately if you need the next turn to start clean.
+- **Without an AEC, a prompt stays "live" for ~2 s after the audio drains.** That window lets STT discard echo of your own prompt instead of transcribing it as caller speech — and anything the caller says in it with it. `interrupt()` ends the window immediately if you need the next turn to start clean. With an AEC in the pipeline there is no such window: the prompt ends as soon as its audio has drained, and the AEC cancels the room's echo tail for another 0.5 s.
 
 ---
 
