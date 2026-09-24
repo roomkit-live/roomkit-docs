@@ -329,20 +329,27 @@ that can otherwise leak noise into VAD and STT.
 Detects speech start and end. This is the most critical pipeline stage — it drives STT segmentation and interruption handling.
 
 ```python
-from roomkit.voice.pipeline.vad import SherpaOnnxVADProvider, EnergyVADProvider, VADConfig
 from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline.vad import SherpaOnnxVADConfig, SherpaOnnxVADProvider, VADConfig
 
-vad = SherpaOnnxVADProvider(model_path="silero_vad.onnx")
+vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="ten-vad.onnx"))
 
 pipeline = AudioPipelineConfig(
     vad=vad,
     vad_config=VADConfig(
-        silence_threshold_ms=500,      # Silence duration to end speech
-        speech_pad_ms=300,             # Padding around speech segments
-        min_speech_duration_ms=250,    # Minimum utterance length
+        silence_threshold_ms=600,      # Silence duration to end speech
+        extra={"threshold": 0.5},      # Provider-specific setting
     ),
 )
 ```
+
+`vad_config` tunes whichever VAD provider the pipeline holds, when the pipeline
+is built. A field you set replaces the provider's own value; a field you leave
+out keeps it, so above `speech_pad_ms` stays at the provider's 1000 ms. `extra`
+takes the provider's own setting names (any `SherpaOnnxVADConfig` field, or any
+`EnergyVADProvider` constructor argument), and an unknown name raises
+`ValueError` when the pipeline is built. A third-party provider that does not
+implement `VADProvider.configure()` logs a warning instead of ignoring it.
 
 | Provider | Method | Notes |
 |----------|--------|-------|
@@ -587,10 +594,10 @@ from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
 from roomkit.voice.pipeline import AudioPipelineConfig
 from roomkit.voice.pipeline.aec import SpeexAECProvider
 from roomkit.voice.pipeline.denoiser import RNNoiseDenoiserProvider
-from roomkit.voice.pipeline.vad import SherpaOnnxVADProvider, VADConfig
+from roomkit.voice.pipeline.vad import SherpaOnnxVADConfig, SherpaOnnxVADProvider, VADConfig
 
 # Configure stages
-vad = SherpaOnnxVADProvider(model_path="silero_vad.onnx")
+vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="ten-vad.onnx"))
 aec = SpeexAECProvider(sample_rate=16000, frame_size=320, filter_length=1024)
 denoiser = RNNoiseDenoiserProvider()
 
