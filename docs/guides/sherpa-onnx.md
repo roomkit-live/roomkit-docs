@@ -292,6 +292,9 @@ All parameters are set via `SherpaOnnxVADConfig`:
 | `min_speech_duration_ms` | `250` | Minimum speech duration to emit. Shorter segments are discarded. |
 | `speech_pad_ms` | `1000` | Pre-roll buffer — audio from before detection included in the segment. TEN-VAD detects speech 0.4–0.9 s after it starts, so a shorter pre-roll cuts the first word. |
 | `max_speech_duration` | `20.0` | Maximum speech segment length in seconds (sherpa-internal). |
+| `energy_silence_rms` | `20.0` | RMS below which audio counts as silence: `silence_threshold_ms` of it forces `SPEECH_END` even when the model still reports speech. `0` disables it. |
+| `sherpa_min_silence_duration` | `0.05` | sherpa-onnx internal hysteresis, in seconds. Kept low; `silence_threshold_ms` does the debounce. |
+| `sherpa_min_speech_duration` | `0.1` | sherpa-onnx internal minimum speech duration, in seconds. |
 | `sample_rate` | `16000` | Expected audio sample rate. |
 | `num_threads` | `1` | CPU threads for inference. |
 | `provider` | `"cpu"` | ONNX execution provider (`"cpu"` or `"cuda"`). |
