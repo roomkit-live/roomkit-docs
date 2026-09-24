@@ -1,6 +1,6 @@
 # MCP Tool Provider
 
-`MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's `AITool` / `ToolHandler` system. It discovers tools from a remote MCP server and exposes them as standard RoomKit tools that plug directly into `AIChannel`. The companion `compose_tool_handlers` utility chains multiple tool handlers so you can mix MCP tools with local tools in a single channel.
+`MCPToolProvider` bridges [MCP](https://modelcontextprotocol.io/) servers into RoomKit's `AITool` / `ToolHandler` system. It discovers tools from an MCP server, one reached by URL or one it starts itself as a command (stdio), and exposes them as standard RoomKit tools that plug directly into `AIChannel`. The companion `compose_tool_handlers` utility chains multiple tool handlers so you can mix MCP tools with local tools in a single channel.
 
 !!! note
     `MCPToolProvider` uses the `tool_handler` parameter rather than the `Tool` protocol because it exposes a raw handler via `as_tool_handler()` that dispatches dynamically to the MCP server. For local tools that don't need MCP, prefer the simpler `Tool` protocol — see the [Tool Calling guide](tool-calling.md).
@@ -70,14 +70,40 @@ async with provider as mcp:
 # Connection is closed automatically
 ```
 
+Enter and exit the provider in the same task, with `async with`: the MCP SDK's transports hold anyio cancel scopes that must close where they were opened. If connecting fails half-way (the server exits, `initialize` errors), everything already opened is closed before the error reaches you.
+
+### Local servers over stdio
+
+Most MCP servers are programs you start, speaking MCP on their stdin and stdout. `from_command()` starts one when the provider is entered and stops it on exit:
+
+```python
+from roomkit.tools import MCPToolProvider
+
+async with MCPToolProvider.from_command(
+    "uvx", ["mcp-server-time"],
+    env={"TZ": "America/Montreal"},
+) as mcp:
+    ai = AIChannel("ai", provider=provider, tools=mcp.get_tools(), tool_handler=mcp.as_tool_handler())
+    ...
+# the server process is stopped here
+```
+
+The arguments are passed as a list, with no shell. The MCP SDK starts the server with a **minimal environment** (`HOME`, `PATH`, `SHELL`, `TERM`, `USER`, `LOGNAME`), not the whole of your process's: whatever the server needs beyond that, an API key or a config path, goes in `env=`, which is added to that minimum. The server's own stderr goes to yours.
+
+A runnable version with a local model and a small notes server: [`examples/mcp_stdio_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_stdio_tools.py).
+
 ### Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `url` | required | MCP server URL |
-| `transport` | `"streamable_http"` | Transport protocol: `"streamable_http"` or `"sse"` |
+| `url` | required for HTTP | MCP server URL (`from_url`) |
+| `transport` | `"streamable_http"` | `"streamable_http"`, `"sse"`, or `"stdio"` (`from_command` sets it) |
 | `tool_filter` | `None` | Predicate to include only matching tool names |
-| `headers` | `None` | HTTP headers sent with every request |
+| `headers` | `None` | HTTP headers sent with every request (HTTP transports) |
+| `command` | required for stdio | Executable that starts the server (`from_command`) |
+| `args` | `()` | Its arguments, as a list |
+| `env` | `None` | Extra environment variables for the server, added to the SDK's minimal one |
+| `cwd` | `None` | Working directory of the server |
 
 ### Methods
 
@@ -117,7 +143,7 @@ MCP tool results are serialized to strings for RoomKit's `ToolHandler` protocol:
 pip install roomkit[mcp]
 ```
 
-The import is lazy — `mcp` is only required when you actually connect.
+The import is lazy — `mcp` is only required when you actually connect. RoomKit supports `mcp` 1.24 and later in the 1.x line; `mcp` 2 renames its model fields and moves to `httpx2`, and is not supported yet.
 
 ## compose_tool_handlers
 

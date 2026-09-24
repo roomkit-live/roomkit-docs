@@ -1006,7 +1006,7 @@ async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
     ai = AIChannel("ai", provider=provider, tool_handler=handler)
 ```
 
-`compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports both streamable HTTP and SSE transports. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
+`compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports streamable HTTP and SSE for servers reached by URL, and stdio for a server started as a command: `MCPToolProvider.from_command("uvx", ["mcp-server-time"])` starts it on entry and stops it on exit. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
 
 !!! note
     MCP tools use the `tool_handler` parameter because `MCPToolProvider` exposes a raw handler via `as_tool_handler()` rather than implementing the `Tool` protocol. For local tools, prefer passing `Tool` objects via `tools=[]` instead.
