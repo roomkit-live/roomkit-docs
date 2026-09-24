@@ -937,8 +937,8 @@ What the provider does with the context:
 - after a barge-in, the cache is cut back to the frame the user stopped
   hearing (`played_ms`, 80 ms frames), and a reply nobody heard is dropped;
 - a call for another voice session, another voice, or `synthesize()` (no
-  conversation), and a cache about to run out of room (about 16 minutes of
-  dialogue), restart it from the voice prompt with the user turns awaiting a
+  conversation), and a dialogue about to exceed the 6 minutes of audio the
+  model was trained on (prompt included), restart it from the voice prompt with the user turns awaiting a
   reply; earlier turns are not replayed;
 - when the session is unbound, the cache is emptied (`release_context`), user
   audio included.
