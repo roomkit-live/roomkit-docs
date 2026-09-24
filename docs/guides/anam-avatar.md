@@ -351,6 +351,7 @@ async def on_video_ended(event, ctx):
 |--------|-------------|
 | `send_audio(session, bytes)` | Forward raw PCM audio to Anam (`send_user_audio`) |
 | `inject_text(session, text)` | Send text through the LLM (`send_message`) |
+| `inject_text(session, text, role="assistant")` | Speak the text verbatim, bypassing the LLM (`talk`) |
 | `interrupt(session)` | Cancel current avatar response |
 | `on_audio(callback)` | Register audio output callback |
 | `on_video(callback)` | Register video frame callback |

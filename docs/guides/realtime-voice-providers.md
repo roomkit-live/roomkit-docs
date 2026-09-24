@@ -185,16 +185,21 @@ API offers.
 - `role="system"` is an **instruction** — how to behave, or what to do now.
 - `role="user"` is **content**: a user turn the model answers on a turn-based
   provider, words the model says aloud on a full-duplex one.
-- `silent=True` adds either one as context without asking for a response.
+- `role="assistant"` is a **line** the agent says now (a configured greeting).
+  A provider with a speech primitive uses it (Deepgram's `InjectAgentMessage`,
+  Anam's `talk`); the others ask the model to say it. It never reaches the
+  model as the user's words, which the model would answer.
+- `silent=True` adds any of them as context without asking for a response.
 
 | Intent | OpenAI Realtime | Gemini Live | OpenAI GPT-Live |
 |---|---|---|---|
 | `system` | `system` message, then a response | a `user` turn (no system role in turns) | instructions append |
 | `user` | `user` message, then a response | `user` turn | commentary: said aloud, paraphrased |
+| `assistant` | `system` message asking to say the line, then a response | `user` turn asking to say the line | instructions append asking to say the line |
 | `silent` | the message, no response | turn left incomplete; a marked context text once audio flows | thinking append |
 
-So **anything that directs the model is `role="system"`**, an opening greeting
-included. Sent as `role="user"`, a full-duplex model says it — or improvises
+So **anything that directs the model is `role="system"`**, an instruction to
+greet included; a greeting the application wrote itself is `role="assistant"`. Sent as `role="user"`, a full-duplex model says it — or improvises
 around it — instead of following it:
 
 ```python
@@ -1152,7 +1157,7 @@ Deepgram also has no "user stopped speaking" event: the user's `ConversationText
 - **Turn detection is always Deepgram's.** `server_vad=False` is not supported; the provider logs a warning and ignores it.
 - **Transcriptions are final-only.** `ConversationText` carries no interim results.
 - **Sessions are capped at two hours.** A `MAXIMUM_SESSION_LENGTH_APPROACHING` warning arrives at 1 h 55 and a terminal error at 2 h, both surfaced through `on_error`.
-- **Silent injection rewrites the prompt.** Deepgram has no message that adds to the conversation without a reply, so `inject_text(..., silent=True)` appends the text to the system prompt via `UpdatePrompt` — additive, but it lands as an instruction rather than as a turn.
+- **Silent injection rewrites the prompt.** Deepgram has no message that adds to the conversation without a reply, so `inject_text(..., silent=True)` appends the text to the system prompt via `UpdatePrompt` — additive, but it lands as an instruction rather than as a turn. `UpdatePrompt` never starts a turn, so a non-silent `role="system"` instruction travels as `InjectUserMessage`, which the agent acts on at once; a standing instruction ("speak more slowly from now on") is `silent=True`. `role="assistant"` is `InjectAgentMessage`: the agent says the line verbatim.
 - **Managed-LLM prompts are capped at 25,000 characters.** Past the cap Deepgram truncates the prompt and keeps the session alive (a non-fatal `PROMPT_TOO_LONG` warning). RoomKit warns client-side before sending — at connect, on `reconfigure()`, and as silent injections grow the prompt — governed by `max_prompt_chars`. Bring-your-own `think_endpoint` sessions have no cap and are never warned.
 
 ### Local speaker and microphone example
