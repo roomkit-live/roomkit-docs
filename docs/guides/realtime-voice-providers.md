@@ -177,6 +177,36 @@ key against the [provider reference](../api/providers-realtime-voice.md).
 
 ---
 
+## What `inject_text`'s role means
+
+The role is an intent, not a wire field: each provider maps it onto what its
+API offers.
+
+- `role="system"` is an **instruction** — how to behave, or what to do now.
+- `role="user"` is **content**: a user turn the model answers on a turn-based
+  provider, words the model says aloud on a full-duplex one.
+- `silent=True` adds either one as context without asking for a response.
+
+| Intent | OpenAI Realtime | Gemini Live | OpenAI GPT-Live |
+|---|---|---|---|
+| `system` | `system` message, then a response | a `user` turn (no system role in turns) | instructions append |
+| `user` | `user` message, then a response | `user` turn | commentary: said aloud, paraphrased |
+| `silent` | the message, no response | turn left incomplete; a marked context text once audio flows | thinking append |
+
+So **anything that directs the model is `role="system"`**, an opening greeting
+included. Sent as `role="user"`, a full-duplex model says it — or improvises
+around it — instead of following it:
+
+```python
+# Right on every provider
+await channel.inject_text(session, "Greet the user by first name, then listen.", role="system")
+
+# Wrong on GPT-Live: the model voices the instruction as its own words
+await channel.inject_text(session, "Greet the user by first name, then listen.")
+```
+
+---
+
 ## Which model is speaking
 
 `provider.model_name` names the model behind a session, for a log line, a span
@@ -477,8 +507,12 @@ Install with `pip install roomkit[realtime-openai]` (the `websockets` extra).
   `inline_full`.
 - **Text injection is paraphrased.** `inject_text(role="system")` appends
   instructions; `role="user"` adds spoken context the model relays in its own
-  words, or silent context with `silent=True`. Long texts are split at the
-  API's 500-token per-append bound. `inject_image()` is not available.
+  words, or silent context with `silent=True`. There is no user turn once the
+  session started, so an instruction — the opening greeting included — is
+  `role="system"`, which is how OpenAI documents having the model speak first
+  (see [What `inject_text`'s role means](#what-inject_texts-role-means)). Long
+  texts are split at the API's 500-token per-append bound. `inject_image()` is
+  not available.
 - **One audio format for both directions**, chosen from the channel's
   `output_sample_rate`: PCM at 16 or 24 kHz, or G.711 at 8 kHz with
   `provider_config={"codec": "pcmu"}` or `"pcma"`. A different
