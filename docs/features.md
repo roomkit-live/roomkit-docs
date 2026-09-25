@@ -1337,7 +1337,7 @@ Key features:
 - **Not visibility** — addressing narrows who is *asked*, never who may *see*; the humans in the room still get the message
 - **Outranks the router** — a `ConversationRouter` cannot override what the sender asked for
 - **Stored on the event** — a transcript shows who was asked, and a replay reproduces the same solicitation
-- **Instructions** — `InboundMessage(event_type=EventType.INSTRUCTION, addressed_to=[agent])` directs an agent without a participant's line: never stored, never delivered to a transport, the agent's input for one turn, recorded on its reply as `metadata["instruction"]` ([guide](guides/orchestration.md#directing-an-agent-instructions))
+- **Instructions** — `InboundMessage(event_type=EventType.INSTRUCTION, addressed_to=[agent])` directs an agent without a participant's line: never stored, never delivered to a transport, the agent's input for one turn, recorded on its reply as a fingerprint `metadata["instruction"] = {sha256, length}`; `standalone=True` makes that turn read nothing of the room (no history, no memory provider call) ([guide](guides/orchestration.md#directing-an-agent-instructions))
 - **`AgentResponsePolicy` per room** — `AGENT_CHAIN` (default) or `ADDRESSED_ONLY`, settable at creation *and* on a live room with `set_agent_response_policy()`
 - **Unsolicited targets cost nothing** — a binding that is not asked to act is skipped before any work is done for it, so a roster can be attached lazily and rehydrated one agent at a time
 - **RoomKit takes the decision, never the syntax** — `@codex`, a `/agent` command, a picker or a Slack payload all live in your application, which passes channel ids

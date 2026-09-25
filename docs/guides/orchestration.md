@@ -505,8 +505,36 @@ It goes through the same pipeline — hooks, the room's order, addressing — an
   speaks it;
 - **is the agent's input for one turn**, marked as the application's, never as
   a participant's line, and absent from later turns' history;
-- **is recorded on the reply**: `metadata["instruction"]` says why the agent
-  spoke.
+- **is recorded on the reply** as a fingerprint:
+  `metadata["instruction"] == {"sha256": "…", "length": 51}` says an
+  instruction made the agent speak, and which one, without copying its text
+  onto every reply (an application that shows the text keeps it and matches it
+  by the digest).
+
+A pass that must start from a blank page, such as a summary re-run that would
+otherwise read and copy its previous answer, sends a **standalone**
+instruction: its turn reads nothing of the room. The input is the instruction
+alone, and the agent's memory provider is not called at all, so a provider
+that always keeps a minimum of events, or returns a summary, adds nothing
+either. The system prompt, tools and skills are unchanged.
+
+```python
+await kit.process_inbound(
+    InboundMessage(
+        channel_id="voice",
+        sender_id="system",
+        event_type=EventType.INSTRUCTION,
+        content=TextContent(body=summary_prompt),
+        addressed_to=["summarizer"],
+        standalone=True,   # no history, no memory provider call
+    ),
+    room_id=room_id,
+)
+```
+
+`send_event(..., standalone=True)` does the same. `standalone` on any other
+event type is refused: on a message, it would store a participant's line
+without the isolation it asked for.
 
 It takes no `idempotency_key` (refused, `instruction_not_idempotent`): there is
 no stored event to find it again by. A realtime session is directed with
