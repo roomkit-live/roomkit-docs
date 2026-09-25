@@ -506,7 +506,8 @@ It goes through the same pipeline — hooks, the room's order, addressing — an
 - **is the agent's input for one turn**, marked as the application's, never as
   a participant's line, and absent from later turns' history;
 - **is recorded on the reply** as a fingerprint:
-  `metadata["instruction"] == {"sha256": "…", "length": 51}` says an
+  `metadata["instruction"] == {"sha256": "…", "length": 51}` (length in code
+  points) says an
   instruction made the agent speak, and which one, without copying its text
   onto every reply (an application that shows the text keeps it and matches it
   by the digest).
@@ -516,7 +517,10 @@ otherwise read and copy its previous answer, sends a **standalone**
 instruction: its turn reads nothing of the room. The input is the instruction
 alone, and the agent's memory provider is not called at all, so a provider
 that always keeps a minimum of events, or returns a summary, adds nothing
-either. The system prompt, tools and skills are unchanged.
+either. Nor does the turn see the room's working memories: skills activated in
+the room, its plan, or the digest of tools used there (which quotes their
+results). The channel's own system prompt, tools and skill catalogue are
+unchanged.
 
 ```python
 await kit.process_inbound(
