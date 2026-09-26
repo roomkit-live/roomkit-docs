@@ -401,7 +401,9 @@ A **standalone** instruction cannot empty the room's session, so it runs in a
 session opened for that turn and closed after it:
 
 - no catch-up is sent, and the room's session is neither prompted nor told —
-  its catch-up still waits for the next ordinary turn;
+  its catch-up still waits for the next ordinary turn, and carries the
+  standalone reply as the agent's own words (`you (in a separate session)`),
+  since that session never held it;
 - the turn session takes the room session's configuration (`model`, `mode`)
   where the agent accepts it, and host-contributed blocks still open the
   prompt;
