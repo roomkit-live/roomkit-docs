@@ -389,6 +389,27 @@ that was loaded anyway, and raising `room_history` past the floor grows the tail
 the catch-up draws on. Declaring the window is what keeps the tail loaded on a
 room with no hook at all.
 
+### Directing the agent: instructions
+
+An `INSTRUCTION` ([orchestration guide](orchestration.md#directing-an-agent-instructions))
+reaches the agent marked as the application's direction, never as a
+participant's line, and the reply records its fingerprint in
+`metadata["instruction"]`. The session keeps it once prompted: nothing is
+rebuilt there, so the mark is what lets later turns read it for what it was.
+
+A **standalone** instruction cannot empty the room's session, so it runs in a
+session opened for that turn and closed after it:
+
+- no catch-up is sent, and the room's session is neither prompted nor told —
+  its catch-up still waits for the next ordinary turn;
+- the turn session takes the room session's configuration (`model`, `mode`)
+  where the agent accepts it, and host-contributed blocks still open the
+  prompt;
+- `cancel(room_id)` stops it like any other turn of the room.
+
+Opening a session costs what it costs on your agent (MCP servers reconnect), so
+keep standalone for passes that need a blank page, such as a summary re-run.
+
 ## Contributing context the agent cannot fetch
 
 The catch-up carries the room. It does not carry what only the *host* holds —
