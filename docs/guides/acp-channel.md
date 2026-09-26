@@ -373,10 +373,16 @@ what did claude just do?
   up is not a second door into the room.
 - **Honest about its bound.** `room_history` (default 20) caps the block, and
   the header says so when it bites: *"the 20 most recent of 47 messages you did
-  not receive"*. An agent that knows it was truncated can ask for the rest; one
-  that believes it holds the whole room cannot.
-- **Its own words stay out**, and a session closed and reopened starts over —
-  the new one has missed everything.
+  not receive"* when the loaded tail holds more than it shows, or *"the 20 most
+  recent messages you did not receive; up to 27 earlier room events were not
+  loaded"* when the tail itself stops short of what the agent missed (a room
+  with no hook loads exactly the declared window). The second count is an upper
+  bound: it counts room events, some of which the agent would not have been
+  shown. An agent that knows it was truncated can ask for the rest; one that
+  believes it holds the whole room cannot.
+- **Its own words stay out**, except a reply it gave in a standalone turn (see
+  below), which its room session never held. A session closed and reopened
+  starts over: the new one has missed everything.
 
 ```python
 ACPChannel("codex", command=[...], cwd=workspace, room_history=0)  # opt out
@@ -443,7 +449,7 @@ sits further from the question than what the agent missed of the conversation:
 draft the renewal email
 ```
 
-Four things this contract says out loud.
+Five things this contract says out loud.
 
 **A contributor that raises costs its blocks, not the turn.** The failure is
 logged and the prompt goes without them, like the other host-supplied callbacks
@@ -465,6 +471,13 @@ slow contributor delays delivery for the whole room, not just for this agent.
 **RoomKit cannot filter what you put in.** The catch-up is filtered per reader
 because it is made of room events (RFC §7.5 rule 8). Your blocks are not events,
 so nothing checks them — do not route through them what visibility withheld.
+
+**`context.recent_events` is the framework's tail, not a window you are
+promised.** It holds the largest window any channel bound to the room declares,
+floored at 50 events while a hook is registered. With `room_history=0` on a room
+with no hook and no other channel reading history, it holds the triggering event
+alone. A contributor that needs the room's history reads it from the store
+(`kit.store.get_conversation(room_id, limit=...)`).
 
 ## Event mapping
 
