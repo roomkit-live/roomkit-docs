@@ -375,8 +375,9 @@ what did claude just do?
   the header says so when it bites: *"the 20 most recent of 47 messages you did
   not receive"* when the loaded tail holds more than it shows, or *"the 20 most
   recent messages you did not receive; up to 27 earlier room events were not
-  loaded"* when the tail itself stops short of what the agent missed (a room
-  with no hook loads exactly the declared window). The second count is an upper
+  loaded"* when the tail itself stops short of what the agent missed, which is
+  the common case on a room with no hook (it loads exactly the declared
+  window). The second count is an upper
   bound: it counts room events, some of which the agent would not have been
   shown. An agent that knows it was truncated can ask for the rest; one that
   believes it holds the whole room cannot.
@@ -474,7 +475,8 @@ so nothing checks them — do not route through them what visibility withheld.
 
 **`context.recent_events` is the framework's tail, not a window you are
 promised.** It holds the largest window any channel bound to the room declares,
-floored at 50 events while a hook is registered. With `room_history=0` on a room
+floored at 50 events while a hook or an identity hook is registered, and capped
+at 2000. With `room_history=0` on a room
 with no hook and no other channel reading history, it holds the triggering event
 alone. A contributor that needs the room's history reads it from the store
 (`kit.store.get_conversation(room_id, limit=...)`).
