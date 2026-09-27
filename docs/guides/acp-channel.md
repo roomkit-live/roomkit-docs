@@ -139,6 +139,13 @@ them without reimplementing anything. Note the split on the session fields:
 machine — the absolute-path check still applies, but the path does not have to
 exist here.
 
+`session/new` also names the room in its `_meta` (`field_meta` in Python):
+`roomkit.live/roomId`, and `roomkit.live/sessionScope`, `"room"` for the
+room's session or `"turn"` for a [standalone turn's](#directing-the-agent-instructions).
+A transport that keeps one remote session per room must file a `"turn"` session
+under a key of its own and close only that one; filed under the room, the turn
+would answer from the room's session and then close it.
+
 `is_alive()` is what lets the channel notice a dead connection: when it turns
 false, the next prompt reconnects and drops every session behind the old one (a
 reconnect never resumes them). Answer only when you know — the default `True`
@@ -414,7 +421,9 @@ session opened for that turn and closed after it:
 - the turn session takes the room session's configuration (`model`, `mode`)
   where the agent accepts it, and host-contributed blocks still open the
   prompt;
-- `cancel(room_id)` stops it like any other turn of the room.
+- `cancel(room_id)` stops it like any other turn of the room;
+- its `session/new` says `roomkit.live/sessionScope: "turn"`, so a transport
+  that files sessions by room keeps it apart from the room's.
 
 Opening a session costs what it costs on your agent (MCP servers reconnect), so
 keep standalone for passes that need a blank page, such as a summary re-run.
