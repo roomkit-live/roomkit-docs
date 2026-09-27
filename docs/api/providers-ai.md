@@ -27,6 +27,16 @@ producing a negative or non-finite cost.
 
 ::: roomkit.providers.ai.mock.MockAIProvider
 
+## Response schema
+
+`AIContext.response_schema` constrains the answer of `generate()` to a JSON
+Schema within a portable subset. See the
+[Structured Output guide](../guides/structured-output.md).
+
+::: roomkit.providers.ai.json_schema.check_portable_schema
+
+::: roomkit.providers.ai.response_schema.ResponseSchemaError
+
 ## Image parts
 
 Every provider turns an `AIImagePart` into what its API takes through one

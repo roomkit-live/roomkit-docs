@@ -1053,6 +1053,37 @@ or uncertain reconnection; gates open after successful delivery. The activation
 result carries complete instructions, reference names and authorized prerequisite
 schemas. Existing inline and native reconfiguration modes remain available.
 
+#### Structured Output (Response Schema)
+
+A call that needs data rather than prose sets `AIContext.response_schema` to a
+JSON Schema. The provider constrains its output natively, and `generate()`
+returns one JSON document that satisfies the schema, or raises
+`ResponseSchemaError` saying why it could not: `refusal`, `truncated`,
+`invalid_json`, or `unsupported` (checked before any request).
+
+```python
+context = AIContext(
+    messages=[AIMessage(role="user", content="I was charged twice for March.")],
+    response_schema={
+        "type": "object",
+        "properties": {"department": {"type": "string", "enum": ["billing", "other"]}},
+        "required": ["department"],
+        "additionalProperties": False,
+    },
+)
+department = json.loads((await provider.generate(context)).content)["department"]
+```
+
+The schema stays within a portable subset that every supporting provider
+accepts (all properties required, `additionalProperties: false`, `enum` on
+strings only, no null, `anyOf` or `$ref`). RoomKit checks it when the context is
+built. OpenAI and its derivatives, Anthropic, Gemini, Mistral, Ollama and
+PolarGrid support it; `provider.supports_response_schema` says so, and the
+OpenAI-compatible configs take `supports_response_schema=` for a server that
+differs. This version covers `generate()` only, without tools in the same turn.
+
+See the [Structured Output guide](guides/structured-output.md).
+
 #### AI Thinking / Reasoning
 
 AI models with chain-of-thought reasoning (Claude 3.5+, DeepSeek-R1, QwQ) can expose their internal thinking. RoomKit captures this reasoning, preserves it across tool-loop rounds, and exposes it through hooks and ephemeral events.

@@ -114,6 +114,7 @@ nav:
           - Human-in-the-Loop: guides/human-in-the-loop.md
           - MCP Tool Provider: guides/mcp-tool-provider.md
           - AI Thinking: guides/ai-thinking.md
+          - Structured Output: guides/structured-output.md
           - Streaming with Tools: guides/streaming-tools.md
           - Multi-Agent Orchestration: guides/orchestration.md
           - Delivery Service: guides/delivery.md
