@@ -86,6 +86,31 @@ the [STT & TTS Providers guide](../guides/stt-tts-providers.md#gemini-cloud-api-
 
 Install with: `pip install roomkit[gemini]`
 
+### Meta Muse Voice Transcribe STT (streaming + batch)
+
+::: roomkit.voice.stt.meta.MetaSTTProvider
+
+::: roomkit.voice.stt.meta.MetaSTTConfig
+
+::: roomkit.voice.stt.meta.MetaSTTError
+
+#### Usage
+
+```python
+from roomkit.voice.stt.meta import MetaSTTConfig, MetaSTTProvider
+
+# No pipeline VAD: the model finds where each turn ends
+stt = MetaSTTProvider(MetaSTTConfig(api_key="your-meta-model-api-key"))
+
+# Behind a pipeline VAD: one final per utterance
+stt = MetaSTTProvider(MetaSTTConfig(api_key="...", mode="PUSH_TO_TALK"))
+```
+
+See the [STT & TTS Providers guide](../guides/stt-tts-providers.md#meta-muse-voice-transcribe-cloud-api-streaming-batch)
+for the mode choice and the limits.
+
+Install with: `pip install roomkit[meta-stt]`
+
 ## TTS (Text-to-Speech)
 
 ::: roomkit.voice.tts.base.TTSProvider

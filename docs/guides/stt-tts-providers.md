@@ -503,6 +503,86 @@ exercises the hesitation, accent and language detection a synthesized sentence
 cannot. `examples/stt_gemini_transcribe_live.py` does the same from a file or a
 synthesized sentence, for a machine with no audio device.
 
+## Meta Muse Voice Transcribe (Cloud API, streaming + batch)
+
+`muse-voice-transcribe-1.0` is Meta's recogniser on the Meta Model API. One
+provider speaks both of its endpoints: a realtime WebSocket that answers
+interim transcripts while the speaker talks and, when asked, finds where each
+turn ends by itself; and a REST endpoint for one finished clip.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.stt.meta import MetaSTTConfig, MetaSTTProvider
+
+stt = MetaSTTProvider(
+    MetaSTTConfig(
+        api_key="your-meta-model-api-key",
+        mode="ENDPOINTING",  # no pipeline VAD: the model ends each turn
+        language_bias=["French"],
+        keywords=["RoomKit", "Tremblay"],
+    )
+)
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `api_key` | *(required)* | Meta Model API key |
+| `model` | `muse-voice-transcribe-1.0` | Transcription model id |
+| `mode` | `ENDPOINTING` | How a stream ends — see below |
+| `keywords` | `[]` | Terms to bias recognition toward; a bias, not a guaranteed spelling |
+| `language_bias` | `[]` | Language **names** to bias toward (`"French"`, not `"fr"`) |
+| `base_url` | `https://api.meta.ai/v1` | REST endpoint root |
+| `realtime_url` | `wss://api.meta.ai/v1/asr/realtime` | Realtime WebSocket endpoint |
+| `timeout_s` | `60.0` | REST transcription timeout |
+| `handshake_timeout_s` | `10.0` | How long a stream waits for the service to accept its configuration |
+
+Install with `pip install roomkit[meta-stt]` (`websockets` for streams,
+`httpx` for `transcribe()`).
+
+### Pick the mode from the channel
+
+The provider cannot see how the `VoiceChannel` is set up, and the right mode
+depends on it:
+
+| Channel | Mode | What the model does |
+|---------|------|---------------------|
+| No pipeline VAD — continuous STT | `ENDPOINTING` | Signals speech start (`ON_SPEECH_START` fires), sends interims, and ends each turn itself after about 550 ms of silence |
+| Pipeline VAD delimits utterances | `PUSH_TO_TALK` | Sends interims, then one final when the channel closes the utterance's stream |
+
+`ENDPOINTING` behind a pipeline VAD would hand the channel several finals for
+one utterance, of which it keeps the last. The endpointing silence is not
+configurable, and two voices separated by less than that silence make one
+turn.
+
+### Limits worth knowing
+
+- **Audio**: mono 16-bit PCM at 16 or 24 kHz goes through as it is; any other
+  rate is resampled to 24 kHz (the model's native rate) by the provider, so an
+  8 kHz telephony leg works without a pipeline resampler.
+- **Language**: `language_bias` biases, it does not pin, so the provider
+  reports `supports_language_override = False` and the channel never passes it
+  a per-call language. The names are checked at construction against the 25
+  Meta documents (`SUPPORTED_LANGUAGES`): the service itself accepts a
+  misspelt one silently, and the bias then does nothing. Meta reports no
+  detected language and no confidence.
+- **Sessions**: a stream lasts at most 60 minutes, then the service closes it
+  with code 1011. Every failure raises `MetaSTTError`, which carries Meta's
+  `code` and `error_type` (e.g. `billing_not_configured` / `billing_error`)
+  and `retryable`: true for a server fault (1011), a rate limit (1013, HTTP
+  429), a 5xx and a dropped connection, false for a refused request (1008,
+  HTTP 4xx).
+- **REST** (`transcribe()`): one WAV of at most 10 minutes and 32 MB, sent in
+  `PUSH_TO_TALK` mode; the provider wraps the PCM in the WAV itself. An
+  `AudioContent` carrying a WAV `data:` URI is decoded locally; an http(s)
+  URL is refused rather than fetched.
+- **Speakers**: Meta's `DIARIZATION` mode is refused for now. The model labels
+  speakers turn by turn, but a `TranscriptionResult` has nowhere to carry the
+  label yet, so the config raises rather than dropping it silently.
+
+`examples/stt_meta_live.py` streams a WAV file in real time in either mode,
+then sends the same file over REST.
+
 ---
 
 ## TTS Provider ABC

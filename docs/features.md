@@ -65,7 +65,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 
 Voice isn't bolted on -- it's a full `Channel` implementation with:
 
-- Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, Gemini, sherpa-onnx, or custom)
+- Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, Gemini, Meta Muse, sherpa-onnx, or custom)
 - STT language chosen per session at runtime (`set_stt_language`), with `STTLanguageLock` to start in Deepgram `multi` and pin the next stream to the language the caller uses
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
@@ -2155,6 +2155,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 |----------|----------|------------|
 | `DeepgramSTTProvider` | Streaming STT, interim results, VAD, punctuation, diarization, language detection (Nova-3 `multi`) and a per-call language | `roomkit[deepgram]` |
 | `SherpaOnnxSTTProvider` | Local transducer/Whisper, streaming, batch | `roomkit[sherpa-onnx]` |
+| `MetaSTTProvider` | Meta Muse Voice Transcribe: streaming with interim results and model endpointing (`ENDPOINTING`) or one final per VAD utterance (`PUSH_TO_TALK`), REST batch, keyword and language bias, 25 languages including French; 16/24 kHz native, other rates resampled | `roomkit[meta-stt]` |
 | `GeminiSTTProvider` | Batch only — one pass over a whole recording returns transcript, speaker turns and timestamps together. A multimodal model by default; `model="gemini-3.5-transcribe"` for Google's dedicated recogniser, about twice as fast with every word timed to 100 ms. For meetings, voicemail and audio files, not live turn-taking | `roomkit[gemini]` |
 | `MockSTTProvider` | Configurable responses, cycling transcripts | None |
 
