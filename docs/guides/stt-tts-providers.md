@@ -306,9 +306,8 @@ stt = Qwen3ASRProvider(
 
 ## Gemini (Cloud API, batch only)
 
-Transcription here is an *instruction* to a multimodal model that accepts
-audio, so this provider is batch by construction: it takes a complete recording
-and answers in one pass, in seconds. For live turn-taking use
+The API takes a complete recording and answers in one pass, in seconds, so
+this provider is batch by construction. For live turn-taking use
 [Gemini Transcribe](#gemini-transcribe-cloud-api-streaming) below, which drives
 Google's dedicated recogniser over a WebSocket.
 
@@ -345,21 +344,70 @@ for turn in transcript.segments:
 | `model` | `"gemini-3.8-flash"` | A multimodal model that accepts audio input |
 | `language` | `None` | BCP-47 hint; unset, the model identifies and reports it |
 | `diarize` | `True` | Ask for `Speaker 1`, `Speaker 2`, … labels |
-| `prompt` | `None` | Extra instruction: vocabulary, formatting rules |
+| `prompt` | `None` | Extra instruction: formatting rules. Refused on the recogniser |
 | `timeout` | `600.0` | Per-request timeout in seconds |
 | `max_inline_bytes` | `15 MiB` | Above this, the recording is uploaded via the Files API |
+| `mode` | `"verbatim"` | `"smart"` for the recogniser's cleaned-up transcript (recogniser only) |
+| `custom_vocabulary` | `[]` | Terms to spell as written, up to 1000; in the prompt of a multimodal model |
+| `word_timestamps` | `True` | Time every word (recogniser only) |
+
+### Two kinds of model
+
+`model` picks how the transcript is obtained:
+
+- **A multimodal model** (the default, `gemini-3.8-flash`) is *instructed*: a
+  prompt asks for the transcript and a JSON schema shapes it. Turns are timed
+  to the second, and long recordings are fine.
+- **The dedicated recogniser**, `gemini-3.5-transcribe`, is *configured*: it
+  refuses a prompt and a response schema, and takes a `transcription_config`
+  instead. It answers about twice as fast and times every word to 100 ms, in
+  `transcript.words`.
+
+Measured against the live API on 2026-09-27, on a 12-second, two-speaker
+French dialogue:
+
+| | `gemini-3.8-flash` | `gemini-3.5-transcribe` |
+|---|---|---|
+| Time | 2.9–4.0 s | 1.7–2.7 s |
+| Speaker turns | 4, correct | 4, correct |
+| Timing | per turn, `MM:SS` | per word, 100 ms |
+| Longest recording | long files | 1 hour; 30 minutes with speakers or word timing |
+
+```python
+stt = GeminiSTTProvider(
+    GeminiSTTConfig(api_key="...", model="gemini-3.5-transcribe", language="fr-CA")
+)
+transcript = await stt.transcribe_recording("meeting.wav")
+for word in transcript.words:
+    print(f"{word.start:.1f}-{word.end:.1f}s {word.speaker}: {word.text}")
+```
+
+The recogniser's options exclude each other the way the service does, and the
+config refuses a forbidden pair at construction rather than on the first call:
+
+| Option | Needs | Excludes |
+|--------|-------|----------|
+| `diarize=True` | `word_timestamps=True` — speakers ride on the words | |
+| `mode="smart"` | | `diarize`, `word_timestamps` |
+| `custom_vocabulary` | `language` — without one the service answers the first sentence alone | `diarize`, `word_timestamps` |
+| `prompt` | | always refused |
+
+Two more differences to know. The recogniser detects the language but never
+reports it, so `transcript.language` is empty unless you set `language`
+(short codes such as `"fr"` are accepted). And raw PCM is sent to every model
+inside a WAV header, because the recogniser refuses bare `audio/l16`.
 
 ### Two methods, two shapes
 
 `transcribe()` is the `STTProvider` contract and returns flat text, dropping the
 structure. `transcribe_recording()` returns the whole `Transcript` — the
-detected language plus one `TranscriptSegment` per speaker turn, with `.text`
-(labelled) and `.plain_text` (words only) helpers. It also accepts a file path,
-which `transcribe()` does not.
+language plus one `TranscriptSegment` per speaker turn, with `.text` (labelled)
+and `.plain_text` (words only) helpers, and, from the recogniser, the timed
+`words`. It also accepts a file path, which `transcribe()` does not.
 
 ### Input paths
 
-Raw `AudioChunk`/`AudioFrame` audio is sent inline as PCM; a `data:` URL is sent
+Raw `AudioChunk`/`AudioFrame` audio is sent inline as WAV; a `data:` URL is sent
 inline as-is; a local path is inlined below `max_inline_bytes` and uploaded
 through the Files API above it (and deleted afterwards, rather than left to
 expire). Arbitrary `http(s)` URLs are **refused**, not fetched: dereferencing a
@@ -380,11 +428,14 @@ speakers are already separated — a conference records **one track per
 participant** — transcribe each track with `diarize=False` and merge on the
 timestamps instead. The labels earn their keep on a single mixed file.
 
-Timestamps are the model's reading, not a forced alignment: good for navigating
-a recording, not for syncing against anything.
+A multimodal model's timestamps are its reading, not a forced alignment: good
+for navigating a recording, not for syncing against anything. The recogniser's
+word offsets are measured, at 100 ms.
 
 See `examples/meeting_transcription.py` — a recording becomes speaker turns,
-enters a room, and an AI channel writes the minutes.
+enters a room, and an AI channel writes the minutes. Run it with
+`GEMINI_STT_MODEL=gemini-3.5-transcribe` for the recogniser and its word
+timing.
 
 ---
 

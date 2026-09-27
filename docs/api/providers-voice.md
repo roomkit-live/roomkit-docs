@@ -64,6 +64,8 @@ Install with: `pip install roomkit[sherpa-onnx]`
 
 ::: roomkit.voice.stt.gemini.TranscriptSegment
 
+::: roomkit.voice.stt.gemini.TranscriptWord
+
 #### Usage
 
 ```python
@@ -77,7 +79,9 @@ for turn in transcript.segments:
 ```
 
 Batch only: the model takes a complete recording and answers in seconds, so this
-fits meetings, voicemail and imported files rather than live turn-taking — see
+fits meetings, voicemail and imported files rather than live turn-taking. Pass
+`model="gemini-3.5-transcribe"` for Google's dedicated recogniser and its
+word-level timing in `transcript.words` — see
 the [STT & TTS Providers guide](../guides/stt-tts-providers.md#gemini-cloud-api-batch-only).
 
 Install with: `pip install roomkit[gemini]`
