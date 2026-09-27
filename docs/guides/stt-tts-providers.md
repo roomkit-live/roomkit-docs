@@ -580,8 +580,12 @@ turn.
   speakers turn by turn, but a `TranscriptionResult` has nowhere to carry the
   label yet, so the config raises rather than dropping it silently.
 
-`examples/stt_meta_live.py` streams a WAV file in real time in either mode,
-then sends the same file over REST.
+Two examples. `examples/stt_meta_mic.py` is the one to run first: speak into
+your microphone and the caption line reacts as the model hears you start,
+rewrites itself while you talk, and commits once you pause — the model's own
+endpointing, with no VAD on RoomKit's side. `examples/stt_meta_live.py` streams
+a WAV file in real time in either mode and then sends it over REST, for a
+machine with no audio device.
 
 ---
 
