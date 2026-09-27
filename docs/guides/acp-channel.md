@@ -145,7 +145,7 @@ room's session or `"turn"` for a [standalone turn's](#directing-the-agent-instru
 A transport, or the relay behind it, that keeps one remote session per room
 must file a `"turn"` session under a key of its own and close only that one;
 filed under the room, the turn would answer from the room's session and then
-close it. The key is absent before 0.92.0. A relay that still answers a turn's
+close it. The key is absent before 0.91.1. A relay that still answers a turn's
 `session/new` with a session already open makes the turn fail with a
 `RuntimeError`, and the room's session stays as it was.
 
