@@ -315,7 +315,8 @@ malformed duration.
 `thinking_level` wins when both are set:
 
 - `GeminiConfig(thinking_level=...)` — `minimal`, `low`, `medium`, `high`, for
-  Gemini 3.x models
+  Gemini 3.x models. `gemini-3.8-flash`, the default, refuses `minimal` with a
+  400: `low` is its lowest level
 - `thinking_budget` (per turn, from the channel) — a token budget, for Gemini 2.5
 
 ```python
@@ -323,7 +324,7 @@ from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
 
 provider = GeminiAIProvider(GeminiConfig(
     api_key="...",
-    model="gemini-3.6-flash",
+    model="gemini-3.8-flash",
     thinking_level="high",
 ))
 ```

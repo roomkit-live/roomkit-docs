@@ -173,9 +173,9 @@ from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
 
 tts = GeminiTTSProvider(GeminiTTSConfig(
     api_key="your-gemini-api-key",
-    model="gemini-3.1-flash-tts-preview",
+    model="gemini-3.8-flash-tts",
     voice="Kore",
-    style_prompt="Read this calmly and clearly",   # delivery guidance
+    style_prompt="calm and clear",                 # delivery guidance
 ))
 ```
 

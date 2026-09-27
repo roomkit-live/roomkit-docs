@@ -326,7 +326,7 @@ from roomkit.voice.stt.gemini import GeminiSTTConfig, GeminiSTTProvider
 stt = GeminiSTTProvider(
     config=GeminiSTTConfig(
         api_key="your-gemini-api-key",
-        model="gemini-3.6-flash",     # any multimodal model that accepts audio
+        model="gemini-3.8-flash",     # any multimodal model that accepts audio
         language="fr-CA",              # optional hint; detected otherwise
         diarize=True,                  # ask for speaker labels
         prompt="The product is spelled RoomKit.",   # optional vocabulary/format
@@ -342,7 +342,7 @@ for turn in transcript.segments:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `api_key` | *(required)* | Gemini API key (`GEMINI_API_KEY`) |
-| `model` | `"gemini-3.6-flash"` | A multimodal model that accepts audio input |
+| `model` | `"gemini-3.8-flash"` | A multimodal model that accepts audio input |
 | `language` | `None` | BCP-47 hint; unset, the model identifies and reports it |
 | `diarize` | `True` | Ask for `Speaker 1`, `Speaker 2`, … labels |
 | `prompt` | `None` | Extra instruction: vocabulary, formatting rules |
@@ -718,9 +718,9 @@ tts = GradiumTTSProvider(
 
 ## Gemini TTS (Cloud API)
 
-Google's generative speech models. The prompt is an *instruction*, so a
-natural-language direction steers delivery — that is what `style_prompt`
-exploits. 30 prebuilt voices and more than 70 documented languages.
+Google's generative speech models. They perform the text rather than read it,
+so a natural-language direction steers delivery — that is what `style_prompt`
+is for. 30 prebuilt voices and more than 70 documented languages.
 
 ```python
 from __future__ import annotations
@@ -730,36 +730,40 @@ from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
 tts = GeminiTTSProvider(
     config=GeminiTTSConfig(
         api_key="your-gemini-api-key",
-        model="gemini-3.1-flash-tts-preview",
+        model="gemini-3.8-flash-tts",                    # the default
         voice="Kore",                                    # 30 prebuilt voices
         language="fr-CA",                                # optional BCP-47 hint
-        style_prompt="Read this in a calm voice",         # optional direction
+        style_prompt="calm and reassuring",              # optional direction
     )
 )
 ```
 
 Install with `pip install roomkit[gemini]` — the same extra the Gemini AI
-provider and Gemini Live use.
+provider and Gemini Live use. It requires `google-genai>=2.25.0`, the first
+release that carries the 3.8 `speech_metadata` annotation.
 
 ### Latency: not a conversational TTS
 
-Gemini TTS trades latency for expressiveness. Measured against the live API on
-2026-08-06 for a one-sentence French prompt, three runs per model:
+Gemini TTS trades latency for expressiveness. Measured against the live API
+for a one-sentence prompt, three runs per model:
 
 | Model | Time to first audio | Streams incrementally |
 |-------|---------------------|-----------------------|
-| `gemini-3.1-flash-tts-preview` | ~5.1 s median (1.2–8.3 s) | Yes — 40 ms frames |
-| `gemini-2.5-flash-preview-tts` | ~3.4 s median | No — one clip |
-| `gemini-2.5-pro-preview-tts` | ~5.3 s median | No — one clip |
+| `gemini-3.8-flash-tts` | 1.1–1.6 s (2026-09-27) | Yes |
+| `gemini-3.8-flash-lite-tts` | ~0.7 s (2026-09-27) | Yes |
+| `gemini-3.1-flash-tts-preview` | ~5.1 s median, 1.2–8.3 s (2026-08-06); 0.7–0.9 s (2026-09-27) | Yes — 40 ms frames |
+| `gemini-2.5-flash-preview-tts` | ~3.4 s median (2026-08-06) | No — one clip |
+| `gemini-2.5-pro-preview-tts` | ~5.3 s median (2026-08-06) | No — one clip |
 
-Seconds of dead air do not work for live turn-taking. Use Gemini TTS for
-prompts, announcements, voicemail and generated audio messages; for
-conversation reach for a low-latency engine (ElevenLabs, Gradium) or skip the
-text round trip entirely with
+A second of dead air before every reply still does not work for live
+turn-taking. Use Gemini TTS for prompts, announcements, voicemail and generated
+audio messages; for conversation reach for a low-latency engine (ElevenLabs,
+Gradium) or skip the text round trip entirely with
 [Gemini Live speech-to-speech](realtime-voice-providers.md).
 
-The default model is the only one that streams as it generates, which is why it
-is the default despite a higher median: playback can start on the first frame
+The default is `gemini-3.8-flash-tts`, Google's replacement for the 3.1
+preview; `gemini-3.8-flash-lite-tts` is its low-latency, high-throughput
+variant. Both stream as they generate, so playback starts on the first frame
 instead of waiting for the whole clip.
 
 ### Configuration
@@ -767,10 +771,10 @@ instead of waiting for the whole clip.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `api_key` | *(required)* | Gemini API key (`GEMINI_API_KEY`) |
-| `model` | `"gemini-3.1-flash-tts-preview"` | One of the three models above |
+| `model` | `"gemini-3.8-flash-tts"` | One of the five models above |
 | `voice` | `"Kore"` | Prebuilt voice name |
 | `language` | `None` | BCP-47 hint; unset, the model infers it from the text |
-| `style_prompt` | `None` | Delivery direction. Not an API field — written as a labelled `Delivery direction:` line above the transcript in the same prompt |
+| `style_prompt` | `None` | Delivery direction for the whole utterance. Sent as `speech_metadata` from 3.8 on; written into the prompt on 3.1 and 2.5 (see below) |
 | `timeout` | `120.0` | Per-request timeout in seconds |
 
 ### Output format
@@ -779,6 +783,13 @@ Always 24 kHz, 16-bit, mono PCM — fixed by the service. The request accepts a
 `sample_rate` field but the service ignores it, so the provider does not expose
 the knob; attach a [resampler stage](resampler.md) when the transport needs
 another rate.
+
+`synthesize()` returns a WAV `data:` URL on every model. Up to 3.1 the service
+answers bare PCM, which the provider wraps in a WAV header. From 3.8 it answers
+a whole WAV file with a C2PA content-credentials chunk after the audio; the
+provider passes that file through unchanged, so the provenance manifest reaches
+you intact, and measures its duration from the audio alone.
+`synthesize_stream()` yields bare PCM on every model.
 
 ### Voices
 
@@ -809,12 +820,26 @@ list — any descriptive cue is interpreted — so listen to an unusual one befo
 relying on it: an unrecognised cue can be spoken aloud instead of performed.
 With a non-English transcript, keep the tags in English.
 
-The API has no style field: `model`, `input`, `stream`, `response_format` and
-`speech_config` (voice, language) are all it takes, and style is only
-expressible inside `input`. `style_prompt` is RoomKit's sugar over exactly
-that — it writes a labelled `Delivery direction:` line above the `Transcript:`
-label in the same string, which is what stops the model from reciting the
-direction along with the words.
+For the 3.8 models Google documents an angle-bracket spelling — `<laugh>`,
+`<sigh>`, `<short pause>`, and `|mhm|` for a listener's reaction in a dialogue.
+Measured on 2026-09-27, both 3.8 models perform the square-bracket tags above
+as well, so text written for 3.1 keeps working.
+
+How `style_prompt` reaches the model depends on the model family:
+
+- **3.8 and newer** — the transcript goes out alone, and the direction rides as
+  the `style` of a `speech_metadata` annotation on it, a field the model takes
+  as direction and never speaks.
+- **3.1 and 2.5** — the API has no style field, so the direction is only
+  expressible inside `input`. The provider writes a labelled
+  `Delivery direction:` line above the `Transcript:` label in the same string,
+  which is what stops the model from reciting the direction along with the
+  words.
+
+The 3.8 models read that 3.1 prompt aloud — its instructions in place of, or
+on top of, the transcript: 3 runs in 6 on `gemini-3.8-flash-tts` and 6 in 6 on
+the Lite model, measured 2026-09-27, against 0 in 36 with the bare transcript.
+That is why the two families get different requests.
 
 Tags and `style_prompt` are therefore different tools: a tag steers a word or a
 phrase from inside the transcript, `style_prompt` steers the whole utterance
@@ -862,6 +887,7 @@ Gemini 3.1 TTS remains a preview model. Google documents rare cases where it
 reads prompt directions aloud or returns a transient HTTP 500 instead of audio;
 keep prompts explicit, split outputs longer than a few minutes, and apply retry
 at the calling workflow boundary when a failed generation is safe to repeat.
+The 3.8 models are generally available.
 
 See `examples/gemini_tts.py`.
 

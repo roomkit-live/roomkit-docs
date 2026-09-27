@@ -71,7 +71,7 @@ provider = GeminiVertexProvider(
     GeminiVertexConfig(
         project="my-gcp-project",
         location="northamerica-northeast1",   # Montréal — required, no default
-        model="gemini-3.1-flash-lite",
+        model="gemini-3.8-flash",               # the default, as on GeminiConfig
     )
 )
 
@@ -91,7 +91,7 @@ kit.register_channel(ai)
 | Belgium (EU) | `europe-west1` |
 | Iowa (US) | `us-central1` |
 
-See [Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locations) for the full list and which models each region serves.
+See [Vertex AI locations](https://cloud.google.com/vertex-ai/docs/general/locations) for the full list and which models each region serves. `model` defaults to `gemini-3.8-flash`, as on `GeminiConfig`; a region that does not serve it refuses the call, so name a model it does serve.
 
 ## Billing labels
 

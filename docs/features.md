@@ -2164,7 +2164,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 |----------|----------|------------|
 | `ElevenLabsTTSProvider` | Streaming synthesis, voice listing, configurable stability | `roomkit[httpx,websocket]` |
 | `GrokTTSProvider` | REST + WebSocket streaming, 5 voices, 20 languages, expressive tags | `httpx`, `websockets` |
-| `GeminiTTSProvider` | Generative speech, natural-language style direction, 30 voices, 80+ languages. Seconds of latency — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
+| `GeminiTTSProvider` | Generative speech on `gemini-3.8-flash-tts` by default, natural-language style direction, inline audio tags, 30 voices, 80+ languages. About a second to first audio — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |

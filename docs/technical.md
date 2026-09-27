@@ -637,7 +637,7 @@ class OpenAIConfig(BaseModel):
 
 class GeminiConfig(BaseModel):
     api_key: SecretStr
-    model: str = "gemini-2.0-flash"
+    model: str = "gemini-3.8-flash"
     max_tokens: int = 1024
     temperature: float = 1.0
 

@@ -3390,7 +3390,7 @@ vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="sk-...", base_url="https://api.openai.com/v1",
     model="gpt-4o", detail="low", max_tokens=100,
 ))
-# GeminiVisionProvider(GeminiVisionConfig(api_key="AIza...", model="gemini-3.1-flash-lite"))
+# GeminiVisionProvider(GeminiVisionConfig(api_key="AIza...", model="gemini-3.8-flash"))
 ```
 
 `await provider.analyze_frame(frame, prompt=None)` returns `VisionResult(description, labels, confidence, faces, text, metadata)` — `text` is OCR, `faces` are `FaceDetection` boxes. Results are cached per session (`channel.get_last_vision_result(session_id)`), emitted as `video_vision_result` framework events, and auto-injected into the system prompt of any `AIChannel` in the same room. For realtime voice, `setup_realtime_vision(kit, room_id, voice_channel_id)` injects via `inject_text(silent=True)`. On-demand tools: `DescribeWebcamTool`, `DescribeScreenTool`, `ListWebcamsTool`.
