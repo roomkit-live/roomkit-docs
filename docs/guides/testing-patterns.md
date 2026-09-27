@@ -196,6 +196,15 @@ print(trace.sequence())                             # the hooks, in order
 backend.write_capture(session, "reports/bot.wav")   # what the bot said
 ```
 
+`ScenarioVoiceBackend(mute_mic_during_playback=True)` makes the caller's side
+half-duplex, as `LocalAudioBackend` is by default: `play()` drops the frames
+that fall while the bot is speaking, and `is_speaking(session)` holds for as
+long as the audio the bot sent lasts, played out like a speaker would. That is
+the silence a continuous STT stream meets on a local mic while the bot answers,
+and a bench that delivered every frame never reproduced it: a Gemini Live
+transcription stream that never ended on silence (RMK-230) stalls a two-turn
+scenario on this setting and on nothing else.
+
 A `wait_for` that times out raises `TimeoutError` naming the triggers that did
 fire. `VoiceTrace(kit, triggers=(*VOICE_TRIGGERS, HookTrigger.AFTER_BROADCAST))`
 adds any other trigger to the timeline. `read_wav`, `write_wav`, `pcm_frames`,
