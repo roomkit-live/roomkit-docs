@@ -430,10 +430,11 @@ session opened for that turn and closed after it:
 
 Opening a session costs what it costs on your agent (MCP servers reconnect), so
 keep standalone for passes that need a blank page, such as a summary re-run.
-Closing one is not stable ACP: `session/close` goes only to an agent that
-announces `session_capabilities.close` (the Claude and Codex agents do). An agent
-that does not keeps every standalone turn's session until the connection
-closes, and the channel logs a warning when it connects to one.
+Closing one is optional in ACP: `session/close` goes only to an agent whose
+`initialize` announces `sessionCapabilities.close` (the Claude and Codex agents
+do). An agent that does not keeps every standalone turn's session until the
+connection closes; the channel never prompts it again, and logs a warning per
+turn.
 
 ## Contributing context the agent cannot fetch
 
@@ -758,12 +759,18 @@ permission options it presents.
 # Notify the agent that the active turn should stop.
 cancelled = await agent.cancel("coding-session")
 
-# Close one Room's ACP session but keep the process for other Rooms.
+# Forget one Room's ACP session but keep the process for other Rooms.
 closed = await agent.close_session("coding-session")
 
 # RoomKit.close() closes all sessions and the subprocess.
 await kit.close()
 ```
+
+`close_session` forgets the session whatever the agent answers, and never
+raises for a refused close: `session/close` goes only to an agent that announces
+it, and one that does not keeps the session until the connection closes. A
+custom transport whose `initialize` reply carries no `agent_capabilities` at
+all keeps receiving it; a relay that needs it to drop a session announces it.
 
 Session identifiers are process-local in this first implementation. A restart
 creates new sessions; persistent ACP load/resume is not yet enabled.
