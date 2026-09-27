@@ -142,9 +142,12 @@ exist here.
 `session/new` also names the room in its `_meta` (`field_meta` in Python):
 `roomkit.live/roomId`, and `roomkit.live/sessionScope`, `"room"` for the
 room's session or `"turn"` for a [standalone turn's](#directing-the-agent-instructions).
-A transport that keeps one remote session per room must file a `"turn"` session
-under a key of its own and close only that one; filed under the room, the turn
-would answer from the room's session and then close it.
+A transport, or the relay behind it, that keeps one remote session per room
+must file a `"turn"` session under a key of its own and close only that one;
+filed under the room, the turn would answer from the room's session and then
+close it. The key is absent before 0.92.0. A relay that still answers a turn's
+`session/new` with a session already open makes the turn fail with a
+`RuntimeError`, and the room's session stays as it was.
 
 `is_alive()` is what lets the channel notice a dead connection: when it turns
 false, the next prompt reconnects and drops every session behind the old one (a
