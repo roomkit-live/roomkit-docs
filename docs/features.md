@@ -1059,7 +1059,8 @@ A call that needs data rather than prose sets `AIContext.response_schema` to a
 JSON Schema. The provider constrains its output natively, and `generate()`
 returns one JSON document that satisfies the schema, or raises
 `ResponseSchemaError` saying why it could not: `refusal`, `truncated`,
-`invalid_json`, or `unsupported` (checked before any request).
+`invalid_json`, or `unsupported` (checked before any request). The document is
+checked against the schema before it is returned, whatever the server did.
 
 ```python
 context = AIContext(
@@ -1080,7 +1081,8 @@ strings only, no null, `anyOf` or `$ref`). RoomKit checks it when the context is
 built. OpenAI and its derivatives, Anthropic, Gemini, Mistral, Ollama and
 PolarGrid support it; `provider.supports_response_schema` says so, and the
 OpenAI-compatible configs take `supports_response_schema=` for a server that
-differs. This version covers `generate()` only, without tools in the same turn.
+differs. This version covers direct `generate()` calls only: no streaming, no
+tools in the same turn, so not an `AIChannel` turn.
 
 See the [Structured Output guide](guides/structured-output.md).
 

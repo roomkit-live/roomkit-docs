@@ -8,8 +8,10 @@ through it.
 
 `AIContext.response_schema` removes that guesswork. It carries a JSON Schema,
 the provider constrains its output natively, and `generate()` returns one JSON
-document that satisfies the schema. If it cannot, it raises an error that says
-why. It never returns prose in its place.
+document that satisfies the schema. RoomKit checks the document against the
+schema before handing it back, whatever the server claims to have done. If
+there is no such document, `generate()` raises an error that says why. It never
+returns prose in its place.
 
 ## Quick start
 
@@ -73,7 +75,7 @@ Nothing else passes: no `null` or optional fields, no `anyOf`, no `$ref`, no
 `minimum` or `maxLength`. For an answer that may be absent, use a required
 field with an agreed empty value (`""`, `[]`).
 
-The check runs when the context is built, when a hook assigns the field, and
+The check runs when the context is built, when the field is assigned, and
 through `model_copy(update=...)`. A schema outside the subset fails there,
 before any provider is called. `check_portable_schema(schema)` runs the same
 check on its own, for a schema you build at startup.
@@ -89,6 +91,10 @@ check on its own, for a schema you build at startup.
 | Mistral | strict `json_schema` `response_format` | yes |
 | Ollama | `format` | yes |
 | PolarGrid | `json_schema` `response_format` | yes |
+
+On OpenRouter, a constrained request also asks for `provider.require_parameters`,
+so it is only routed to an upstream that honours the format. Routing
+preferences set in `extra_body` are kept.
 
 `provider.supports_response_schema` gives the provider's answer. It is a
 default, not a promise for every model: a model older than the feature may
@@ -115,28 +121,39 @@ request fails the same way. Its `reason` tells the cases apart:
 | `reason` | Meaning |
 |---|---|
 | `unsupported` | The call cannot carry a schema: the provider does not support one, the turn also has `tools`, or a streaming method received it. Raised before any request is sent. |
-| `refusal` | The model declined to answer: a refusal field (OpenAI), a `refusal` stop reason (Anthropic), a safety stop (Gemini), a content filter. |
-| `truncated` | The output cap cut the document. Raise `max_tokens`; a reasoning model spends part of it thinking. |
-| `invalid_json` | The text is not JSON. That happens with a server that accepted the constraint and did not apply it. |
+| `refusal` | The model declined to answer: a refusal field (OpenAI), a `refusal` stop reason (Anthropic), a safety stop or a blocked prompt (Gemini), a content filter. |
+| `truncated` | The answer was cut: the output cap, or the context window filling up. Raise `max_tokens`; a reasoning model spends part of it thinking. |
+| `invalid_json` | The text is not a JSON document satisfying the schema: not JSON at all, or JSON of another shape. That happens with a server that accepted the constraint and did not apply it. |
 
 ## Running on any provider
 
 A component that must work with every provider checks the property first, and
-where it is false asks for JSON in the prompt and parses the answer itself:
+where it is false asks for JSON in the prompt and checks the answer itself.
+`schema_mismatch` is the same check the providers run:
 
 ```python
+from roomkit.providers.ai import schema_mismatch
+
 if provider.supports_response_schema:
     context = context.model_copy(update={"response_schema": TRIAGE})
+    triage = json.loads((await provider.generate(context)).content)
 else:
-    context.system_prompt += "\nAnswer with one JSON object: " + json.dumps(TRIAGE)
+    instruction = "Answer with one JSON object matching: " + json.dumps(TRIAGE)
+    context.system_prompt = f"{context.system_prompt or ''}\n{instruction}".strip()
+    triage = json.loads((await provider.generate(context)).content)  # may raise
+    if (problem := schema_mismatch(TRIAGE, triage)) is not None:
+        raise ValueError(problem)
 ```
 
 ## Not in this version
 
 - **Streaming.** `generate_stream()` and `generate_structured_stream()` refuse
   a schema. What a half-written document means mid-stream is not defined yet.
-- **Tools.** A turn cannot carry both `tools` and a schema, so an `AIChannel`
-  turn with tools cannot use one either.
+- **Tools.** A turn cannot carry both `tools` and a schema.
+- **`AIChannel` turns.** An `AIChannel` streams whenever its provider can, and
+  its turns may carry tools, so a schema set on one (by a
+  `BEFORE_AI_GENERATION` hook, say) is refused. Call `generate()` on the
+  provider directly.
 
 The rules live in [RFC §6.7](https://github.com/roomkit-live/roomkit-specs).
 

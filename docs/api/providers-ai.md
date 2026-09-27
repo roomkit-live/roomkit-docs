@@ -35,6 +35,8 @@ Schema within a portable subset. See the
 
 ::: roomkit.providers.ai.json_schema.check_portable_schema
 
+::: roomkit.providers.ai.json_schema.schema_mismatch
+
 ::: roomkit.providers.ai.response_schema.ResponseSchemaError
 
 ## Image parts
