@@ -21,6 +21,10 @@ class STTProvider(ABC):
     def supports_language_override(self) -> bool: ...
         """Whether transcribe/transcribe_stream honour a per-call language."""
 
+    @property
+    def supports_diarization(self) -> bool: ...
+        """Whether final results say who spoke (TranscriptionResult.segments)."""
+
     async def transcribe(self, audio, *, language=None) -> TranscriptionResult:
         """Batch transcription — send all audio, get full text."""
 
@@ -53,12 +57,52 @@ class TranscriptionResult:
     language: str | None = None
     words: list[dict[str, Any]] = []
     is_speech_start: bool = False
+    segments: list[SpeakerSegment] = []   # who said what (RFC §12.2.3)
+
+    @property
+    def speaker(self) -> str | None: ...  # the label all segments share
+
+
+@dataclass(frozen=True)
+class SpeakerSegment:
+    speaker: str | None      # provider label, e.g. "A"; None = unattributed
+    text: str
+    start_ms: int | None = None
+    end_ms: int | None = None
 ```
 
 `language` is what the provider **reports** — what it detected when it was
 asked to detect — never an echo of the language it was configured with. A
 Deepgram stream pinned to `fr-CA` reports nothing; one opened in `multi`
 reports the language most words carried.
+
+### Speaker labels from the STT
+
+A recogniser that diarizes itself reports `supports_diarization = True` and
+gives every final the segments its text is made of, each with one speaker.
+A label is the provider's (`"A"`, `"B"`…), opaque, and holds **within one
+stream only**: another stream may give the same voice another label. Hence
+the rule for `VoiceChannel`: it opens a stream per utterance or per turn, so
+it refuses a diarizing provider at construction until it can keep one stream
+across turns (RFC §12.2.3). A `ConferenceChannel` refuses one too: it already
+knows who spoke from each participant's track, and transcribes utterance by
+utterance. Read the provider's `transcribe_stream()` directly meanwhile —
+`examples/stt_meta_mic.py --diarize` does.
+
+`MetaSTTProvider` in `DIARIZATION` mode is the provider that fills `segments`
+today. Deepgram's `diarize=True` keeps its speaker ids in `words`, and
+`GeminiSTTProvider.transcribe_recording()` returns its speaker turns in its own
+`Transcript`; neither reports `supports_diarization`.
+
+```python
+async for result in stt.transcribe_stream(audio):
+    if result.is_final:
+        print(f"{result.speaker}: {result.text}")   # A: Bonjour Julie…
+```
+
+This is the STT's own diarization, aligned to its words. The pipeline's
+`DiarizationProvider` (see [Audio Pipeline Stages](audio-pipeline-stages.md))
+is the other source: it labels audio frames and fires `ON_SPEAKER_CHANGE`.
 
 ---
 
@@ -549,6 +593,7 @@ depends on it:
 |---------|------|---------------------|
 | No pipeline VAD — continuous STT | `ENDPOINTING` | Signals speech start (`ON_SPEECH_START` fires), sends interims, and ends each turn itself after about 550 ms of silence |
 | Pipeline VAD delimits utterances | `PUSH_TO_TALK` | Sends interims, then one final when the channel closes the utterance's stream |
+| Provider read directly, speakers wanted | `DIARIZATION` | `ENDPOINTING` plus a speaker per turn; a change of voice also ends a turn |
 
 `ENDPOINTING` behind a pipeline VAD would hand the channel several finals for
 one utterance, of which it keeps the last. The endpointing silence is not
@@ -576,14 +621,20 @@ turn.
   `PUSH_TO_TALK` mode; the provider wraps the PCM in the WAV itself. An
   `AudioContent` carrying a WAV `data:` URI is decoded locally; an http(s)
   URL is refused rather than fetched.
-- **Speakers**: Meta's `DIARIZATION` mode is refused for now. The model labels
-  speakers turn by turn, but a `TranscriptionResult` has nowhere to carry the
-  label yet, so the config raises rather than dropping it silently.
+- **Speakers**: in `DIARIZATION` mode every final carries its turn as one
+  `SpeakerSegment` labelled `"A"`, `"B"`…, with the turn's offsets; a turn Meta
+  could not attribute has `speaker=None`. `transcribe()` answers the clip's
+  turns as segments the same way. On a two-voice French dialogue (2026-09-27)
+  both paths attributed 5 turns out of 5. Meta documents the mode as not
+  tuned for low latency. A `VoiceChannel` refuses the provider in this mode
+  (see [Speaker labels from the STT](#speaker-labels-from-the-stt)); read
+  `transcribe_stream()` directly.
 
 Two examples. `examples/stt_meta_mic.py` is the one to run first: speak into
 your microphone and the caption line reacts as the model hears you start,
 rewrites itself while you talk, and commits once you pause — the model's own
-endpointing, with no VAD on RoomKit's side. `examples/stt_meta_live.py` streams
+endpointing, with no VAD on RoomKit's side. Add `--diarize` and talk in turn
+with someone: each committed line says who spoke (`> A: …`, `> B: …`). `examples/stt_meta_live.py` streams
 a WAV file in real time in either mode and then sends it over REST, for a
 machine with no audio device.
 

@@ -14,6 +14,8 @@
 
 ::: roomkit.voice.base.TranscriptionResult
 
+::: roomkit.voice.base.SpeakerSegment
+
 ## STT (Speech-to-Text)
 
 ::: roomkit.voice.stt.base.STTProvider
@@ -104,6 +106,12 @@ stt = MetaSTTProvider(MetaSTTConfig(api_key="your-meta-model-api-key"))
 
 # Behind a pipeline VAD: one final per utterance
 stt = MetaSTTProvider(MetaSTTConfig(api_key="...", mode="PUSH_TO_TALK"))
+
+# Who spoke: every final names its speaker (read the provider directly)
+stt = MetaSTTProvider(MetaSTTConfig(api_key="...", mode="DIARIZATION"))
+async for result in stt.transcribe_stream(audio):
+    if result.is_final:
+        print(f"{result.speaker}: {result.text}")
 ```
 
 See the [STT & TTS Providers guide](../guides/stt-tts-providers.md#meta-muse-voice-transcribe-cloud-api-streaming-batch)

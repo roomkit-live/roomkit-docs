@@ -2155,7 +2155,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 |----------|----------|------------|
 | `DeepgramSTTProvider` | Streaming STT, interim results, VAD, punctuation, diarization, language detection (Nova-3 `multi`) and a per-call language | `roomkit[deepgram]` |
 | `SherpaOnnxSTTProvider` | Local transducer/Whisper, streaming, batch | `roomkit[sherpa-onnx]` |
-| `MetaSTTProvider` | Meta Muse Voice Transcribe: streaming with interim results and model endpointing (`ENDPOINTING`) or one final per VAD utterance (`PUSH_TO_TALK`), REST batch, keyword and language bias, 25 languages including French; 16/24 kHz native, other rates resampled | `roomkit[meta-stt]` |
+| `MetaSTTProvider` | Meta Muse Voice Transcribe: streaming with interim results and model endpointing (`ENDPOINTING`) or one final per VAD utterance (`PUSH_TO_TALK`), REST batch, speaker labels per turn (`DIARIZATION`, read from the provider directly), keyword and language bias, 25 languages including French; 16/24 kHz native, other rates resampled | `roomkit[meta-stt]` |
 | `GeminiSTTProvider` | Batch only — one pass over a whole recording returns transcript, speaker turns and timestamps together. A multimodal model by default; `model="gemini-3.5-transcribe"` for Google's dedicated recogniser, about twice as fast with every word timed to 100 ms. For meetings, voicemail and audio files, not live turn-taking | `roomkit[gemini]` |
 | `MockSTTProvider` | Configurable responses, cycling transcripts | None |
 
