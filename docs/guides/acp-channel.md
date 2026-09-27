@@ -430,6 +430,10 @@ session opened for that turn and closed after it:
 
 Opening a session costs what it costs on your agent (MCP servers reconnect), so
 keep standalone for passes that need a blank page, such as a summary re-run.
+Closing one is not stable ACP: `session/close` goes only to an agent that
+announces `session_capabilities.close` (the Claude and Codex agents do). An agent
+that does not keeps every standalone turn's session until the connection
+closes, and the channel logs a warning when it connects to one.
 
 ## Contributing context the agent cannot fetch
 
