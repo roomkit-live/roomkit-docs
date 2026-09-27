@@ -904,6 +904,16 @@ Tags travel through a room like any other text, so anything written into a room
 attached to a voice channel is performed: `examples/gemini_tts_room.py` is a
 room that speaks what you type at the CLI.
 
+The writer can be the model. `examples/voice_gemini.py` is a voice assistant
+that is Gemini end to end — `gemini-3.5-transcribe-live` hears you,
+`gemini-3.8-flash` answers, `gemini-3.8-flash-lite-tts` speaks — and its
+system prompt lets the model put tags in its replies. Run against a recorded
+French question on 2026-09-27, the model answered
+`[whispers] Promets-moi de ne le répéter à personne… <chuckle>`, and the voice
+whispered and laughed without saying either tag. Keep `tts_filter` unset on
+such a channel: `StripBrackets` would remove the `[...]` tags before the TTS
+sees them.
+
 ### SSML is not an input mode here
 
 SSML belongs to Cloud Text-to-Speech, which accepts it in a dedicated field
