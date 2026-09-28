@@ -127,8 +127,9 @@ guide](guides/realtime-voice-providers.md) for the fidelity and cost knob.
 
 #### Voice Discovery
 
-Every realtime voice provider can report which voices it supports, mirroring the
-AI model catalog — so an integrator can list the `voice` ids before configuring:
+Every realtime voice provider and every TTS provider can report which voices it
+supports, mirroring the AI model catalog — so an integrator can list the `voice`
+ids before configuring (RFC §12.2):
 
 ```python
 from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
@@ -150,9 +151,30 @@ live = await provider.list_voices()
   xAI, PersonaPlex, and Deepgram have fixed voice sets (no endpoint) and fall
   back to `available_voices()`; ElevenLabs queries `client.voices` live.
 
-`VoiceInfo.id` is exactly what you pass as `connect(voice=...)` (e.g. `"alloy"`,
-`"Puck"`, a PersonaPlex `"NATF2.pt"` prompt, or an ElevenLabs `voice_id`). See
-`examples/list_voices.py`.
+`VoiceInfo.id` is exactly what you pass as `connect(voice=...)` or
+`synthesize(voice=...)` (e.g. `"alloy"`, `"Puck"`, `"fr-ca-advisor-1"`, a
+PersonaPlex `"NATF2.pt"` prompt, or an ElevenLabs `voice_id`). `VoiceInfo` also
+carries `accent`, and `attributes` for what a vendor reports beyond the common
+fields (persona, age, use case, category). See `examples/list_voices.py`.
+
+A TTS provider's `list_voices()` takes filters that every provider applies the
+same way, server side or on the results: `language` matches a tag or its
+prefix (`"fr"` finds `fr-CA` and `fr-FR`), `gender` matches exactly, and `query`
+searches the name and the description. Gemini reads Google's whole catalog —
+2,089 voices on 2026-09-27, 68 of them Québec French; ElevenLabs and Gradium
+return the account's voices, its own clones included.
+
+```python
+tts = GeminiTTSProvider(GeminiTTSConfig(api_key="..."))
+for voice in await tts.list_voices(language="fr-CA", gender="female"):
+    print(voice.id, voice.accent, voice.description)   # fr-ca-advisor-1 Montreal French …
+```
+
+A TTS can also voice a scripted dialogue in one clip (`synthesize_dialogue`,
+two speakers on Gemini 3.8), and custom voices are made through a
+`VoiceLibrary`: designed from a description, or replicated from a person's
+recording with their recorded consent (`GeminiVoiceLibrary`, RFC §12.2.4). See
+the [STT & TTS Providers guide](guides/stt-tts-providers.md#gemini-tts-cloud-api).
 
 ### Shared Patterns
 

@@ -125,6 +125,22 @@ Install with: `pip install roomkit[meta-stt]`
 
 ::: roomkit.voice.tts.mock.MockTTSProvider
 
+### Voices and Dialogue
+
+::: roomkit.voice.voices.VoiceInfo
+
+::: roomkit.voice.voices.DialogueTurn
+
+::: roomkit.voice.voices.filter_voices
+
+### Custom Voices
+
+::: roomkit.voice.tts.library.VoiceLibrary
+
+::: roomkit.voice.tts.library.CustomVoice
+
+::: roomkit.voice.tts.library.VoiceConsentError
+
 ### Conversation Context
 
 ::: roomkit.voice.tts.context.TTSContextLevel
@@ -203,6 +219,10 @@ Install with: `pip install httpx websockets`
 
 ::: roomkit.voice.tts.gemini.GeminiTTSConfig
 
+::: roomkit.voice.tts.gemini_library.GeminiVoiceLibrary
+
+::: roomkit.voice.tts.gemini_library.GeminiVoiceLibraryConfig
+
 #### Usage
 
 ```python
@@ -215,6 +235,10 @@ tts = GeminiTTSProvider(GeminiTTSConfig(
     style_prompt="calm and clear",                 # delivery guidance
 ))
 ```
+
+`list_voices()` reads Google's catalog of about 2,000 voices, `synthesize_dialogue()`
+voices two speakers in one clip, and `GeminiVoiceLibrary` designs and replicates
+custom voices.
 
 Time to first audio is measured in seconds, so this fits prompts and generated
 audio messages rather than live turn-taking — see the

@@ -754,10 +754,9 @@ tts = ElevenLabsTTSProvider(
     )
 )
 
-# List available voices
-voices = await tts.list_voices()
-for v in voices:
-    print(f"{v['voice_id']}: {v['name']} ({v['category']})")
+# List the account's voices, its own clones included, as VoiceInfo
+for v in await tts.list_voices(language="fr"):
+    print(f"{v.id}: {v.name} ({v.attributes.get('category')})")
 ```
 
 | Parameter | Default | Description |
@@ -1021,13 +1020,81 @@ you intact, and measures its duration from the audio alone.
 ### Voices
 
 `GeminiTTSProvider.available_voices()` returns the 30 prebuilt voices as
-`VoiceInfo` records — the same catalog Gemini Live native audio draws from, so a
-voice chosen for one works in the other.
+`VoiceInfo` records, offline — the same catalog Gemini Live native audio draws
+from, so a voice chosen for one works in the other.
+
+`list_voices()` reads Google's whole catalog instead: 2,089 voices on
+2026-09-27, among them 68 Québec French (`fr-CA`, "Montreal French" accent) and
+French from France. Each entry says its language, gender and accent, a
+description, and under `attributes` Google's own fields (`persona`,
+`region_code`, `type`). The filters behave as for every provider (RFC §12.2):
+Google's own mean something else — its language filter wants an exact tag, so
+`fr` finds nothing, and its search for `Kore` answers Korean voices — so the
+provider reads everything (three pages, 0.4 s) and filters itself.
 
 ```python
-for v in GeminiTTSProvider.available_voices():
-    print(v.id, "—", v.description)   # Kore — Firm
+for v in await tts.list_voices(language="fr-CA", gender="female"):
+    print(v.id, "—", v.description)
+# fr-ca-advisor-1 — 31-year-old Lawyer from Montreal. Speaks Montreal French. …
+
+await tts.synthesize("Bonjour!", voice="fr-ca-advisor-1")   # any listed id plays
 ```
+
+### Dialogue
+
+`synthesize_dialogue()` voices a scripted exchange of two speakers in one clip,
+each line with its own direction — a support-call role-play, a two-host
+podcast. The speakers are bound to voices by name; a third speaker, or one the
+map does not name, is refused before any request. The 3.1 and 2.5 models voice
+no dialogue (`max_dialogue_speakers` is 0).
+
+```python
+from roomkit.voice.voices import DialogueTurn
+
+audio = await tts.synthesize_dialogue(
+    [
+        DialogueTurn(speaker="Client", text="Bonjour, ma facture me semble trop élevée."),
+        DialogueTurn(speaker="Conseillère", text="Je vérifie ça avec vous.", style="calme"),
+    ],
+    {"Client": "fr-ca-advisor-2", "Conseillère": "fr-ca-advisor-1"},
+)
+```
+
+Measured on 2026-09-27 with two `fr-CA` voices, a three-line call came back as
+one 8.9 s WAV, and `gemini-3.5-transcribe` heard the three lines as two
+alternating speakers. See `examples/gemini_tts_voices.py`.
+
+### Custom voices
+
+`GeminiVoiceLibrary` makes voices the TTS then speaks with by their id (RFC
+§12.2.4):
+
+- **Designed** — `design_voice("a warm Montreal narrator in her forties…")`
+  returns a stored `voice_…` in about 15 s, with a WAV preview. Google stores
+  every designed voice, for a year: `store=False` is refused. Delete it with
+  `delete_voice()`.
+- **Replicated** — `replicate_voice(sample, consent)` clones a person's voice
+  from 10 to 30 s of their speech and a recording of them reading Google's
+  consent statement word for word (`CONSENT_STATEMENTS`, e.g. fr-CA: « Je suis
+  le propriétaire de cette voix et j'autorise Google à utiliser cette voix pour
+  créer un modèle de voix synthétique. »). Both are 16-bit, 24 kHz mono WAV.
+  Google refuses anything else, and the refusal is raised as
+  `VoiceConsentError` with Google's reason — it arrives as a 500 wrapping
+  `Consent flow failed`. `store=False` returns a `voicekey_…` good for seven
+  days, which Google keeps nothing addressable for.
+
+```python
+from roomkit.voice.tts.gemini_library import GeminiVoiceLibrary, GeminiVoiceLibraryConfig
+
+library = GeminiVoiceLibrary(GeminiVoiceLibraryConfig(api_key="..."))
+narrator = await library.design_voice("Une narratrice québécoise chaleureuse", name="Narratrice")
+await tts.synthesize("Bienvenue!", voice=narrator.voice.id)
+await library.delete_voice(narrator.voice.id)
+```
+
+The recordings go to Google for the call and nothing of them is kept or logged
+(RFC §17.6); the library logs only which voice was made and that Google
+verified the consent. See `examples/gemini_voice_design.py`.
 
 ### Expressive audio tags
 
