@@ -1540,7 +1540,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
   See [Chat E2E Benchmarks](guides/chat-benchmarks.md) for coverage and limits.
 - **User feedback** — `kit.submit_feedback()` for collecting quality ratings with `ON_FEEDBACK` hook
 - **Human-in-the-loop** — pause the AI tool loop to request user input via `HumanInputToolHandler`. The tool blocks until the user responds, then resumes with the answer. Works with any tool name (`AskUserQuestion`, confirmations, data collection), provided the turn actually offers it — `tool_names` gates dispatch, `tool_definitions` (or the channel's `tools=`) is what puts it in the toolset. Uses `ON_USER_INPUT_REQUIRED` sync hook for notifications, and the request carries `actor_id` so a notification layer can ask the person whose turn raised it rather than the whole room. See the [Human-in-the-Loop guide](guides/human-in-the-loop.md)
-- **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely:
+- **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely. The tools the hook leaves are the turn's toolset: one it removes is declared at no later round and a call to it is refused, one it adds stays declared:
 
 ```python
 from roomkit.models.enums import HookTrigger

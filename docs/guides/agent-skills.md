@@ -257,6 +257,10 @@ Consequences worth knowing:
 - **`skills_in_prompt=False` does not disable this.** That flag governs the
   *catalogue* — a host rendering its own `<available_skills>` manifest. Active bodies
   are runtime state a host cannot know, so they are injected either way.
+- **An activation counts only once its call is served.** An `ON_TOOL_CALL` hook that
+  blocks `activate_skill` blocks the activation, not only the answer: the model reads
+  the refusal and no gated tool opens, for the turn or the conversation. The same
+  holds on a realtime voice channel, where the hook runs before the result is sent.
 
 Realtime voice channels run the same lifecycle per *session*. `inline_full`
 preloads every body at connection time. `on_demand` advertises metadata and loads
