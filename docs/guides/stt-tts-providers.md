@@ -171,7 +171,7 @@ voice = VoiceChannel(
   `search_threshold`) is `"Unknown speaker"`. An utterance the stage gave no
   result for carries no speaker, as without the option.
 - `ON_SPEAKER_CHANGE` still comes from the stage alone, with
-  `source="pipeline"`.
+  `source="pipeline"`, and never for a voice it matched to nobody.
 - Refused without a diarization stage, and in batch mode, where one flush may
   hold several voices.
 
