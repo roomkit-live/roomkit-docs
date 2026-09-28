@@ -127,7 +127,6 @@ LlamaCppConfig(model="…", extra_args=["--threads", "8"])
 | `context_size` | `8192` | Context window in tokens; tool definitions and results count against it |
 | `gpu_layers` | `None` | Layers on the GPU; `None` = as many as fit, `0` = CPU only |
 | `max_tokens` | `1024` | Maximum tokens in one answer |
-| `temperature` | `0.7` | Sampling temperature |
 | `enable_thinking` | `None` | Turn a reasoning model's thinking on/off through its template |
 | `binary` | `None` | Your own `llama-server` (path or name on the `PATH`) |
 | `variant` | `None` | Force a download variant (see the table above) |

@@ -286,14 +286,14 @@ ai = AIChannel("ai", provider=provider, thinking_budget=8192)
 ```
 
 `OllamaConfig` also exposes per-config sampling options, mapped to Ollama's
-`options`: `temperature` (default `0.7`), `max_tokens` (→ `num_predict`),
-`num_ctx`, `top_p`, `top_k`, and `min_p`. Each defaults to `None` (the model's
-own default) except `temperature`.
+`options`: `max_tokens` (→ `num_predict`), `num_ctx`, `top_p`, `top_k`, and
+`min_p`. Each defaults to `None` (the model's own default). `temperature` is a
+turn setting, set on the `AIChannel` (or per room, per turn) like on every
+provider.
 
 ```python
 provider = OllamaAIProvider(OllamaConfig(
     model="llama3.2",
-    temperature=0.2,
     num_ctx=8192,
     top_p=0.9,
     keep_alive=-1,    # keep the model loaded indefinitely

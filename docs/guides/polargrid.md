@@ -36,7 +36,6 @@ A full runnable example lives at [`examples/polargrid_ai.py`](https://github.com
 | `model` | `qwen-3.8-27b` | The one LLM on the public fleet. `qwen-3.5-27b` was retired on 2026-08-20; `qwen-3.6-35b-a3b` (vision) is a customer pilot with no public edge. See [Models](#models) — or call `PolarGridAIProvider.available_models()` / `list_models()`. |
 | `region` | `None` | `toronto` / `vancouver` / `montreal` — or the IDs `yto-01` / `yvr-02` / `yul-01`. `None` auto-routes to an edge already serving the configured model. |
 | `max_tokens` | `None` | API cap is 4096. |
-| `temperature` | `0.7` | 0.0-2.0 |
 | `top_p` | `0.9` | 0.0-1.0 |
 | `thinking` | `None` | Toggle qwen reasoning via the `enable_thinking` request flag (sdk 0.8.5+) — `True` on, `False` off, `None` leaves it unset. See [Thinking / reasoning](#thinking-reasoning). |
 | `timeout` | `30.0` | Seconds. |
