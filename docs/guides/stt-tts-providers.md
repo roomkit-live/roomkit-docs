@@ -144,6 +144,44 @@ This is the STT's own diarization, aligned to its words. The pipeline's
 is the other source: it labels audio frames and fires `ON_SPEAKER_CHANGE` with
 `source="pipeline"`. With both, the STT's label is the one on the transcript.
 
+### Speakers from the pipeline stage
+
+When the STT labels nobody, `VoiceChannel(pipeline_speakers=True)` names each
+transcript from the pipeline's `DiarizationProvider` instead (RFC §12.2.3):
+
+```python
+voice = VoiceChannel(
+    "voice",
+    stt=stt,                       # any STT; a diarizing one keeps its own labels
+    backend=backend,
+    pipeline=AudioPipelineConfig(vad=vad, diarization=diarization),
+    pipeline_speakers=True,
+)
+```
+
+- The transcript's speaker is the one the stage **heard the longest** over it:
+  the utterance behind a VAD, the audio since the last final in continuous
+  mode. The room message carries `speaker_label`, `speaker_epoch` (always `0`:
+  the stage keeps its labels for the session) and `sender_name`, and
+  `ON_TRANSCRIPTION` carries the speaker, so the hook above renames it the
+  same way.
+- A voice the stage matched to nobody (sherpa-onnx says `"unknown"` below its
+  `search_threshold`) is `"Unknown speaker"`. An utterance the stage gave no
+  result for carries no speaker, as without the option.
+- `ON_SPEAKER_CHANGE` still comes from the stage alone, with
+  `source="pipeline"`.
+- Refused without a diarization stage, and in batch mode, where one flush may
+  hold several voices.
+
+`SherpaOnnxDiarizationProvider` identifies **enrolled** voices, and only
+behind a VAD: it extracts an embedding when an utterance ends (and every 2 s
+of speech), so it names nobody in continuous mode. Its label is the enrolled
+name: enroll `"Sylvain"` and the message reads `"Speaker Sylvain"` until a
+hook names it. On a French two-voice dialogue (TitaNet embeddings, TEN VAD,
+pauses lengthened so the VAD cut at every turn), 9 utterances of 9 went to the
+right voice at `search_threshold=0.4`; at the default `0.5` one short
+utterance scored 0.48 and came out as `"Unknown speaker"`.
+
 ---
 
 ## Deepgram (Cloud API)

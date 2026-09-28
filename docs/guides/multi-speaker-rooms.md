@@ -57,7 +57,7 @@ await kit.process_inbound(
 
 `metadata` travels onto the stored `RoomEvent`, so the name is there for every later turn that replays the event from history.
 
-A `VoiceChannel` stamps it too when its STT labels speakers: several people on one microphone become one message per turn, `"Speaker A"`, `"Speaker B"`…, which an `ON_TRANSCRIPTION` hook can rename (see [Speaker labels from the STT](stt-tts-providers.md#speaker-labels-from-the-stt)).
+A `VoiceChannel` stamps it too when its STT labels speakers: several people on one microphone become one message per turn, `"Speaker A"`, `"Speaker B"`…, which an `ON_TRANSCRIPTION` hook can rename (see [Speaker labels from the STT](stt-tts-providers.md#speaker-labels-from-the-stt)). With an STT that labels nobody, `pipeline_speakers=True` takes the name from the pipeline's diarization stage instead (see [Speakers from the pipeline stage](stt-tts-providers.md#speakers-from-the-pipeline-stage)).
 
 ### Registering participants instead
 

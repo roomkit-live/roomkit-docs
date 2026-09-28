@@ -68,6 +68,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Pluggable STT/TTS providers (Deepgram, ElevenLabs, Grok, Gemini, Meta Muse, sherpa-onnx, or custom)
 - STT language chosen per session at runtime (`set_stt_language`), with `STTLanguageLock` to start in Deepgram `multi` and pin the next stream to the language the caller uses
 - Speaker attribution from a diarizing STT: in continuous mode the channel keeps one stream across turns, routes one room message per speaker with `sender_name` ("Speaker A", renamable by an `ON_TRANSCRIPTION` hook), and fires `ON_SPEAKER_CHANGE` with `source="stt"` (RFC §12.2.3)
+- Speaker attribution from the pipeline's diarization stage when the STT labels nobody: `VoiceChannel(pipeline_speakers=True)` gives each transcript the speaker the stage heard the longest over it, as the same `speaker_label` / `sender_name` metadata (RFC §12.2.3)
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
 - Barge-in detection (user interrupts TTS playback)
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling

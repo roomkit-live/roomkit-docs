@@ -377,15 +377,21 @@ Hooks: `ON_SPEECH_START`, `ON_SPEECH_END`, `ON_VAD_SILENCE`, `ON_VAD_AUDIO_LEVEL
 Identifies **who** is speaking. Only processes frames during active speech (requires VAD).
 
 ```python
-from roomkit.voice.pipeline.diarization import SherpaOnnxDiarizationProvider
+from roomkit.voice.pipeline.diarization import (
+    SherpaOnnxDiarizationConfig,
+    SherpaOnnxDiarizationProvider,
+)
 
-diarization = SherpaOnnxDiarizationProvider(model_path="speaker_model.onnx")
+diarization = SherpaOnnxDiarizationProvider(
+    SherpaOnnxDiarizationConfig(model="speaker_model.onnx")
+)
+diarization.enroll_speaker("Sylvain", diarization.extract_embedding(pcm, 16000))
 ```
 
-Returns `DiarizationResult(speaker_id, confidence, is_new_speaker)` and fires `ON_SPEAKER_CHANGE` when the speaker changes.
+Returns `DiarizationResult(speaker_id, confidence, is_new_speaker)` and fires `ON_SPEAKER_CHANGE` when the speaker changes. The sherpa-onnx provider matches against enrolled voices: below `search_threshold` its `speaker_id` is `"unknown"`.
 
 !!! tip
-    Diarization is useful for multi-party calls where you need to attribute transcriptions to specific speakers.
+    To put the stage's speaker on each transcript — one room message with `sender_name` — pass `pipeline_speakers=True` to the `VoiceChannel`. See [Speakers from the pipeline stage](stt-tts-providers.md#speakers-from-the-pipeline-stage).
 
 ---
 
