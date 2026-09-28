@@ -1376,6 +1376,35 @@ channel = RealtimeVoiceChannel(
 )
 ```
 
+### Tool policy
+
+`tool_policy=` takes the same `ToolPolicy` as an `AIChannel`. A tool it denies
+is never declared to the session (at connection, at a reconfiguration, in a
+Tool Search reveal or a skill activation), is not in the catalogue a reasoning
+backend receives, is never named by `find_tools`, and is refused if a call
+names it anyway, whichever way the call arrived: from the provider, spoken as
+`call:name{args}`, or from a reasoning backend. The refusal reaches
+`ON_TOOL_CALL`'s observers with `is_error`. Role overrides apply to the
+session's participant, whose role is read when the session starts.
+
+```python
+from roomkit import RealtimeVoiceChannel, RoleOverride, ToolPolicy
+
+voice = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    tools=[lookup_account, close_account],
+    tool_handler=accounts,
+    # Everyone may use every tool, but an observer may not close anything.
+    tool_policy=ToolPolicy(role_overrides={"observer": RoleOverride(deny=["close_*"])}),
+)
+```
+
+A conference's provider takes one too, as `ConferenceRealtimeConfig(tool_policy=...)`;
+the mix names no participant, so only the base rules apply there. See
+`examples/realtime_tool_policy.py`.
+
 ### Via Hooks
 
 The unified `ON_TOOL_CALL` hook fires from both `AIChannel` and `RealtimeVoiceChannel`. Use `event.channel_type` to distinguish the source. Return the result via `HookResult.metadata["result"]`.
