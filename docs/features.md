@@ -1530,7 +1530,7 @@ Built-in providers: `SlidingWindowMemory` (last N events), `BudgetAwareMemory` (
 AIChannel includes built-in agentic capabilities for complex, multi-step AI workflows:
 
 - **Dangling tool call recovery** — automatically patches orphaned tool calls from barge-in interruptions
-- **Large output eviction** — oversized tool results are stored externally and replaced with previews; the AI can paginate back via `_read_tool_result` (configure with `evict_threshold_tokens`)
+- **Large output eviction** — oversized tool results are stored externally and replaced with a head/tail preview bounded in lines and in characters (at most 8000, or twice `evict_threshold_tokens` when smaller; a line too long is clipped with a marker); the AI can paginate back via `read_stored_result` (configure with `evict_threshold_tokens`)
 - **Planning tools** — opt-in `enable_planning=True` gives the AI a `plan_tasks` tool for structured task tracking (up to 100 tasks, 500 characters per title) with real-time UI updates via ephemeral events
 - **Knowledge retrieval (RAG)** — `KnowledgeSource` ABC + `RetrievalMemory` provider for pluggable retrieval backends (vector stores, search engines). See the [Advanced Memory guide](guides/advanced-memory.md)
 - **Response scoring** — `ConversationScorer` ABC + `ScoringHook` for automatic quality evaluation via `ON_AI_RESPONSE` hook. Scores stored as Observations
