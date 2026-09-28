@@ -120,7 +120,7 @@ request fails the same way. Its `reason` tells the cases apart:
 
 | `reason` | Meaning |
 |---|---|
-| `unsupported` | The call cannot carry a schema: the provider does not support one, or the turn also has `tools`. Raised before any request is sent. |
+| `unsupported` | The call cannot carry a schema: the provider does not support one, or cannot support one beside the turn's `tools`. Raised before any request is sent. |
 | `refusal` | The model declined to answer: a refusal field (OpenAI), a `refusal` stop reason (Anthropic), a safety stop or a blocked prompt (Gemini), a content filter. |
 | `truncated` | The answer was cut: the output cap, or the context window filling up. Raise `max_tokens`; a reasoning model spends part of it thinking. |
 | `invalid_json` | The text is not a JSON document satisfying the schema: not JSON at all, or JSON of another shape. That happens with a server that accepted the constraint and did not apply it. |
@@ -161,12 +161,27 @@ async for event in provider.generate_structured_stream(context):
         triage = json.loads("".join(buffer))  # checked against the schema
 ```
 
+## Tools in the same turn
+
+A turn may carry `tools` and a schema together where
+`provider.supports_response_schema_with_tools` is true: OpenAI's own endpoint and
+Azure, Anthropic, Gemini. The model either calls tools or answers in the schema.
+A response carrying tool calls is a step of the loop and is not checked; the
+final answer, the one without tool calls, is.
+
+Where the constraint is a decoding grammar (Ollama, vLLM, llama.cpp, PolarGrid)
+the pair is refused before any request. The grammar forces every token into the
+schema, so the model cannot call the tool: asked for the weather with a
+`get_weather` tool and a schema, a local Ollama model answered a schema-valid
+temperature it had made up. `supports_response_schema_with_tools=True` on
+`OpenAIConfig`, `AzureAIConfig` or `VLLMConfig` states otherwise for a server
+you know combines them.
+
 ## Not in this version
 
-- **Tools.** A turn cannot carry both `tools` and a schema.
 - **`AIChannel` turns.** There is no per-turn setting for a schema yet. A
   `BEFORE_AI_GENERATION` hook can set one on the turn's context; it holds when
-  the turn carries no tools, and is refused when it does.
+  the turn carries no tools, or when the provider can combine the two.
 
 The rules live in [RFC §6.7](https://github.com/roomkit-live/roomkit-specs).
 
