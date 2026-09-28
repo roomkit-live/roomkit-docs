@@ -120,7 +120,7 @@ request fails the same way. Its `reason` tells the cases apart:
 
 | `reason` | Meaning |
 |---|---|
-| `unsupported` | The call cannot carry a schema: the provider does not support one, the turn also has `tools`, or a streaming method received it. Raised before any request is sent. |
+| `unsupported` | The call cannot carry a schema: the provider does not support one, or the turn also has `tools`. Raised before any request is sent. |
 | `refusal` | The model declined to answer: a refusal field (OpenAI), a `refusal` stop reason (Anthropic), a safety stop or a blocked prompt (Gemini), a content filter. |
 | `truncated` | The answer was cut: the output cap, or the context window filling up. Raise `max_tokens`; a reasoning model spends part of it thinking. |
 | `invalid_json` | The text is not a JSON document satisfying the schema: not JSON at all, or JSON of another shape. That happens with a server that accepted the constraint and did not apply it. |
@@ -145,15 +145,28 @@ else:
         raise ValueError(problem)
 ```
 
+## Streaming
+
+`generate_stream()` and `generate_structured_stream()` carry the schema too. The
+text deltas are the JSON as the model writes it, partial and provisional; the
+whole document is checked before the done event, and the error takes the done
+event's place when the check fails. So a consumer shows the text as it streams,
+if it likes, and acts on it only once `StreamDone` arrives:
+
+```python
+async for event in provider.generate_structured_stream(context):
+    if isinstance(event, StreamTextDelta):
+        buffer.append(event.text)          # partial JSON, provisional
+    elif isinstance(event, StreamDone):
+        triage = json.loads("".join(buffer))  # checked against the schema
+```
+
 ## Not in this version
 
-- **Streaming.** `generate_stream()` and `generate_structured_stream()` refuse
-  a schema. What a half-written document means mid-stream is not defined yet.
 - **Tools.** A turn cannot carry both `tools` and a schema.
-- **`AIChannel` turns.** An `AIChannel` streams whenever its provider can, and
-  its turns may carry tools, so a schema set on one (by a
-  `BEFORE_AI_GENERATION` hook, say) is refused. Call `generate()` on the
-  provider directly.
+- **`AIChannel` turns.** There is no per-turn setting for a schema yet. A
+  `BEFORE_AI_GENERATION` hook can set one on the turn's context; it holds when
+  the turn carries no tools, and is refused when it does.
 
 The rules live in [RFC §6.7](https://github.com/roomkit-live/roomkit-specs).
 

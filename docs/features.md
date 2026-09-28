@@ -1104,8 +1104,9 @@ strings only, no null, `anyOf` or `$ref`). RoomKit checks it when the context is
 built. OpenAI and its derivatives, Anthropic, Gemini, Mistral, Ollama and
 PolarGrid support it; `provider.supports_response_schema` says so, and the
 OpenAI-compatible configs take `supports_response_schema=` for a server that
-differs. This version covers direct `generate()` calls only: no streaming, no
-tools in the same turn, so not an `AIChannel` turn.
+differs. The answer streams too, checked before its done event. This version
+does not combine a schema with tools in the same turn, so not an `AIChannel`
+turn.
 
 See the [Structured Output guide](guides/structured-output.md).
 
