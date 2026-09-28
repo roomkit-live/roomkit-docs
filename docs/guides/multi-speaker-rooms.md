@@ -57,6 +57,8 @@ await kit.process_inbound(
 
 `metadata` travels onto the stored `RoomEvent`, so the name is there for every later turn that replays the event from history.
 
+A `VoiceChannel` stamps it too when its STT labels speakers: several people on one microphone become one message per turn, `"Speaker A"`, `"Speaker B"`…, which an `ON_TRANSCRIPTION` hook can rename (see [Speaker labels from the STT](stt-tts-providers.md#speaker-labels-from-the-stt)).
+
 ### Registering participants instead
 
 Transports that register named participants without stamping events fall back to the participant record. `ensure_participant` is bookkeeping only (no event, no hook) and returns the existing record when there is one:

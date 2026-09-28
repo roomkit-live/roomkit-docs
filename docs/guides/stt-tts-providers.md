@@ -81,18 +81,7 @@ reports the language most words carried.
 A recogniser that diarizes itself reports `supports_diarization = True` and
 gives every final the segments its text is made of, each with one speaker.
 A label is the provider's (`"A"`, `"B"`…), opaque, and holds **within one
-stream only**: another stream may give the same voice another label. Hence
-the rule for `VoiceChannel`: it opens a stream per utterance or per turn, so
-it refuses a diarizing provider at construction until it can keep one stream
-across turns (RFC §12.2.3). A `ConferenceChannel` refuses one too: it already
-knows who spoke from each participant's track, and transcribes utterance by
-utterance. Read the provider's `transcribe_stream()` directly meanwhile —
-`examples/stt_meta_mic.py --diarize` does.
-
-`MetaSTTProvider` in `DIARIZATION` mode is the provider that fills `segments`
-today. Deepgram's `diarize=True` keeps its speaker ids in `words`, and
-`GeminiSTTProvider.transcribe_recording()` returns its speaker turns in its own
-`Transcript`; neither reports `supports_diarization`.
+stream only**: another stream may give the same voice another label.
 
 ```python
 async for result in stt.transcribe_stream(audio):
@@ -100,9 +89,53 @@ async for result in stt.transcribe_stream(audio):
         print(f"{result.speaker}: {result.text}")   # A: Bonjour Julie…
 ```
 
+**Through a `VoiceChannel`** (RFC §12.2.3), in continuous mode — a streaming
+STT and no VAD in the pipeline:
+
+- The channel keeps **one stream across turns**, so the labels compare. While
+  no audio arrives (a microphone muted during playback) it feeds the stream
+  silence at real-time pace: Meta Muse ends a stream whose audio falls behind
+  real time (1008 after ~15 s). An echo transcript it discards does not end
+  the stream either.
+- **Each segment is its own room message.** The sender stays the session's
+  participant, the owner of the audio stream; the speaker is metadata:
+  `speaker_label` (`"A"`), `speaker_epoch` and `sender_name`, which the AI
+  channel uses to attribute turns (see [Multi-Speaker Rooms](multi-speaker-rooms.md)).
+  `sender_name` is `"Speaker A"`, `"Speaker A#1"` once a new stream (epoch)
+  has started, and `"Unknown speaker"` for words nobody was attributed.
+- `ON_TRANSCRIPTION` fires per segment, its event carrying `speaker`,
+  `speaker_epoch` and `sender_name`. A hook returning the event with another
+  `sender_name` names the voice from then on:
+
+  ```python
+  @kit.hook(HookTrigger.ON_TRANSCRIPTION)
+  async def name_known_voices(event, ctx):
+      if event.speaker == "A" and event.speaker_epoch == 0:
+          return HookResult.modify(dataclasses.replace(event, sender_name="Sylvain"))
+      return HookResult.allow()
+  ```
+
+- `ON_SPEAKER_CHANGE` fires with `source="stt"` when a segment's label differs
+  from the last one routed, and on the first label of each epoch;
+  `confidence` is `None`. A turn detector never joins two speakers' segments:
+  a change of voice routes the pending turn first.
+- A new stream — the provider ended it, an error, a language change — starts
+  a new epoch: the same letter afterwards is not assumed to be the same person.
+
+A `VoiceChannel` behind a VAD (a stream per utterance) or in batch mode refuses
+a diarizing provider at construction, and so does a `ConferenceChannel`, which
+knows who spoke from each participant's track and transcribes utterance by
+utterance.
+
+`MetaSTTProvider` in `DIARIZATION` mode is the provider that fills `segments`
+today. Deepgram's `diarize=True` keeps its speaker ids in `words`, and
+`GeminiSTTProvider.transcribe_recording()` returns its speaker turns in its own
+`Transcript`; neither reports `supports_diarization`.
+
 This is the STT's own diarization, aligned to its words. The pipeline's
 `DiarizationProvider` (see [Audio Pipeline Stages](audio-pipeline-stages.md))
-is the other source: it labels audio frames and fires `ON_SPEAKER_CHANGE`.
+is the other source: it labels audio frames and fires `ON_SPEAKER_CHANGE` with
+`source="pipeline"`. With both, the STT's label is the one on the transcript.
 
 ---
 
@@ -593,7 +626,7 @@ depends on it:
 |---------|------|---------------------|
 | No pipeline VAD — continuous STT | `ENDPOINTING` | Signals speech start (`ON_SPEECH_START` fires), sends interims, and ends each turn itself after about 550 ms of silence |
 | Pipeline VAD delimits utterances | `PUSH_TO_TALK` | Sends interims, then one final when the channel closes the utterance's stream |
-| Provider read directly, speakers wanted | `DIARIZATION` | `ENDPOINTING` plus a speaker per turn; a change of voice also ends a turn |
+| No pipeline VAD, speakers wanted | `DIARIZATION` | `ENDPOINTING` plus a speaker per turn; a change of voice also ends a turn |
 
 `ENDPOINTING` behind a pipeline VAD would hand the channel several finals for
 one utterance, of which it keeps the last. The endpointing silence is not
@@ -626,15 +659,19 @@ turn.
   could not attribute has `speaker=None`. `transcribe()` answers the clip's
   turns as segments the same way. On a two-voice French dialogue (2026-09-27)
   both paths attributed 5 turns out of 5. Meta documents the mode as not
-  tuned for low latency. A `VoiceChannel` refuses the provider in this mode
-  (see [Speaker labels from the STT](#speaker-labels-from-the-stt)); read
-  `transcribe_stream()` directly.
+  tuned for low latency. A `VoiceChannel` in continuous mode carries the
+  labels to the room (see [Speaker labels from the STT](#speaker-labels-from-the-stt));
+  through one on the live service, the same dialogue gave 5 room messages on
+  one stream, and a 20 s silence did not end it.
 
 Two examples. `examples/stt_meta_mic.py` is the one to run first: speak into
 your microphone and the caption line reacts as the model hears you start,
 rewrites itself while you talk, and commits once you pause — the model's own
 endpointing, with no VAD on RoomKit's side. Add `--diarize` and talk in turn
-with someone: each committed line says who spoke (`> A: …`, `> B: …`). `examples/stt_meta_live.py` streams
+with someone: each committed line says who spoke (`> A: …`, `> B: …`).
+`examples/voice_meta_diarization.py` does the same through a `VoiceChannel`:
+each turn becomes a room message with its `sender_name`, and `SPEAKER_NAMES`
+(`"A=Sylvain,B=Julie"`) names the voices you know. `examples/stt_meta_live.py` streams
 a WAV file in real time in either mode and then sends it over REST, for a
 machine with no audio device.
 
