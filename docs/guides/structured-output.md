@@ -177,11 +177,26 @@ temperature it had made up. `supports_response_schema_with_tools=True` on
 `OpenAIConfig`, `AzureAIConfig` or `VLLMConfig` states otherwise for a server
 you know combines them.
 
-## Not in this version
+## AIChannel turns
 
-- **`AIChannel` turns.** There is no per-turn setting for a schema yet. A
-  `BEFORE_AI_GENERATION` hook can set one on the turn's context; it holds when
-  the turn carries no tools, or when the provider can combine the two.
+An `AIChannel` answers in a schema the same way. Set it for every turn, per
+turn from a config provider, or per room in the binding metadata; the binding
+wins, then the config provider, then the channel:
+
+```python
+triage = AIChannel("triage", provider=provider, response_schema=TRIAGE)
+
+# One room answers in another shape
+await kit.attach_channel(
+    "vip-room", "triage", category=ChannelCategory.INTELLIGENCE,
+    metadata={"response_schema": URGENCY},
+)
+```
+
+The turn's final message is then one JSON document checked against the
+schema, streamed or not. A provider that cannot honour it, or cannot honour it
+beside the turn's tools, fails the turn before any request, through `ON_ERROR`.
+A channel default outside the portable subset fails when the channel is built.
 
 The rules live in [RFC §6.7](https://github.com/roomkit-live/roomkit-specs).
 

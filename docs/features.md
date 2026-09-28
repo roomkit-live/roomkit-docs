@@ -1108,7 +1108,8 @@ OpenAI-compatible configs take `supports_response_schema=` for a server that
 differs. The answer streams too, checked before its done event, and shares a
 turn with tools where the provider can combine them
 (`supports_response_schema_with_tools`: OpenAI, Azure, Anthropic, Gemini).
-`AIChannel` has no per-turn setting for it yet.
+An `AIChannel` takes it per channel (`response_schema=`), per turn
+(`AIChannelTurnConfig.response_schema`) or per room (binding metadata).
 
 See the [Structured Output guide](guides/structured-output.md).
 
