@@ -131,11 +131,13 @@ a diarizing provider at construction, and so does a `ConferenceChannel`, which
 knows who spoke from each participant's track and transcribes utterance by
 utterance.
 
-Two providers fill `segments`: `MetaSTTProvider` in `DIARIZATION` mode
-(labels per turn) and `DeepgramSTTProvider` with `diarize_model` (labels per
-word). Deepgram's older `diarize=True` keeps its ids in `words`, and
-`GeminiSTTProvider.transcribe_recording()` returns its speaker turns in its own
-`Transcript`; neither reports `supports_diarization`.
+Three providers fill `segments`: `MetaSTTProvider` in `DIARIZATION` mode
+(labels per turn), `DeepgramSTTProvider` with `diarize_model` (labels per word)
+and `GeminiSTTProvider` with `speaker_segments` (batch only). Labels are
+normalised by `roomkit.voice.base.speaker_label`: a string, `None` for an
+unattributed speaker, and without a leading "speaker" word (`"Speaker 1"` →
+`"1"`). Deepgram's older `diarize=True` keeps its ids in `words` and does not
+report `supports_diarization`.
 
 This is the STT's own diarization, aligned to its words. The pipeline's
 `DiarizationProvider` (see [Audio Pipeline Stages](audio-pipeline-stages.md))
@@ -467,6 +469,30 @@ for turn in transcript.segments:
 | `mode` | `"verbatim"` | `"smart"` for the recogniser's cleaned-up transcript (recogniser only) |
 | `custom_vocabulary` | `[]` | Terms to spell as written, up to 1000; in the prompt of a multimodal model |
 | `word_timestamps` | `True` | Time every word (recogniser only) |
+| `speaker_segments` | `False` | Put the turns on `transcribe()`'s result as `segments`; needs `diarize` |
+
+### Speaker turns in the shared contract
+
+`transcribe_recording()` returns Gemini's own `Transcript`, whose turns carry
+`MM:SS` strings. `transcript.speaker_segments()` gives the same turns as the
+shared `SpeakerSegment` (label `"1"`, `"2"`…, offsets in milliseconds — to the
+100 ms word time on the recogniser, to the second otherwise), the type Meta
+and Deepgram fill too. With `speaker_segments=True`, `transcribe()` returns
+them directly in `TranscriptionResult.segments` and the provider reports
+`supports_diarization`:
+
+```python
+stt = GeminiSTTProvider(GeminiSTTConfig(api_key="...", speaker_segments=True))
+result = await stt.transcribe(recording)
+for segment in result.segments:
+    print(f"{segment.speaker}: {segment.text}")
+```
+
+It is off by default because `diarize` has always been on: a diarizing STT is
+refused by a `VoiceChannel` behind a VAD, where labels would not compare across
+utterances (see [Speaker labels from the STT](#speaker-labels-from-the-stt)).
+Both kinds of model attributed the two-voice French dialogue's 5 turns
+correctly (2026-09-27).
 
 ### Two kinds of model
 
