@@ -250,13 +250,17 @@ async def tool_gate(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
 
 Several sync hooks apply in turn to one result, in priority order: each sees the
 result as the previous one left it, whether it replaced it with
-`HookResult.modify(event)` or `metadata={"result": ...}`, and the model reads what
-the last one left. A "redact" hook followed by a "cite the source" hook gives the
-model the redacted text with its source, never the original.
+`HookResult.modify(dataclasses.replace(event, result=...))` or
+`HookResult(metadata={"result": ...})`, and the model reads what the last one
+left. A "redact" hook followed by a "cite the source" hook gives the model the
+redacted text with its source, never the original. A `modify` whose payload is
+not the `ToolCallEvent` replaces nothing.
 
 **Async — audit.** An audit hook sees the final outcome: the result the model
 reads, never one a sync hook replaced. A blocked call fires it too, with
-`is_error=True` and the block's reason. It also wants the calls a sync hook never sees. A tool
+`is_error=True` and the block's reason. An external tool's report (an ACP or
+Claude Agent SDK agent) reaches it as the provider told it: no hook can change
+what that agent already read. It also wants the calls a sync hook never sees. A tool
 denied by the policy, a name the agent does not have, a handler that raised, a
 call nothing served: none of them run, so none of them reach a hook that could
 serve one. They fire the async observers instead, with `is_error=True`:
