@@ -618,7 +618,7 @@ AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
 - **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation
-- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Cerebras, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, or custom providers
+- **Provider-agnostic** -- Swap between Anthropic, OpenAI, Cerebras, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, Meta Muse Spark, or custom providers
 - **Local models with nothing to run beside them** -- `LlamaCppAIProvider` downloads the llama.cpp build for the machine (CUDA, Metal or CPU, SHA-256 pinned) and a GGUF model, runs `llama-server` itself and stops it on close; tools use the model's native format (see [Local models with llama.cpp](#local-models-with-llamacpp))
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
 - **Cost attribution** -- `GeminiVertexConfig.labels` rides every Vertex request as a billing label, so Cloud Billing splits one project's Gemini spend per tenant or partner; validated against Google's label rules at configuration
@@ -741,7 +741,7 @@ trusting a stale number.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
   `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
-  DeepSeek, Qwen, Cerebras, Ollama, and PolarGrid. Most catalogs are verified against a live upstream mirror on every
+  Meta, DeepSeek, Qwen, Cerebras, Ollama, and PolarGrid. Most catalogs are verified against a live upstream mirror on every
   release (`make check-models`), which is what catches a vendor shipping a new
   flagship — a stale list is internally consistent, so no test can. Cerebras
   is checked against its public models endpoint and model cards. PolarGrid,

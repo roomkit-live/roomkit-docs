@@ -170,6 +170,15 @@ Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. 
 
 ::: roomkit.providers.gemini.schema.clean_gemini_schema
 
+## Meta Muse Spark Provider
+
+::: roomkit.providers.meta.ai.MetaAIProvider
+
+::: roomkit.providers.meta.config.MetaConfig
+
+Muse Spark cannot turn reasoning off: `reasoning_effort="none"` is sent as
+`"minimal"`. See the [Meta Model API guide](../guides/meta.md).
+
 ## vLLM Provider (Local LLM)
 
 ::: roomkit.providers.vllm.VLLMConfig
