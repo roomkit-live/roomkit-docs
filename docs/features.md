@@ -1294,7 +1294,7 @@ result.decoded()     # raw PNG bytes
 
 The separation is the point: the agent holding the conversation is rarely one that draws, so an Anthropic agent draws with a Gemini or OpenAI key exactly as it transcribes with a Deepgram one. Nothing about `AIResponse` changes.
 
-- **Five providers** -- `OpenAIImageProvider` (`/v1/images`), `GeminiImageProvider` (Interactions API), `XAIImageProvider` (Grok Imagine), `OpenRouterImageProvider` (OpenRouter's Image API, reaching its whole aggregated lineup — Seedream, FLUX, Recraft and the rest) and `AzureImageProvider` (Azure OpenAI deployments), plus `MockImageProvider`, which returns a real 1×1 PNG so a consumer tests the whole path without a key
+- **Six providers** -- `OpenAIImageProvider` (`/v1/images`), `GeminiImageProvider` (Interactions API), `XAIImageProvider` (Grok Imagine), `MetaImageProvider` (Muse Image, its search and shell tools off unless asked), `OpenRouterImageProvider` (OpenRouter's Image API, reaching its whole aggregated lineup — Seedream, FLUX, Recraft and the rest) and `AzureImageProvider` (Azure OpenAI deployments), plus `MockImageProvider`, which returns a real 1×1 PNG so a consumer tests the whole path without a key
 - **Editing in the same call** -- `reference_images=[result.to_image_part()]` edits rather than redraws; each provider absorbs its vendor's split between generation and edit endpoints
 - **One size string** -- `size="1920x1080"` is translated per vendor (an aspect ratio and a resolution tier for Gemini and xAI); a size a model cannot produce raises rather than silently becoming another
 - **Data URI in, room out** -- `MediaContent.url` accepts `data:`, so a generated image enters a room with no conversion

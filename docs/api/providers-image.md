@@ -43,6 +43,10 @@ it transcribes through Deepgram.
 
 ::: roomkit.providers.xai.config.XAIImageConfig
 
+::: roomkit.providers.meta.image.MetaImageProvider
+
+::: roomkit.providers.meta.config.MetaImageConfig
+
 ::: roomkit.providers.openrouter.image.OpenRouterImageProvider
 
 ::: roomkit.providers.openrouter.config.OpenRouterImageConfig

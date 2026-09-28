@@ -28,6 +28,7 @@ The second reason is narrower and just as decisive: `AIResponse.content` is a `s
 | `OpenAIImageProvider` | `/v1/images` (`images.generate`, `images.edit`) | `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `chatgpt-image-latest` | `roomkit[openai]` |
 | `GeminiImageProvider` | Interactions API (`interactions.create`) | `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | `roomkit[gemini]` |
 | `XAIImageProvider` | `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `grok-imagine-image-2.0`, `grok-imagine-image-quality`, `grok-imagine-image` | `roomkit[xai]` |
+| `MetaImageProvider` | Meta Model API `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `muse-image-1.0` | `roomkit[meta]` |
 | `OpenRouterImageProvider` | OpenRouter Image API (`POST /api/v1/images`) | 40+ aggregated slugs — `google/gemini-3.1-flash-image`, `x-ai/grok-imagine-image-2.0`, `bytedance-seed/seedream-5-0-pro`, `black-forest-labs/flux.2-pro`, … | `roomkit[openrouter]` |
 | `AzureImageProvider` | Azure OpenAI images endpoint | your deployments (`gpt-image-*` behind user-chosen names) | `roomkit[azure]` |
 | `MockImageProvider` | — | `mock-image` | none — draws a real 1×1 PNG |
@@ -56,7 +57,25 @@ images = OpenRouterImageProvider(
 )
 ```
 
-Connection settings and deployment defaults live on the provider config. OpenAI and Gemini also support per-request `ImageOptions` through `generate_with_options()`. Existing `generate()` calls keep their shape. Other providers reject unsupported advanced controls before making a request.
+```python
+from roomkit.providers.meta import MetaImageConfig, MetaImageProvider
+
+images = MetaImageProvider(
+    MetaImageConfig(api_key=..., reasoning_strength="low")  # one refinement pass, ~10 s
+)
+```
+
+Meta's generator can search the web, fetch reference images and run code while
+it draws, and Meta turns all three on when a request says nothing.
+`MetaImageProvider` always sends them **off** unless `MetaImageConfig.tools`
+lists them (`"web_search"`, `"image_search"`, `"shell"`) or a call asks through
+`ImageOptions.search_types` — a prompt does not leave for the web by default.
+Its default format is WebP, and `size` sets the aspect ratio only: the service
+draws at its own resolution (`1536x1024` came back 1920x1280, 2026-09-27). It
+takes `output_format`, `moderation`, `thinking_level` (`minimal` → one pass,
+`high`) and `search_types` per call; no mask.
+
+Connection settings and deployment defaults live on the provider config. OpenAI, Gemini and Meta also support per-request `ImageOptions` through `generate_with_options()`. Existing `generate()` calls keep their shape. Other providers reject unsupported advanced controls before making a request.
 
 ## One size string, every vendor
 
