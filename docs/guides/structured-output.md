@@ -193,9 +193,29 @@ await kit.attach_channel(
 )
 ```
 
-The turn's final message is then one JSON document checked against the
-schema, streamed or not. A provider that cannot honour it, or cannot honour it
-beside the turn's tools, fails the turn before any request, through `ON_ERROR`.
+The turn's answer is then one JSON document, checked against the schema before
+any of it reaches the room. A streamed answer is held until the check passes and
+arrives in one piece; one that fails the check is never delivered nor stored,
+and the turn fails through `ON_ERROR`.
+
+What fails the turn:
+
+| Case | When | Reason |
+|---|---|---|
+| The provider cannot honour a schema | before any request | `unsupported` |
+| The turn has tools and the provider cannot combine them with a schema | before any request | `unsupported` |
+| The model refuses, the output cap cuts the answer, or the text is not a document satisfying the schema | after the answer | `refusal`, `truncated`, `invalid_json` |
+| The tool loop stops before a final answer (`max_tool_rounds`, the loop timeout, a stop) | when the loop ends | `truncated` |
+
+The turn's tools include the ones the channel adds itself: skills, the
+sandbox, planning (`enable_planning=True`), and orchestration tools such as
+`submit_result`. A channel with any of them needs a provider that combines tools
+and a schema.
+
+When the model calls tools, a round can carry text of its own ("Let me look
+that up."). That text reaches the room as its own message, as in any turn; the
+turn's last text message is the JSON document.
+
 A channel default outside the portable subset fails when the channel is built.
 
 ## Vision
