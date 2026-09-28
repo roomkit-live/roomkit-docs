@@ -416,6 +416,15 @@ Three arbitrations to know about:
   events that pass the speaking gate are injected into its conversation
   context (`inject_text`) instead of being synthesized over it.
 
+The provider's tool calls go through the same gate as on any other channel
+(RFC §12.10.12). A call must name one of `ConferenceRealtimeConfig.tools` and
+match its `parameters` schema, `BEFORE_TOOL_USE` may deny it or rewrite its
+arguments, and `ON_TOOL_CALL` sees the result: its sync hooks may rewrite or
+block it, and its async observers see every call, the refused and failed ones
+included (`is_error`). A result is bounded at 16384 characters. A call the
+provider abandons interrupts `tool_handler` and sends nothing back. A handler
+that raises is logged, and the model reads only that the tool failed.
+
 The slot hot-plugs like every other need — `plug_realtime(config)` /
 `unplug_realtime()`, with the occupancy probe re-run at the plug and the bot
 retiring on the last unplug — and the lanes it shares with a recognizer
