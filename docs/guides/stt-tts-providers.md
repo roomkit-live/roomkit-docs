@@ -131,8 +131,9 @@ a diarizing provider at construction, and so does a `ConferenceChannel`, which
 knows who spoke from each participant's track and transcribes utterance by
 utterance.
 
-`MetaSTTProvider` in `DIARIZATION` mode is the provider that fills `segments`
-today. Deepgram's `diarize=True` keeps its speaker ids in `words`, and
+Two providers fill `segments`: `MetaSTTProvider` in `DIARIZATION` mode
+(labels per turn) and `DeepgramSTTProvider` with `diarize_model` (labels per
+word). Deepgram's older `diarize=True` keeps its ids in `words`, and
 `GeminiSTTProvider.transcribe_recording()` returns its speaker turns in its own
 `Transcript`; neither reports `supports_diarization`.
 
@@ -177,7 +178,8 @@ stt = DeepgramSTTProvider(
 | `endpointing` | `300` | Silence ms before utterance end, or `False` to disable |
 | `utterance_end_ms` | `None` | Additional utterance end signal |
 | `vad_events` | `True` | Emit VAD events |
-| `diarize` | `False` | Speaker diarization |
+| `diarize` | `False` | Deepgram's older diarizer; the ids stay in `words` |
+| `diarize_model` | `None` | Speaker segments (`"latest"`): every final carries `segments`; exclusive with `diarize` |
 | `filler_words` | `False` | Include "um", "uh" |
 | `keywords` | `[]` | Keywords to boost recognition |
 | `keyterm` | `[]` | Key terms (Nova-3) |
@@ -190,6 +192,40 @@ stt = DeepgramSTTProvider(
 **Batch mode**: HTTP POST to `/listen` endpoint.
 
 **Streaming mode**: WebSocket with real-time partials and finals.
+
+### Speaker segments (`diarize_model`)
+
+`diarize_model="latest"` makes the provider report `supports_diarization` and
+fill `TranscriptionResult.segments` on every final, in batch and in streaming
+(see [Speaker labels from the STT](#speaker-labels-from-the-stt)). Deepgram
+labels each word, so a final spanning a change of voice becomes two segments;
+labels are `"0"`, `"1"`…, and the offsets are Deepgram's word times.
+
+```python
+stt = DeepgramSTTProvider(
+    DeepgramConfig(api_key="...", model="nova-3", language="fr", diarize_model="latest")
+)
+result = await stt.transcribe(recording)
+for segment in result.segments:
+    print(f"{segment.speaker}: {segment.text}")
+```
+
+Measured on a two-voice French dialogue (2026-09-27):
+
+- **Batch** attributed the 5 turns correctly, with their offsets.
+- **Streaming** labelled every word `0` for about the first 30 seconds, then
+  told the voices apart, mostly correctly. Through a continuous
+  `VoiceChannel` the same dialogue played three times gave one stream,
+  "Speaker 0" throughout the first pass and alternating speakers after. For
+  live attribution from the first sentence, Meta Muse's `DIARIZATION` did
+  better on the same audio.
+- `diarize=True`, the older diarizer, labelled every word `0` in both modes.
+  It is kept as it was — ids in `words`, no segments, no
+  `supports_diarization` — so an existing configuration behaves the same, a
+  `VoiceChannel` behind a VAD included.
+
+`diarize_model` travels as a query parameter, so it works with every SDK the
+`deepgram` extra allows.
 
 ### Language: detect, then lock
 
