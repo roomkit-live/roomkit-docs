@@ -1573,9 +1573,11 @@ names the tools it unlocks. Entries are `ToolPolicy` **globs** (RFC §24.2), so
 `search_*` covers every tool whose name starts with `search_` — match them, never
 test membership. A gated tool is hidden from the catalogue *and* refused at
 execution, because a model that saw the name before the skill was deactivated can
-still call it. The skill and Tool Search infrastructure tools are exempt from
-gating in both places: gating `find_tools` or `activate_skill` would tell the
-model to activate a skill it has no way left to name.
+still call it. The tools that only read or unlock (`activate_skill`,
+`read_skill_reference`, `read_stored_result`, `find_tools`, `list_tools`) are
+exempt from gating in both places: gating `find_tools` or `activate_skill` would
+tell the model to activate a skill it has no way left to name. `run_skill_script`
+acts, and is gated like any other tool.
 
 ### Visibility states
 
