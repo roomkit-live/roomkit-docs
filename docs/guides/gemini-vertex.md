@@ -119,7 +119,7 @@ What to expect from it:
 |--------|-----------|
 | Client | `genai.Client(vertexai=True, project=…, location=…)` — the same `google-genai` SDK as `GeminiAIProvider`, in Vertex mode |
 | Auth | No API key. `impersonate_service_account`, else `service_account_json`, else Application Default Credentials; `GeminiVertexConfig.api_key` is optional and ignored |
-| Config | `GeminiVertexConfig` **subclasses** `GeminiConfig`, inheriting every generation field (`model`, `max_tokens`, `temperature`, `thinking_level`) so the two never drift |
+| Config | `GeminiVertexConfig` **subclasses** `GeminiConfig`, inheriting every generation field (`model`, `max_tokens`, `thinking_level`) so the two never drift |
 | Models | The same Gemini catalog — `available_models()` / `list_models()` inherited |
 | Thinking | Inherited: `thinking_level` requests thought summaries, surfaced as `StreamThinkingDelta` |
 | Labels | `labels` rides every request as `GenerateContentConfig.labels`; Cloud Billing groups the charges by them. Vertex only: the Developer API refuses the field |

@@ -105,7 +105,7 @@ The reasoning trace streams as `StreamThinkingDelta` events, so a `CLIChannel(sh
 | Aspect | Behaviour |
 |--------|-----------|
 | Transport | OpenAI Chat Completions API at `https://openrouter.ai/api/v1` |
-| Config | `OpenRouterConfig` **subclasses** `OpenAIConfig`, inheriting every request field (`temperature`, `reasoning_effort`, `include_stream_usage`, `use_max_completion_tokens`, …) so the two never drift |
+| Config | `OpenRouterConfig` **subclasses** `OpenAIConfig`, inheriting every request field (`reasoning_effort`, `include_stream_usage`, `use_max_completion_tokens`, …) so the two never drift |
 | Streaming & tools | Inherited unchanged from `OpenAIAIProvider`, including `<think>` / `reasoning_content` handling |
 | Telemetry | Errors and TTFB metrics are tagged `provider="openrouter"` |
 

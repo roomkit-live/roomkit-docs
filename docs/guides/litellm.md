@@ -107,7 +107,7 @@ See `examples/litellm_ai.py` for an interactive chat and a `--list-models` mode.
 | Aspect | Behaviour |
 |--------|-----------|
 | Transport | OpenAI Chat Completions API at your proxy's URL (with or without `/v1`) |
-| Config | `LiteLLMConfig` **subclasses** `OpenAIConfig`, inheriting every request field (`temperature`, `reasoning_effort`, `include_stream_usage`, `extra_body`, …) so the two never drift |
+| Config | `LiteLLMConfig` **subclasses** `OpenAIConfig`, inheriting every request field (`reasoning_effort`, `include_stream_usage`, `extra_body`, …) so the two never drift |
 | Streaming & tools | Inherited unchanged from `OpenAIAIProvider`, including `reasoning_content` thinking handling |
 | Vision | `supports_vision` is `True`: whether a routed model reads images is the gateway's call, so images pass through and a text-only route answers with an error |
 | Telemetry | Errors and TTFB metrics are tagged `provider="litellm"` |
