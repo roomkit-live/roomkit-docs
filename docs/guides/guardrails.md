@@ -248,7 +248,15 @@ async def tool_gate(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
     return HookResult.allow()
 ```
 
-**Async — audit.** An audit hook wants the calls a sync hook never sees. A tool
+Several sync hooks apply in turn to one result, in priority order: each sees the
+result as the previous one left it, whether it replaced it with
+`HookResult.modify(event)` or `metadata={"result": ...}`, and the model reads what
+the last one left. A "redact" hook followed by a "cite the source" hook gives the
+model the redacted text with its source, never the original.
+
+**Async — audit.** An audit hook sees the final outcome: the result the model
+reads, never one a sync hook replaced. A blocked call fires it too, with
+`is_error=True` and the block's reason. It also wants the calls a sync hook never sees. A tool
 denied by the policy, a name the agent does not have, a handler that raised, a
 call nothing served: none of them run, so none of them reach a hook that could
 serve one. They fire the async observers instead, with `is_error=True`:
