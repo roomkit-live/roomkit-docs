@@ -161,7 +161,9 @@ voice = VoiceChannel(
 
 - The transcript's speaker is the one the stage **heard the longest** over it:
   the utterance behind a VAD, the audio since the last final in continuous
-  mode. The room message carries `speaker_label`, `speaker_epoch` (always `0`:
+  mode. Each result counts for the audio since the stage's previous one, so
+  a verdict sherpa-onnx gives over 2 s of speech outweighs one over a short
+  tail. The room message carries `speaker_label`, `speaker_epoch` (always `0`:
   the stage keeps its labels for the session) and `sender_name`, and
   `ON_TRANSCRIPTION` carries the speaker, so the hook above renames it the
   same way.
@@ -180,7 +182,10 @@ name: enroll `"Sylvain"` and the message reads `"Speaker Sylvain"` until a
 hook names it. On a French two-voice dialogue (TitaNet embeddings, TEN VAD,
 pauses lengthened so the VAD cut at every turn), 9 utterances of 9 went to the
 right voice at `search_threshold=0.4`; at the default `0.5` one short
-utterance scored 0.48 and came out as `"Unknown speaker"`.
+utterance scored 0.48 and came out as `"Unknown speaker"`. On a laptop
+microphone, the wrong voice never scored above 0.21 while the right one scored
+0.36 to 0.66: a `search_threshold` around 0.35 suits it. Sub-second
+utterances score low whoever speaks.
 
 ---
 
