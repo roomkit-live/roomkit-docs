@@ -442,10 +442,10 @@ sequenceDiagram
 
 | Provider | SDK | Purpose |
 |---|---|---|
-| Anthropic Claude | `anthropic>=0.30` | Conversational AI responses via `AnthropicAIProvider` |
-| OpenAI | `openai>=1.30` | Conversational AI responses via `OpenAIAIProvider` |
-| Google Gemini | `google-genai>=1.0.0` | Conversational AI responses via `GeminiAIProvider` with native vision and function calling |
-| Mistral AI | `mistralai>=1.0` | Conversational AI responses via `MistralAIProvider` with streaming, vision (Pixtral), and function calling |
+| Anthropic Claude | `anthropic>=1.8,<2` | Conversational AI responses via `AnthropicAIProvider` |
+| OpenAI | `openai>=2.28,<3` | Conversational AI responses via `OpenAIAIProvider` |
+| Google Gemini | `google-genai>=2.25.0` | Conversational AI responses via `GeminiAIProvider` with native vision and function calling |
+| Mistral AI | `mistralai>=2.0,<3` | Conversational AI responses via `MistralAIProvider` with streaming, vision (Pixtral), and function calling |
 
 All AI providers support:
 - **Per-room configuration** via binding metadata (system_prompt, temperature, max_tokens)
@@ -459,8 +459,8 @@ All AI providers support:
 | Deepgram | `httpx>=0.27`, `websockets>=13.0` | Streaming speech-to-text via `DeepgramSTTProvider` |
 | ElevenLabs | `httpx>=0.27`, `websockets>=13.0` | Text-to-speech synthesis via `ElevenLabsTTSProvider` |
 | FastRTC | `fastrtc`, `numpy` | WebSocket audio transport with VAD via `FastRTCVoiceBackend`; WebRTC passthrough via `FastRTCRealtimeTransport` |
-| Gemini Live | `google-genai>=1.0.0` | Speech-to-speech AI via `GeminiLiveProvider` |
-| OpenAI Realtime | `openai>=1.30`, `websockets>=13.0` | Speech-to-speech AI via `OpenAIRealtimeProvider` |
+| Gemini Live | `google-genai>=2.25.0` | Speech-to-speech AI via `GeminiLiveProvider` |
+| OpenAI Realtime | `openai>=2.28`, `websockets>=14.2`, `tiktoken>=0.7` | Speech-to-speech AI via `OpenAIRealtimeProvider` |
 
 Voice providers use the same **lazy dependency loading** pattern as other providers -- the SDK is imported only when the provider is instantiated. The `roomkit[fastrtc]` optional extra installs FastRTC and NumPy.
 
