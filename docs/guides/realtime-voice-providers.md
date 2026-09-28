@@ -851,7 +851,7 @@ provider = ElevenLabsRealtimeProvider(config)
 
 ### Agent Setup
 
-ElevenLabs agents are pre-configured on the [ElevenLabs dashboard](https://elevenlabs.io/conversational-ai) with an LLM, voice, knowledge base, and tools. The `agent_id` identifies which agent to connect to. Runtime overrides for system prompt, voice, and temperature are applied at connection time.
+ElevenLabs agents are pre-configured on the [ElevenLabs dashboard](https://elevenlabs.io/conversational-ai) with an LLM, voice, knowledge base, and tools. The `agent_id` identifies which agent to connect to. Runtime overrides for system prompt, voice, and temperature are applied at connection time. The agent's TTS model, Eleven v4 Turbo included, is chosen in its dashboard configuration; RoomKit does not override it.
 
 ### Audio Format
 

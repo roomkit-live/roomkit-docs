@@ -873,7 +873,30 @@ for v in await tts.list_voices(language="fr"):
 | `style` | `0.0` | Style exaggeration (0–1) |
 | `output_format` | `"mp3_44100_128"` | Output format |
 | `optimize_streaming_latency` | `3` | Latency optimization level (0–4) |
+| `expressive` | `False` | Eleven v4 Turbo with inline audio tags (see below) |
 | `use_context` | `True` | Request stitching from the conversation context |
+
+**Models.** `model_id` takes any ElevenLabs text-to-speech model id; the module
+exports the common ones as constants:
+
+| Constant | Model id | Use |
+|----------|----------|-----|
+| `MODEL_V4_TURBO` | `eleven_v4_turbo` | Voice agents: audio tags, 90+ languages, ~150 ms to first speech (ElevenLabs' figure) |
+| `MODEL_V4` | `eleven_v4` | Highest quality for pre-generated audio, 10,000 characters per request |
+| `MODEL_FLASH_V2_5` | `eleven_flash_v2_5` | Lowest latency (~75 ms), 32 languages, no audio tags |
+| `MODEL_MULTILINGUAL_V2` | `eleven_multilingual_v2` | The default |
+| `MODEL_V3` | `eleven_v3` | Previous expressive model, without request stitching |
+
+`MODEL_TURBO_V2_5` is kept for existing code; ElevenLabs deprecated it in favour
+of Flash v2.5.
+
+**Expressive mode.** `expressive=True` selects `eleven_v4_turbo`, unless
+`model_id` already names a v3 or v4 model, which is kept. The text may then
+carry audio tags (`[laughs]`, `[whispers]`, `[sighs]`, `[excited]`, `[pause]`),
+alone or stacked; ElevenLabs renders them instead of reading them out. v3 and
+v4 do not take SSML `<break>` tags: use `[pause]` or an ellipsis. Do not set
+`StripBrackets` as the channel's TTS filter, which would remove the tags.
+`examples/voice_expressive.py` runs a voice assistant in this mode.
 
 **Two synthesis modes**:
 
@@ -891,8 +914,9 @@ to the end, in the same voice (`previous_request_ids`, ids younger than two
 hours), so ElevenLabs continues the voice from one response to the next. When
 no id is usable, the last response's text is passed as `previous_text`. After
 a response the user cut off with a barge-in, nothing is sent and the next
-response starts afresh. The user's words are never sent. v3 models (`expressive=True` or an
-`eleven_v3*` `model_id`) do not support stitching and receive no context.
+response starts afresh. The user's words are never sent. v3 models (an `eleven_v3*`
+`model_id`) do not support stitching and receive no context; v4 models, expressive
+mode included, are stitched.
 `examples/voice_elevenlabs_context.py` writes the same conversation with and
 without stitching to two WAV files for comparison.
 

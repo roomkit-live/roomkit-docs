@@ -2225,7 +2225,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 
 | Provider | Features | Dependency |
 |----------|----------|------------|
-| `ElevenLabsTTSProvider` | Streaming synthesis, voice listing, configurable stability | `roomkit[httpx,websocket]` |
+| `ElevenLabsTTSProvider` | Streaming synthesis on Eleven v4 / v4 Turbo and earlier models, expressive audio tags, request stitching, voice listing | `roomkit[elevenlabs]` |
 | `GrokTTSProvider` | REST + WebSocket streaming, 5 voices, 20 languages, expressive tags | `httpx`, `websockets` |
 | `GeminiTTSProvider` | Generative speech on `gemini-3.8-flash-tts` by default, natural-language style direction, inline audio tags, 30 voices, 80+ languages. About a second to first audio — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
