@@ -215,6 +215,8 @@ ai = AIChannel(
 | `restrict` (default) | Deny lists union, allow lists intersect |
 | `replace` | Override completely replaces the base policy |
 
+The policy also covers the tools the channel injects: a sandbox's `sandbox_*` commands, `run_skill_script` and `plan_tasks` are denied by `deny=["*"]` like any other tool. Only `activate_skill`, `read_skill_reference`, `read_stored_result`, `find_tools` and `list_tools` are exempt, because they read or unlock and never act.
+
 See the [Tool Calling guide](tool-calling.md#tool-policy-access-control) for more details.
 
 ### Tool Call Auditing
