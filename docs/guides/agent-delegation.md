@@ -115,6 +115,11 @@ tool = build_delegate_tool([
 setup_delegation(voice_agent, handler, tool=tool)
 ```
 
+The task is delegated from the room of the call, read from the tool call
+context: one agent attached to several rooms delegates each room's work from
+that room, with or without a `ConversationRouter`. A worker that delegates in
+turn runs in its own child room, so its task hangs off that room.
+
 The AI will see a `delegate_task` tool and can call it naturally:
 
 ```json
