@@ -198,6 +198,16 @@ schema, streamed or not. A provider that cannot honour it, or cannot honour it
 beside the turn's tools, fails the turn before any request, through `ON_ERROR`.
 A channel default outside the portable subset fails when the channel is built.
 
+## Vision
+
+A `VisionProvider` answers a frame in a schema the same way:
+`analyze_frame(frame, prompt=..., response_schema=SCHEMA)` returns a
+`VisionResult` whose `description` is the JSON document, checked before it is
+returned. `GeminiVisionProvider` and `OpenAIVisionProvider` support it
+(`OpenAIVisionConfig(supports_response_schema=False)` for a server that does
+not); `vision.supports_response_schema` says which do. The screen input tools'
+`click_element` uses it to locate an element.
+
 The rules live in [RFC §6.7](https://github.com/roomkit-live/roomkit-specs).
 
 ## Testing

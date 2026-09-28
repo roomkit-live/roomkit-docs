@@ -1110,6 +1110,8 @@ turn with tools where the provider can combine them
 (`supports_response_schema_with_tools`: OpenAI, Azure, Anthropic, Gemini).
 An `AIChannel` takes it per channel (`response_schema=`), per turn
 (`AIChannelTurnConfig.response_schema`) or per room (binding metadata).
+A `VisionProvider` answers a frame in a schema too
+(`analyze_frame(..., response_schema=)`).
 
 See the [Structured Output guide](guides/structured-output.md).
 

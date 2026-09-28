@@ -272,6 +272,12 @@ Requires `pip install roomkit[screen-input]` (`pyautogui`).
 | `press_key` | Press a single key or key combination |
 | `scroll` | Scroll up/down by a given amount |
 
+`click_element` asks the vision provider for the element's position in a fixed
+shape (`found`, `cx`, `cy`, `box`, `label`). A provider that supports a
+response schema (Gemini, OpenAI-compatible vision) is held to that shape and its
+answer is read as it is; any other answers in free text, which is repaired
+before use.
+
 ### Usage with Voice Agent
 
 ```python
