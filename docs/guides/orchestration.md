@@ -791,6 +791,16 @@ This does two things:
 1. Injects `HANDOFF_TOOL` into the channel's tool definitions
 2. Wraps the tool handler to intercept `handoff_conversation` calls
 
+A handoff acts on the room of the call that requested it, read from the tool
+call context (`current_tool_room_id()`), with or without a `ConversationRouter`.
+The same holds for every orchestration tool: a supervisor's
+`delegate_to_<worker>` and `delegate_workers`, and `delegate_task`. One agent
+attached to several rooms therefore hands off, or delegates, from each room on
+its own, and a child room's parent is the room whose call asked for it. Called
+directly, outside a tool call, these tools have no room to act on and refuse:
+to demonstrate one without a model, script the call through a
+`MockAIProvider(ai_responses=[...])`, as the mock examples below do.
+
 The handoff tool definition tells the AI when and how to transfer:
 
 ```json
