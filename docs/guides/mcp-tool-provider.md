@@ -127,13 +127,16 @@ unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
 
 ### Result serialization
 
-MCP tool results are serialized to strings for RoomKit's `ToolHandler` protocol:
+`call_tool()` always returns a string. The handler from `as_tool_handler()` returns the same string, except for a result that carries an image, which it hands over as content parts so the model sees the image:
 
-| MCP result | Serialized as |
-|------------|---------------|
-| Single `TextContent` | Plain text string |
-| Multiple content parts | JSON array of strings |
-| `isError=True` | `{"error": "..."}` |
+| MCP result | `call_tool()` | `as_tool_handler()` |
+|------------|---------------|---------------------|
+| Single `TextContent` | Plain text string | Plain text string |
+| Multiple text parts | JSON array of strings | JSON array of strings |
+| Any `ImageContent` | As above, the image as its repr text | `[AITextPart, AIImagePart, ...]` in the server's order |
+| `isError=True` | `{"error": "..."}` | raises `ToolRefusedError` |
+
+An `AIChannel` evicts the text of a content-part result like any other large result, and keeps its images.
 
 ### Installation
 
