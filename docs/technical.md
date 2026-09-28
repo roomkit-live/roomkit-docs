@@ -720,7 +720,20 @@ emits the `process_timeout` framework event. Nothing durable has been written.
 
 ### Optional Dependencies
 
-Dependencies are lazily loaded. Each provider group has its own optional extra:
+The core depends on `pydantic` alone. Everything else is an optional extra,
+loaded lazily: a provider imports its SDK when it is built, and names the extra
+to install when the SDK is missing. There are close to a hundred extras, so the
+list is not repeated here; `pyproject.toml` is the reference. The conventions:
+
+- **One extra per vendor**, named for the vendor (`anthropic`, `gemini`,
+  `deepgram`, `twilio`), or for the vendor and the surface when one vendor has
+  several (`realtime-openai`, `meta-stt`, `whatsapp-personal`).
+- **An SDK whose next major release broke RoomKit is capped** below it, with the
+  reason in a comment beside the pin.
+- **Two aggregates**: `providers` pulls in the AI and messaging providers,
+  and `all` adds the voice, video, storage and protocol extras on top of it.
+
+An excerpt, as it stands in `pyproject.toml`:
 
 ```toml
 [project.optional-dependencies]
@@ -729,15 +742,8 @@ anthropic = ["anthropic>=1.8,<2"]
 openai = ["openai>=2.28,<3"]
 gemini = ["google-genai>=2.25.0"]
 mistral = ["mistralai>=2.0,<3"]
-twilio = ["twilio>=9.0"]
-phonenumbers = ["phonenumbers>=8.13"]
-pynacl = ["pynacl>=1.5"]
-
-fastrtc = ["fastrtc", "numpy"]
-websocket = ["websockets>=13.0"]
+websocket = ["websockets>=14.2"]
 sse = ["httpx>=0.27", "httpx-sse>=0.4"]
-providers = ["roomkit[httpx,anthropic,openai,gemini,twilio]"]
-all = ["roomkit[providers,phonenumbers,pynacl]"]
 ```
 
 ---
