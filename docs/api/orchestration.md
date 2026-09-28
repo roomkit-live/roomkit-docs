@@ -67,6 +67,17 @@ in the Agent Delegation guide. Enabled per call via
 `kit.delegate(require_structured_result=True)`, and used internally by the
 supervised sequential flow.
 
+`kit.delegate(result_tool=...)` forces another tool than `submit_result`, by
+passing a `ResultTool`: the supervised flow's verdict comes back through
+`submit_verdict` this way. The capture is scoped to the child room, so two
+delegations to the same agent at once never read each other's result.
+
+::: roomkit.orchestration.result.ResultTool
+
+::: roomkit.orchestration.result.MissingResult
+
+::: roomkit.orchestration.result.SUBMIT_RESULT
+
 ::: roomkit.orchestration.result.SUBMIT_RESULT_TOOL
 
 ::: roomkit.orchestration.result.is_submit_result

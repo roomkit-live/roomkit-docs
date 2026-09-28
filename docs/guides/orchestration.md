@@ -145,7 +145,10 @@ worker the framework:
 2. Runs the worker, which hands its work back as a structured result (see
    [Structured results](agent-delegation.md#structured-results)).
 3. Asks the supervisor to **review** that output with a strict APPROVE / REJECT
-   verdict.
+   verdict, which it hands back by calling the `submit_verdict` tool (forced
+   like a worker's `submit_result`, re-prompted when a turn ends without it).
+   The supervisor's provider must therefore call tools. A verdict that never
+   comes, or a review that times out, counts as a reject.
 4. On REJECT, sends the worker the supervisor's feedback for a **rework** — up
    to `max_revisions` times.
 5. Carries the validated result into the next worker's brief.

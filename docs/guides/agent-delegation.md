@@ -346,8 +346,9 @@ the top-level parent.
 | `notify` | `str` | Channel ID to update with result (default: `agent_id`) |
 | `on_complete` | `callable` | Async callback `(DelegatedTaskResult) -> None` |
 | `wait` | `bool` | Run inline and return a pre-completed task (default `False` = background) |
-| `require_structured_result` | `bool` | Force the agent to hand back via the `submit_result` tool (default `False`) — see [Structured results](#structured-results) |
-| `max_result_retries` | `int` | Re-prompts for `submit_result` before the orchestration fails on the agent's behalf (default `3`) |
+| `require_structured_result` | `bool` | Force the agent to hand back via a result tool, `submit_result` by default (default `False`); inline runs only — see [Structured results](#structured-results) |
+| `max_result_retries` | `int` | Re-prompts for the result tool before its missing-result payload is returned on the agent's behalf (default `3`) |
+| `result_tool` | `ResultTool` | The tool to force instead of `submit_result`: the tool, how its call is read, the reminder, the payload when it never comes (default `None` = `SUBMIT_RESULT`) |
 
 ## Custom task runner
 
