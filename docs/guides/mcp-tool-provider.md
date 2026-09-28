@@ -133,10 +133,11 @@ unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
 |------------|---------------|---------------------|
 | Single `TextContent` | Plain text string | Plain text string |
 | Multiple text parts | JSON array of strings | JSON array of strings |
-| Any `ImageContent` | As above, the image as its repr text | `[AITextPart, AIImagePart, ...]` in the server's order |
+| A PNG, JPEG, GIF or WebP `ImageContent` whose payload decodes | As above, the image as its repr text | `[AITextPart, AIImagePart, ...]` in the server's order |
+| Another image format, a corrupt payload, `AudioContent`, a blob resource | As above, as its repr text | A one-line note, `[audio content (audio/wav) not shown to the model]` |
 | `isError=True` | `{"error": "..."}` | raises `ToolRefusedError` |
 
-An `AIChannel` evicts the text of a content-part result like any other large result, and keeps its images.
+A bad image would fail the whole request at the vendor, and base64 read as text is noise the model pays for: the handler hands over only what a vision model can take. An `AIChannel` evicts the text of a content-part result like any other large result and keeps its images; with a provider that has no vision it hands the model the text, the images marked `[image]`.
 
 ### Installation
 

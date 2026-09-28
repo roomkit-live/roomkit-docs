@@ -1915,7 +1915,7 @@ When a tool result exceeds the threshold:
 2. A head/tail preview (first 5 + last 5 lines) replaces the result in context. The preview is also bounded in characters: at most 8000, or twice `evict_threshold_tokens` when that is smaller. A line too long for it is clipped with a `[... N chars truncated ...]` marker, and the lines left out are counted in `[... N lines omitted ...]`
 3. A `read_stored_result` tool is auto-injected so the agent can paginate through the full output
 
-Every outcome the model reads goes through the same eviction: a result made of content parts (text and images, such as a screenshot with its page text) has its text evicted and its images kept in place, and a refusal, an error or an `ON_TOOL_CALL` override is evicted like a result. An `activate_skill` body is the one exception: a skill's instructions are never reduced to a preview.
+Every outcome the model reads goes through the same eviction: a result made of content parts (text and images, such as a screenshot with its page text) has its text evicted and its images kept in place, and a refusal, an error or an `ON_TOOL_CALL` override is evicted like a result. A provider without vision gets the text of a content-part result, its images marked `[image]`. An `activate_skill` body is the one exception: a skill's instructions are never reduced to a preview.
 
 ### Planning Tools
 
