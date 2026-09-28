@@ -92,11 +92,12 @@ async for result in stt.transcribe_stream(audio):
 **Through a `VoiceChannel`** (RFC §12.2.3), in continuous mode — a streaming
 STT and no VAD in the pipeline:
 
-- The channel keeps **one stream across turns**, so the labels compare. While
-  no audio arrives (a microphone muted during playback) it feeds the stream
-  silence at real-time pace: Meta Muse ends a stream whose audio falls behind
-  real time (1008 after ~15 s). An echo transcript it discards does not end
-  the stream either.
+- The channel keeps **one stream across turns**, so the labels compare. It
+  keeps the stream's audio level with the clock: whenever the audio pauses
+  and the stream is behind — a microphone muted during playback, packets
+  lost over a long call — it fills the gap with silence, since Meta Muse ends
+  a stream whose audio falls behind real time (1008 after ~15 s). An echo
+  transcript it discards does not end the stream either.
 - **Each segment is its own room message.** The sender stays the session's
   participant, the owner of the audio stream; the speaker is metadata:
   `speaker_label` (`"A"`), `speaker_epoch` and `sender_name`, which the AI
@@ -105,7 +106,8 @@ STT and no VAD in the pipeline:
   has started, and `"Unknown speaker"` for words nobody was attributed.
 - `ON_TRANSCRIPTION` fires per segment, its event carrying `speaker`,
   `speaker_epoch` and `sender_name`. A hook returning the event with another
-  `sender_name` names the voice from then on:
+  `sender_name` names that segment; every segment starts from the default
+  name, so the hook names the label each time it sees it:
 
   ```python
   @kit.hook(HookTrigger.ON_TRANSCRIPTION)
@@ -116,9 +118,11 @@ STT and no VAD in the pipeline:
   ```
 
 - `ON_SPEAKER_CHANGE` fires with `source="stt"` when a segment's label differs
-  from the last one routed, and on the first label of each epoch;
-  `confidence` is `None`. A turn detector never joins two speakers' segments:
-  a change of voice routes the pending turn first.
+  from the last one routed, and on the first label of each epoch; the event
+  carries the label's `speaker_epoch`, and `confidence` is `None`. A turn
+  detector never joins two speakers' segments: a change of voice routes the
+  pending turn first. A session's segments reach the room in the order they
+  were said, and the reply to one never holds back the next.
 - A new stream — the provider ended it, an error, a language change — starts
   a new epoch: the same letter afterwards is not assumed to be the same person.
 
