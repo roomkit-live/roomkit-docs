@@ -854,7 +854,7 @@ tts = ElevenLabsTTSProvider(
         style=0.0,
         use_speaker_boost=True,
         output_format="mp3_44100_128",
-        optimize_streaming_latency=3,         # 0-4, higher = faster
+        optimize_streaming_latency=3,         # 0-4, higher = faster; v2 / v2.5 models only
         use_context=True,                     # request stitching (see below)
     )
 )
@@ -872,7 +872,7 @@ for v in await tts.list_voices(language="fr"):
 | `similarity_boost` | `0.75` | Voice similarity (0–1) |
 | `style` | `0.0` | Style exaggeration (0–1) |
 | `output_format` | `"mp3_44100_128"` | Output format |
-| `optimize_streaming_latency` | `3` | Latency optimization level (0–4) |
+| `optimize_streaming_latency` | `None` | Latency optimization level (0–4, higher is faster at some cost of quality). Sent to the v2 / v2.5 models only: v3 and v4 refuse it, and a value set for them is left out with a warning. `None` sends nothing |
 | `expressive` | `False` | Eleven v4 Turbo with inline audio tags (see below) |
 | `use_context` | `True` | Request stitching from the conversation context |
 
