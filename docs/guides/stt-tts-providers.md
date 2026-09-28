@@ -875,6 +875,7 @@ for v in await tts.list_voices(language="fr"):
 | `optimize_streaming_latency` | `None` | Latency optimization level (0–4, higher is faster at some cost of quality). Sent to the v2 / v2.5 models only: v3 and v4 refuse it, and a value set for them is left out with a warning. `None` sends nothing |
 | `expressive` | `False` | Eleven v4 Turbo with inline audio tags (see below) |
 | `use_context` | `True` | Request stitching from the conversation context |
+| `stream_input` | `False` | Streaming text input over WebSocket for streaming AI responses (see below) |
 
 **Models.** `model_id` takes any ElevenLabs text-to-speech model id; the module
 exports the common ones as constants:
@@ -898,17 +899,43 @@ v4 do not take SSML `<break>` tags: use `[pause]` or an ellipsis. Do not set
 `StripBrackets` as the channel's TTS filter, which would remove the tags.
 `examples/voice_expressive.py` runs a voice assistant in this mode.
 
-**Two synthesis modes**:
+**Three synthesis modes**:
 
 - `synthesize()`: batch, returns complete audio as a base64 data URL
 - `synthesize_stream()`: streaming output, yields audio chunks over HTTP
+- `synthesize_stream_input()`: streaming input and output over a WebSocket
 
-Streaming *input* is not supported (`supports_streaming_input` is `False`): a
-voice channel synthesizes each AI response as a whole.
+**Streaming input.** With `stream_input=True` (off by default) the provider
+declares `supports_streaming_input`, so a Voice Channel speaks a streaming AI
+response from its first sentence instead of waiting for the whole text. Each
+sentence is sent and flushed as the LLM produces it, over one WebSocket per
+response. Measured with an LLM writing a sentence every 0.8 s, first audio came
+after 140 ms on v4 Turbo and flash v2.5 and 350 ms on multilingual v2, against
+2.6 to 3.9 s on the HTTP path. The model picks the socket:
+
+| Models | Socket | Voice settings |
+|--------|--------|----------------|
+| `eleven_v4_turbo`, `eleven_v4` (expressive mode included) | Text to Dialogue | Not applied: the socket takes none. The provider warns at construction when `stability`, `similarity_boost`, `style` or `use_speaker_boost` differ from their defaults |
+| `eleven_multilingual_v2`, `eleven_flash_v2*`, `eleven_turbo_v2*` | Text to Speech | Applied, with `optimize_streaming_latency` when set |
+| `eleven_v3*` | None: `supports_streaming_input` is `False` | |
+
+It is opt-in because a streamed response is handled differently from one
+synthesized whole:
+
+- the Voice Channel runs no `BEFORE_TTS` hook on it (a hook cannot block text
+  already being spoken); `AFTER_TTS` still runs;
+- a TTS failure (a 401, a 429, a network error) ends the AI response where it
+  failed: the text streamed so far is stored, the rest is not generated, and
+  `ON_ERROR` fires; the HTTP path stores the whole text and emits `tts_error`;
+- it is not stitched to the previous responses (below): neither socket takes a
+  request id or a previous text.
+
+`say()` and non-streaming AI responses keep the HTTP path either way.
 
 **Request stitching.** With `use_context=True` (the default) the provider
 declares `TTSContextLevel.SELF` and receives its own previous turns in the
-voice session ([TTS Conversation Context](tts-context.md)). Each request then
+voice session ([TTS Conversation Context](tts-context.md)). Stitching applies
+to the HTTP path, not to a response spoken over the socket. Each HTTP request then
 carries the `request_id` of the up to three previous responses the user heard
 to the end, in the same voice (`previous_request_ids`, ids younger than two
 hours), so ElevenLabs continues the voice from one response to the next. When
@@ -1564,7 +1591,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Gradium** | Cloud STT | Yes | Low | Per-minute | Real-time with server-side VAD |
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
-| **ElevenLabs** | Cloud TTS | Yes | Low | Per-character | Highest voice quality |
+| **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
 | **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
 | **SherpaOnnx** | Local TTS | Yes | Medium | Free | Privacy, offline, VITS/Piper |
