@@ -261,6 +261,8 @@ Consequences worth knowing:
   blocks `activate_skill` blocks the activation, not only the answer: the model reads
   the refusal and no gated tool opens, for the turn or the conversation. The same
   holds on a realtime voice channel, where the hook runs before the result is sent.
+  A hook that rewrites the result changes what the model reads, not what the skill
+  loads: only a block governs the gates.
 
 Realtime voice channels run the same lifecycle per *session*. `inline_full`
 preloads every body at connection time. `on_demand` advertises metadata and loads
