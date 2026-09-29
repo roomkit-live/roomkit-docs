@@ -1734,21 +1734,32 @@ and asks for a plain-text answer. That text summarises an interrupted turn, so
 a consumer treating "the model produced prose" as "the model answered" will
 deliver a cut run as a finished one — which is precisely why the reason is
 named rather than folded into `completed`. `error` is a turn the provider
-interrupted after a tool round (non-streaming): the rounds are kept, each
-round's text as its own message, the turn ends on the `[Response interrupted]`
-marker alone, and it is an error too, surfaced through `ON_ERROR` and the
-caller's `InboundResult.error`. A streaming failure reaches the consumer as the
-exception itself.
+interrupted after a tool round: the rounds are kept, each round's text as its
+own message, `ON_AI_RESPONSE` reports it with the usage of its rounds, and it
+is an error too, surfaced through `ON_ERROR` and the caller's
+`InboundResult.error`. The non-streaming loop ends it on the
+`[Response interrupted]` marker alone, a message carrying
+`metadata["interrupted"] = True` (`roomkit.models.event.is_interruption_marker`)
+that solicits no agent and that no strategy or delegation takes for an answer;
+the streaming loop yields its `LoopEndMarker` with `reason="error"`, then the
+exception reaches the consumer. The marker's `usage` is what the turn's
+generations used, summed over its rounds.
 
-### Why a non-streaming tool loop stopped
+### Why a turn stopped, read from its reply
 
-The non-streaming loop returns `RoomEvent`s rather than a stream, so its
-reason travels on them: every response MESSAGE event's metadata carries
-`loop_end_reason` with the same values, next to `ai_usage` (which sums every
-generation round of the turn, not just the last).
+Both loops record the reason on the turn's reply: its last MESSAGE event
+carries `loop_end_reason` with the same values, next to `ai_usage` (which sums
+every generation round of the turn, not just the last). That is the final
+answer, or, for a turn that ended without one (a cancellation between rounds,
+an interruption), the last round's text. A streamed turn learns its end after
+that message was written: its stored row is updated once the turn's deliveries
+are done, so read it from the store or `InboundResult`, not from the frames a
+channel was streamed.
 
 ```python
-reply = output.response_events[-1]
+from roomkit.models.enums import EventType
+
+reply = [e for e in output.response_events if e.type == EventType.MESSAGE][-1]
 if reply.metadata["loop_end_reason"] != "completed":
     logger.warning("agent stopped: %s", reply.metadata["loop_end_reason"])
 ```
