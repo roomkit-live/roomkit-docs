@@ -1733,9 +1733,12 @@ ripcord on a model re-issuing an already-blocked call, which strips the tools
 and asks for a plain-text answer. That text summarises an interrupted turn, so
 a consumer treating "the model produced prose" as "the model answered" will
 deliver a cut run as a finished one — which is precisely why the reason is
-named rather than folded into `completed`. `error` ends with text on the same
-terms: a mid-loop provider failure salvaged as a partial answer (non-streaming
-only — a streaming failure reaches the consumer as the exception itself).
+named rather than folded into `completed`. `error` is a turn the provider
+interrupted after a tool round (non-streaming): the rounds are kept, each
+round's text as its own message, the turn ends on the `[Response interrupted]`
+marker alone, and it is an error too, surfaced through `ON_ERROR` and the
+caller's `InboundResult.error`. A streaming failure reaches the consumer as the
+exception itself.
 
 ### Why a non-streaming tool loop stopped
 
