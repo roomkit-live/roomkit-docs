@@ -57,7 +57,10 @@ The flow:
 3. **Channels shared** from parent (same provider instance, different binding)
 4. **Task event injected** into child room → agent picks it up
 5. **Agent response collected** as the task result
-6. **Parent notified** via system prompt injection on the `notify` channel
+6. **Parent notified** on the `notify` channel: an agent receives the result, bounded
+   and set apart as the worker's output, as an instruction addressed to it and answers
+   at once through the room's transport; a transport receives it as a delivery. The
+   notified agent's system prompt is never touched.
 7. **Hooks fired**: `ON_TASK_DELEGATED` (immediately) and `ON_TASK_COMPLETED` (on finish)
 
 ## Fire and forget

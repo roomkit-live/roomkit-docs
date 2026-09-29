@@ -1431,7 +1431,7 @@ Key features:
 
 - **Child room isolation** — each task gets its own room, event history, and agent
 - **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`)
-- **Result routing** — system prompt injection on the `notify` channel
+- **Result routing** — the result, bounded, reaches the `notify` channel: an agent as an instruction it answers at once, a transport as a delivery; no prompt is rewritten
 - **Tool integration** — `setup_delegation()` for AIChannel, `setup_realtime_delegation()` for RealtimeVoiceChannel
 - **Delivery strategies** — `ImmediateDelivery`, `WaitForIdleDelivery`, `ContextOnlyDelivery` — all support RealtimeVoiceChannel via `inject_text()`
 - **Dedup** — `CompletedTaskCache` prevents re-delegating recently completed tasks (TTL-based)
