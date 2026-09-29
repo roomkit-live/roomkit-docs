@@ -240,7 +240,7 @@ class ObservingAIChannel(AIChannel):
 | `max_rounds` | `max_tool_rounds` was reached |
 | `timeout` | The wall-clock deadline passed |
 | `truncated` | The final round hit the output cap with no text — often reasoning consuming the whole budget |
-| `empty_response` | The model answered nothing after its tool rounds, and the bounded retries were spent |
+| `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed (Gemini's `MALFORMED_FUNCTION_CALL`), and the bounded retries were spent |
 | `cancelled` | The turn was cancelled |
 
 `rounds` is how many tool rounds ran before the stop. The limits each reason

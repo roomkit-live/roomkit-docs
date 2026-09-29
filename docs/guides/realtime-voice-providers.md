@@ -1474,6 +1474,13 @@ transcription, parses the arguments, runs the tool, and suppresses the text so
 the caller never hears it. Speech before the call is kept and still reaches the
 room; a transcription that is only a call produces no room event.
 
+Only a call said as a sentence of its own that ends the utterance is one: at
+the start of the transcription or of a line, or after a sentence's end
+(`Let me check. call:get_weather{city:Montreal}`), with nothing after its
+closing brace but a final stop. A sentence that mentions the form
+(`You can type call:get_weather{city:Montreal} to ask me.`) is speech, and so is
+a call followed by more speech.
+
 The recovered call is a tool call like any other:
 
 - it passes the same pre-execution gate — the declared catalogue, the argument
@@ -1483,7 +1490,9 @@ The recovered call is a tool call like any other:
   handler answers it normally;
 - its outcome — result *or* refusal — returns as **injected context**, never as
   a tool result, because the model issued no call and has no
-  `FunctionResponse` waiting on it. It reads the outcome on its next turn.
+  `FunctionResponse` waiting on it. It reads the outcome on its next turn. A
+  call that nothing served (no handler, no hook) reads as a failure, never
+  as a success.
 
 Two limits follow from the text being text:
 
