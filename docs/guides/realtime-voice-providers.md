@@ -102,6 +102,10 @@ Tool Search activates automatically when the catalogue exceeds
 `tool_search_threshold` (20 by default). Set `tool_search=True` to enable it for
 a smaller catalogue or `False` to expose the catalogue directly.
 `tool_search_pinned` keeps selected tools directly callable alongside discovery.
+The tools orchestration adds to the channel stay declared the same way: a voice
+supervisor's `delegate_workers`, a voice loop's `delegate_loop`,
+`setup_realtime_delegation`'s `delegate_task`, and a voice pipeline's
+`handoff_conversation`. The agent is told to call them, not to find them.
 
 Providers that support mid-session reconfiguration receive native declarations
 for the tools matched by `find_tools`. Providers with fixed declarations, such
