@@ -298,6 +298,11 @@ A third outcome exists on realtime channels: the model abandoned the call.
 Gemini Live sends `tool_call_cancellation` when the caller interrupts while a
 tool is outstanding; RoomKit cancels the handler still running, sends nothing
 back, and fires the observers with `cancelled=True` beside `is_error=True`.
+A reconnect abandons outstanding calls the same way (call ids belong to the
+connection), with one exception: the call whose own handler reconfigured the
+session, as a speech-to-speech handoff does on Gemini Live, runs to its end,
+sends nothing back (the new connection never issued its id) and reaches the
+observers served.
 Read `cancelled` first when the distinction matters: an abandoned call is not a
 refusal, and a ledger that counts refusals must not count it as one.
 
