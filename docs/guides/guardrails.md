@@ -253,14 +253,17 @@ result as the previous one left it, whether it replaced it with
 `HookResult.modify(dataclasses.replace(event, result=...))` or
 `HookResult(metadata={"result": ...})`, and the model reads what the last one
 left. A "redact" hook followed by a "cite the source" hook gives the model the
-redacted text with its source, never the original. A `modify` whose payload is
-not the `ToolCallEvent` replaces nothing.
+redacted text with its source, never the original. A hook that withdraws the
+result altogether with `HookResult(metadata={"result": None})` replaces it too:
+the model reads `null`, on every channel. A `modify` whose payload is not the
+`ToolCallEvent` replaces nothing.
 
-**Async — audit.** An audit hook sees the final outcome: the result the model
-reads, never one a sync hook replaced. A blocked call fires it too, with
-`is_error=True` and the block's reason. An external tool's report (an ACP or
-Claude Agent SDK agent) reaches it as the provider told it: no hook can change
-what that agent already read. It also wants the calls a sync hook never sees. A tool
+**Async — audit.** An audit hook sees the final outcome as the model reads it:
+a sync hook's `dict` replacement arrives as the JSON the model read. A blocked
+call fires it too, with `is_error=True` and the block's reason. A report on a
+call whose outcome the model already read (an ACP or Claude Agent SDK agent's,
+one the provider ran itself, a realtime Tool Search call) reaches it as it was
+read: no hook can change what the model already read. It also wants the calls a sync hook never sees. A tool
 denied by the policy, a name the agent does not have, a handler that raised, a
 call nothing served: none of them run, so none of them reach a hook that could
 serve one. They fire the async observers instead, with `is_error=True`:
