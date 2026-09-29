@@ -437,7 +437,7 @@ ai = AIChannel("ai", provider=provider, tools=[weather_tool, search_tool], tool_
 Patterns use `fnmatch` glob syntax: `search_*`, `mcp_*`, `tool_?`.
 
 !!! note "What the policy covers"
-    The policy governs every tool the channel offers, including the ones it injects itself: sandbox commands (`sandbox_*`), `run_skill_script` and `plan_tasks` must be allowed like any host tool. Five tools only read or unlock and are never filtered, by exact name: `activate_skill`, `read_skill_reference`, `read_stored_result`, `find_tools` and `list_tools`. The same rule decides what the model is offered and what it may call, and Tool Search's `find_tools` / `list_tools` never name a tool the policy denies or a skill gates.
+    The policy governs every tool the channel offers, including the ones it injects itself: sandbox commands (`sandbox_*`), `run_skill_script` and `plan_tasks` must be allowed like any host tool. Five tools only read or unlock and are never filtered when the channel serves them itself: `activate_skill`, `read_skill_reference`, `read_stored_result`, `find_tools` and `list_tools`. A tool of yours or of an MCP server under one of these names is filtered like any other; better, don't use them: a tool passed to the channel's `tools=` under a name the channel serves raises `ValueError` at construction (pass `tool_search=False` to free `find_tools` and `list_tools`), and one that arrives later (a binding's tools, orchestration) is not declared, with a warning. No name is declared twice. The same rule decides what the model is offered and what it may call, and Tool Search's `find_tools` / `list_tools` never name a tool the policy denies or a skill gates.
 
 ## MCP Tool Provider
 
