@@ -435,7 +435,7 @@ async def output_filter(event: RoomEvent, ctx: RoomContext) -> HookResult:
 
 ### Observe AI Responses
 
-`ON_AI_RESPONSE` is an **async** (observational) hook — it fires after the AI responds but cannot block or modify. It reports a turn whose loop reached its end: a barge-in, a stream the transport stopped reading, or a turn cancelled from outside or failed fires nothing. `event.response_content` is the whole turn's text, its segments separated by a blank line where a tool call cut them, and `event.segments` carries them one by one (`segments[-1]` is the final answer). Use it for logging and analytics:
+`ON_AI_RESPONSE` is an **async** (observational) hook — it fires after the AI responds but cannot block or modify. It reports a turn whose loop reached its end: a barge-in, a stream the transport stopped reading, a turn cancelled from outside, or one that raised out of its loop fires nothing, and its `llm.generate` span carries what its rounds used. A non-streaming turn the provider interrupted after a tool round reaches its end and reports `loop_end_reason="error"`. `event.response_content` is the whole turn's text, its segments separated by a blank line where a tool call cut them, and `event.segments` carries them one by one (`segments[-1]` is the final answer). Use it for logging and analytics:
 
 It fires for **any** channel of category `INTELLIGENCE`, not only `AIChannel`. An [ACP coding agent](acp-channel.md) runs its tool loop in its own process and reports the same way at the end of a turn — with one caveat on `event.usage`: those counters are the agent's own, relayed unaltered, and a coding agent's context arrives almost entirely as cache reads. Read `total_tokens`, not `input_tokens`.
 
