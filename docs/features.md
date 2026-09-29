@@ -830,11 +830,11 @@ file, and nothing fails while that is true.
   compatible server that rejects `stream_options` sets it to `False` and
   reports no usage. Cerebras sends usage unasked and keeps `False`.
 - **Reasoning is billed as output** -- `output_tokens` counts a model's
-  thinking wherever the vendor bills it: Gemini reports thinking outside its
-  candidates count, and RoomKit adds it (and a built-in tool's prompt to
-  `input_tokens`). `reasoning_tokens`, when present (OpenAI, DeepSeek,
-  Gemini), is the thinking share of `output_tokens`: a detail that
-  `cost_for()` never prices a second time.
+  thinking wherever the vendor bills it. OpenAI-shaped APIs put it inside the
+  completion count; Gemini (text and Live) and xAI report it beside, and
+  RoomKit adds it. `reasoning_tokens`, when present (the providers on the
+  OpenAI client, DeepSeek, Gemini), is the thinking share of `output_tokens`:
+  a detail that `cost_for()` never prices a second time.
 
 #### Per-Room AI Configuration
 
