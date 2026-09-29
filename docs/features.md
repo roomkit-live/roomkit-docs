@@ -969,6 +969,8 @@ This means downstream channels (WebSocket, Voice/TTS) receive text in real time 
 
 Providers that support structured streaming (`supports_structured_streaming=True`) emit `StreamTextDelta`, `StreamToolCall`, and `StreamDone` events. The Anthropic provider has native support; other providers use a default fallback that wraps `generate()`.
 
+Every provider hands the loop a call the same way. Its arguments are a mapping, never an error: empty ones are `{}`, and anything that does not parse to an object is kept under `raw`. Every call of a response has its own id, minted when the server gave none or repeated one, and two calls stay two whatever stream index they share. A call the output cap cut mid-arguments comes marked `partial` and does not run: the model reads that it was cut and can call again with less.
+
 Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls.
 
 The loop yields a final `LoopEndMarker(reason, rounds)` on every exit, `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
