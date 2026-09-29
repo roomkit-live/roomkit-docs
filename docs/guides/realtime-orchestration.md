@@ -65,7 +65,7 @@ When `pipeline.install()` detects that `voice_channel_id` points to a `RealtimeV
 
 1. **Agents are NOT registered as channels** — they have no provider, they're config-only
 2. **The active agent's config is applied to the RealtimeVoiceChannel** — system_prompt, voice, and tools are passed to `provider.connect()`. The tools are the channel's own (the `tools=` it was built with), the agent's own (`Agent(tools=...)`), and the handoff tool; an agent tool with the same name as a channel tool replaces it for that agent
-3. **The handoff tool is registered on the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by that agent's `tool_handler`; any other tool by the channel's
+3. **The handoff tool is registered on the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by the `tool_handler` the agent was given; any other tool, and an agent tool the agent has no handler for, by the channel's
 4. **On handoff, `reconfigure_session()` is called** — disconnects and reconnects with the new agent's config
 
 ```

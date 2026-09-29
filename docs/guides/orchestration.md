@@ -414,12 +414,19 @@ A strategy is installed per room, but its agents (and a voice channel it
 wires) serve every room they are attached to. Installing it in a second room
 declares nothing twice and wraps nothing twice: the voice supervisor's
 `delegate_workers` and the voice loop's `delegate_loop` appear once on the
-channel, and each call runs for the room of the session that made it. What a
-strategy adds for one room stays in that room: a supervisor's
-`delegate_workers` is declared in the rooms it was installed in (not in the
-`::task-` rooms where it frames and judges its workers' steps), and a
-delegation's `submit_result` only in its child room. A busy worker or a running
-pipeline blocks its own room's next call, never another room's.
+channel, each call runs for the room of the session that made it, and a call
+from a room the strategy was not installed in is refused. On an AI channel,
+what a strategy adds for one room stays in that room: a supervisor's
+`delegate_workers` or `delegate_to_<worker>` tools are declared in the rooms
+it was installed in (not in the `::task-` rooms where it frames and judges its
+workers' steps), and a delegation's `submit_result` only in its child room. A
+busy worker or a running pipeline blocks its own room's next call, never
+another room's. The handoff tool Pipeline and Swarm wire on an agent is the
+agent's, and stays declared wherever it serves.
+
+The installs are in memory: after a restart, install the strategy again in the
+rooms that already exist (`strategy.install(kit, room_id)`), as
+`create_room(orchestration=...)` does for a new one.
 
 ### Custom strategies
 
