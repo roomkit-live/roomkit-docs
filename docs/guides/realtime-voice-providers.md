@@ -875,6 +875,20 @@ XAI_VOICE=ara           # Voice override
 
 ---
 
+### Mid-session reconfiguration
+
+Tool Search, a skill activation and a handoff reconfigure a live session. xAI
+does it in band, as OpenAI does, with a partial `session.update` carrying only
+what changes (`instructions`, `voice`, `tools`, `temperature`): the
+conversation survives. A `provider_config` key the live session cannot take
+(turn detection, transcription, audio format) is named in a warning and
+applies from the next session.
+
+PersonaPlex and Anam take their prompt and persona only when a session opens,
+so they declare `supports_mid_session_reconfigure = False`: the channel does
+not reconnect them for Tool Search or a skill, and their skills are delivered
+inline.
+
 ## ElevenLabs Conversational AI
 
 Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider sends and receives audio, and bridges the agent's client tool calls into RoomKit's tool path.
