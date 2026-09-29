@@ -619,7 +619,7 @@ ai = AIChannel(
 AI features:
 - **Context-aware** -- Builds conversation context from recent room events
 - **Self-loop prevention** -- Skips events from itself to prevent self-echoing
-- **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops; exceeded events are stored as BLOCKED with an observation each, a streamed response's rows included (it is generated, but delivered to no channel)
+- **Chain depth limiting** -- Global `max_chain_depth` (default 5) prevents runaway AI-to-AI loops, streamed or buffered alike: an agent whose answer would reach the limit is not asked (no model call, no tool), and one BLOCKED record with an observation stands in for its answer. Below the limit every answer is read, a streamed segment wakes the other agents as a buffered answer does, and a delegation's result continues the chain of the turn that delegated
 - **Provider-agnostic** -- Swap between Anthropic, OpenAI, Cerebras, OpenRouter, a LiteLLM gateway, Gemini, Mistral, DeepSeek, Qwen, Meta Muse Spark, or custom providers
 - **Local models with nothing to run beside them** -- `LlamaCppAIProvider` downloads the llama.cpp build for the machine (CUDA, Metal or CPU, SHA-256 pinned) and a GGUF model, runs `llama-server` itself and stops it on close; tools use the model's native format (see [Local models with llama.cpp](#local-models-with-llamacpp))
 - **Data residency** -- `GeminiVertexProvider` runs Gemini through Vertex AI in a pinned region (in-region processing, no training-data retention) for regimes like Québec Law 25 / PIPEDA
@@ -3027,7 +3027,9 @@ Prevents infinite loops when AI channels generate responses that trigger other A
 kit = RoomKit(max_chain_depth=5)  # Default: 5
 ```
 
-Events exceeding the chain depth limit are stored with `status=BLOCKED` and `blocked_by="event_chain_depth_limit"`. An `Observation` is created documenting the exceeded depth. A framework event `chain_depth_exceeded` is emitted.
+An agent whose answer would reach the limit is not asked at all: no model call runs and no tool, whether it streams or not. One record stands in for its answer, stored with `status=BLOCKED` and `blocked_by="event_chain_depth_limit"` (the agent as its source, empty text, the depth the answer would have had). An `Observation` documents the exceeded depth, and a framework event `chain_depth_exceeded` is emitted.
+
+Every path that produces an agent's answer carries the depth: a streamed segment (each one wakes the other agents, as each segment of a buffered answer does), a realtime model's transcription (one deeper than what it last heard), a `Loop` or `Supervisor` result, and a delegation's result delivered back to the room, which continues the chain of the turn that delegated. A cycle of delegation, result and delegation again therefore stops at the limit. Content a host delivers for a turn can do the same with `kit.deliver(..., chain_depth=...)`.
 
 ### Delivery outcomes
 

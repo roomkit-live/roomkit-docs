@@ -328,7 +328,7 @@ from roomkit import RoomKit
 kit = RoomKit(max_chain_depth=3)
 ```
 
-When the limit is reached, the response event is marked with `EventStatus.BLOCKED` and `blocked_by="event_chain_depth_limit"`. An `Observation` is recorded with the chain depth metadata.
+When an agent's answer would reach the limit, the agent is not asked: no model call and no tool, streamed or buffered. A record stands in for the answer, marked `EventStatus.BLOCKED` with `blocked_by="event_chain_depth_limit"`, and an `Observation` is recorded with the chain depth metadata. The limit also bounds a delegation that repeats on every result: the result comes back at the depth of the turn that delegated.
 
 ### Tool Loop Limits
 

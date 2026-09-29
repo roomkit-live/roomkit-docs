@@ -153,7 +153,7 @@ Under the hood, this injects the delegate tool dict into `channel._tools` and wr
 
 ## Preventing re-delegation (dedup)
 
-When a task completes and the result is delivered back, the AI may try to delegate the same task again. Use `CompletedTaskCache` to prevent this:
+When a task completes and the result is delivered back, the AI may try to delegate the same task again. The result comes back at the chain depth of the turn that delegated, so an agent that delegates again on every result stops at `max_chain_depth` (RFC §23.3): each round is one level deeper, and past the limit the agent is not asked. That bound is the backstop; to avoid the repeated work in the first place, use `CompletedTaskCache`:
 
 ```python
 from roomkit.tasks import DelegateHandler, CompletedTaskCache
