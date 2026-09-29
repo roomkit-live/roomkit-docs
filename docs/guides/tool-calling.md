@@ -226,10 +226,13 @@ beside `is_error=True`. The provider-level callback is described in the
 [realtime providers guide](realtime-voice-providers.md#background-tool-calls).
 
 A handler that declines a call it owns raises `ToolRefusedError`. A refusal
-returned as a body reads as work that was done, and a plain `raise` replaces
-the wording with `Error executing tool '<name>': <exc>`. Raising
-`ToolRefusedError` keeps both: the call is marked `is_error`, the observers
-fire, and the message reaches the model verbatim.
+returned as a body reads as work that was done, and any other exception reads
+as `{"error": "Tool '<name>' failed (<ExceptionClass>)"}` on every channel:
+its message never reaches the model, since it can hold anything the failing
+code held (a connection string with its password), and goes to the log and to
+`ON_TOOL_CALL` observers as `event.error_detail`. Raising `ToolRefusedError`
+keeps both: the call is marked `is_error`, the observers fire, and the message
+reaches the model verbatim.
 `MCPToolProvider.as_tool_handler()` raises it when the server refuses a call.
 An unknown tool is a different case: return the `{"error": "Unknown tool: ..."}`
 envelope so a composed handler can pass the call on (see below).
