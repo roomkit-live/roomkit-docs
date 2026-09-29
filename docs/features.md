@@ -492,8 +492,13 @@ async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
   the hook in `blocked_by` and the outcome in the reason —
   `hook_timeout:<name>`, `hook_error:<name>` or `hook_invalid_result:<name>` —
   so the sender can be told why it did not go out. Without the flag a failing
-  hook is logged and skipped, except on `BEFORE_TTS` and `ON_TRANSCRIPTION`,
-  which always fail closed. The flag is refused on an ASYNC hook.
+  hook is logged and skipped, except on `BEFORE_TTS`, `ON_TRANSCRIPTION` and
+  `BEFORE_TOOL_USE`, which always fail closed. On `BEFORE_TOOL_USE`, the gate
+  of a tool call, a failed hook refuses the call: the model reads `Tool 'x'
+  denied by pre-execution hook.`, never the hook's error, which reaches
+  `ON_TOOL_CALL`'s observers on `error_detail`. Give an approval hook that
+  waits for a person the `timeout` it needs (30 s by default). The flag is
+  refused on an ASYNC hook.
 - `needs_lock=False` (sync `BEFORE_BROADCAST` only): the check runs before
   the room lock, so the scans of successive messages overlap instead of
   queueing — two messages one second apart with a 3 s scan go out at 3 s and
