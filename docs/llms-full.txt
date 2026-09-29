@@ -1739,27 +1739,31 @@ own message, `ON_AI_RESPONSE` reports it with the usage of its rounds, and it
 is an error too, surfaced through `ON_ERROR` and the caller's
 `InboundResult.error`. The non-streaming loop ends it on the
 `[Response interrupted]` marker alone, a message carrying
-`metadata["interrupted"] = True` (`roomkit.models.event.is_interruption_marker`)
-that solicits no agent and that no strategy or delegation takes for an answer;
-the streaming loop yields its `LoopEndMarker` with `reason="error"`, then the
-exception reaches the consumer. The marker's `usage` is what the turn's
-generations used, summed over its rounds.
+`metadata["interruption_marker"] = True`
+(`roomkit.models.event.is_interruption_marker`) that solicits no agent and that
+no strategy or delegation takes for an answer: a delegated turn it ends fails.
+The streaming loop yields its `LoopEndMarker` with `reason="error"`, then the
+exception reaches the consumer. `LoopEndMarker.usage` is what the turn's
+generations used, summed over its rounds; a response without tools yields the
+marker too, with `rounds=0`, unless its provider streams text only.
 
 ### Why a turn stopped, read from its reply
 
 Both loops record the reason on the turn's reply: its last MESSAGE event
 carries `loop_end_reason` with the same values, next to `ai_usage` (which sums
 every generation round of the turn, not just the last). That is the final
-answer, or, for a turn that ended without one (a cancellation between rounds,
-an interruption), the last round's text. A streamed turn learns its end after
-that message was written: its stored row is updated once the turn's deliveries
-are done, so read it from the store or `InboundResult`, not from the frames a
-channel was streamed.
+answer (the interruption marker, for a non-streaming turn the provider
+interrupted), or, for a turn that ended without one (a cancellation between
+rounds, a streamed interruption), the last round's text. A streamed turn
+learns its end after that message was written: its stored row is updated once
+the turn's deliveries are done (`ON_EVENT_UPDATED` fires), so read it from the
+store or the `InboundResult`, not from the frames a channel was streamed.
 
 ```python
 from roomkit.models.enums import EventType
 
-reply = [e for e in output.response_events if e.type == EventType.MESSAGE][-1]
+result = await kit.process_inbound(message)
+reply = [e for e in result.response_events if e.type == EventType.MESSAGE][-1]
 if reply.metadata["loop_end_reason"] != "completed":
     logger.warning("agent stopped: %s", reply.metadata["loop_end_reason"])
 ```
