@@ -461,10 +461,14 @@ floor: between the pipeline VAD's speech start and end in manual mode, between
 the server VAD's `speech_started` and `speech_stopped` otherwise. Results that
 land during a barge-in are then answered together with what the caller said,
 by the request that closes the caller's turn (the server's own, under server
-VAD, unless `create_response` is false). No request goes out while another is
-in progress, active or sent and not yet begun, whichever path sends it:
-`inject_text`, the end of the caller's turn, or a continuation. xAI Grok
-speaks the same wire and behaves the same way.
+VAD, unless OpenAI's `create_response` is false). No request goes out while
+another is in progress, active or sent and not yet begun, whichever path sends
+it: `inject_text`, the end of the caller's turn, or a continuation. A caller's
+turn whose request met a response in progress is answered once that response
+ends, unless a request sent since already covers it, and a request the server
+rejects with an error no longer counts as in progress. xAI Grok speaks the same
+wire and behaves the same way; it has no `create_response` setting, its server
+VAD always answers the turn.
 
 ### Available Voices
 
@@ -777,15 +781,15 @@ await channel.reconfigure_session(
     - a session with no conversation yet (nothing sent, nothing heard)
       reconnects without its handle, so it starts under the new instruction
       with nothing lost;
-    - a `ConversationPipeline` installed with `greet_on_handoff=True` carries
-      the new agent's instructions in the handoff greeting whenever the
-      provider reports `supports_mid_session_reconfigure=False`, and the model
-      follows them.
+    - a session with a conversation resumes with its context, and the new
+      instruction rides its next non-silent `inject_text`, which the model
+      follows at once: the greeting of a `ConversationPipeline` handoff with
+      `greet_on_handoff=True`, for one.
 
     After a direct `reconfigure_session(system_prompt=...)` on a 3.8 session
-    that has a conversation, send the new instructions yourself with a
-    non-silent `inject_text(..., role="system")`: the model acts on them and
-    keeps the context.
+    that has a conversation, follow it with a non-silent
+    `inject_text(..., role="system")` (a greeting, an announcement): until
+    then the model still runs under the old instruction.
 
 ---
 
