@@ -453,6 +453,19 @@ actually received, preventing an API error after a playback underrun. This
 keeps OpenAI's conversation context aligned with what the user heard even when
 `response.done` arrived before the speaker finished.
 
+### Tool results and the caller's turn
+
+The model is asked to go on (`response.create`) once per response, when every
+call it made has its result. That request waits while the caller holds the
+floor: between the pipeline VAD's speech start and end in manual mode, between
+the server VAD's `speech_started` and `speech_stopped` otherwise. Results that
+land during a barge-in are then answered together with what the caller said,
+by the request that closes the caller's turn (the server's own, under server
+VAD, unless `create_response` is false). No request goes out while another is
+in progress, active or sent and not yet begun, whichever path sends it:
+`inject_text`, the end of the caller's turn, or a continuation. xAI Grok
+speaks the same wire and behaves the same way.
+
 ### Available Voices
 
 alloy, echo, shimmer, breeze, cinnamon, juniper, sage (varies by model)
@@ -737,7 +750,9 @@ Aoede, Fenrir, Kore, Pax, Breeze, Charon, Ember, Orion, Stella, and more.
 
 ### Session Resumption
 
-Gemini preserves conversation context when reconfigured — useful for agent handoff:
+Gemini preserves conversation context when reconfigured: `reconfigure()`
+reconnects with the session's resumption handle. That is what an agent handoff
+relies on:
 
 ```python
 # Start with general assistant
@@ -751,6 +766,26 @@ await channel.reconfigure_session(
     tools=billing_tools,
 )
 ```
+
+!!! warning "`gemini-3.8-live` keeps the original instruction"
+    A session resumed on `gemini-3.8-live` runs under the system instruction
+    it started with: the one a reconfiguration sends is ignored. Measured: an
+    agent started as "Tina" and reconfigured as "Bill" still answers "Tina"
+    when asked its name (`gemini-3.1-flash-live-preview` and 2.5 take the new
+    instruction). RoomKit covers two cases:
+
+    - a session with no conversation yet (nothing sent, nothing heard)
+      reconnects without its handle, so it starts under the new instruction
+      with nothing lost;
+    - a `ConversationPipeline` installed with `greet_on_handoff=True` carries
+      the new agent's instructions in the handoff greeting whenever the
+      provider reports `supports_mid_session_reconfigure=False`, and the model
+      follows them.
+
+    After a direct `reconfigure_session(system_prompt=...)` on a 3.8 session
+    that has a conversation, send the new instructions yourself with a
+    non-silent `inject_text(..., role="system")`: the model acts on them and
+    keeps the context.
 
 ---
 
@@ -1704,7 +1739,9 @@ negotiated codec rate. Configure provider rates using the provider's accepted
 formats; for OpenAI PCM, use 24 kHz rather than Gemini's usual 16 kHz input.
 
 `await channel.wait_idle(room_id)` waits for generation to finish and audio to
-reach the transport. A queued SIP transport may still be playing: before a
+reach the transport. A tool call holds it until the response that continues its
+result; a call that owes no result (cancelled by the model, or spared by the
+reconnect its own handler caused) stops holding it when it ends. A queued SIP transport may still be playing: before a
 conversational hangup, also wait until `backend.is_playing(carrier_session)` is
 false. Bound this wait and stop it when the call disconnects. SIP reports RTP
 emission and an estimated playback boundary; remote speaker playback cannot be
