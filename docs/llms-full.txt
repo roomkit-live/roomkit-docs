@@ -1923,7 +1923,7 @@ ai = AIChannel(
 ```
 
 When a tool result exceeds the threshold:
-1. The full result is stored in a FIFO-bounded buffer (max 50 entries)
+1. The full result is stored under an id no other result is given: each room keeps its 50 most recently read results, and the store's bounds for memory (200 results, 64 MB of text) take from the room holding the most first, so a quiet room keeps its results while others evict
 2. A head/tail preview (first 5 + last 5 lines) replaces the result in context. The preview is also bounded in characters: at most 8000, or twice `evict_threshold_tokens` when that is smaller. A line too long for it is clipped with a `[... N chars truncated ...]` marker, and the lines left out are counted in `[... N lines omitted ...]`
 3. A `read_stored_result` tool is auto-injected so the agent can paginate through the full output
 
