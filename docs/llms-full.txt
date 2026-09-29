@@ -1765,6 +1765,13 @@ know, so a text-only consumer filtering on `isinstance(chunk, str)` is
 unaffected. Streaming only — the non-streaming loop returns an `AIResponse`
 the caller already holds.
 
+Every provider hands the loop a call the same way (RFC §6.4): arguments as
+a mapping, never an error (none or `null` is `{}`, anything unparseable is
+kept under `raw`); an id no other call of the response carries, minted when
+the server gave none or repeated one; and `partial=True` on a call the
+response cut before its arguments were complete, which the loop answers
+without running it. The shared rules are `roomkit.providers.ai.tool_calls`.
+
 Two bounds keep a degenerate model from running away with a turn:
 `max_tool_rounds` caps how many rounds run, and a **32-call ceiling per
 round** caps how wide one round may be. The per-round cap is applied before

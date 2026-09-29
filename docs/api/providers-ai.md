@@ -53,6 +53,24 @@ corrupt one is refused before the request leaves, as a non-retryable
 
 ::: roomkit.providers.ai.image_parts.image_part_uri
 
+## Handing the loop a tool call
+
+Every provider hands the tool loop the same thing for the same call (RFC
+§6.4): arguments as a mapping, never an error; an id no other call of the
+response carries; and `partial=True` on a call the response cut before its
+arguments were complete, which the loop answers without running it. A custom
+provider builds its calls through these rules rather than its own.
+
+::: roomkit.providers.ai.tool_calls.tool_arguments
+
+::: roomkit.providers.ai.tool_calls.call_cut
+
+::: roomkit.providers.ai.tool_calls.CallIds
+
+::: roomkit.providers.ai.tool_calls.cut_call_error
+
+::: roomkit.providers.ai.tool_calls.is_truncation
+
 ## Explicit models and modern request profiling
 
 `model=` is required by both `OpenAIConfig` and `AnthropicConfig`, so a RoomKit

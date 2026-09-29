@@ -67,7 +67,7 @@ The streaming tool loop is built on three event types emitted by `AIProvider.gen
 | Event | Fields | Description |
 |-------|--------|-------------|
 | `StreamTextDelta` | `text` | A chunk of generated text |
-| `StreamToolCall` | `id`, `name`, `arguments` | A complete tool call extracted after streaming |
+| `StreamToolCall` | `id`, `name`, `arguments`, `partial` | A complete tool call extracted after streaming; `partial` marks one the response cut before its arguments were complete, which the loop answers without running |
 | `StreamDone` | `finish_reason`, `usage`, `metadata` | Signals the end of one generation round |
 
 These are Pydantic models exported from `roomkit`:
@@ -101,6 +101,7 @@ This means every provider works with the streaming tool loop without changes, bu
 ### Implementing for a custom provider
 
 ```python
+from roomkit.providers.ai import CallIds, call_cut, tool_arguments
 from roomkit.providers.ai.base import AIProvider, AIContext
 from roomkit.providers.ai.base import (
     StreamTextDelta, StreamToolCall, StreamDone, StreamEvent,
@@ -124,16 +125,20 @@ class MyProvider(AIProvider):
             if chunk.type == "text":
                 yield StreamTextDelta(text=chunk.text)
 
-        # After streaming, yield any tool calls
+        # After streaming, yield any tool calls through the shared rules:
+        # every call its own id, arguments as a mapping, a cut call partial.
+        ids = CallIds()
+        finish_reason = self._finish_reason
         for tool_call in self._pending_tool_calls:
             yield StreamToolCall(
-                id=tool_call.id,
+                id=ids(tool_call.id, tool_call.name),
                 name=tool_call.name,
-                arguments=tool_call.arguments,
+                arguments=tool_arguments(tool_call.raw_arguments),
+                partial=call_cut(tool_call.raw_arguments, finish_reason),
             )
 
         yield StreamDone(
-            finish_reason="stop",
+            finish_reason=finish_reason,
             usage={"input_tokens": 100, "output_tokens": 50},
         )
 ```
