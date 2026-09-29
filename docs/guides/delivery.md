@@ -163,6 +163,29 @@ muting. A configured supervisor retains the RFC's supervisory exception.
 Naming an intelligence channel in `channel_id` selects its room's transport for
 compatibility. Use `addressed_to` to choose which intelligence channel acts.
 
+### Delivering an instruction
+
+Content the application produces for an agent, such as a background task's
+result or a scheduled nudge, is not something a participant said. Pass
+`instruction=True` to deliver it as the application's direction:
+
+```python
+result = await kit.deliver(
+    "conversation", "Tell the caller their order shipped.",
+    addressed_to=["agent-a"],     # Required through the text pipeline
+    instruction=True,
+)
+```
+
+Through the text pipeline it is an `INSTRUCTION` event (see
+[Directing an agent](orchestration.md#directing-an-agent-instructions)): the
+addressed agent takes it as its input for one turn and answers, and nothing is
+stored. It needs `addressed_to` and no `idempotency_key`; otherwise the outcome
+is `blocked` (`instruction_unaddressed`, `instruction_not_idempotent`). Sent to a
+realtime channel (`channel_id=` without `addressed_to`), it is injected with the
+`system` intent instead of `user`. The strategy, the delivery hooks and a delivery
+backend apply unchanged. The hooks see an event of type `INSTRUCTION`.
+
 ### Text idempotency and retries
 
 A key identifies one publication within a room, even if a later call supplies
@@ -284,7 +307,8 @@ mock audio providers, with no credentials or network service.
 ### Queued grouping
 
 Reuse a `Queued` instance to batch compatible requests. Rooms, transports,
-intelligence addresses, session targets and metadata must match. Requests with
+intelligence addresses, session targets, intents (message or instruction) and
+metadata must match. Requests with
 idempotency keys publish individually, retaining each key and outcome attribution.
 A request arriving during transmission is drained too. Cancelling the drain
 wakes waiting callers; it does not roll back committed events.
@@ -313,7 +337,7 @@ inbound pipeline ordering or its own broadcast hooks.
 
 | Hook | When | Payload |
 |------|------|---------|
-| `BEFORE_DELIVER` | Before strategy executes | Address and key on the event; `channel_id`, `strategy`, `delivery_item_id`, `session_id` in metadata |
+| `BEFORE_DELIVER` | Before strategy executes | Address and key on the event, whose type is `INSTRUCTION` for an instruction delivery; `channel_id`, `strategy`, `delivery_item_id`, `session_id` in metadata |
 | `AFTER_DELIVER` | After an execution attempt | Same fields, plus `delivery_outcome` and `error` (null on success/replay) |
 
 ## Integration with orchestration
@@ -321,7 +345,7 @@ inbound pipeline ordering or its own broadcast hooks.
 The `Supervisor` strategy uses `kit.deliver()` internally:
 
 - **Sync mode** (`async_delivery=False`): results returned inline, no delivery needed
-- **Async mode** (`async_delivery=True`): workers run in background, results delivered via `kit.deliver()` when the conversation is idle
+- **Async mode** (`async_delivery=True`): workers run in background, and their results are handed back to the supervisor with `kit.deliver(..., instruction=True)`, each worker's output bounded, when the strategy allows
 
 ```python
 from roomkit import RoomKit, Supervisor, WaitForIdle

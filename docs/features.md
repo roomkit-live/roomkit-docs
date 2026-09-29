@@ -91,7 +91,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - `setup_realtime_delegation()` — delegate tasks from voice agents without boilerplate
 - `setup_realtime_vision()` — inject video/screen vision into voice sessions with dedup
 - `inject_image()` — put a picture in the model's own context (Gemini Live, OpenAI Realtime)
-- Task delivery via `inject_text()` — `ImmediateDelivery` and `WaitForIdleDelivery` auto-detect RealtimeVoiceChannel
+- Task delivery via `inject_text()`: a delegation's result reaches a notified RealtimeVoiceChannel with the `system` intent, under any delivery strategy
 - Gemini schema cleaning — tool schemas auto-stripped of unsupported fields (`$schema`, `additionalProperties`, `default`, `title`). `Optional[X]` and other typed `anyOf` / `oneOf` fold to one branch, an `allOf` gathers the fields of all its branches; a union (`oneOf`, `anyOf`, `allOf`) that only narrows an object ("give `url` or `path`") leaves the object whole, with the fields its branches add, and `required` names only the properties that survive. A type JSON Schema leaves implied (`properties` or `items` on an untyped node) is written out, and an array without `items` gets `items: {}`, as `list[Any]` does. An `enum` of numbers or booleans (`Literal[1, 2, 3]`), which Gemini cannot hold, is listed in the parameter's description instead, the parameter keeping its type (or taking the one its values share), and a `null` member makes it `nullable`; a declaration the SDK still refuses raises a `ProviderError` naming the tool
 - Gemini streaming STT on `gemini-3.5-transcribe-live` — a dedicated recogniser over the Live API, with interim and final transcripts, automatic language detection across 85+ locales and custom-vocabulary biasing. The batch `GeminiSTTProvider` stays the one for finished recordings, where seeing the whole file buys speaker turns and timestamps in one pass. See [STT providers](guides/stt-tts-providers.md#gemini-transcribe-cloud-api-streaming).
 - Gemini 3.8 Live background tool calls — declarations go out `NON_BLOCKING` and results are scheduled `WHEN_IDLE`, so the model keeps the floor while a tool runs; the end of a response follows `interaction_status` rather than `turn_complete`, which 3.8 emits several times per request. Setup fields the target model no longer accepts (affective dialog, proactive audio, thinking budget) are dropped with a warning instead of failing the session. See [Gemini Live](guides/realtime-voice-providers.md#google-gemini-live).
@@ -1431,9 +1431,9 @@ Key features:
 
 - **Child room isolation** — each task gets its own room, event history, and agent
 - **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`)
-- **Result routing** — the result, bounded, reaches the `notify` channel: an agent as an instruction it answers at once, a transport as a delivery; no prompt is rewritten
+- **Result routing** — the result, bounded and delimited, is handed back through `kit.deliver(..., instruction=True)`: an agent receives an instruction addressed to it, a realtime voice channel a `system` injection, another transport a message; no prompt is rewritten and nothing is stored as a participant's words
 - **Tool integration** — `setup_delegation()` for AIChannel, `setup_realtime_delegation()` for RealtimeVoiceChannel
-- **Delivery strategies** — `ImmediateDelivery`, `WaitForIdleDelivery`, `ContextOnlyDelivery` — all support RealtimeVoiceChannel via `inject_text()`
+- **Delivery strategies** — `Immediate`, `WaitForIdle`, `Queued`: the kit's strategy and the `BEFORE_DELIVER`/`AFTER_DELIVER` hooks apply to a task's result as to any delivery
 - **Dedup** — `CompletedTaskCache` prevents re-delegating recently completed tasks (TTL-based)
 - **Serialization** — `DelegateHandler(serialize_per_room=True)` queues concurrent delegations per room
 - **Context injection** — previous task descriptions automatically injected into new delegations

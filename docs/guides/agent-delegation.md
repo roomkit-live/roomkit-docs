@@ -270,25 +270,41 @@ when that voice channel has ended.
 
 ## Delivery strategies
 
-Control how task results are delivered back to the parent conversation:
+A background task's result is handed back with
+`kit.deliver(..., instruction=True)` ([Delivery guide](delivery.md#delivering-an-instruction)),
+so the kit's delivery strategy decides when it arrives, and the delivery hooks
+see it and can refuse it:
 
 ```python
-from roomkit.tasks import WaitForIdleDelivery, ImmediateDelivery
+from roomkit import EventType, HookResult, HookTrigger, RoomKit, WaitForIdle
 
-# Wait for TTS playback to finish, then deliver
-kit = RoomKit(delivery_strategy=WaitForIdleDelivery())
+# Wait for voice playback to finish, then hand the result back
+kit = RoomKit(delivery_strategy=WaitForIdle())
 
-# Deliver immediately (may interrupt)
-kit = RoomKit(delivery_strategy=ImmediateDelivery(prompt="Task done!"))
+@kit.hook(HookTrigger.BEFORE_DELIVER)
+async def quiet_hours(event, ctx):
+    if event.type == EventType.INSTRUCTION and is_night():
+        return HookResult.block("quiet hours")
+    return HookResult.allow()
 ```
 
 | Strategy | Behavior |
 |----------|----------|
-| `ContextOnlyDelivery` | Inject into system prompt, wait for next user turn (default) |
-| `ImmediateDelivery` | Send synthetic inbound message immediately |
-| `WaitForIdleDelivery` | Wait for TTS playback to finish, then send |
+| `Immediate` | Deliver now (the default); may interrupt voice playback |
+| `WaitForIdle` | Wait for voice playback, or a realtime session's idle, then deliver |
+| `Queued` | Batch compatible deliveries at idle; an instruction is never merged with a message |
 
-All strategies support `RealtimeVoiceChannel` — they detect the channel type and deliver via `inject_text()` instead of `process_inbound()`. For `WaitForIdleDelivery`, realtime voice delivery is immediate since there's no playback queue to wait for.
+`notify` names who is told:
+
+- an intelligence channel receives an instruction addressed to it, and answers through the room's transport;
+- a `RealtimeVoiceChannel` receives an injection with the `system` intent;
+- any other transport receives a message through it.
+
+A `notify` channel not attached to the parent room is told nothing, which is
+the case of `delegate()`'s default (the worker itself). The result is bounded
+to 4,000 characters and delimited as the worker's output. An instruction is not
+stored: later turns see the agent's answer, not the raw result, which
+`ON_TASK_COMPLETED` still carries in full.
 
 ## Structured results
 
