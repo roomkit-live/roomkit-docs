@@ -741,11 +741,11 @@ Gemini preserves conversation context when reconfigured — useful for agent han
 
 ```python
 # Start with general assistant
-session = await channel.start_session(room_id, participant_id)
+session = await channel.start_session(room_id, participant_id, connection)
 
 # Hand off to specialist — context is preserved
 await channel.reconfigure_session(
-    session.id,
+    session,
     system_prompt="You are a billing specialist.",
     voice="Kore",
     tools=billing_tools,
@@ -1515,7 +1515,7 @@ session = await channel.start_session(
 
 # Reconfigure mid-conversation
 await channel.reconfigure_session(
-    session.id,
+    session,
     system_prompt="New prompt",
     voice="shimmer",
     tools=new_tools,
