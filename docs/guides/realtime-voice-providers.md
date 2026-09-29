@@ -873,8 +873,6 @@ XAI_MODEL=grok-3-fast  # Model override
 XAI_VOICE=ara           # Voice override
 ```
 
----
-
 ### Mid-session reconfiguration
 
 Tool Search, a skill activation and a handoff reconfigure a live session. xAI
@@ -888,6 +886,8 @@ PersonaPlex and Anam take their prompt and persona only when a session opens,
 so they declare `supports_mid_session_reconfigure = False`: the channel does
 not reconnect them for Tool Search or a skill, and their skills are delivered
 inline.
+
+---
 
 ## ElevenLabs Conversational AI
 
