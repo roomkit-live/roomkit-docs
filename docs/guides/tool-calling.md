@@ -189,11 +189,27 @@ ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
 
 When both `tools` and `tool_handler` are provided, the channel merges them — Tool object handlers are tried first, then the explicit `tool_handler`.
 
+A handler answers with text, or with a list of content parts (text and images)
+for a multimodal result. Anything else it returns (a dict, a list of values, a
+number, `None`) reaches the model as its JSON serialization, the same on
+`AIChannel` and `RealtimeVoiceChannel`: `{"ok": True}` reads as `{"ok": true}`
+and `None` as `null`. A result an `ON_TOOL_CALL` hook supplies in its place is
+read the same way.
+
 The pre-execution gates — the declared-catalogue check, argument validation
 against the declared schema, and the `BEFORE_TOOL_USE` hook — are a property of
 the channel, not of the handler. They run before the call is routed, so a tool
 served by an `ON_TOOL_CALL` hook on a `RealtimeVoiceChannel` with no
 `tool_handler` is gated exactly like one served by a handler.
+
+A declared tool that no handler serves reaches the `ON_TOOL_CALL` sync hooks
+with `result=None`: a hook may serve it by supplying the result (`HookResult`
+with `metadata={"result": ...}`). If none does, the model reads
+`{"error": "No handler for tool <name>"}` and the call is reported once, as
+failed. The channel's own outcomes are refusals too: a repeat of the same call
+with the same arguments that the channel stops, and a tool outside the turn's
+toolset. `HumanInputToolHandler` refuses a request nobody answered in time, or
+one the human rejected.
 
 A call one of those gates refuses never reaches the handler, and a handler that
 raises never returns — but both are still reported. They fire `ON_TOOL_CALL`
