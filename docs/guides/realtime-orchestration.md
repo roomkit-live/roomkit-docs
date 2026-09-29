@@ -64,8 +64,8 @@ The reconnect takes ~200-500ms — a natural pause, similar to a phone transfer.
 When `pipeline.install()` detects that `voice_channel_id` points to a `RealtimeVoiceChannel`:
 
 1. **Agents are NOT registered as channels** — they have no provider, they're config-only
-2. **The active agent's config is applied to the RealtimeVoiceChannel** — system_prompt, voice, and tools are passed to `provider.connect()`
-3. **The handoff tool is registered on the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling
+2. **The active agent's config is applied to the RealtimeVoiceChannel** — system_prompt, voice, and tools are passed to `provider.connect()`. The tools are the channel's own (the `tools=` it was built with), the agent's own (`Agent(tools=...)`), and the handoff tool; an agent tool with the same name as a channel tool replaces it for that agent
+3. **The handoff tool is registered on the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by that agent's `tool_handler`; any other tool by the channel's
 4. **On handoff, `reconfigure_session()` is called** — disconnects and reconnects with the new agent's config
 
 ```
@@ -254,7 +254,7 @@ def install(self, kit, agents, *, voice_channel_id=None, ...):
 
 In speech-to-speech mode, `_wire_realtime()`:
 
-1. Builds the initial agent's config with identity block
+1. Builds the initial agent's config with identity block, and its tools: the channel's, the agent's, the handoff tool
 2. Applies it to the RealtimeVoiceChannel (system_prompt, voice, tools)
 3. Builds per-agent handoff tools (enum-constrained targets with descriptions)
 4. Registers a `tool_handler` on the RealtimeVoiceChannel that intercepts `handoff_conversation` calls

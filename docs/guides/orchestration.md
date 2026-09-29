@@ -410,6 +410,17 @@ room2 = await kit.create_room(orchestration=Swarm(agents=[x, y, z]))
 room3 = await kit.create_room(orchestration=None)
 ```
 
+A strategy is installed per room, but its agents (and a voice channel it
+wires) serve every room they are attached to. Installing it in a second room
+declares nothing twice and wraps nothing twice: the voice supervisor's
+`delegate_workers` and the voice loop's `delegate_loop` appear once on the
+channel, and each call runs for the room of the session that made it. What a
+strategy adds for one room stays in that room: a supervisor's
+`delegate_workers` is declared in the rooms it was installed in (not in the
+`::task-` rooms where it frames and judges its workers' steps), and a
+delegation's `submit_result` only in its child room. A busy worker or a running
+pipeline blocks its own room's next call, never another room's.
+
 ### Custom strategies
 
 Subclass `Orchestration` to build your own:
