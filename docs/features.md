@@ -819,6 +819,17 @@ file, and nothing fails while that is true.
   so it fails on the commit that adds one without), and the rates are compared
   against the upstream mirror at release (`make check-models`), which reports a
   disagreeing rate as `PRICE`.
+- **A streamed turn has a usage too** -- every tool round streams. The OpenAI
+  family (OpenAI, Azure, vLLM and the providers built on `OpenAIConfig`) asks
+  for usage in the stream by default (`include_stream_usage=True`); a
+  compatible server that rejects `stream_options` sets it to `False` and
+  reports no usage. Cerebras sends usage unasked and keeps `False`.
+- **Reasoning is billed as output** -- `output_tokens` counts a model's
+  thinking wherever the vendor bills it: Gemini reports thinking outside its
+  candidates count, and RoomKit adds it (and a built-in tool's prompt to
+  `input_tokens`). `reasoning_tokens`, when present (OpenAI, DeepSeek,
+  Gemini), is the thinking share of `output_tokens`: a detail that
+  `cost_for()` never prices a second time.
 
 #### Per-Room AI Configuration
 
