@@ -577,10 +577,10 @@ or a delegation's `submit_result` stays declared as a pinned tool does, is not
 named by `find_tools`, and does not count toward the catalogue that switches
 Tool Search on. The agent is told to call these tools, not to go and find them.
 
-A `BEFORE_AI_GENERATION` hook sees the whole catalogue under Tool Search, not
-only the pinned floor, so it can withdraw a deferred tool: `find_tools` and
-`list_tools` no longer name it and a call to it is refused. A tool the hook adds
-is declared at every round of the turn, as a pinned tool is.
+A `BEFORE_AI_GENERATION` hook sees the whole catalogue under Tool Search,
+deferred tools included, so it can withdraw one: `find_tools` and `list_tools`
+do not name it and a call to it is refused. A tool the hook adds is declared at
+every round of the turn, as a pinned tool is, and `find_tools` does not name it.
 
 The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
