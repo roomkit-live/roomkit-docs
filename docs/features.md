@@ -496,7 +496,8 @@ async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
   `BEFORE_TOOL_USE`, which always fail closed. On `BEFORE_TOOL_USE`, the gate
   of a tool call, a failed hook refuses the call: the model reads `Tool 'x'
   denied by pre-execution hook.`, never the hook's error, which reaches
-  `ON_TOOL_CALL`'s observers on `error_detail`. Give an approval hook that
+  `ON_TOOL_CALL`'s observers on `error_detail` (an external tool handler
+  decides and reports the call itself). Give an approval hook that
   waits for a person the `timeout` it needs (30 s by default). The flag is
   refused on an ASYNC hook.
 - `needs_lock=False` (sync `BEFORE_BROADCAST` only): the check runs before

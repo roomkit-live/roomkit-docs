@@ -152,7 +152,10 @@ its default bind is `0.0.0.0` and an open voice endpoint is an open invoice.
 A sync hook that raises, times out, or returns the wrong thing is treated as
 **allow** — a broken hook must not take a room down (RFC §9.3). The exceptions
 are `BEFORE_TTS` and `ON_TRANSCRIPTION`, whose payload is content a hook may
-exist to withhold; those block instead.
+exist to withhold, and `BEFORE_TOOL_USE`, the gate of a tool call; those block
+instead. An approval hook on `BEFORE_TOOL_USE` that cannot answer refuses the
+call, so give one that waits for a person the `timeout` it needs (30 s by
+default).
 
 The consequence to plan for: **a moderation hook on `BEFORE_BROADCAST` that
 crashes lets the content through.** See [Guardrails](guardrails.md) for how to

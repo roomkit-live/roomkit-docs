@@ -911,16 +911,17 @@ timeout, it returns something that is not a `HookResult`, or it returns a
 **allow**, and the error is logged. A broken hook must not be able to take a
 room down, so the event goes through.
 
-**Two triggers invert that**, because their payload is content a hook may
-exist to withhold:
+**Three triggers invert that**, because their payload is content a hook may
+exist to withhold, or an action it may exist to prevent:
 
 | Trigger | On hook failure |
 |---|---|
 | `BEFORE_TTS` | **Blocked** — the text is not synthesised |
 | `ON_TRANSCRIPTION` | **Blocked** — the transcript is not published |
+| `BEFORE_TOOL_USE` | **Refused** — the call does not run; the model reads `Tool 'x' denied by pre-execution hook.`, and the hook's error reaches ON_TOOL_CALL's observers on `error_detail` (an external tool handler decides and reports the call itself) |
 | every other sync trigger | Allowed, error logged |
 
-All four failure modes block on those two, not just exceptions: a rule that
+All four failure modes block on those three, not just exceptions: a rule that
 covered exceptions but allowed timeouts would leak through the timeout.
 
 The consequence for `BEFORE_BROADCAST` is worth being explicit about, since
@@ -1128,7 +1129,7 @@ member management API.
 
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
-| `BEFORE_TOOL_USE` | SYNC | `(ToolCallEvent, ctx) -> HookResult` | Before a tool executes (AIChannel, realtime channels, external/ACP tools). Block denies the call. Fails closed: if room context cannot be built, the call is denied. |
+| `BEFORE_TOOL_USE` | SYNC | `(ToolCallEvent, ctx) -> HookResult` | Before a tool executes (AIChannel, realtime channels, conference, external/ACP tools). Block denies the call. **Fails closed**: a hook that raises, times out or returns something unusable denies the call; the model then reads `Tool 'x' denied by pre-execution hook.`, never the hook's error, which reaches ON_TOOL_CALL's observers on `error_detail` (an external tool handler decides and reports the call itself). A room context that cannot be built refuses the call too. |
 | `ON_TOOL_CALL` | SYNC | `(ToolCallEvent, ctx) -> HookResult` | A tool call executed (AIChannel, RealtimeVoiceChannel, skills, external/ACP tools). In the AI channel's tool loop, Block returns an error result to the model and marks the call failed, its structured copy dropped; `HookResult(metadata={"result": ...})` or `HookResult.modify(event)` supplies or overrides the tool result (`event.result is None` means the hook must provide it; a served result replaced with `None` reads as JSON `null`, on every channel) and keeps the copy; SYNC hooks chain, each seeing the result the previous one left, and ASYNC observers see the final one as the model reads it (a replacement serialized), a blocked call included (`is_error=True`), while a report on a call whose outcome the model already read (an external tool's, one the provider ran itself, a realtime Tool Search call) reaches them as it was read, whatever a SYNC hook returned; `event.structured_content` is the copy the tool-call event carries for UI surfaces (MCP `structuredContent`), which `metadata={"structured_content": ...}` replaces and `None` clears. RFC §9 lists this ASYNC; code invokes it through the sync pipeline. |
 | `ON_USER_INPUT_REQUIRED` | SYNC | `(PendingInputEvent, ctx) -> HookResult` | A `HumanInputHandler`-backed tool paused awaiting human input. Sync so the notification (e.g. WebSocket push) lands before `wait()` starts blocking; block auto-rejects the pending request. |
 
