@@ -555,6 +555,12 @@ tool usage — no configuration needed:
   the conversation's working set — since this is the part that costs full tool
   schemas.
 
+Tool Search never hides a tool orchestration injected: a handoff
+(`handoff_conversation`), a delegation (`delegate_task`, a supervisor's tools)
+or a delegation's `submit_result` stays declared as a pinned tool does, is not
+named by `find_tools`, and does not count toward the catalogue that switches
+Tool Search on. The agent is told to call these tools, not to go and find them.
+
 The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
 conversation that outlives its channel object keeps its tool memory. Those
