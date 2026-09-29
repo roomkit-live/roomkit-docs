@@ -281,13 +281,18 @@ async def tool_auditor(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
         ctx.room.id,
         "cancelled" if event.cancelled else "refused" if event.is_error else "ok",
     )
+    if event.error_detail:
+        # A call that raised: the exception's class and message, which the
+        # model never reads (it gets "Tool 'x' failed (<class>)").
+        logger.warning("Tool %s failed: %s", event.name, event.error_detail)
     return HookResult.allow()
 ```
 
 Read the outcome from `is_error`, never from the result body. A refusal's body
 is a body like any other — RoomKit's own refusals are `{"error": ...}`
-envelopes, a handler that raised leaves the sentence the model is meant to
-read, an external tool leaves whatever it printed. An audit that pattern-matches
+envelopes, a handler that raised leaves `{"error": "Tool 'x' failed
+(<class>)"}` (its message is on `event.error_detail`, for the audit only), an
+external tool leaves whatever it printed. An audit that pattern-matches
 that text records a refused call as a completed one, which is how a friction
 metric ends up reporting a healthy conversation for an agent that was denied
 every tool it asked for.
