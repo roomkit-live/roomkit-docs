@@ -556,16 +556,19 @@ ago because the catalogue is re-hidden every turn.
 `AIChannel` closes both gaps automatically with a per-room, in-memory record of
 tool usage — no configuration needed:
 
-- **A "what you did" digest** — recent tool calls (name + arguments) are
-  appended to the system prompt, so the model knows what it already did and
-  what it got. The three most recent keep their result, up to 6,000 characters
+- **A "what you did" digest** — recent tool calls (name + arguments) ride
+  the turn's input, after the user's words and marked as the runtime's notes,
+  so the model knows what it already did and what it got. They are not in the
+  system prompt: it changes after every turn that calls a tool, and a system
+  prompt that changes invalidates a provider's cache of the whole history
+  (RFC §6.4). The room's plan (`enable_planning`) travels the same way. The three most recent keep their result, up to 6,000 characters
   each and never more than the eviction threshold (`evict_threshold_tokens`)
   lets through: a follow-up question ("and the fifteenth board?") is answered
   from the data instead of invented. Each result sits in a `<tool_result>`
   block the model is told to read as data, never as instructions, since it
   comes from a tool and not from the prompt's author. A longer result is cut
   and marked so, telling the model to call the tool again rather than guess;
-  older calls shrink to one line with a short preview. In a live conversation
+  older calls shrink to one line with a short preview, set apart as data too. In a live conversation
   the result kept is what the tool returned, even when eviction gave the model
   a placeholder for it. Bounded by recent *calls*.
 - **Sticky re-exposure** — the distinct tool names called recently are
