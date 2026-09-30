@@ -98,9 +98,14 @@ a connection nobody owns.
 
 ## Tool Search with fixed declarations
 
-Tool Search activates automatically when the catalogue exceeds
-`tool_search_threshold` (20 by default). Set `tool_search=True` to enable it for
-a smaller catalogue or `False` to expose the catalogue directly.
+Tool Search activates automatically when a session's catalogue exceeds
+`tool_search_threshold` (20 by default), decided per session on the tools it
+declares: a pipeline's active agent, the tools a session was opened with or a
+room's orchestration tools may make one session's catalogue larger than the
+channel's. Set `tool_search=True` to enable it for a smaller catalogue or
+`False` to expose the catalogue directly. Unless `tool_search=False`, the
+channel serves `find_tools` and `list_tools` itself, so a host tool under one of
+those names is refused at construction.
 `tool_search_pinned` keeps selected tools directly callable alongside discovery.
 The tools orchestration adds to the channel stay declared the same way: a voice
 supervisor's `delegate_workers`, a voice loop's `delegate_loop`,

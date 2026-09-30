@@ -1381,6 +1381,7 @@ Key features:
 
 - **Orchestration strategies** — `Pipeline`, `Swarm`, `Supervisor`, `Loop` — declarative, zero-boilerplate setup
 - **Per-room override** — `create_room(orchestration=...)` overrides or disables the kit default
+- **Per-room installs** — one agent or voice channel shared by rooms with different strategies runs each room's own: a strategy's tools are declared in its room's turns and sessions and run with that room's configuration, a sync `Loop` or auto-delegating `Supervisor` takes its own rooms' turns only, a realtime session starts with its room's active agent, and nothing is written onto the shared object for one room ([guide](guides/orchestration.md))
 - **ConversationState** — Immutable state model tracking phase, active agent, handoff count, and transition history
 - **ConversationRouter** — Three-tier agent selection: affinity, rule matching, default fallback
 - **HandoffHandler** — Validates targets, updates state, persists, emits system events

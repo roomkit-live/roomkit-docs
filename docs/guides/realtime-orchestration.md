@@ -64,9 +64,9 @@ The reconnect takes ~200-500ms — a natural pause, similar to a phone transfer.
 When `pipeline.install()` detects that `voice_channel_id` points to a `RealtimeVoiceChannel`:
 
 1. **Agents are NOT registered as channels** — they have no provider, they're config-only
-2. **The active agent's config is applied to the RealtimeVoiceChannel** — system_prompt, voice, and tools are passed to `provider.connect()`. The tools are the channel's own (the `tools=` it was built with), the agent's own (`Agent(tools=...)`), and the handoff tool; an agent tool with the same name as a channel tool replaces it for that agent
-3. **The handoff tool is registered on the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by the `tool_handler` the agent was given; any other tool, and an agent tool the agent has no handler for, by the channel's
-4. **On handoff, `reconfigure_session()` is called** — disconnects and reconnects with the new agent's config
+2. **A session starts with its room's active agent** — system_prompt, voice, and tools are passed to `provider.connect()`, read from the room's conversation state when the session opens. The tools are the channel's own (the `tools=` it was built with), the agent's own (`Agent(tools=...)`), and the handoff tool; an agent tool with the same name as a channel tool replaces its declaration for that agent. The channel's own `system_prompt`, `voice` and `tools` are left as they are
+3. **The handoff tool is served by the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by the `tool_handler` the agent was given; a call to a channel tool (one sharing its name included) and to an agent tool the agent has no handler for, by the channel's
+4. **On handoff, `reconfigure_session()` is called for the room's sessions** — disconnects and reconnects with the new agent's config. Another room's sessions, and the next session of another room, keep their own room's agent
 
 ```
 pipeline.install(kit, [triage, advisor], voice_channel_id="voice")
@@ -74,9 +74,10 @@ pipeline.install(kit, [triage, advisor], voice_channel_id="voice")
 Internally:
   1. Does NOT call kit.register_channel() for agents
   2. Builds per-agent handoff tools (enum-constrained targets)
-  3. Sets initial agent config on RealtimeVoiceChannel
-  4. Registers handoff tool_handler on RealtimeVoiceChannel
+  3. Serves the handoff and the agents' tools on RealtimeVoiceChannel
+  4. Starts each new session with its room's active agent
   5. HandoffHandler.handle() → rtv.reconfigure_session(session, new_config)
+     for the sessions of the room that handed off
 ```
 
 ### Agent identity in speech-to-speech
@@ -199,6 +200,10 @@ async def reconfigure_session(
     """
 ```
 
+It changes the session it is given, and nothing else (RFC §12.4): the
+channel's configuration for future sessions changes through `configure()`,
+never as a side effect of one session's reconfiguration.
+
 ### `reconfigure()` on RealtimeVoiceProvider
 
 ```python
@@ -254,11 +259,11 @@ def install(self, kit, agents, *, voice_channel_id=None, ...):
 
 In speech-to-speech mode, `_wire_realtime()`:
 
-1. Builds the initial agent's config with identity block, and its tools: the channel's, the agent's, the handoff tool
-2. Applies it to the RealtimeVoiceChannel (system_prompt, voice, tools)
-3. Builds per-agent handoff tools (enum-constrained targets with descriptions)
-4. Registers a `tool_handler` on the RealtimeVoiceChannel that intercepts `handoff_conversation` calls
-5. The tool handler calls `HandoffHandler.handle()` which triggers `reconfigure_session()`
+1. Builds each agent's config with identity block, and its tools: the channel's, the agent's, the handoff tool
+2. Builds per-agent handoff tools (enum-constrained targets with descriptions)
+3. Serves `handoff_conversation` and the agents' own tools on the RealtimeVoiceChannel
+4. Gives the channel the config a new session of a room starts with: the room's active agent's
+5. A handoff calls `HandoffHandler.handle()`, which triggers `reconfigure_session()` for that room's sessions
 
 ## Examples
 

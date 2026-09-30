@@ -189,6 +189,29 @@ ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
 
 When both `tools` and `tool_handler` are provided, the channel merges them — Tool object handlers are tried first, then the explicit `tool_handler`.
 
+`channel.tool_handler` is this handler, the host's: reading it returns it, and
+assigning it replaces it alone. The tools the channel serves itself (skills,
+Tool Search, `read_stored_result`, the planner, the sandbox) and the ones
+orchestration sets up (a handoff, a delegation, a strategy's tools) are served
+before it, whatever it is.
+
+### One tool per name
+
+A name is served by one tool in a room, so a tool given under a name the
+channel already has is refused when it is given (RFC §21.1):
+
+- two tools of the host under one name at construction raise `ValueError`:
+  composing two MCP servers that both expose `search` would otherwise declare
+  one server's schema for a call the other serves;
+- `setup_handoff`, `setup_delegation` or a strategy setting a tool up under a
+  name one of the host's tools carries raise `ToolNameCollisionError` (a
+  `ValueError`): rename one of them.
+
+A tool that arrives with the turn (binding metadata, a `config_provider`, a
+`BEFORE_AI_GENERATION` hook) comes too late to be refused: under a name the
+channel or orchestration serves it is left out, with a warning, and a name it
+gives twice is declared once, with the later definition.
+
 A handler answers with text, or with a list of content parts (text and images)
 for a multimodal result. Anything else it returns (a dict, a list of values, a
 number, `None`) reaches the model as its JSON serialization, the same on

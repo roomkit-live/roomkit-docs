@@ -411,18 +411,28 @@ room3 = await kit.create_room(orchestration=None)
 ```
 
 A strategy is installed per room, but its agents (and a voice channel it
-wires) serve every room they are attached to. Installing it in a second room
-declares nothing twice and wraps nothing twice: the voice supervisor's
-`delegate_workers` and the voice loop's `delegate_loop` appear once on the
-channel, each call runs for the room of the session that made it, and a call
-from a room the strategy was not installed in is refused. On an AI channel,
-what a strategy adds for one room stays in that room: a supervisor's
-`delegate_workers` or `delegate_to_<worker>` tools are declared in the rooms
-it was installed in (not in the `::task-` rooms where it frames and judges its
-workers' steps), and a delegation's `submit_result` only in its child room. A
-busy worker or a running pipeline blocks its own room's next call, never
-another room's. The handoff tool Pipeline and Swarm wire on an agent is the
-agent's, and stays declared wherever it serves.
+serves) serve every room they are attached to. What it adds for one room is
+set up for that room on the shared agent or channel, with that install's
+configuration, and reaches that room only (RFC §19.7):
+
+- its tools are declared in the room's turns and in the room's realtime
+  sessions: a supervisor's `delegate_workers` or `delegate_to_<worker>`, a
+  voice supervisor's `delegate_workers`, a voice loop's `delegate_loop`, the
+  handoff tool Pipeline and Swarm set up on each agent, a delegation's
+  `submit_result` in its child room. Not in the supervisor's other rooms, nor
+  in the `::task-` rooms where it frames and judges its workers' steps;
+- each runs with the install of the room it is called from: two rooms that
+  install a `Supervisor` on the same agent with different workers each run
+  their own, whichever was installed first;
+- a sync `Loop` or an auto-delegating `Supervisor` takes the turns of the
+  rooms it was installed in; in a room where it was not, the agent answers as
+  itself.
+
+Nothing is written onto the shared agent or channel for one room: no wrapped
+handler, no rewritten prompt, no default another room would read. A busy
+worker or a running pipeline blocks its own room's next call, never another
+room's. `setup_handoff(agent, handler)` without a room sets the handoff up for
+every room the agent serves; `setup_handoff(..., room_id=...)` for one.
 
 The installs are in memory: after a restart, install the strategy again in the
 rooms that already exist (`strategy.install(kit, room_id)`), as

@@ -152,7 +152,7 @@ tool = build_delegate_tool([("exec-agent", "Runs tasks on screen")])
 setup_realtime_delegation(voice, handler, tool=tool)
 ```
 
-Under the hood, this injects the delegate tool dict into `channel._tools` and wraps `_tool_handler` to intercept `delegate_task` calls. Room ID is resolved via `get_current_voice_session()` + `channel.session_rooms`.
+Under the hood, the channel serves `delegate_task` beside the host's own tools and declares it in its sessions; the host's `tool_handler` is left as it is. A call delegates from the room of its session, which the channel installs as the tool call context (`current_tool_room_id()`).
 
 ## Preventing re-delegation (dedup)
 
