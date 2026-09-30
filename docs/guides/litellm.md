@@ -74,7 +74,7 @@ ai = AIChannel(
 | `0` | nothing — no reasoning parameters at all, the routed model's own default applies |
 | `> 0` | `thinking: {type: "enabled", budget_tokens: <budget>}` — explicit budget |
 
-Reasoning is omitted on tool-call turns, matching the OpenAI provider — the gateway fronts the same upstreams that reject it alongside function tools.
+Reasoning is omitted on tool-call turns: the model behind an alias is not known, and some upstreams the gateway fronts reject it alongside function tools.
 
 !!! warning "Why `0` sends nothing"
     LiteLLM has no disable token that survives every upstream translator — verified live against 1.79.0: its Gemini mapper rejects `reasoning_effort="none"` with a 500, and its Anthropic mapper rejects both `"none"` and `"disable"`. Any explicit spelling would break on some routes while working on others, so omission is the one portable behaviour. To force thinking off for an alias, state it where the upstream is known: per-model in the proxy's `config.yaml`, or via `extra_body` with the token that route's translator accepts (e.g. `extra_body={"reasoning_effort": "disable"}` for a Gemini route).

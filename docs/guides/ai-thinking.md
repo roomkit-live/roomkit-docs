@@ -421,6 +421,23 @@ Round 2: AI thinks → generates answer
 
 This ensures the model has full context of its prior reasoning when generating follow-up responses.
 
+### Reasoning settings on a turn with tools
+
+A turn that declares tools gets the same `thinking_budget`, `enable_thinking`
+and `reasoning_effort` as one that does not, and every provider prefers the
+turn's value (per-turn config, room override) to its own configuration
+(RFC §6.7). Where the vendor restricts what a turn with tools accepts, the
+provider sends the value accepted, read from its model catalogue:
+
+| Provider | On a turn with tools |
+|---|---|
+| Anthropic, Gemini, Ollama, vLLM, Cerebras, Meta, Qwen | Applied as on any turn |
+| xAI, Mistral, DeepSeek | Applied as on any turn |
+| OpenRouter | `reasoning` (effort, budget, or `{"enabled": false}` for a budget of 0), as on any turn |
+| OpenAI, reasoning models before GPT-5.4 (`gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3`, `o3-pro`, `o4-mini`) | The turn's `reasoning_effort` |
+| OpenAI, GPT-5.4 and later (`gpt-5.4*`, `gpt-5.5*`, `gpt-5.6-*`, `gpt-6-*`) | `none`, the only value Chat Completions takes with function tools |
+| OpenAI with a model the catalogue does not know, OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Omitted: the model behind the endpoint is not known, so the model's own default applies |
+
 ## Data model
 
 ### AIThinkingPart

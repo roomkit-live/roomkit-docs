@@ -95,7 +95,7 @@ ai = AIChannel(
 | `0` | `reasoning: {enabled: false}` — thinking off |
 | `> 0` | `reasoning: {max_tokens: <budget>}` — Anthropic-style cap |
 
-The reasoning trace streams as `StreamThinkingDelta` events, so a `CLIChannel(show_thinking=True)` renders it inline (💭) above the answer — see `examples/openrouter_ai.py`. Reasoning is omitted on tool-call turns (some models reject it alongside function tools).
+The reasoning trace streams as `StreamThinkingDelta` events, so a `CLIChannel(show_thinking=True)` renders it inline (💭) above the answer — see `examples/openrouter_ai.py`. Reasoning rides tool-call turns too, so a `thinking_budget` of 0 disables it there as well; the turn's `reasoning_effort` outranks the configured one.
 
 !!! note "Streaming vs non-streaming"
     The thinking trace is captured on the **streaming** path (the AIChannel default). A non-streaming `generate()` call still *requests* reasoning, but OpenRouter's `message.reasoning` field is not folded into `AIResponse.thinking`.
