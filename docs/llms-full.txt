@@ -1451,6 +1451,7 @@ ai = AIChannel(
     tool_handler=handle_tools,
     tools=big_catalogue,              # e.g. 60+ MCP tools
     tool_search=None,                 # None = auto, True/False = force
+    tool_search_threshold_tokens=8000,  # auto-enable above this many schema tokens
     tool_search_threshold_pct=10.0,   # auto-enable above this % of the window
     tool_search_threshold=20,         # fallback tool count when window unknown
     tool_search_pinned=["get_help"],  # always visible, never searched for
@@ -1473,12 +1474,16 @@ On a provider that can hold a tool declared but unseen (Anthropic, `AIProvider.s
 
 Notes:
 
-- **Activation auto-tunes to the model.** In `auto` mode it defers when the
-  *deferrable* (non-pinned) tools would cost more than `tool_search_threshold_pct`
-  % of the model's context window (default 10%) — a large model is a no-op, a
-  small one defers early. When the window is unknown (custom / local model ids
-  absent from the provider catalog) it falls back to the `tool_search_threshold`
-  tool count. Below the threshold Tool Search is a no-op and every tool is sent.
+- **Activation weighs cost and fit.** In `auto` mode it defers when the
+  *deferrable* (non-pinned) tools' schemas pass `tool_search_threshold_tokens`
+  (8,000 by default, whatever the window; `None` drops this cap), or would cost
+  more than `tool_search_threshold_pct` % of the model's context window
+  (default 10%). The cap is for cost: measured on `claude-sonnet-5`, hiding a
+  catalogue pays for its discovery round from about 15 tools, prompt caching
+  included (60 tools over two turns: $0.074 sent whole, $0.018 behind Tool
+  Search). When the window is unknown (custom / local model ids absent from the
+  provider catalog) the cap or the `tool_search_threshold` tool count decides.
+  Below the thresholds Tool Search is a no-op and every tool is sent.
 - **Pinned tools** stay visible without a search. The discovery tools always
   pass tool-policy and skill gating, so they work even under a restrictive
   `tool_policy`.
@@ -1946,7 +1951,7 @@ ai = AIChannel(
 When a tool result exceeds the threshold:
 1. The full result is stored under an id no other result is given while it is among the last 10,000 the store issued: each room keeps its 50 most recently stored or read results, and the store's bounds for memory (200 results, 64 Mi characters of text) take from the room holding the most first, so a quiet room keeps its results while others evict
 2. A head/tail preview (first 5 + last 5 lines) replaces the result in context. The preview is also bounded in characters: at most 8000, or twice `evict_threshold_tokens` when that is smaller. A line too long for it is clipped with a `[... N chars truncated ...]` marker, and the lines left out are counted in `[... N lines omitted ...]`
-3. A `read_stored_result` tool lets the agent paginate through the full output. It is declared from the first round of any turn that declares a tool, after the others, so the tool list does not change when a result is stored: a tool list that changes mid-turn invalidates a provider's prompt cache (RFC §6.4). A `BEFORE_AI_GENERATION` hook sees it once the room holds a stored result, and may withdraw it
+3. A `read_stored_result` tool lets the agent paginate through the full output, or search it: with `query`, it returns the lines that contain the text (case aside, never a pattern) with two lines around each and their numbers, bounded like a page. A search covers the whole result, so no match means the text is absent (RFC §21.5). It is declared from the first round of any turn that declares a tool, after the others, so the tool list does not change when a result is stored: a tool list that changes mid-turn invalidates a provider's prompt cache (RFC §6.4). A `BEFORE_AI_GENERATION` hook sees it once the room holds a stored result, and may withdraw it
 
 Every outcome the model reads goes through the same eviction: a result made of content parts (text and images, such as a screenshot with its page text) has its text evicted and its images kept in place, and a refusal, an error or an `ON_TOOL_CALL` override is evicted like a result. An `ON_TOOL_CALL` hook sees the tool's whole result, before eviction, and what it hands back is what gets stored: a hook that redacts covers everything `read_stored_result` can page back, not only the preview. It sees the shape the model reads (for a model without vision, the flattened text). Declare such a hook `fail_closed=True`: `ON_TOOL_CALL` otherwise fails open, and a hook that times out on a large result would let the raw text through. A provider without vision gets the text of a content-part result, its images marked `[image]`. An `activate_skill` body is the one exception: a skill's instructions are never reduced to a preview. The `TOOL_CALL_END` event that records a result keeps at most 512 KB of its images and notes the rest, whatever their shape (image parts, image, audio or blob blocks in JSON such as an ACP agent's output, data URIs), in the result and its structured copy together (the structured copy first, being the one UI surfaces render); the model's copy keeps them all.
 
