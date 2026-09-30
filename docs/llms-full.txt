@@ -1730,8 +1730,9 @@ the marker.
 
 `force_stopped` is the one worth special attention, because it is the only
 non-`completed` exit that ends **with text**: the anti-loop guard pulled the
-ripcord on a model re-issuing an already-blocked call, which strips the tools
-and asks for a plain-text answer. That text summarises an interrupted turn, so
+ripcord on a model re-issuing an already-blocked call, and one last generation
+is asked for a plain-text answer (its tools stay declared, so the provider's
+prompt cache holds, and none of its calls runs). That text summarises an interrupted turn, so
 a consumer treating "the model produced prose" as "the model answered" will
 deliver a cut run as a finished one — which is precisely why the reason is
 named rather than folded into `completed`. `error` is a turn the provider
@@ -1941,7 +1942,7 @@ ai = AIChannel(
 When a tool result exceeds the threshold:
 1. The full result is stored under an id no other result is given while it is among the last 10,000 the store issued: each room keeps its 50 most recently stored or read results, and the store's bounds for memory (200 results, 64 Mi characters of text) take from the room holding the most first, so a quiet room keeps its results while others evict
 2. A head/tail preview (first 5 + last 5 lines) replaces the result in context. The preview is also bounded in characters: at most 8000, or twice `evict_threshold_tokens` when that is smaller. A line too long for it is clipped with a `[... N chars truncated ...]` marker, and the lines left out are counted in `[... N lines omitted ...]`
-3. A `read_stored_result` tool is auto-injected so the agent can paginate through the full output
+3. A `read_stored_result` tool lets the agent paginate through the full output. It is declared from the first round of any turn that declares a tool, last, not from the round a result is first stored: a tool list that changes mid-turn invalidates a provider's prompt cache (RFC §6.4)
 
 Every outcome the model reads goes through the same eviction: a result made of content parts (text and images, such as a screenshot with its page text) has its text evicted and its images kept in place, and a refusal, an error or an `ON_TOOL_CALL` override is evicted like a result. An `ON_TOOL_CALL` hook sees the tool's whole result, before eviction, and what it hands back is what gets stored: a hook that redacts covers everything `read_stored_result` can page back, not only the preview. It sees the shape the model reads (for a model without vision, the flattened text). Declare such a hook `fail_closed=True`: `ON_TOOL_CALL` otherwise fails open, and a hook that times out on a large result would let the raw text through. A provider without vision gets the text of a content-part result, its images marked `[image]`. An `activate_skill` body is the one exception: a skill's instructions are never reduced to a preview. The `TOOL_CALL_END` event that records a result keeps at most 512 KB of its images and notes the rest, whatever their shape (image parts, image, audio or blob blocks in JSON such as an ACP agent's output, data URIs), in the result and its structured copy together (the structured copy first, being the one UI surfaces render); the model's copy keeps them all.
 

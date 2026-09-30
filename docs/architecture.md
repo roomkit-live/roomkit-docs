@@ -204,6 +204,9 @@ Fragments remain demand-driven. The provider's complete text is retained for
 subsequent model context, while `ON_AI_RESPONSE` reports only the text actually
 delivered to the consumer. An anti-loop stop permits one final generation and
 ends there, even if that generation asks for another tool or returns no text.
+That generation keeps the round's tools declared: a tool list that changes
+mid-turn invalidates a provider's prompt cache, so the declaration only
+changes where a tool must appear (a Tool Search reveal, a skill activation).
 
 ### Voice Stack
 
