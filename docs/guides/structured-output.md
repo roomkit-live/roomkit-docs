@@ -205,7 +205,7 @@ What fails the turn:
 | The provider cannot honour a schema | before any request | `unsupported` |
 | The turn has tools and the provider cannot combine them with a schema | before any request | `unsupported` |
 | The model refuses, the output cap cuts the answer, or the text is not a document satisfying the schema | after the answer | `refusal`, `truncated`, `invalid_json` |
-| The tool loop stops before a final answer (`max_tool_rounds`, the loop timeout, a stop) | when the loop ends | `truncated` |
+| The tool loop stops before a final answer (`max_tool_rounds`, the loop timeout, a turn budget, a stop) | when the loop ends | `truncated` |
 
 The turn's tools include the ones the channel adds itself: skills, the
 sandbox, planning (`enable_planning=True`), and orchestration tools such as

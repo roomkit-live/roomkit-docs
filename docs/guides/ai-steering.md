@@ -214,17 +214,17 @@ Delay formula: `min(base_delay * exponential_base^attempt, max_delay)`
 ai = AIChannel(
     "ai",
     provider=provider,
-    max_tool_rounds=200,            # Max tool loop iterations (default: 200)
+    max_tool_rounds=50,             # Max tool loop iterations (default: 50)
     tool_loop_timeout_seconds=300,   # Hard timeout in seconds (default: 300)
-    tool_loop_warn_after=50,         # Soft warning at this round count (default: 50)
+    tool_loop_warn_after=25,         # Soft warning at this round count (default: 25)
 )
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_tool_rounds` | `200` | Maximum iterations before forced stop |
+| `max_tool_rounds` | `50` | Maximum iterations before forced stop |
 | `tool_loop_timeout_seconds` | `300.0` | Hard timeout (seconds). `None` disables |
-| `tool_loop_warn_after` | `50` | Log warning at this round count |
+| `tool_loop_warn_after` | `25` | Log warning at this round count |
 
 ## Testing
 

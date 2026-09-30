@@ -630,17 +630,22 @@ ai = AIChannel(
     "ai",
     provider=provider,
     tools=[my_tool],
-    max_tool_rounds=200,            # Max iterations (default: 200)
+    max_tool_rounds=50,              # Max iterations (default: 50)
     tool_loop_timeout_seconds=300,   # Hard timeout in seconds (default: 300)
-    tool_loop_warn_after=50,         # Soft warning threshold (default: 50)
+    tool_loop_warn_after=25,         # Soft warning threshold (default: 25)
+    turn_budget_usd=0.05,            # What a turn may cost (default: no budget)
 )
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_tool_rounds` | `200` | Maximum tool loop iterations before forced stop |
+| `max_tool_rounds` | `50` | Maximum tool loop iterations before forced stop |
 | `tool_loop_timeout_seconds` | `300.0` | Hard timeout for entire loop. `None` disables |
-| `tool_loop_warn_after` | `50` | Log warning at this round count |
+| `tool_loop_warn_after` | `25` | Log warning at this round count |
+| `turn_budget_tokens` | `None` | Billed tokens a turn may spend, cache included |
+| `turn_budget_usd` | `None` | What a turn may cost at the model's catalogue price |
+
+A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for, so the turn overshoots by one generation at most. Both are off by default and can be set per room (binding metadata) or per turn (`AIChannelTurnConfig`); a cost budget on a model with no catalogue price raises `ValueError` (RFC §6.4).
 
 !!! note
     A tool result over `evict_threshold_tokens` (5,000 by default) is stored and replaced by a preview the model can page back with `read_stored_result`.

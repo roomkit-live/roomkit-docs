@@ -1792,11 +1792,13 @@ response cut before its arguments were complete, which the loop answers
 without running it. The shared rules are `roomkit.providers.ai.tool_calls`.
 
 Two bounds keep a degenerate model from running away with a turn:
-`max_tool_rounds` caps how many rounds run, and a **32-call ceiling per
-round** caps how wide one round may be. The per-round cap is applied before
+`max_tool_rounds` (50 by default) caps how many rounds run, and a **32-call
+ceiling per round** caps how wide one round may be. The per-round cap is applied before
 the assistant message is assembled, so a dropped call is absent from the
 transcript as well as from the results — no provider sees a tool call with no
 matching result. Both loops enforce it from the shared loop rules.
+
+A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for. Both are off by default and can be set on the channel, per room (binding metadata) or per turn (`AIChannelTurnConfig`); a cost budget on a model with no catalogue price raises `ValueError` (RFC §6.4).
 
 ## AI Thinking/Reasoning
 

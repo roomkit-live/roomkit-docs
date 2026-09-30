@@ -159,7 +159,7 @@ class MyProvider(AIProvider):
 
 ### Max rounds
 
-The `max_tool_rounds` parameter (default 10) controls how many times tools can be executed. The loop runs at most `max_tool_rounds + 1` generations:
+The `max_tool_rounds` parameter (default 50) controls how many times tools can be executed. The loop runs at most `max_tool_rounds + 1` generations:
 
 - Generations 0 through `max_tool_rounds - 1`: if tool calls are returned, tools are executed and the loop continues
 - Generation `max_tool_rounds`: final generation only -- tool calls are **not** executed (since no generation would follow to use the results)
@@ -239,6 +239,7 @@ class ObservingAIChannel(AIChannel):
 | `completed` | The model produced its answer (or the turn ran no tool at all) |
 | `max_rounds` | `max_tool_rounds` was reached |
 | `timeout` | The wall-clock deadline passed |
+| `budget_exceeded` | The turn reached its `turn_budget_tokens` or `turn_budget_usd`; the round's calls did not run |
 | `truncated` | The final round hit the output cap with no text — often reasoning consuming the whole budget |
 | `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed (Gemini's `MALFORMED_FUNCTION_CALL`), and the bounded retries were spent |
 | `cancelled` | The turn was cancelled |

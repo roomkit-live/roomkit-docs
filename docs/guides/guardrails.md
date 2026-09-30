@@ -350,17 +350,17 @@ from roomkit.channels import AIChannel
 ai = AIChannel(
     "ai-assistant",
     provider=provider,
-    max_tool_rounds=20,               # Max tool-call iterations (default: 200)
+    max_tool_rounds=20,               # Max tool-call iterations (default: 50)
     tool_loop_timeout_seconds=30.0,   # Hard timeout for the entire loop (default: 300)
-    tool_loop_warn_after=10,          # Log a warning after N rounds (default: 50)
+    tool_loop_warn_after=10,          # Log a warning after N rounds (default: 25)
 )
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_tool_rounds` | `200` | Maximum tool-call/response iterations |
+| `max_tool_rounds` | `50` | Maximum tool-call/response iterations |
 | `tool_loop_timeout_seconds` | `300.0` | Hard timeout for the entire tool loop |
-| `tool_loop_warn_after` | `50` | Log a warning at this round count |
+| `tool_loop_warn_after` | `25` | Log a warning at this round count |
 
 ### Steering Directives
 

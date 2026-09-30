@@ -890,7 +890,8 @@ result, then the `AIChannel` constructor default, then the provider config.
 `None` at a tier means "not set here" and defers outward.
 
 `AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
-`max_tokens`, `thinking_budget`, `enable_thinking` and `reasoning_effort`.
+`max_tokens`, `thinking_budget`, `enable_thinking`, `reasoning_effort`,
+`turn_budget_tokens` and `turn_budget_usd`.
 
 #### Function Calling / Tools
 
@@ -966,7 +967,7 @@ ai = AIChannel(
         AnthropicConfig(api_key="sk-...", model="claude-opus-5")
     ),
     tools=[LookupOrderTool()],  # definitions + handlers extracted automatically
-    max_tool_rounds=10,  # default
+    max_tool_rounds=50,  # default
 )
 ```
 
@@ -982,13 +983,13 @@ The streaming tool loop works as follows:
 3. **Execute tools** -- each tool call is dispatched to the tool's handler
 4. **Re-generate** -- the loop continues with tool results appended to the conversation context
 
-This means downstream channels (WebSocket, Voice/TTS) receive text in real time during each generation round, with no delay waiting for tool calls to complete. The `max_tool_rounds` parameter controls the maximum number of tool execution rounds (default 10).
+This means downstream channels (WebSocket, Voice/TTS) receive text in real time during each generation round, with no delay waiting for tool calls to complete. The `max_tool_rounds` parameter controls the maximum number of tool execution rounds (default 50).
 
 Providers that support structured streaming (`supports_structured_streaming=True`) emit `StreamTextDelta`, `StreamToolCall`, and `StreamDone` events. The Anthropic provider has native support; other providers use a default fallback that wraps `generate()`.
 
 Every provider hands the loop a call the same way. Its arguments are a mapping, never an error: none or `null` is `{}`, and anything that does not parse to an object is kept under `raw`. Every call of a response has its own id, minted when the server gave none or repeated one, and two calls stay two whatever stream index they share (Gemini, which re-emits a call in a later chunk, folds an identical id-less call it cannot tell from a re-emission). A call the response cut mid-arguments comes marked `partial` and does not run, in the tool loop and in a realtime reasoning backend alike: the model reads that it was cut and can call again with less.
 
-Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls.
+Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` (50 by default) caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls. A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for, so the turn overshoots by one generation at most. Both are off by default and can be set per room (binding metadata) or per turn (`AIChannelTurnConfig`); a cost budget on a model with no catalogue price raises `ValueError` (RFC §6.4).
 
 The loop yields a final `LoopEndMarker(reason, rounds)` on every exit, `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
 
