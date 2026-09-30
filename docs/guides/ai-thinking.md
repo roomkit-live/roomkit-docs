@@ -323,11 +323,13 @@ and the turn outranks the configuration on what it states:
   `gemini-3.7-flash` and `gemini-3.1-pro-preview`
 - `thinking_budget` (per turn, from the channel) — a token budget, for Gemini 2.5.
   `0` turns reasoning off, as on every other provider, a configured level
-  included. Not every model can run without it: measured on 2026-09-27,
-  `gemini-3.1-pro-preview` and `gemini-3.5-flash-lite` answer 400 to a budget
-  of `0`, and `gemini-3.7-flash` and `gemini-3.8-flash` accept it but still
-  reason a little (46 to 150 thought tokens, 2026-09-30). A positive
-  budget with a level set keeps the level
+  included, and so do `enable_thinking=False` and `reasoning_effort="none"`.
+  Not every model can run without it: `gemini-3.1-pro-preview` and
+  `gemini-3.5-flash-lite` answer 400 to a budget of `0` (measured
+  2026-09-27), so off is sent there as the lowest level the model takes
+  (`low`, `minimal`); `gemini-3.7-flash` and `gemini-3.8-flash` accept `0`
+  but still reason a little (46 to 150 thought tokens, 2026-09-30). A
+  positive budget with a level set keeps the level
 - `enable_thinking=True` alone sends a dynamic budget (`-1`), which turns
   reasoning on for a model that does not reason by default
   (`gemini-3.1-flash-lite`)
@@ -440,7 +442,11 @@ included. A vendor setting of the provider's own (Gemini's `thinking_level`,
 Ollama's `think`, PolarGrid's `thinking`) yields to the turn on what the turn
 states and supplies the rest: `thinking_budget` (`0` off, above `0` on), then
 `enable_thinking`, say whether the model reasons, a `reasoning_effort` of
-`none` says off, and `reasoning_effort` says how much.
+`none` says off, and `reasoning_effort` says how much. Every provider reads
+that switch the same way (Qwen, DeepSeek, vLLM and llama.cpp, Ollama,
+PolarGrid, Gemini, Mistral, OpenRouter, LiteLLM, Anthropic), each in its own
+wire form; on Anthropic, `enable_thinking=True` alone turns adaptive thinking
+on where the model has it, and a model without it needs a `thinking_budget`.
 
 | Configured | Turn | Sent |
 |---|---|---|

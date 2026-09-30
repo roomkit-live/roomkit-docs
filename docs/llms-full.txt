@@ -2160,20 +2160,22 @@ OllamaConfig(
 
 ## How `think` is resolved
 
-Per-request precedence (highest first):
+The turn outranks `OllamaConfig.think` on what it states (RFC §6.7),
+and the config supplies the rest:
 
-1. **`AIContext.thinking_budget`** — if set, this wins:
-   - `None` or `0` → `think=False`
-   - any `>0` → `think=True`
-2. **`OllamaConfig.think`** — fallback when `thinking_budget` is unset.
-3. **Omit `think`** — let the model decide its default (reasoning
-   models think, others don't).
+1. **Whether the model thinks** — the turn's `thinking_budget` (`0` off,
+   above `0` on), else its `enable_thinking`, else a `reasoning_effort` of
+   `"none"` (off). Off sends `think=False`.
+2. **How much** — the turn's `reasoning_effort` replaces a configured level
+   (`think="high"` with a turn `reasoning_effort="low"` sends `"low"`). A
+   level goes only to a model configured with one: Ollama refuses a level on
+   a model that takes none (`think value "low" is not supported for this
+   model`), so without a configured level the turn's is not sent.
+3. **Nothing stated** — `OllamaConfig.think` as configured, or `think`
+   omitted so the model decides (reasoning models think, others don't).
 
-This makes the "Leave empty to disable" semantics in higher-level
-agent configs actually honor themselves: a missing/zero
-`thinking_budget` at the agent layer reaches the provider as
-`think=False` and the model genuinely skips the reasoning phase
-instead of just having its reasoning silently discarded.
+So `thinking_budget=4096` with `think="high"` still sends `"high"`: the
+budget says on, the config says how much.
 
 ## Streamed events
 
