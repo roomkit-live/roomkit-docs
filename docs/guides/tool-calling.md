@@ -642,10 +642,10 @@ ai = AIChannel(
 | `tool_loop_timeout_seconds` | `300.0` | Hard timeout for entire loop. `None` disables |
 | `tool_loop_warn_after` | `50` | Log warning at this round count |
 
-!!! warning
-    Tool results are truncated at ~30K tokens to prevent context overflow. Very large tool results will be automatically trimmed.
+!!! note
+    A tool result over `evict_threshold_tokens` (5,000 by default) is stored and replaced by a preview the model can page back with `read_stored_result`.
 
-When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, tools already used, speakers) stay whole: the history before the input is summarized, and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`. Every call keeps its result, and the summary never makes two user messages in a row (RFC §6.4). A context with nothing left to shorten before the input fails the round rather than cutting the input.
+When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, tools already used, speakers) stay whole. When the input falls in the older half of the messages, the history before it is summarized and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`; a skill's instructions and a page already read back stay whole. Otherwise the older half is summarized. Every call keeps its result, a summary joins the user message that follows it instead of forming a second one in a row (RFC §6.4), and a context with nothing left to shorten before the input fails the round rather than cutting the input.
 
 ## Concurrent Tool Execution
 
