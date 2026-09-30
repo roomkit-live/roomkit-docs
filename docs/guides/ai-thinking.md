@@ -437,7 +437,7 @@ provider sends the value accepted, read from its model catalogue:
 | OpenRouter | Only the switch-off (`thinking_budget=0` sends `{"enabled": false}`); turning reasoning on is left to the model, since a tool round's reasoning would have to be passed back as `reasoning_details` |
 | OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3`, `o4-mini` | The turn's `reasoning_effort` |
 | OpenAI: `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna` | `none`, the only value Chat Completions takes with function tools |
-| OpenAI: any other model (not in the catalogue, `gpt-6-astra`, the `-pro` models), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out: the model is not known, or does not take function tools on Chat Completions |
+| OpenAI: any other model (not in the catalogue, `gpt-6-astra`, `gpt-6.1-sol`, the `-pro` models), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out: the model is not known, or does not take function tools on Chat Completions |
 
 ## Data model
 
