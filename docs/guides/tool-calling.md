@@ -200,12 +200,16 @@ before it, whatever it is.
 A name is served by one tool in a room, so a tool given under a name the
 channel already has is refused when it is given (RFC §21.1):
 
-- two tools of the host under one name at construction raise `ValueError`:
-  composing two MCP servers that both expose `search` would otherwise declare
-  one server's schema for a call the other serves;
+- two tools of the host under one name raise `ValueError` when they are given
+  (an `AIChannel` or a `RealtimeVoiceChannel` at construction, a realtime
+  `configure(tools=)`, a conference's `ConferenceRealtimeConfig`): composing two
+  MCP servers that both expose `search` would otherwise declare one server's
+  schema for a call the other serves;
 - `setup_handoff`, `setup_delegation` or a strategy setting a tool up under a
-  name one of the host's tools carries raise `ToolNameCollisionError` (a
-  `ValueError`): rename one of them.
+  name one of the host's tools carries raise `roomkit.ToolNameCollisionError` (a
+  `ValueError`): rename one of them. The same strategy installed again in a room
+  replaces its own tools, and an install that sets up several tools sets up all
+  of them or none.
 
 A tool that arrives with the turn (binding metadata, a `config_provider`, a
 `BEFORE_AI_GENERATION` hook) comes too late to be refused: under a name the
