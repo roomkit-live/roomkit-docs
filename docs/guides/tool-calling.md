@@ -645,6 +645,8 @@ ai = AIChannel(
 !!! warning
     Tool results are truncated at ~30K tokens to prevent context overflow. Very large tool results will be automatically trimmed.
 
+When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, tools already used, speakers) stay whole: the history before the input is summarized, and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`. Every call keeps its result, and the summary never makes two user messages in a row (RFC §6.4). A context with nothing left to shorten before the input fails the round rather than cutting the input.
+
 ## Concurrent Tool Execution
 
 When the AI requests multiple tool calls in a single round, they are executed concurrently via `asyncio.gather()`:
