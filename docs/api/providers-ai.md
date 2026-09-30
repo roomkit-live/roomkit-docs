@@ -85,13 +85,15 @@ Explicit compatibility flags always win. A custom `base_url` also keeps the
 conservative legacy defaults, since OpenAI-compatible and Anthropic-compatible
 proxies may implement the older request shape.
 
-The OpenAI provider currently uses Chat Completions. On OpenAI's own endpoint,
-a GPT-5.6 turn carrying function tools therefore sends
-`reasoning_effort="none"` explicitly: omission would select the model family's
-`medium` default, which is incompatible with function tools on that endpoint.
-Tool-free turns still use `OpenAIConfig.reasoning_effort`, or the model default
-when it is unset. Custom `base_url` deployments are never force-profiled this
-way.
+The OpenAI provider uses Chat Completions. On OpenAI's own endpoint, what a
+turn carrying function tools sends of `reasoning_effort` comes from the model
+catalogue: the turn's effort for the reasoning models before GPT-5.4, and
+`"none"` explicitly from GPT-5.4 on, where it is the only value accepted
+alongside tools and leaving it out answers 400 on the models that default
+higher. A model the catalogue does not tag, a custom `base_url` and Azure send
+none on such a turn. Tool-free turns use the turn's effort, else
+`OpenAIConfig.reasoning_effort`, else the model default. See
+[Reasoning settings on a turn with tools](../guides/ai-thinking.md#reasoning-settings-on-a-turn-with-tools).
 
 ## Per-Room AI Configuration
 
