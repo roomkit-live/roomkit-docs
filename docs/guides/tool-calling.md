@@ -568,7 +568,7 @@ tool usage — no configuration needed:
   block the model is told to read as data, never as instructions, since it
   comes from a tool and not from the prompt's author. A longer result is cut
   and marked so, telling the model to call the tool again rather than guess;
-  older calls shrink to one line with a short preview, set apart as data too. In a live conversation
+  older calls shrink to a short preview, set apart as data too. In a live conversation
   the result kept is what the tool returned, even when eviction gave the model
   a placeholder for it. Bounded by recent *calls*.
 - **Sticky re-exposure** — the distinct tool names called recently are
@@ -592,7 +592,7 @@ The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
 conversation that outlives its channel object keeps its tool memory. Those
 events hold what the model was given: a result that had been evicted comes back
-as a one-line preview, not as data.
+as a short preview, not as the stored id.
 
 ## Tool Loop Configuration
 
