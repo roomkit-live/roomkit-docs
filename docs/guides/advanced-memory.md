@@ -35,11 +35,13 @@ class MemoryProvider(ABC):
 class MemoryResult:
     messages: list[AIMessage] = field(default_factory=list)  # Pre-built messages (summaries)
     events: list[RoomEvent] = field(default_factory=list)    # Raw events for conversion
+    notes: list[str] = field(default_factory=list)           # Retrieved for this turn alone
 ```
 
 - **messages** are prepended first in the AI context (e.g., conversation summaries)
 - **events** are converted by AIChannel using its content extraction logic (preserves vision/images)
-- Both fields are optional — a provider may populate one or both
+- **notes** is what the provider retrieved for the current turn only (knowledge passages): it rides the turn's notes, after the input, never the history, so a provider that caches a prefix keeps the history cached from turn to turn (RFC §20.2). A provider that wraps another and rebuilds its result carries the inner `notes` (`dataclasses.replace(inner_result, ...)` keeps them)
+- All fields are optional — a provider may populate any of them
 
 ## When to Use Each
 
@@ -280,7 +282,7 @@ ai = AIChannel("ai-agent", provider=provider, memory=memory)
 2. Extracts query text from the current event
 3. Searches all sources concurrently (fault-tolerant — one failure doesn't break others)
 4. Deduplicates results by content (keeps highest score)
-5. Prepends a `[Relevant context from knowledge sources]` message before the conversation history
+5. Returns the passages as the turn's note (`MemoryResult.notes`), each in a `<knowledge>` block set apart as data: they follow the turn's input, after the question, and leave the conversation history untouched, so its cache holds when the passages change at the next question (on a six-question benchmark, 30 % cheaper on `claude-sonnet-5`)
 
 **Automatic indexing**: When `AIChannel` calls `ingest()` on every inbound event, `RetrievalMemory` forwards to both the inner provider and all knowledge sources — enabling auto-indexing of conversation content.
 

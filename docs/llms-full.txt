@@ -2033,7 +2033,7 @@ ai = AIChannel(
 )
 ```
 
-`RetrievalMemory` searches all sources concurrently, deduplicates results, and prepends relevant knowledge as a context message. When `ingest()` is called (automatic on every inbound event), it also indexes content in all sources.
+`RetrievalMemory` searches all sources concurrently, deduplicates results, and returns the passages as the turn's note (`MemoryResult.notes`), each set apart in a `<knowledge>` block: they follow the turn's input, so the history before it stays the same, and cached, when the passages change at the next question (RFC §20.2). When `ingest()` is called (automatic on every inbound event), it also indexes content in all sources.
 
 #### Built-in: PostgreSQL Full-Text Search
 
