@@ -89,16 +89,18 @@ ai = AIChannel(
 )
 ```
 
-| `thinking_budget` | Request sent to OpenRouter |
-|-------------------|----------------------------|
-| `None` | `reasoning: {effort: <reasoning_effort>}` — omitted entirely if `reasoning_effort` is unset (model decides) |
-| `0` | `reasoning: {enabled: false}` — thinking off |
-| `> 0` | `reasoning: {max_tokens: <budget>}` — Anthropic-style cap |
+| Turn | Request sent to OpenRouter |
+|------|----------------------------|
+| `thinking_budget=0`, `enable_thinking=False` or `reasoning_effort="none"` | `reasoning: {enabled: false}` — thinking off |
+| `thinking_budget > 0` | `reasoning: {max_tokens: <budget>}` — Anthropic-style cap |
+| otherwise, a `reasoning_effort` (the turn's, else the configured one) | `reasoning: {effort: <reasoning_effort>}` |
+| otherwise, `enable_thinking=True` | `reasoning: {enabled: true}` |
+| nothing set | omitted (the model decides) |
 
 The reasoning trace streams as `StreamThinkingDelta` events, so a `CLIChannel(show_thinking=True)` renders it inline (💭) above the answer — see `examples/openrouter_ai.py`. A tool-call turn carries the same `reasoning` object as any other: every upstream of the curated catalogue (Claude, GPT, Gemini, Grok, DeepSeek, Qwen, Mistral) takes it across tool rounds, with each round's reasoning passed back as `<think>` text. The turn's `reasoning_effort` outranks the configured one.
 
 !!! note "Streaming vs non-streaming"
-    The thinking trace is captured on the **streaming** path (the AIChannel default). A non-streaming `generate()` call still *requests* reasoning, but OpenRouter's `message.reasoning` field is not folded into `AIResponse.thinking`.
+    Both paths surface the trace: the streaming one as `StreamThinkingDelta` events, a non-streaming `generate()` on `AIResponse.thinking`, read from OpenRouter's `message.reasoning` field.
 
 ## How it works
 
