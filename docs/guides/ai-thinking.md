@@ -312,17 +312,25 @@ malformed duration.
 
 `GeminiAIProvider` streams thought summaries: the parts Gemini flags
 `thought=True` surface as `StreamThinkingDelta`, everything else as
-`StreamTextDelta`. Two knobs reach the same `ThinkingConfig`, and
-`thinking_level` wins when both are set:
+`StreamTextDelta`. Gemini takes a thinking level or a token budget, never both,
+and the turn outranks the configuration on what it states:
 
 - `GeminiConfig(thinking_level=...)` — `minimal`, `low`, `medium`, `high`, for
-  Gemini 3.x models. `gemini-3.8-flash`, the default, refuses `minimal` with a
-  400: `low` is its lowest level
+  Gemini 3.x models. A turn's `reasoning_effort` replaces it, and reaches a
+  model with no configured level when the catalogue says the model takes levels
+  (every Gemini 3 model; Gemini 2.5 refuses one). `minimal` goes as `low` to a
+  model that refuses it: measured on 2026-09-30, `gemini-3.8-flash`,
+  `gemini-3.7-flash` and `gemini-3.1-pro-preview`
 - `thinking_budget` (per turn, from the channel) — a token budget, for Gemini 2.5.
-  `0` turns reasoning off, as on every other provider. Not every model can run
-  without it: measured on 2026-09-27, `gemini-3.1-pro-preview` and
-  `gemini-3.5-flash-lite` answer 400 to a budget of `0`, and
-  `gemini-3.7-flash` accepts it but reasons anyway
+  `0` turns reasoning off, as on every other provider, a configured level
+  included. Not every model can run without it: measured on 2026-09-27,
+  `gemini-3.1-pro-preview` and `gemini-3.5-flash-lite` answer 400 to a budget
+  of `0`, and `gemini-3.7-flash` and `gemini-3.8-flash` accept it but still
+  reason a little (46 to 150 thought tokens, 2026-09-30). A positive
+  budget with a level set keeps the level
+- `enable_thinking=True` alone sends a dynamic budget (`-1`), which turns
+  reasoning on for a model that does not reason by default
+  (`gemini-3.1-flash-lite`)
 
 ```python
 from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
@@ -428,9 +436,23 @@ A turn that declares tools gets the same `thinking_budget`, `enable_thinking`
 and `reasoning_effort` as one that does not (RFC §6.7). Where a provider's
 configuration carries the same setting under the same name, the turn's value
 (per-turn config, room override, channel default) outranks it, `False`
-included; a vendor setting of the provider's own (Gemini's `thinking_level`,
-Ollama's `think`, PolarGrid's `thinking`) keeps its own precedence. Where the vendor restricts what a turn with tools accepts, the
-provider sends the value accepted, read from its model catalogue:
+included. A vendor setting of the provider's own (Gemini's `thinking_level`,
+Ollama's `think`, PolarGrid's `thinking`) yields to the turn on what the turn
+states and supplies the rest: `thinking_budget` (`0` off, above `0` on), then
+`enable_thinking`, say whether the model reasons, a `reasoning_effort` of
+`none` says off, and `reasoning_effort` says how much.
+
+| Configured | Turn | Sent |
+|---|---|---|
+| Ollama `think="high"` | `thinking_budget=4096` | `think="high"` |
+| Ollama `think="high"` | `reasoning_effort="low"` | `think="low"` |
+| Ollama `think=None` | `reasoning_effort="low"` | nothing: a level only goes to a model configured with one, since Ollama refuses a level on a model that takes none |
+| Gemini `thinking_level="high"` | `thinking_budget=0` | `thinking_budget=0`, reasoning off |
+| Gemini, no level, `gemini-3.7-flash` | `reasoning_effort="low"` | `thinking_level="low"`, the levels a model takes read from the catalogue |
+| PolarGrid `thinking=True` | `enable_thinking=False` | `enable_thinking=false` |
+
+Where the vendor restricts what a turn with tools accepts, the provider sends
+the value accepted, read from its model catalogue:
 
 | Provider | On a turn with tools |
 |---|---|

@@ -147,6 +147,8 @@ PolarGridConfig(api_key="pg_...", thinking=False)  # enable_thinking=false → r
 PolarGridConfig(api_key="pg_...")                  # thinking=None         → flag unset (model default)
 ```
 
+A turn outranks the configured switch (RFC §6.7): `thinking_budget` (`0` off, above `0` on), `enable_thinking`, or a `reasoning_effort` of `"none"` sets the flag for that turn. qwen has no effort tier, so any other `reasoning_effort` leaves it as configured.
+
 Thinking responses are **larger and slower** (the reasoning counts toward latency and `max_tokens`), so raise `timeout` and `max_tokens` when enabling it. To display reasoning in a CLI, construct the channel with `CLIChannel("cli", show_thinking=True)`.
 
 ## Tool / function calling

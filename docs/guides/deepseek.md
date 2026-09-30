@@ -43,7 +43,7 @@ DeepSeekConfig(
 )
 ```
 
-Per turn, `AIChannel(thinking_budget=...)` overrides the config: `0` switches thinking off, any positive value switches it on.
+Per turn, `AIChannel(thinking_budget=...)` overrides the config: `0` switches thinking off, any positive value switches it on. A turn's `enable_thinking` does the same, and a `reasoning_effort` of `"none"` switches it off.
 
 !!! warning "Token budgets are ignored by this API"
     DeepSeek accepts no reasoning token cap — `reasoning_effort` is the only lever over how long the model thinks. RoomKit deliberately drops the *size* of `thinking_budget` rather than inventing a budget-to-effort mapping DeepSeek never published; only its sign is read.
