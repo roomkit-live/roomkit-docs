@@ -20,22 +20,24 @@ When no `memory` parameter is provided, `AIChannel` auto-creates a `SlidingWindo
 
 ## How it works
 
-When an event triggers AI generation, `AIChannel` calls `memory.retrieve()` to get a `MemoryResult`. The result contains two optional fields:
+When an event triggers AI generation, `AIChannel` calls `memory.retrieve()` to get a `MemoryResult`. The result contains three optional fields:
 
 - **`messages`** — Pre-built `AIMessage` objects (summaries, system context, synthetic messages). These are prepended to the context as-is.
 - **`events`** — Raw `RoomEvent` objects. These are converted by `AIChannel` using its own content extraction logic, preserving vision support and role determination.
+- **`notes`** — What the provider retrieved for the current turn alone (knowledge passages, say). They ride the turn's notes, after the current event, never the history: they change from one turn to the next, and in the history they would shift everything after them, which a provider caching a prefix bills again at every turn (RFC §20.2).
 
 ```
 Event arrives → memory.retrieve() → MemoryResult
                                       ├── messages → prepended directly
-                                      └── events  → converted via _extract_content()
-                                                     ↓
-                                            current event appended last
+                                      ├── events  → converted via _extract_content()
+                                      │               ↓
+                                      │      current event appended
+                                      └── notes   → the turn's notes, after it
                                                      ↓
                                               AIContext → Provider
 ```
 
-A provider can return one or both fields. `SlidingWindowMemory` returns only `events`. A summarization provider might return only `messages`. A hybrid could return both.
+A provider can return any of the fields. A provider that wraps another and rebuilds its result must carry the inner `notes`: build it with `dataclasses.replace(inner_result, ...)` rather than a new `MemoryResult(messages=..., events=...)`, which drops them. A provider that keeps the turn to a token budget counts them (`roomkit.memory.estimate_notes_tokens`): nothing trims them. `SlidingWindowMemory` returns only `events`. A summarization provider might return only `messages`. A hybrid could return both.
 
 `context.recent_events` is the room's **tail**, in ascending order: its last
 element is the most recent event. That is why providers slice `[-N:]` rather
@@ -147,8 +149,9 @@ The `MemoryResult` dataclass controls what goes into the AI context:
 |-------|------|---------|-------------|
 | `messages` | `list[AIMessage]` | `[]` | Pre-built messages prepended to context |
 | `events` | `list[RoomEvent]` | `[]` | Raw events converted by AIChannel |
+| `notes` | `list[str]` | `[]` | Retrieved for this turn alone; carried after the current event |
 
-Messages appear first in the context, followed by converted events, followed by the current triggering event. This ordering ensures summaries and system context appear before the conversation, and the current user message is always last.
+Messages appear first in the context, followed by converted events, followed by the current triggering event, which carries the turn's notes after its own text. This ordering ensures summaries and system context appear before the conversation, and what changes from turn to turn comes last.
 
 ## Auto-default behavior
 

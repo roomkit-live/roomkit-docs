@@ -1541,7 +1541,7 @@ class SummaryMemory(MemoryProvider):
 ai = AIChannel("ai", provider=provider, memory=SummaryMemory())
 ```
 
-`MemoryResult` has two fields: `messages` (pre-built `AIMessage` objects prepended to context) and `events` (raw `RoomEvent` objects converted by `AIChannel` with vision support preserved). See the [Memory Provider guide](guides/memory-provider.md) for details.
+`MemoryResult` has three fields: `messages` (pre-built `AIMessage` objects prepended to context), `events` (raw `RoomEvent` objects converted by `AIChannel` with vision support preserved) and `notes` (what the provider retrieved for the current turn alone, carried with the turn's notes after the input). See the [Memory Provider guide](guides/memory-provider.md) for details.
 
 The `context` a provider receives is already the requesting channel's view of the room: events [visibility](#channel-access-control) kept from that channel are gone before your `retrieve` runs, so `context.recent_events[-5:]` above is safe by construction and a summarizing provider cannot accidentally launder hidden content into a summary. You do not filter, and there is no way to opt out.
 
