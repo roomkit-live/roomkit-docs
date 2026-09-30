@@ -212,6 +212,8 @@ ai = AIChannel(
 | `read_skill_reference(skill_name, filename)` | Always | Reads a file from the skill's `references/` directory |
 | `run_skill_script(skill_name, script_name, arguments)` | Only when `script_executor` is set | Executes a script via the integrator's executor |
 
+On a provider that can hold a tool declared but unseen (Anthropic), a skill's gated tools are declared that way from the turn's first round, and `activate_skill` makes them callable by reference: the tool list does not change when the skill opens them, so the prompt cache holds (RFC §6.4). A gated tool is still refused until its skill is active.
+
 ### How it works
 
 1. **System prompt injection** — The channel appends a preamble and `<available_skills>` XML to the system prompt. If no script executor is configured, a note is added.

@@ -577,6 +577,8 @@ tool usage — no configuration needed:
   the conversation's working set — since this is the part that costs full tool
   schemas.
 
+On a provider that can hold a tool declared but unseen (Anthropic, `AIProvider.supports_deferred_tools`), the hidden catalogue is declared that way (`defer_loading`) from the first round, and `find_tools` makes its matches callable by reference: the tool list does not change within the turn, so the provider's prompt cache holds across the reveal (RFC §6.4). A skill's gated tools are held the same way until `activate_skill` opens them. A tool used in one turn is visible from the next, as on any provider.
+
 Tool Search never hides a tool orchestration injected: a handoff
 (`handoff_conversation`), a delegation (`delegate_task`, a supervisor's tools)
 or a delegation's `submit_result` stays declared as a pinned tool does, is not

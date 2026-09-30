@@ -1469,6 +1469,8 @@ How it works:
    provider. (The realtime voice channel offers the same feature via
    `provider.reconfigure`.)
 
+On a provider that can hold a tool declared but unseen (Anthropic, `AIProvider.supports_deferred_tools`), the hidden catalogue is declared that way (`defer_loading`) from the first round, and `find_tools` makes its matches callable by reference: the tool list does not change within the turn, so the provider's prompt cache holds across the reveal (RFC §6.4). A skill's gated tools are held the same way until `activate_skill` opens them. A tool used in one turn is visible from the next, as on any provider.
+
 Notes:
 
 - **Activation auto-tunes to the model.** In `auto` mode it defers when the
