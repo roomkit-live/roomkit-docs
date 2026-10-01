@@ -10,10 +10,11 @@ RoomKit provides two FastRTC-based voice backends for browser-to-server real-tim
 ## Installation
 
 ```bash
-pip install roomkit[fastrtc] fastapi uvicorn
+pip install roomkit[fastrtc]
 ```
 
-This installs the WebRTC and audio dependencies, including aiortc and numpy.
+This installs the WebRTC and audio dependencies, including aiortc and numpy,
+and FastAPI with uvicorn to serve the signalling routes.
 
 ## FastRTCVoiceBackend (WebSocket)
 

@@ -373,7 +373,7 @@ a sub-second agent with native turn-taking instead, one realtime provider
 
 ```python
 from roomkit import ConferenceRealtimeConfig
-from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.providers.gemini.realtime import GeminiLiveProvider
 
 conference = ConferenceChannel(
     "conf",

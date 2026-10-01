@@ -169,10 +169,12 @@ sip_backend = SIPVoiceBackend(local_sip_addr=("0.0.0.0", 5060))
 
 voice = VoiceChannel("voice", backend=wt_backend, bridge=True)
 
-# Register SIP audio callbacks on the same voice channel
-sip_backend.on_audio_received(voice._on_audio_received)
-sip_backend.on_session_ready(voice._on_session_ready)
+# SIP callers join the same channel: their audio enters its pipeline and
+# bridge, and what is sent to them goes out on SIP
+voice.add_backend(sip_backend)
 ```
+
+See [Several Transports in One Room](audio-bridge.md#several-transports-in-one-room).
 
 ## Configuration
 

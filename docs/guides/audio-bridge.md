@@ -135,6 +135,45 @@ When a `frame_processor` is set (i.e., the outbound pipeline handles
 resampling), the bridge skips its own resampling to avoid double
 resampling.
 
+## Several Transports in One Room
+
+A bridged room often mixes transports: phone callers on SIP beside browser
+participants on WebRTC. One `VoiceChannel` serves them all. Build it on one
+backend and add the others with `add_backend()`:
+
+```python
+from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend
+from roomkit.voice.backends.sip import SIPVoiceBackend
+
+fastrtc_backend = FastRTCVoiceBackend()
+sip_backend = SIPVoiceBackend(local_sip_addr=("0.0.0.0", 5060))
+
+voice = VoiceChannel("voice", backend=fastrtc_backend, stt=stt, bridge=True)
+voice.add_backend(sip_backend)
+kit.register_channel(voice)
+
+@sip_backend.on_call
+async def on_call(session):
+    await kit.join("bridge-room", "voice", session=session)
+```
+
+The added backend's audio goes through the same pipeline, bridge and STT,
+and its session-ready and hang-up signals drive the session lifecycle as for
+the backend given at construction. Everything addressed to one session —
+bridged audio, TTS from `say()` or an AI answer, assistant transcriptions,
+the playback cancel of an interruption, the hang-up of `kit.leave()` — goes
+out on that session's own transport. A session is matched to its transport by
+`kit.join(..., backend=...)`, or else by the added backend reporting that it
+holds the session (`get_session`), which the SIP, RTP and FastRTC backends
+do.
+
+The pipeline is built once, for the backend given at construction, so the
+channel needs one; `add_backend()` on a channel without a backend raises
+`RuntimeError`. Closing the channel closes the added backends too.
+
+`examples/voice_multibackend_bridge.py` puts SIP phones and browsers in one
+room, with a live analysis of the transcript and a summary at the end.
+
 ## Bridge + STT (Transcription)
 
 Bridge mode and STT run in parallel.  This is useful for compliance

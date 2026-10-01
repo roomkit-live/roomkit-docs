@@ -2393,6 +2393,8 @@ Bridge mode works alongside STT/TTS -- neither blocks the other:
 
 **Cross-rate resampling**: When participants have different sample rates (e.g., SIP at 8kHz + WebRTC at 48kHz), the bridge automatically resamples audio to match each target's native rate.
 
+**Several transports in one room**: `voice.add_backend(sip_backend)` lets a channel built on one backend (FastRTC, WebTransport) also serve SIP callers. Their audio goes through the same pipeline, bridge and STT, and everything sent to one of their sessions (bridged audio, TTS, transcriptions) goes out on SIP. See the [audio bridge guide](guides/audio-bridge.md#several-transports-in-one-room) and `examples/voice_multibackend_bridge.py`.
+
 **Per-frame filtering** allows muting or modifying audio before forwarding:
 
 ```python

@@ -244,8 +244,8 @@ Fired when the remote party sends BYE:
 
 ```python
 async def handle_disconnect(session: VoiceSession):
-    # Previously disconnect_voice() + close_room(), now unified as leave()
-    await kit.leave(session)
+    # The voice channel already ended the session on the BYE (it listens to
+    # the same signal): no kit.leave() here, which would end it twice.
     await kit.close_room(session.room_id)
 
 backend.on_call_disconnected(handle_disconnect)
