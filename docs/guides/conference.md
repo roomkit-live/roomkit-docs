@@ -710,11 +710,15 @@ stuck: the room stops delivering events and `disconnect()` never returns. So
 the bot's voice is not unpublished when a session ends (the disconnect takes
 it down), a departure whose SDK disconnect has not returned after 2 s is
 settled by the server (`RemoveParticipant`, a bot the server no longer knows
-counts as out), and a voice the SFU refuses ends the session as unhealthy, so
-the channel re-joins with a session that hears the room again. A refused
-voice is usually explicit `bot_grants` without `publish_audio` next to a
-configured `tts`: the channel takes explicit grants as given, and the error
-log says which grant is missing.
+counts as out, and the confirmation is itself bounded to 2 s), and a voice
+the SFU refuses ends the session as unhealthy, so the channel re-joins with a
+session that hears the room again. A refused voice is usually explicit
+`bot_grants` without `publish_audio` next to a configured `tts`: the channel
+takes explicit grants as given, and the error log says which grant is
+missing. Two things follow from that. The refusal only shows after the SDK
+gives up waiting on the publication, about ten seconds into the bot's first
+answer. And it comes back on every answer: the re-joined session holds the
+same explicit grants, so the fix is in the grants, not in the retry.
 
 Relatedly: a room holds at most one conference. Attaching a second conference
 channel is refused with `ConferenceAlreadyAttachedError`, and the reservation
