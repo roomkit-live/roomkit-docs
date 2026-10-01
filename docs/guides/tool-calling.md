@@ -564,7 +564,10 @@ async def on_tool_event(event: EphemeralEvent) -> None:
         tools = event.data["tool_calls"]
         print(f"Calling: {[t['name'] for t in tools]}")
     elif event.type == EphemeralEventType.TOOL_CALL_END:
-        print(f"Completed in {event.data.get('duration_ms')}ms")
+        # status is "completed" or "failed": a refused, failed, blocked,
+        # unserved or cancelled call ends "failed".
+        failed = [t["name"] for t in event.data["tool_calls"] if t["status"] == "failed"]
+        print(f"Completed in {event.data.get('duration_ms')}ms, failed: {failed}")
 
 
 sub_id = await kit.subscribe_room("room-1", on_tool_event)

@@ -139,11 +139,18 @@ Every tool call produces a `ToolAuditEntry`:
 | `tool_name` | str | Tool function name |
 | `arguments` | dict | Input arguments |
 | `result` | str | Tool output (truncated to 500 chars) |
-| `status` | str | `ok`, `failed`, or `error` |
+| `status` | str | `ok`, `failed`, `error` or `cancelled` |
 | `duration_ms` | float | Execution time in milliseconds |
 | `metadata` | dict | Optional extra data |
 
-Status is auto-detected: if the tool returns `{"status": "failed"}`, the entry is marked as failed.
+The handler raising records `error`, a refusal (`ToolRefusedError`) or a declined call
+(`UnservedToolCallError`) records `failed`, and a cancelled call records `cancelled`; each
+still reaches the channel as raised. Otherwise the status is read from the answer: a
+`{"status": "failed"}`, `{"error": ...}` or `{"success": false}` body is marked failed.
+
+The wrapper hands the channel the handler's answer itself: a list of content parts or a
+mapping reaches the model as it would without the audit. Only the recorded `result` is
+text, the parts flattened with `[image]` placeholders.
 
 ### Implementations
 
