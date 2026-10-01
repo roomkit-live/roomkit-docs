@@ -99,7 +99,9 @@ config = AnamConfig(
 
 ### Ephemeral Persona (full control)
 
-Configure individual components from [lab.anam.ai](https://lab.anam.ai):
+Configure individual components from [lab.anam.ai](https://lab.anam.ai). Over Anam's
+own WebRTC transport an ephemeral persona needs all three of `avatar_id`, `voice_id`
+and `llm_id`: Anam refuses an avatar-only configuration there.
 
 ```python
 config = AnamConfig(
@@ -398,5 +400,5 @@ await provider.simulate_video(session, frame)
 
 | Example | Description |
 |---------|-------------|
-| `examples/realtime_av_anam.py` | Basic Anam avatar with mock transport |
+| `examples/realtime_av_anam.py` | Talk to an Anam avatar from your microphone and speakers; its video is written to an MP4 |
 | `examples/sip_anam_avatar.py` | SIP-to-Anam bridge with video pipeline and H.264 encoding |

@@ -1276,18 +1276,29 @@ transport = WebSocketRealtimeTransport(
 )
 ```
 
-**Client messages**:
+Audio is PCM16 little-endian mono: the client sends it at the channel's
+input rate and receives it at the output rate (16 kHz in, 24 kHz out with
+Gemini Live). By default both directions carry it as raw binary frames; with
+`audio_format="base64_json"` the server wraps it in JSON, and a client may
+always send the JSON form.
+
+**Client messages**: binary audio frames, or
 ```json
 {"type": "audio", "data": "<base64 PCM>"}
 ```
 
-**Server messages**:
+**Server messages**: binary audio frames (or `{"type": "audio", "data": "<base64>"}`
+with `base64_json`), and
 ```json
-{"type": "audio", "data": "<base64>"}
+{"type": "session_started"}
 {"type": "transcription", "text": "Hello", "role": "user", "is_final": true}
 {"type": "speaking", "speaking": true, "who": "assistant"}
 {"type": "clear_audio"}
+{"type": "session_ended"}
 ```
+
+The transport iterates a `websockets` server connection; see
+`examples/realtime_voice_gemini.py` for a minimal server and browser page.
 
 ### FastRTC WebRTC Transport
 
