@@ -97,6 +97,11 @@ the storage is encrypted, `on_recording_start()` raises before creating a file โ
 `create_room()` raises it, and a conference logs the track's recording as
 refused.
 
+`create_room()` starts a room's recorders before it writes the room, all or
+nothing (RFC ยง12.11): when one refuses, the ones already started are stopped and
+no room is written, so fixing the configuration and calling `create_room()` again
+is all a retry takes. `ON_RECORDING_STARTED` fires once the room exists.
+
 ```
 ValueError: PyAVMediaRecorder requires MediaRecordingConfig.encryption or storage_encrypted_at_rest=True
 ```
