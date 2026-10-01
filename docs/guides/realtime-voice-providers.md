@@ -82,8 +82,16 @@ channel = RealtimeVoiceChannel(
 | `transport_sample_rate` | `None` | Transport rate; auto-resamples if mismatched |
 | `emit_transcription_events` | `True` | Create RoomEvents from transcriptions |
 | `tool_handler` | `None` | `async (name: str, args: dict) -> str` — optional when Tool objects are passed via `tools` |
-| `mute_on_tool_call` | `False` | Mute mic during tool execution |
-| `tool_result_max_length` | `16384` | Max chars for tool results |
+| `mute_on_tool_call` | `False` | Mute mic while a tool runs: it stays muted until the last call in flight ends |
+| `tool_result_max_length` | `16384` | Max chars of a tool result the model reads: a handler's, a refusal, a Tool Search result, a skill reference. An activated skill's instructions and a complete schema read with `list_tools(name=...)` are never cut |
+
+Every tool call, whatever door it came through (the provider's function call, a
+call recovered from speech, a reasoning backend's call), is served the same way:
+the pre-execution gate, the handler inside the tool call context, `ON_TOOL_CALL`,
+the bound above, then its one result and its one report. A second call under an
+id still in flight is refused and reported, and sends nothing: the id's result
+is the first call's. Ending the session reports each call it interrupted as
+cancelled.
 
 The transport is accepted before the AI provider finishes its handshake, so a
 caller on a phone line can already be speaking. That audio is buffered in order

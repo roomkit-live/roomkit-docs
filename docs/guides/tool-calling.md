@@ -300,10 +300,10 @@ running. These accessors read the current turn from a contextvar instead:
 | `current_response_metadata()` | The turn's response-metadata record — what the reply's MESSAGE events will carry (see below) |
 
 Contextvars propagate down the async call chain, so they work at any depth
-without a signature change. The realtime voice channel installs the same
-context around each tool call it serves (the session's room and participant
-as the turn's room and actor), so one handler works on both paths for the
-room id, the `Room` and the actor; `current_tool_call()`,
+without a signature change. The realtime voice channel and a conference
+install the same context around each tool call they serve (the session's room
+and participant as the turn's room and actor), so one handler works on every
+path for the room id, the `Room`, the actor and `current_tool_call()`;
 `current_tool_allowed_names()` and `current_response_metadata()` return `None`
 there (no turn merges a record on that path, so the `if record is not None`
 guard below skips a write nothing would carry). Each returns `None` outside a

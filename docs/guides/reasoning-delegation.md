@@ -103,13 +103,22 @@ conversational text, never claim an action completed without a tool result."
 ## Tool calls go through the channel gate
 
 A backend's tool calls are tool calls of the framework. `ReasoningRequest`
-carries the channel's declared catalogue (`tools`) and an `execute_tool`
-callable that runs one call through the same pre-execution gate as a realtime
-tool call — declared catalogue, argument schema, skill gating,
-`BEFORE_TOOL_USE` — then the channel's `tool_handler`, `ON_TOOL_CALL` and
-result truncation. A `BEFORE_TOOL_USE` hook that blocks `rebook_flight` blocks
-it for the backend too, and the denial text is what the backend's model reads.
-A delegation is not a way around the gate.
+carries the channel's declared catalogue (`tools`) and two callables that run
+one call through the same steps as any realtime tool call — the pre-execution
+gate (declared catalogue, argument schema, skill gating, `BEFORE_TOOL_USE`),
+the channel's `tool_handler` inside the tool call context, `ON_TOOL_CALL` and
+the bound on the result:
+
+- `execute_tool_call(name, arguments)` returns a `ToolCallResult`: the `text`
+  the model reads and `is_error`, set when the call was refused, failed, was
+  blocked, was served by nothing or was cancelled. Prefer it: the model then
+  reads a failed call as one, as every tool loop marks it.
+- `execute_tool(name, arguments)` returns the text alone.
+
+A `BEFORE_TOOL_USE` hook that blocks `rebook_flight` blocks it for the backend
+too, and the block's reason is what the backend's model reads. A delegation is
+not a way around the gate. The built-in `AIProviderReasoningBackend` uses
+`execute_tool_call`.
 
 ## When the backend cannot answer
 
@@ -138,15 +147,20 @@ class FlightDeskBackend(ReasoningBackend):
     async def run(self, request: ReasoningRequest) -> AsyncIterator[ReasoningOutput]:
         last_user = next((l.text for l in reversed(request.transcript) if l.role == "user"), "")
         yield ReasoningOutput("Let me look that up.", spoken=False)
-        status = await request.execute_tool("check_flight_status", {"flight_number": parse(last_user)})
-        yield ReasoningOutput(f"Here is what I found: {status}", spoken=True, is_final=True)
+        status = await request.execute_tool_call(
+            "check_flight_status", {"flight_number": parse(last_user)}
+        )
+        if status.is_error:
+            yield ReasoningOutput("I could not check that flight.", spoken=True, is_final=True)
+            return
+        yield ReasoningOutput(f"Here is what I found: {status.text}", spoken=True, is_final=True)
 
     async def session_ended(self, session_id: str) -> None:
         ...  # drop any per-session state
 ```
 
 `run()` is an async generator: yield outputs as you learn things. Route every
-tool call through `request.execute_tool`. Implement `session_ended()` if you
+tool call through `request.execute_tool_call` (or `request.execute_tool`). Implement `session_ended()` if you
 keep state per session and `close()` if you hold resources.
 
 ## Observability

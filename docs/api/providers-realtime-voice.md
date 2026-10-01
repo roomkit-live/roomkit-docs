@@ -174,6 +174,8 @@ through (RFC §12.4.1). See the [Reasoning Delegation guide](../guides/reasoning
 
 ::: roomkit.voice.realtime.reasoning.ReasoningRequest
 
+::: roomkit.voice.realtime.reasoning.ToolCallResult
+
 ::: roomkit.voice.realtime.reasoning.ReasoningOutput
 
 ::: roomkit.voice.realtime.reasoning.TranscriptLine
