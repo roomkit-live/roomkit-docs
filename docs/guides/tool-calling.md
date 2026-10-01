@@ -632,6 +632,7 @@ ai = AIChannel(
     tools=[my_tool],
     max_tool_rounds=50,              # Max iterations (default: 50)
     tool_loop_timeout_seconds=300,   # Hard timeout in seconds (default: 300)
+    tool_timeout_seconds=30,         # One call's bound in seconds (default: 30)
     tool_loop_warn_after=25,         # Soft warning threshold (default: 25)
     turn_budget_usd=0.05,            # What a turn may cost (default: no budget)
 )
@@ -642,6 +643,8 @@ ai = AIChannel(
 | `max_tool_rounds` | `50` | Maximum tool loop iterations before forced stop |
 | `tool_loop_timeout_seconds` | `300.0` | Hard timeout for entire loop. `None` disables |
 | `tool_loop_warn_after` | `25` | Log warning at this round count |
+| `tool_timeout_seconds` | `30.0` | How long one tool call may take. `None` disables |
+| `tool_timeouts` | `None` | A bound per tool name, above the default (`None` for no bound) |
 | `turn_budget_tokens` | `None` | Billed tokens a turn may spend, cache included |
 | `turn_budget_usd` | `None` | What a turn may cost at the model's catalogue price |
 
@@ -651,6 +654,22 @@ A turn can also be capped by what it spends: `turn_budget_tokens` counts every t
     A tool result over `evict_threshold_tokens` (5,000 by default) is stored and replaced by a preview the model can page back with `read_stored_result`, or search with its `query` for the lines that contain one line of text: a search reads every line of the result whole, so no match means the text is absent (RFC §21.5).
 
 When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, tools already used, speakers) stay whole. When the input falls in the older half of the messages, the history before it is summarized and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`; a skill's instructions and a page already read back stay whole. Otherwise the older half is summarized. Every call keeps its result, a summary joins the user message that follows it instead of forming a second one in a row (RFC §6.4), and a context with nothing left to shorten before the input fails the round rather than cutting the input.
+
+### Tool call timeout
+
+The loop's timeout is read between rounds, so it cannot stop a handler that never answers. Every call has its own bound for that (RFC §21.6): past `tool_timeout_seconds`, the handler is cancelled and the call fails like one whose handler raised, the model reading `{"error": "Tool 'x' failed (ToolTimeoutError)"}` and the observers the detail, and the turn goes on.
+
+```python
+ai = AIChannel(
+    "ai",
+    provider=provider,
+    tool_handler=handler,
+    tool_timeout_seconds=30,                         # every call (default: 30)
+    tool_timeouts={"export_report": 120, "train": None},  # a tool's own bound
+)
+```
+
+The same two settings exist on `RealtimeVoiceChannel` and `ConferenceRealtimeConfig`, with 10 s by default: a person waits in silence for the answer. A cascade voice agent answers through an `AIChannel` and takes its 30 s unless you lower it. Tools that wait on another agent or on a person by design keep their own bound: orchestration's (a delegation, a strategy's tool) and a `HumanInputToolHandler`'s tools; a bound set in `tool_timeouts` still applies to them. A sandbox command's own `timeout` argument does not lift the channel's bound: give `sandbox_bash` a longer one in `tool_timeouts` if your sandbox runs long commands. A `TimeoutError` your handler raises itself is its own failure, not an expired bound. A bound that is not a positive number, nor `None`, raises `ValueError` when the channel or the config is built.
 
 ## Concurrent Tool Execution
 
