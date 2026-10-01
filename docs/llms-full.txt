@@ -1670,10 +1670,13 @@ ai = AIChannel("ai-agent", provider=provider, config_provider=per_turn)
 `AIChannelTurnConfig` (exported from `roomkit`) carries `system_prompt`,
 `tools`, `temperature`, `max_tokens`, `thinking_budget`, `enable_thinking`
 and `reasoning_effort`. Each setting resolves from the most specific source
-that has an opinion: binding metadata (per-room operator intent, always
-wins), then the `config_provider` result, then the `AIChannel` constructor
-default, then the provider config. `None` at a tier means "not set here" and
-defers outward, so an unset knob never overrides with a default.
+that has an opinion: binding metadata (per-room operator intent, wins when
+it sets a value), then the `config_provider` result, then the `AIChannel`
+constructor default, then the provider config. `None` at a tier means "not
+set here" and defers outward, an explicit `null` in the binding metadata
+included, so an unset knob never overrides with a default. An
+`enable_thinking: False` set at a tier turns off a `thinking_budget` a less
+specific tier set.
 
 ## Streaming
 

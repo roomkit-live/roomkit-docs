@@ -63,7 +63,7 @@ Each setting is resolved fresh at the start of every turn, from the most
 specific source that has an opinion:
 
 ```
-1. Binding metadata          → per-room operator intent, always wins
+1. Binding metadata          → per-room operator intent, wins when it sets a value
 2. config_provider result    → resolved by your callback, every turn
 3. AIChannel constructor     → the channel default
 4. Provider config           → the provider's own setting
@@ -72,9 +72,15 @@ specific source that has an opinion:
 
 A tier that does not set a value defers to the next one, and `None` (`null`)
 counts as not set at every tier, binding metadata included: a host that
-serializes an empty form field as `null` keeps the channel's value. To turn a
+serializes an empty form field as `null` keeps the next tier's value. To turn a
 channel default off for one room, set an explicit value instead
-(`"enable_thinking": False`, `"thinking_budget": 0`).
+(`"thinking_budget": 0`, `"enable_thinking": False`, `"reasoning_effort": "none"`).
+
+The switch is read across two keys: `thinking_budget` states it first (`0` off,
+above `0` on), then `enable_thinking`. An `"enable_thinking": False` set at a
+tier turns thinking off whatever budget a less specific tier set, so a room
+that says off is off even on a channel built with `thinking_budget=8192`; a
+budget set at the same tier or a more specific one still decides.
 
 ### Channel default
 
