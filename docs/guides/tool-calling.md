@@ -669,7 +669,7 @@ ai = AIChannel(
 )
 ```
 
-The same two settings exist on `RealtimeVoiceChannel` and `ConferenceRealtimeConfig`, with 10 s by default: a person waits in silence for the answer. A cascade voice agent answers through an `AIChannel` and takes its 30 s unless you lower it. Tools that wait on another agent or on a person by design keep their own bound: orchestration's (a delegation, a strategy's tool) and a `HumanInputToolHandler`'s tools; a bound set in `tool_timeouts` still applies to them. A sandbox command's own `timeout` argument does not lift the channel's bound: give `sandbox_bash` a longer one in `tool_timeouts` if your sandbox runs long commands. A `TimeoutError` your handler raises itself is its own failure, not an expired bound. A bound that is not a positive number, nor `None`, raises `ValueError` when the channel or the config is built.
+The same two settings exist on `RealtimeVoiceChannel` and `ConferenceRealtimeConfig`, with 10 s by default: a person waits in silence for the answer. A cascade voice agent answers through an `AIChannel` and takes its 30 s unless you lower it. A tool that keeps a bound of its own is not subject to the default: one that waits on another agent or a person by design (a delegation, a supervisor's or a loop's strategy tool, a `HumanInputToolHandler`'s tools) and `sandbox_bash`, whose `timeout` argument your `SandboxExecutor` enforces. A bound set in `tool_timeouts` still applies to them. A pipeline agent's own tools are yours and bounded like any other. A `TimeoutError` your handler raises itself is its own failure, not an expired bound. A bound that is not a positive number, nor `None`, raises `ValueError` when the channel or the config is built.
 
 ## Concurrent Tool Execution
 
