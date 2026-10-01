@@ -145,7 +145,9 @@ Every tool call produces a `ToolAuditEntry`:
 
 The handler raising records `error`, a refusal (`ToolRefusedError`) or a declined call
 (`UnservedToolCallError`) records `failed`, and a cancelled call records `cancelled`; each
-still reaches the channel as raised. Otherwise the status is read from the answer: a
+still reaches the channel as raised. A call the channel's per-call bound
+(`tool_timeout_seconds`) cuts short reaches the wrapped handler as a cancellation, so it
+records `cancelled` as well, with the bound as its duration; the channel reads it as failed. Otherwise the status is read from the answer: a
 `{"status": "failed"}`, `{"error": ...}` or `{"success": false}` body is marked failed.
 
 The wrapper hands the channel the handler's answer itself: a list of content parts or a
