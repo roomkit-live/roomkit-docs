@@ -156,7 +156,11 @@ room = await kit.create_room(
     room_id="my-room",
     recorders=[RoomRecorderBinding(
         recorder=PyAVMediaRecorder(),
-        config=MediaRecordingConfig(storage="./recordings", video_codec="auto"),
+        config=MediaRecordingConfig(
+            storage="/mnt/encrypted/recordings",
+            video_codec="auto",
+            storage_encrypted_at_rest=True,  # or encryption=<RecordingEncryption>
+        ),
     )],
 )
 ```

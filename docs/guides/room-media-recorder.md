@@ -18,9 +18,11 @@ from roomkit.recorder import MediaRecordingConfig
 from roomkit.recorder import RoomRecorderBinding
 from roomkit.recorder.pyav import PyAVMediaRecorder
 
-# 1. Create recorder + config
+# 1. Create recorder + config (encryption at rest is required, see below)
 recorder = PyAVMediaRecorder()
-config = MediaRecordingConfig(storage="./recordings", video_codec="auto")
+config = MediaRecordingConfig(
+    storage="./recordings", video_codec="auto", encryption=MyEncryption()
+)
 
 # 2. Create channels — recording is automatic when the room has recorders
 voice = VoiceChannel("voice", backend=audio_backend, pipeline=pipeline)
@@ -71,6 +73,7 @@ config = MediaRecordingConfig(
     audio_sample_rate=16000,   # Audio sample rate (Hz)
     format="mp4",              # Container format
     metadata={"matter": "M-2026-071"},  # Yours to define, the recorder's to interpret
+    encryption=MyEncryption(), # Or storage_encrypted_at_rest=True (see below)
 )
 ```
 
@@ -83,6 +86,60 @@ config = MediaRecordingConfig(
 | `audio_sample_rate` | `16000` | Audio sample rate in Hz |
 | `format` | `mp4` | Container format |
 | `metadata` | `{}` | Caller-supplied, carried to the recorder verbatim — a matter id, a retention class. The framework never reads it; a conference channel copies `ConferenceRecordingConfig.metadata` into it, one copy per per-track recording. |
+| `encryption` | `None` | `RecordingEncryption` applied to the finished file (RFC §17.6) |
+| `storage_encrypted_at_rest` | `False` | Your statement that the storage already encrypts every byte |
+
+### Encryption at rest
+
+RFC §17.6 makes encryption at rest a MUST for stored recordings, so
+`PyAVMediaRecorder` fails closed: without a cipher or an explicit statement that
+the storage is encrypted, `on_recording_start()` raises before creating a file —
+`create_room()` raises it, and a conference logs the track's recording as
+refused.
+
+```
+ValueError: PyAVMediaRecorder requires MediaRecordingConfig.encryption or storage_encrypted_at_rest=True
+```
+
+The cipher is the same `RecordingEncryption` the [WAV recorder](wav-file-recorder.md#encryption-at-rest)
+takes: the framework owns *when* it runs, you own *how* (cipher, key, rotation).
+
+```python
+from roomkit.voice.pipeline import RecordingEncryption
+
+
+class MyEncryption(RecordingEncryption):
+    @property
+    def name(self) -> str:
+        return "aes-gcm"
+
+    def encrypt_file(self, path: str) -> str:
+        # Encrypt in place or write alongside, then remove the plaintext.
+        # Return the path of the encrypted artifact.
+        ...
+
+
+config = MediaRecordingConfig(storage="./recordings", encryption=MyEncryption())
+```
+
+The recorder calls `encrypt_file()` once the file is closed; `MediaRecordingResult.url`
+then names the encrypted artifact and `size_bytes` its size. A file the cipher
+cannot encrypt is deleted rather than left in the clear, and the result carries
+no `url`.
+
+The file is plaintext on disk while the recording runs. When that window is not
+acceptable, or a volume or bucket already encrypts every byte from the first
+write, declare that instead:
+
+```python
+config = MediaRecordingConfig(
+    storage="/mnt/encrypted/recordings",
+    storage_encrypted_at_rest=True,
+)
+```
+
+`storage_encrypted_at_rest=True` is an assertion by your application: RoomKit
+cannot inspect the volume or object-store policy.
 
 ### ChannelRecordingConfig
 
@@ -112,9 +169,13 @@ channel = ConferenceChannel(
     backend=backend,
     stt=stt,
     recorder=PyAVMediaRecorder(),
-    recording=ConferenceRecordingConfig(storage="./recordings"),
+    recording=ConferenceRecordingConfig(storage="./recordings", encryption=MyEncryption()),
 )
 ```
+
+`ConferenceRecordingConfig` takes the same `encryption` and
+`storage_encrypted_at_rest` fields and hands them to every track's recording, so
+each per-track file is encrypted on its own (see [Encryption at rest](#encryption-at-rest)).
 
 Each subscribed track opens its own recording on its first frame, carrying that track alone with `RecordingTrack.participant_id` set to the publisher — so the output is per-participant and attributed, which is what a compliance recording of a meeting has to be. The bot's own published audio is recorded as one more attributed track (`bot:<session_id>`), never mixed into a participant's.
 
@@ -218,7 +279,7 @@ Audio and video PTS are both derived from `time.monotonic()` at frame acquisitio
 
 ## Custom recorder
 
-Implement the `MediaRecorder` ABC to write to a custom backend (cloud storage, streaming server, etc.):
+Implement the `MediaRecorder` ABC to write to a custom backend (cloud storage, streaming server, etc.). A recorder that stores files owns encryption at rest: refuse `on_recording_start()` when the config carries neither `encryption` nor `storage_encrypted_at_rest`, and hand each finished file to `config.encryption.encrypt_file()`, as `PyAVMediaRecorder` does:
 
 ```python
 from roomkit.recorder.base import (

@@ -2880,14 +2880,18 @@ room = await kit.create_room(
     recorders=[
         RoomRecorderBinding(
             recorder=PyAVMediaRecorder(),
-            config=MediaRecordingConfig(storage="./recordings", video_codec="auto"),
+            config=MediaRecordingConfig(
+                storage="/mnt/encrypted/recordings",
+                video_codec="auto",
+                storage_encrypted_at_rest=True,  # or encryption=<RecordingEncryption>
+            ),
             name="main",
         ),
     ],
 )
 ```
 
-Recording starts automatically when all tracks receive their first frame. A/V sync is maintained via a shared monotonic clock. See the [Room Media Recorder guide](guides/room-media-recorder.md) for configuration, custom recorders, and testing patterns.
+Recording starts automatically when all tracks receive their first frame. A/V sync is maintained via a shared monotonic clock. `PyAVMediaRecorder` refuses to start without a `RecordingEncryption` or `storage_encrypted_at_rest=True` (RFC §17.6, encryption at rest). See the [Room Media Recorder guide](guides/room-media-recorder.md) for configuration, encryption, custom recorders, and testing patterns.
 
 ---
 
