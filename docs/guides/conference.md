@@ -704,6 +704,18 @@ should treat it that way.
 The honest caveat: a backend that *cannot* observe the loss inherits the
 failure mode knowingly — no report, no supervisor, only the lazy join.
 
+The LiveKit backend also guards against its own SDK. In livekit-rtc 1.1.20, a
+track publication or unpublication that fails leaves the SDK's room listener
+stuck: the room stops delivering events and `disconnect()` never returns. So
+the bot's voice is not unpublished when a session ends (the disconnect takes
+it down), a departure whose SDK disconnect has not returned after 2 s is
+settled by the server (`RemoveParticipant`, a bot the server no longer knows
+counts as out), and a voice the SFU refuses ends the session as unhealthy, so
+the channel re-joins with a session that hears the room again. A refused
+voice is usually explicit `bot_grants` without `publish_audio` next to a
+configured `tts`: the channel takes explicit grants as given, and the error
+log says which grant is missing.
+
 Relatedly: a room holds at most one conference. Attaching a second conference
 channel is refused with `ConferenceAlreadyAttachedError`, and the reservation
 outlives the binding — a room whose previous conference channel still has a
