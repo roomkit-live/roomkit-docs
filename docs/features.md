@@ -885,9 +885,14 @@ ai = AIChannel("ai-bot", provider=provider, config_provider=per_turn)
 ```
 
 Settings resolve from the most specific source that has an opinion: binding
-metadata (per-room operator intent, always wins), then the `config_provider`
-result, then the `AIChannel` constructor default, then the provider config.
-`None` at a tier means "not set here" and defers outward.
+metadata (per-room operator intent, wins whenever it sets a value), then the
+`config_provider` result, then the `AIChannel` constructor default, then the
+provider config. `None` at a tier means "not set here" and defers outward, an
+explicit `null` in the binding metadata included: an empty admin field never
+clears the channel's prompt or lifts its turn budget for a room. To turn a
+channel default off for one room, set an explicit value
+(`"enable_thinking": False`, `"thinking_budget": 0`); a turn budget can only be
+replaced by another positive one.
 
 `AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
 `max_tokens`, `thinking_budget`, `enable_thinking`, `reasoning_effort`,

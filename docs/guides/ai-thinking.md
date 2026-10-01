@@ -70,6 +70,12 @@ specific source that has an opinion:
 5. (nothing set)             → the model's own default
 ```
 
+A tier that does not set a value defers to the next one, and `None` (`null`)
+counts as not set at every tier, binding metadata included: a host that
+serializes an empty form field as `null` keeps the channel's value. To turn a
+channel default off for one room, set an explicit value instead
+(`"enable_thinking": False`, `"thinking_budget": 0`).
+
 ### Channel default
 
 Set the default when creating the channel:
