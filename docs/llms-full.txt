@@ -1103,7 +1103,7 @@ member management API.
 | `ON_SPEECH_END` | ASYNC | `(VoiceSession, ctx) -> None` | VAD detected speech end. Same per-lane conference behavior. |
 | `ON_TRANSCRIPTION` | SYNC | `(event, ctx) -> HookResult` | STT produced a final transcript. Can block/modify; **fails closed** — a hook that raises/times out blocks publication. Payload: `TranscriptionEvent` (VoiceChannel), `RealtimeTranscriptionEvent` (RealtimeVoiceChannel), `ConferenceTranscription` (ConferenceChannel). Modify by returning the same type (voice/realtime also accept a plain `str`) with the new text. |
 | `ON_PARTIAL_TRANSCRIPTION` | ASYNC | `(PartialTranscriptionEvent, ctx) -> None` | Streaming interim STT result. Hot path — skipped entirely when no hooks are registered. |
-| `BEFORE_TTS` | SYNC | `(text: str, ctx) -> HookResult` | Before text is synthesized. Payload is the text `str`; modify with a `str`. Can block; **fails closed**. |
+| `BEFORE_TTS` | SYNC | `(text: str, ctx) -> HookResult` | Before text is synthesized. Payload is the text `str`; modify with a `str`. Can block; **fails closed**. On a streamed response it runs once per sentence: a block drops that sentence. |
 | `AFTER_TTS` | ASYNC | `(text: str, ctx) -> None` | After TTS audio was sent. Payload is the final synthesized text. |
 
 ### Voice Pipeline

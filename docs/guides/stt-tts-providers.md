@@ -922,8 +922,10 @@ after 140 ms on v4 Turbo and flash v2.5 and 350 ms on multilingual v2, against
 It is opt-in because a streamed response is handled differently from one
 synthesized whole:
 
-- the Voice Channel runs no `BEFORE_TTS` hook on it (a hook cannot block text
-  already being spoken); `AFTER_TTS` still runs;
+- the Voice Channel runs `BEFORE_TTS` on each sentence before the TTS reads
+  it, not once on the whole text: a hook judges one sentence at a time (a
+  `BLOCK` drops that sentence, a `MODIFY` replaces it, a failing hook drops it)
+  and sees it after the text filter; `AFTER_TTS` receives the text as spoken;
 - a TTS failure (a 401, a 429, a network error) ends the AI response where it
   failed: the text streamed so far is stored, the rest is not generated, and
   `ON_ERROR` fires; the HTTP path stores the whole text and emits `tts_error`;

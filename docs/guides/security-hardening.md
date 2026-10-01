@@ -153,7 +153,9 @@ A sync hook that raises, times out, or returns the wrong thing is treated as
 **allow** — a broken hook must not take a room down (RFC §9.3). The exceptions
 are `BEFORE_TTS` and `ON_TRANSCRIPTION`, whose payload is content a hook may
 exist to withhold, and `BEFORE_TOOL_USE`, the gate of a tool call; those block
-instead. An approval hook on `BEFORE_TOOL_USE` that cannot answer refuses the
+instead. On a streamed TTS response `BEFORE_TTS` runs on each sentence, so the
+rule holds sentence by sentence: streaming is not a way around a redaction
+hook. An approval hook on `BEFORE_TOOL_USE` that cannot answer refuses the
 call, so give one that waits for a person the `timeout` it needs (30 s by
 default).
 

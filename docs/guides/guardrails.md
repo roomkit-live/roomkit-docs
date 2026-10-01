@@ -701,6 +701,17 @@ async def tts_sanitizer(event: str, ctx: RoomContext) -> HookResult:
     return HookResult.allow()
 ```
 
+**On a streamed response the hook runs per sentence.** When the TTS reads text
+as it streams (`supports_streaming_input`: Gradium, Grok, ElevenLabs with
+`stream_input=True`), the Voice Channel cannot hold the whole answer back, so it
+runs `BEFORE_TTS` on each sentence before the TTS reads it — once for all
+sessions. A `BLOCK` drops that sentence and the next one is judged on its own;
+a `MODIFY` replaces it; a hook that raises, times out or returns something
+unusable drops its sentence (fail-closed, RFC §9.3). Write the hook so it works
+on one sentence: a pattern split across two sentences is never seen whole. The
+hook sees the sentence after the TTS text filter, and `AFTER_TTS` receives the
+text as it was spoken.
+
 ---
 
 ## Multi-Channel Guardrails

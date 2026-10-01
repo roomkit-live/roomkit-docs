@@ -583,7 +583,7 @@ Filter options:
 | `ON_SPEECH_START` | Async | Voice: speech detected |
 | `ON_SPEECH_END` | Async | Voice: speech ended with audio |
 | `ON_TRANSCRIPTION` | Sync | Voice: modify/block transcription (`TranscriptionEvent`) |
-| `BEFORE_TTS` | Sync | Voice: modify/block text before synthesis |
+| `BEFORE_TTS` | Sync | Voice: modify/block text before synthesis (each sentence of a streamed response) |
 | `AFTER_TTS` | Async | Voice: after audio sent |
 | `ON_BARGE_IN` | Async | Voice: user interrupted TTS |
 | `ON_TTS_CANCELLED` | Async | Voice: TTS playback cancelled |
@@ -2330,7 +2330,7 @@ A provider left at `NONE` is called exactly as before. ElevenLabs declares `SELF
 | `ON_SPEECH_START` | Async | UI feedback (show recording indicator) |
 | `ON_SPEECH_END` | Async | Analytics (speech duration tracking) |
 | `ON_TRANSCRIPTION` | Sync | Modify or block transcription — receives `TranscriptionEvent(session, text)` |
-| `BEFORE_TTS` | Sync | Modify or block AI response text before synthesis |
+| `BEFORE_TTS` | Sync | Modify or block AI response text before synthesis — per sentence when the TTS streams |
 | `AFTER_TTS` | Async | Analytics (TTS usage tracking) |
 | `ON_BARGE_IN` | Async | Handle user interruption during TTS |
 | `ON_TTS_CANCELLED` | Async | Track cancelled TTS events |
