@@ -125,7 +125,7 @@ config = RecordingConfig(
 | `SEPARATE` | Write separate files per direction |
 | `STEREO` | L/R channels (inbound=left, outbound=right) |
 
-Hooks: `ON_RECORDING_STARTED`, `ON_RECORDING_STOPPED`.
+Hooks: `ON_RECORDING_STARTED`, `ON_RECORDING_STOPPED`, fired by `VoiceChannel` and `RealtimeVoiceChannel` alike when the pipeline opens and closes a session's recording (RFC §17.6).
 
 ---
 
