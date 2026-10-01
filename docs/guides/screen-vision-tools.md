@@ -259,6 +259,16 @@ input_tools = ScreenInputTools(vision=vision, monitor=1)
 
 Requires `pip install roomkit[screen-input]` (`pyautogui`).
 
+### Emergency stop
+
+The model drives a real mouse and keyboard, and it acts on what it reads on the
+screen, so text on screen can steer it. RoomKit leaves pyautogui's failsafe as
+the host set it, which is on by default: moving the mouse to any corner of the
+screen stops every action. While the mouse stays there, each tool call answers
+an error the model reads ("Stopped by the user … nothing was typed or clicked")
+instead of acting. A host that wants the failsafe off sets
+`pyautogui.FAILSAFE = False` itself; the setting is process-wide.
+
 ### Keyboard layout support
 
 `type_text` uses **clipboard paste** instead of raw keystrokes, so it works with all keyboard layouts (AZERTY, QWERTZ, etc.). On macOS it uses `pbcopy` + `Cmd+V`, on Linux `xclip` + `Ctrl+V`, on Windows `clip` + `Ctrl+V`. Falls back to `pyautogui.typewrite()` if clipboard tools aren't available.
