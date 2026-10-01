@@ -1463,7 +1463,7 @@ result = await task.wait(timeout=30.0)
 Key features:
 
 - **Child room isolation** — each task gets its own room, event history, and agent
-- **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`)
+- **Channel sharing** — shared channels use the same provider instance (e.g. shared `EmailChannel`); a shared transport receives the agent's answers through the child room's hooks and permissions, never the task description
 - **Result routing** — the result, bounded and delimited, is handed back through `kit.deliver(..., instruction=True)`: an agent receives an instruction addressed to it, a realtime voice channel a `system` injection, another transport a message; no prompt is rewritten and nothing is stored as a participant's words
 - **Tool integration** — `setup_delegation()` for AIChannel, `setup_realtime_delegation()` for RealtimeVoiceChannel
 - **Delivery strategies** — `Immediate`, `WaitForIdle`, `Queued`: the kit's strategy and the `BEFORE_DELIVER`/`AFTER_DELIVER` hooks apply to a task's result as to any delivery

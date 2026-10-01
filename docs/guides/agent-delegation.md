@@ -178,7 +178,7 @@ This enables three features:
 
 ## Shared channels
 
-Channels shared from the parent use the **same provider instance** with a different binding:
+Channels shared from the parent use the **same provider instance** with a different binding, and keep the parent binding's permissions: a read-only or muted channel is shared as one.
 
 ```python
 task = await kit.delegate(
@@ -189,7 +189,13 @@ task = await kit.delegate(
 )
 ```
 
-The background agent can send emails through the shared channel just like the parent.
+A shared transport is told what the agent answers, never what it was asked (RFC §23.3):
+
+- **The agent's answers reach it through the child room's own gates**, as in any room: each row crosses the `BEFORE_BROADCAST` hooks (a redaction hook applies before the email leaves), the agent's right to write, and the child room's delivery lane. A binding that may not read (`WRITE_ONLY`, `NONE`) receives nothing.
+- **The task description stays internal**, and so does the re-prompt a result tool sends when a turn ends without its call: they are the delegating side's instructions, they reach the child room's agents and never a shared transport.
+- **The task result is the answer the child room kept**, so a hook's rewrite holds for it too, and an answer a hook refused is no answer.
+
+Without a shared transport, nobody is delivered the child room's rows: the trace is committed as it is, past no hook.
 
 ## Hooks
 

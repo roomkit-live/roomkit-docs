@@ -237,7 +237,7 @@ kit = RoomKit(
 )
 ```
 
-Each channel ID listed in `share_channels` is copied from the parent room's bindings into every child room created during delegation. The child room uses the same provider instance with its own binding — events emitted through a shared channel in a child room are visible on that channel (e.g., real-time tool call status sent via a WebSocket channel).
+Each channel ID listed in `share_channels` is copied from the parent room's bindings, permissions included, into every child room created during delegation. The child room uses the same provider instance with its own binding. A shared transport receives what the worker answers — its messages and tool-call rows, through the child room's `BEFORE_BROADCAST` hooks and permissions, as in any room (e.g., real-time tool call status sent via a WebSocket channel) — and never the task the supervisor sent it (RFC §23.3).
 
 This is passed through to `kit.delegate(share_channels=...)` on every delegation call the Supervisor makes, regardless of mode (auto-delegate, strategy-based, or per-worker tools).
 
