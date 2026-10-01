@@ -1668,8 +1668,9 @@ ai = AIChannel("ai-agent", provider=provider, config_provider=per_turn)
 ```
 
 `AIChannelTurnConfig` (exported from `roomkit`) carries `system_prompt`,
-`tools`, `temperature`, `max_tokens`, `thinking_budget`, `enable_thinking`
-and `reasoning_effort`. Each setting resolves from the most specific source
+`tools`, `temperature`, `max_tokens`, `thinking_budget`, `enable_thinking`,
+`reasoning_effort`, `response_schema`, `turn_budget_tokens` and
+`turn_budget_usd`. Each setting resolves from the most specific source
 that has an opinion: binding metadata (per-room operator intent, wins when
 it sets a value), then the `config_provider` result, then the `AIChannel`
 constructor default, then the provider config. `None` at a tier means "not

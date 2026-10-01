@@ -899,7 +899,7 @@ have no value that states off: a room can replace the channel's, never lift it.
 
 `AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
 `max_tokens`, `thinking_budget`, `enable_thinking`, `reasoning_effort`,
-`turn_budget_tokens` and `turn_budget_usd`.
+`response_schema`, `turn_budget_tokens` and `turn_budget_usd`.
 
 #### Function Calling / Tools
 

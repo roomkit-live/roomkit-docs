@@ -137,7 +137,7 @@ ai = AIChannel("ai-thinker", provider=provider, config_provider=per_turn)
 
 `AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
 `max_tokens`, `thinking_budget`, `enable_thinking`, `reasoning_effort`,
-`turn_budget_tokens` and `turn_budget_usd`.
+`response_schema`, `turn_budget_tokens` and `turn_budget_usd`.
 Because it is resolved every turn, it is the right place for config that
 changes underneath you — admin edits, per-user gating, feature flags — where
 snapshotting into the channel or the binding at attach time would go stale.
