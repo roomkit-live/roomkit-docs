@@ -3555,7 +3555,7 @@ backend = LiveKitConferenceBackend(LiveKitConfig(url="wss://my-project.livekit.c
 
 ## Models & Grants
 
-- `ConferenceGrants(publish_audio=True, publish_video=True, publish_screen_share=True, subscribe=True, moderate=False, hidden=False)` — human defaults. `ConferenceGrants.for_bot(speaks=False, listens=True)` = least privilege; `ConferenceGrants.observer()` = subscribe-only + hidden.
+- `ConferenceGrants(publish_audio=True, publish_video=True, publish_screen_share=True, subscribe=True, moderate=False, hidden=False, publish_screen_share_audio=False)` — human defaults. `publish_screen_share_audio` is the sound of a screen share (its own source on the SFU), the one publish right off by default for compatibility; independent of `publish_screen_share`. `ConferenceGrants.for_bot(speaks=False, listens=True)` = least privilege (never screen share or its sound); `ConferenceGrants.observer()` = subscribe-only + hidden.
 - `ConferenceAccess(url, token, expires_at, provider_data)` — opaque client credential; `token` excluded from repr.
 - `BotSession(id, room_id, identity, joined_at, metadata)`; `ConferenceTrack(id, room_id, participant_id, kind, muted, metadata)`; `ConferenceParticipant(participant_id, display_name, connected_at, tracks, metadata, asserted_metadata)`; `TrackKind.AUDIO/VIDEO/SCREEN_SHARE`.
 - `ConferenceInterruptionConfig(strategy=InterruptionStrategy.IMMEDIATE, scope=ConferenceInterruptionScope.ANY, allowlist=[])` — scope `ANY`/`NONE`/`ALLOWLIST` decides who may barge in.

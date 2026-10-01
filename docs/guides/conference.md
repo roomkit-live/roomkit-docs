@@ -630,6 +630,44 @@ attached to (or is leaving) refuses too. What it grants is
 and the credential it returns is opaque to the framework: `ConferenceAccess`
 carries the SFU's URL and token, which the client uses directly.
 
+### Sharing a screen with its sound
+
+A browser that shares a tab or a screen *with its audio* publishes two
+tracks: the picture, and the sound on a source of its own. The two are
+granted separately. `publish_screen_share` covers the picture;
+`publish_screen_share_audio` covers the sound, and it is the one publish
+right that is **off by default** — no credential carried it before the field
+existed, so turning it on silently would widen every token minted after an
+upgrade (RFC §12.10.2). Grant it to the participants who may share sound:
+
+```python
+from roomkit import ConferenceGrants
+
+# Everyone: the permissive defaults, a share without sound included.
+conference = ConferenceChannel("conf", backend=backend)
+
+# A presenter: the same, plus the sound of what they share.
+presenter = ConferenceGrants(publish_screen_share_audio=True)
+access = await conference.mint_access("standup", "alice", grants=presenter)
+```
+
+| Grants | Microphone | Screen share | Its sound |
+|--------|:----------:|:------------:|:---------:|
+| `ConferenceGrants()` | yes | yes | **no** |
+| `ConferenceGrants(publish_screen_share_audio=True)` | yes | yes | yes |
+| `ConferenceGrants(publish_audio=False, publish_screen_share_audio=True)` | no | yes | yes |
+| `ConferenceGrants.for_bot(...)` / `observer()` | as derived | no | no |
+
+Neither screen-share field implies the other, and the microphone grant does
+not cover the sound of a share. Without the grant, a client that asks the
+browser for audio has that track refused by the SFU — LiveKit answers "no
+permission to publish track" and its client SDK reports the publication as
+failed — while the picture still publishes. The same mapping rides the token
+and `update_bot_grants()`, so a grant changes nothing between admission and
+an in-place update. Once published, the sound is an `AUDIO` track like any
+other: a channel that transcribes transcribes it too, attributed to the
+participant sharing, and it can interrupt the bot's voice.
+
 After the mint, the credential is live until its TTL expires
 (`LiveKitConfig.access_ttl`, default 15 minutes) — revoking a ban during that
 window does not un-issue tokens already out. What the framework can do is
