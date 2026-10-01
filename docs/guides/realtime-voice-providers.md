@@ -1039,7 +1039,7 @@ channel = RealtimeVoiceChannel(
 !!! warning "Names must match on both sides"
     A tool the agent knows but the channel did not declare comes back to the agent as an error; a tool the channel declared but the agent does not know is never called. The names are case-sensitive.
 
-A call left unanswered for `tool_timeout_s` (default 30 s) is reported to the agent as an error rather than hanging its turn.
+A call is bounded by the channel (`tool_timeout_seconds`, 10 s by default on `RealtimeVoiceChannel`, and `tool_timeouts` per tool): past it the handler is cancelled and the agent reads the failure rather than its turn hanging. `tool_timeout_s` is off by default; set it only to cap the channel's bound for this provider, knowing a call cut there leaves the channel's handler running.
 
 !!! note "No mid-session reconfigure"
     `supports_mid_session_reconfigure` is `False`: ConvAI takes its overrides once, in the initiation message, and reconnecting would start a different conversation server-side — losing the transcript and every pending `tool_call_id`. Tool and skill surfaces are therefore fixed for the life of the session. Per-conversation tool sets are possible the ElevenLabs way, by creating the tools through the Agents API and passing their `tool_ids` in the prompt override (which the agent's Security settings must allow).
