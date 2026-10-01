@@ -171,6 +171,8 @@ from __future__ import annotations
 
 import json
 
+from roomkit import UnservedToolCallError
+
 
 async def my_handler(name: str, arguments: dict) -> str:
     if name == "get_weather":
@@ -181,7 +183,7 @@ async def my_handler(name: str, arguments: dict) -> str:
         query = arguments["query"]
         # Search your knowledge base
         return json.dumps({"results": ["result1", "result2"]})
-    return json.dumps({"error": f"Unknown tool: {name}"})
+    raise UnservedToolCallError(f"{name} is not mine")  # not this handler's tool
 
 
 ai = AIChannel("ai", provider=provider, tool_handler=my_handler)
@@ -261,8 +263,11 @@ code held (a connection string with its password), and goes to the log and to
 keeps both: the call is marked `is_error`, the observers fire, and the message
 reaches the model verbatim.
 `MCPToolProvider.as_tool_handler()` raises it when the server refuses a call.
-An unknown tool is a different case: return the `{"error": "Unknown tool: ..."}`
-envelope so a composed handler can pass the call on (see below).
+A tool that is not the handler's own is a different case: raise
+`UnservedToolCallError`, so a composed handler passes the call on (see below)
+and the channel reads the call as served by nothing, on every path (RFC §21.4).
+The `{"error": "Unknown tool: ..."}` answer an earlier convention returned is
+still read the same way, as text or as a mapping.
 
 ```python
 from roomkit import ToolRefusedError
@@ -275,7 +280,7 @@ async def my_handler(name: str, arguments: dict) -> str:
 ```
 
 !!! tip
-    Return `json.dumps({"error": f"Unknown tool: {name}"})` for unrecognized tools. This pattern enables tool handler composition (see below).
+    Raise `UnservedToolCallError` for a tool that is not yours. This is what tool handler composition reads (see below), and what lets an `ON_TOOL_CALL` hook still serve the call.
 
 ## What a Handler Knows About the Call
 
@@ -517,10 +522,10 @@ local_handler = my_local_handler
 mcp_handler = mcp.as_tool_handler()
 
 combined = compose_tool_handlers(local_handler, mcp_handler)
-# local_handler is tried first; if it returns "Unknown tool: ...", mcp_handler is tried
+# local_handler is tried first; if it declines the call, mcp_handler is tried
 ```
 
-The composition checks for `{"error": "Unknown tool: ..."}` in the JSON response. Any other response (including other errors) is treated as a valid result and returned immediately.
+A handler declines a call by raising `UnservedToolCallError`, or with the earlier `{"error": "Unknown tool: ..."}` answer. Any other response (including other errors) is treated as a valid result and returned immediately. The last handler's answer is the composition's, a decline included: the channel then reads the call as served by nothing.
 
 ## Streaming Tool Calls
 

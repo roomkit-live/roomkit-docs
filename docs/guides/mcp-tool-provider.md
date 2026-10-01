@@ -44,7 +44,7 @@ AIChannel(tool_handler=composed)
 
 `MCPToolProvider` connects to an MCP server via streamable HTTP or SSE, discovers available tools, and maps them to RoomKit's `AITool` model. The `as_tool_handler()` method returns a `ToolHandler` callable that routes tool calls to the MCP server.
 
-When a tool is not recognized by a handler (it returns `{"error": "Unknown tool: ..."}`), `compose_tool_handlers` tries the next handler in the chain. The last handler's result is always returned as-is.
+When a tool is not a handler's own (it raises `UnservedToolCallError`, or answers the earlier `{"error": "Unknown tool: ..."}` envelope), `compose_tool_handlers` tries the next handler in the chain. The last handler's answer is the composition's, a decline included.
 
 ## MCPToolProvider
 
@@ -115,7 +115,7 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `call_tool(name, args)` | `str` | Call a tool directly and get the result |
 | `as_tool_handler(gate_discovery=True)` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
 
-By default the handler answers `{"error": "Unknown tool: ..."}` for a name this
+By default the handler raises `UnservedToolCallError` for a name this
 connection did not discover, which is what lets `compose_tool_handlers` fall
 through to the next handler. `as_tool_handler(gate_discovery=False)` forwards
 every name to the server instead. That is for a gateway that routes by name
@@ -154,33 +154,32 @@ The import is lazy — `mcp` is only required when you actually connect. RoomKit
 Chains two or more `ToolHandler` callables into a single handler with first-match-wins semantics:
 
 ```python
+from roomkit import UnservedToolCallError
 from roomkit.tools import compose_tool_handlers
 
 async def weather_handler(name: str, arguments: dict) -> str:
     if name == "get_weather":
         return '{"temp": 20, "city": "Montreal"}'
-    return '{"error": "Unknown tool: ' + name + '"}'
+    raise UnservedToolCallError(name)
 
 async def math_handler(name: str, arguments: dict) -> str:
     if name == "add":
         return str(arguments["a"] + arguments["b"])
-    return '{"error": "Unknown tool: ' + name + '"}'
+    raise UnservedToolCallError(name)
 
 combined = compose_tool_handlers(weather_handler, math_handler)
 
 await combined("get_weather", {"city": "Montreal"})  # → weather_handler
 await combined("add", {"a": 1, "b": 2})              # → math_handler
-await combined("unknown", {})                         # → math_handler (last handler)
+await combined("unknown", {})                         # → raises UnservedToolCallError
 ```
 
 ### How dispatch works
 
 1. Each handler is called in order
-2. If the result is `{"error": "Unknown tool: ..."}`, the next handler is tried
+2. If it raises `UnservedToolCallError` (or answers the earlier `{"error": "Unknown tool: ..."}`), the next handler is tried
 3. Any other result (including other errors) is returned immediately
-4. The last handler's result is always returned, even if it's an unknown-tool error
-
-This convention lets each handler signal "not my tool" with the standard error format, enabling clean composition.
+4. The last handler's answer is the composition's, a decline included: a channel reads the call as served by nothing, and an `ON_TOOL_CALL` hook may still serve it (RFC §21.4)
 
 ## Full example: MCP + local tools
 
