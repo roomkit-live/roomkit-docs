@@ -320,7 +320,7 @@ Every message passes through a deterministic processing pipeline:
 5. **Room lock** -- Acquire per-room lock for atomic processing
 6. **Idempotency check** -- A repeated `idempotency_key` skips processing and returns the event the first delivery committed
 7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST), before any persistence
-8. **Write-permission gate** -- A source whose binding cannot write (`READ_ONLY`/`NONE`, or muted) is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected
+8. **Write-permission gate** -- A source whose binding cannot write (`READ_ONLY`/`NONE`, or muted) is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected. An agent's response meets the same two gates in the same order, whichever path commits it (a buffered answer, a streamed row, a regenerated answer): a read-only or muted agent's answer is seen by the `BEFORE_BROADCAST` hooks, keeps the tasks and observations they file, and is then stored `BLOCKED`. A read-only agent's streamed answer is generated, stored row by row as `BLOCKED`, and piped live to no channel; a muted agent's stream is closed before generation
 9. **Edit/delete mutation** -- For `EDIT`/`DELETE` events, the target message is mutated only here -- after hooks allow the event -- so a moderation hook that blocks the edit leaves the target untouched
 10. **Event storage** -- Persist the allowed event as `DELIVERED`
 11. **Broadcast** -- Deliver to all eligible channels via the EventRouter
@@ -1302,6 +1302,12 @@ answers. Deleting is the irreversible half of the two steps: keep the window
 between the delete and the regenerate short, and re-read `regenerate_target`
 right before deleting rather than after the refusal. Without `trigger_id`,
 the call regenerates whatever the selection is.
+
+The regenerated answer re-enters the room like a first-time one (RFC §10.1
+step 14): its `BEFORE_BROADCAST` hooks run, a read-only or muted agent's answer
+is stored `BLOCKED`, it counts against the reentry budget, and the answers the
+call committed come back in `InboundResult.response_events`, streamed or not.
+The trigger's own hooks are not re-run.
 
 Runnable: `examples/regenerate_answer.py`.
 
