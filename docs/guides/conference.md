@@ -630,15 +630,28 @@ attached to (or is leaving) refuses too. What it grants is
 and the credential it returns is opaque to the framework: `ConferenceAccess`
 carries the SFU's URL and token, which the client uses directly.
 
+After the mint, the credential is live until its TTL expires
+(`LiveKitConfig.access_ttl`, default 15 minutes) — revoking a ban during that
+window does not un-issue tokens already out. What the framework can do is
+evict a participant already connected (`remove_participant()`), which is
+reactive by design: there is no pre-connection hook, because the connection
+happens at the SFU, not through RoomKit. Size `access_ttl` to how long a
+"click the link" window should stay open, not to the meeting's length.
+
+One more SFU behavior worth knowing: a second connection with the same
+identity **evicts the first** (LiveKit reports `DUPLICATE_IDENTITY`). A
+leaked token does not let someone lurk alongside its owner — but it does let
+them take the owner's seat; the TTL is what bounds that exposure.
+
 ### Sharing a screen with its sound
 
-A browser that shares a tab or a screen *with its audio* publishes two
+A browser that shares a tab or a whole screen *with its audio* publishes two
 tracks: the picture, and the sound on a source of its own. The two are
 granted separately. `publish_screen_share` covers the picture;
 `publish_screen_share_audio` covers the sound, and it is the one publish
-right that is **off by default** — no credential carried it before the field
-existed, so turning it on silently would widen every token minted after an
-upgrade (RFC §12.10.2). Grant it to the participants who may share sound:
+right that is **off by default**: a mint that never names it carries no such
+right, so grants written without it in mind stay as narrow as they read
+(RFC §12.10.2). Grant it to the participants who may share sound:
 
 ```python
 from roomkit import ConferenceGrants
@@ -659,27 +672,20 @@ access = await conference.mint_access("standup", "alice", grants=presenter)
 | `ConferenceGrants.for_bot(...)` / `observer()` | as derived | no | no |
 
 Neither screen-share field implies the other, and the microphone grant does
-not cover the sound of a share. Without the grant, a client that asks the
-browser for audio has that track refused by the SFU — LiveKit answers "no
-permission to publish track" and its client SDK reports the publication as
-failed — while the picture still publishes. The same mapping rides the token
-and `update_bot_grants()`, so a grant changes nothing between admission and
-an in-place update. Once published, the sound is an `AUDIO` track like any
-other: a channel that transcribes transcribes it too, attributed to the
-participant sharing, and it can interrupt the bot's voice.
+not cover the sound of a share. **Without the grant, a share with sound
+fails whole.** LiveKit does not answer a refused publication: it logs "no
+permission to publish track" and the client gives up after about ten
+seconds. The browser SDK (`livekit-client`) publishes the picture and the
+sound of a share together and, when the sound fails, stops both — so the
+participant sees the share start, then end. A share without sound is
+unaffected. Grant the right to whoever shares tabs, or configure the client
+not to ask the browser for the audio.
 
-After the mint, the credential is live until its TTL expires
-(`LiveKitConfig.access_ttl`, default 15 minutes) — revoking a ban during that
-window does not un-issue tokens already out. What the framework can do is
-evict a participant already connected (`remove_participant()`), which is
-reactive by design: there is no pre-connection hook, because the connection
-happens at the SFU, not through RoomKit. Size `access_ttl` to how long a
-"click the link" window should stay open, not to the meeting's length.
-
-One more SFU behavior worth knowing: a second connection with the same
-identity **evicts the first** (LiveKit reports `DUPLICATE_IDENTITY`). A
-leaked token does not let someone lurk alongside its owner — but it does let
-them take the owner's seat; the TTL is what bounds that exposure.
+The same mapping rides the token and `update_bot_grants()`, so a grant means
+the same thing at admission and on an in-place update. Once published, the
+sound is an `AUDIO` track like any other: a channel that transcribes
+transcribes it too, attributed to the participant sharing, and it can
+interrupt the bot's voice.
 
 ## Resilience
 
