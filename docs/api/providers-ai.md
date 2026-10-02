@@ -86,7 +86,7 @@ vendor accepts: Anthropic refuses an empty map, and Anthropic and Mistral a
 declaration without a schema. Tool names differ by vendor, so a provider
 checks its vendor's rule before the request and raises a `ProviderError`
 naming the tool and the rule; a provider in front of a server it does not
-know (a `base_url`) checks none.
+know (a custom URL: `base_url`, Mistral's `server_url`) checks none.
 
 ::: roomkit.providers.ai.tool_declaration.declared_parameters
 

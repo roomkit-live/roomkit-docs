@@ -86,7 +86,7 @@ before the request, rather than letting the vendor reject the turn:
 | OpenAI (its own endpoint), Anthropic | `[A-Za-z0-9_-]{1,128}` |
 | Gemini | `[A-Za-z_][A-Za-z0-9_.:-]{0,127}`: a dot and a colon, no leading digit |
 | Mistral | `[A-Za-z0-9_.-]+`: a dot, no colon |
-| A server behind a `base_url` | not checked: the server decides |
+| A server behind a custom URL (`base_url`, Mistral's `server_url`) | not checked: the server decides |
 
 So an MCP tool named `files.read` works on Gemini and Mistral and is refused
 up front on OpenAI and Anthropic. A tool without parameters (`parameters={}`
