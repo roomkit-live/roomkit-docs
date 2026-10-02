@@ -75,6 +75,24 @@ tool = AITool(
 )
 ```
 
+A tool's name has to suit the providers it reaches. `AITool` refuses a name
+no vendor accepts: an empty one, or one with a character other than a letter,
+a digit, `_`, `.`, `:` or `-`. Each provider checks its own vendor's rule when
+it declares the turn's tools and raises a `ProviderError` naming the tool
+before the request, rather than letting the vendor reject the turn:
+
+| Provider | Tool names it accepts |
+|---|---|
+| OpenAI (its own endpoint), Anthropic | `[A-Za-z0-9_-]{1,128}` |
+| Gemini | `[A-Za-z_][A-Za-z0-9_.:-]{0,127}`: a dot and a colon, no leading digit |
+| Mistral | `[A-Za-z0-9_.-]+`: a dot, no colon |
+| A server behind a `base_url` | not checked: the server decides |
+
+So an MCP tool named `files.read` works on Gemini and Mistral and is refused
+up front on OpenAI and Anthropic. A tool without parameters (`parameters={}`
+or none) is declared as an object with no properties, which every provider
+accepts.
+
 ### As Dicts in Binding Metadata
 
 Tools can also be defined as plain dicts in channel binding metadata — they are automatically converted to `AITool` instances:
@@ -496,6 +514,10 @@ async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
         "tools": mcp.get_tools_as_dicts(),
     })
 ```
+
+A tool the server lists under a name no provider accepts (see
+[the AITool model](#aitool-model)) is skipped with a warning; the server's
+other tools stay available.
 
 ### MCPToolProvider Options
 

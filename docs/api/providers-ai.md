@@ -57,17 +57,55 @@ corrupt one is refused before the request leaves, as a non-retryable
 
 Every provider hands the tool loop the same thing for the same call (RFC
 §6.4): arguments as a mapping, never an error; an id no other call of the
-response carries; and `partial=True` on a call the response cut before its
-arguments were complete, which the loop answers without running it. A custom
-provider builds its calls through these rules rather than its own.
+response carries; and `partial=True` on a call whose arguments do not read as
+an object, which the loop answers without running it, whatever stop reason
+the response gave. The model reads why: `garbled=True` says the model wrote
+the arguments unreadable; a partial call that is not garbled was cut (the
+output cap, a content filter, a stream that stopped without a stop reason).
+A custom provider builds its calls through these rules rather than its own.
 
 ::: roomkit.providers.ai.tool_calls.tool_arguments
 
+::: roomkit.providers.ai.tool_calls.unreadable_arguments
+
 ::: roomkit.providers.ai.tool_calls.call_cut
+
+::: roomkit.providers.ai.tool_calls.call_garbled
 
 ::: roomkit.providers.ai.tool_calls.CallIds
 
-::: roomkit.providers.ai.tool_calls.cut_call_error
+::: roomkit.providers.ai.tool_calls.partial_call_error
+
+::: roomkit.providers.ai.base.tool_call_of
+
+## Declaring tools
+
+A provider declares the turn's tools in its vendor's format (RFC §6.7). A
+tool without parameters is declared as an object with none, which every
+vendor accepts: Anthropic refuses an empty map, and Anthropic and Mistral a
+declaration without a schema. Tool names differ by vendor, so a provider
+checks its vendor's rule before the request and raises a `ProviderError`
+naming the tool and the rule; a provider in front of a server it does not
+know (a `base_url`) checks none.
+
+::: roomkit.providers.ai.tool_declaration.declared_parameters
+
+::: roomkit.providers.ai.tool_declaration.chat_tool_declarations
+
+::: roomkit.providers.ai.tool_declaration.ToolNameRule
+
+## Rendering a conversation as Chat Completions messages
+
+OpenAI and its derivatives, Mistral and PolarGrid render a conversation
+through one builder. What a provider renders differently is its
+`ChatDialect`: where a model's earlier reasoning goes (inline `<think>`
+tags, a message field such as Cerebras's `reasoning`, or nowhere), whether a
+tool message names its tool, whether text goes flat. A derivative of
+`OpenAIAIProvider` whose service renders differently sets `_chat_dialect`.
+
+::: roomkit.providers.ai.chat_request.ChatDialect
+
+::: roomkit.providers.ai.chat_request.chat_messages
 
 ::: roomkit.providers.ai.tool_calls.is_truncation
 
@@ -94,6 +132,12 @@ higher. A model the catalogue does not tag, a custom `base_url` and Azure send
 none on such a turn. Tool-free turns use the turn's effort, else
 `OpenAIConfig.reasoning_effort`, else the model default. See
 [Reasoning settings on a turn with tools](../guides/ai-thinking.md#reasoning-settings-on-a-turn-with-tools).
+
+The catalogue also says what Chat Completions refuses a model, and the
+request fails before it is sent, with a non-retryable `ProviderError`: GPT-6
+Astra and GPT-6.1 Sol take no function tools there (the Responses API
+serves them with tools), and the `-pro` models are not chat models there. A
+custom `base_url` leaves it to the server.
 
 ## Per-Room AI Configuration
 
@@ -254,6 +298,10 @@ Install with: `pip install roomkit[llamacpp]`
 ::: roomkit.providers.anthropic.ai.AnthropicAIProvider
 
 ::: roomkit.providers.anthropic.config.AnthropicConfig
+
+A tool result whose call was refused, failed, blocked, served by nothing or
+cancelled goes to Anthropic with `is_error` set on its `tool_result` block;
+the text the model reads is the same as on any other provider.
 
 ### Usage
 

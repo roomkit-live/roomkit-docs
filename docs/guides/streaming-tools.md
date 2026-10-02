@@ -67,7 +67,7 @@ The streaming tool loop is built on three event types emitted by `AIProvider.gen
 | Event | Fields | Description |
 |-------|--------|-------------|
 | `StreamTextDelta` | `text` | A chunk of generated text |
-| `StreamToolCall` | `id`, `name`, `arguments`, `partial` | A complete tool call extracted after streaming; `partial` marks one the response cut before its arguments were complete, which the loop answers without running |
+| `StreamToolCall` | `id`, `name`, `arguments`, `partial`, `garbled` | A complete tool call extracted after streaming; `partial` marks one whose arguments do not read as an object, which the loop answers without running, and `garbled` says the model wrote them so rather than the response cutting them |
 | `StreamDone` | `finish_reason`, `usage`, `metadata` | Signals the end of one generation round |
 
 These are Pydantic models exported from `roomkit`:
@@ -99,7 +99,7 @@ A provider that only implements `generate()` works unchanged, but its text arriv
 ### Implementing for a custom provider
 
 ```python
-from roomkit.providers.ai import CallIds, call_cut, tool_arguments
+from roomkit.providers.ai import CallIds, call_garbled, tool_arguments, unreadable_arguments
 from roomkit.providers.ai.base import AIProvider, AIContext
 from roomkit.providers.ai.base import (
     StreamTextDelta, StreamToolCall, StreamDone, StreamEvent,
@@ -124,7 +124,8 @@ class MyProvider(AIProvider):
                 yield StreamTextDelta(text=chunk.text)
 
         # After streaming, yield any tool calls through the shared rules:
-        # every call its own id, arguments as a mapping, a cut call partial.
+        # every call its own id, arguments as a mapping, an unreadable call
+        # partial (and garbled when the response was not cut over it).
         ids = CallIds()
         finish_reason = self._finish_reason
         for tool_call in self._pending_tool_calls:
@@ -132,7 +133,8 @@ class MyProvider(AIProvider):
                 id=ids(tool_call.id, tool_call.name),
                 name=tool_call.name,
                 arguments=tool_arguments(tool_call.raw_arguments),
-                partial=call_cut(tool_call.raw_arguments, finish_reason),
+                partial=unreadable_arguments(tool_call.raw_arguments),
+                garbled=call_garbled(tool_call.raw_arguments, finish_reason),
             )
 
         yield StreamDone(
