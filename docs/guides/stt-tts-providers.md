@@ -1466,6 +1466,10 @@ What the provider does with the context:
   cut after a barge-in, `load_official_prompt` and `Row.prefill(cond_bias=...)`
   for a preset's speaker token and conditioning bias, as Vui's own server
   applies them.
+- After a barge-in cut, `Row.truncate` leaves the codec's count on every
+  frame generated: until the conversation restarts from the voice prompt,
+  the decoder's 10 s restarts run ahead of the cache by the frames nobody
+  heard (open upstream, fluxions-ai/vui#42).
 - `vui-tts` logs the first 40 characters of every user turn at DEBUG on the
   `vui.engine` logger. Keep that logger above DEBUG in production if
   transcripts must not reach the logs.
