@@ -229,8 +229,9 @@ ai_channel = AIChannel("ai", provider=provider)
 Install with: `pip install roomkit[gemini]`
 
 A tool result whose call was refused, failed, blocked, served by nothing or
-cancelled goes to Gemini under the `error` key of its function response, any
-other under `result`; the text the model reads is the same either way.
+cancelled goes to Gemini (and Vertex) under the `error` key of its function
+response, any other under `result`; the text the model reads is the same
+either way. Gemini Live does not flag it yet.
 
 ### Schema Cleaning
 
