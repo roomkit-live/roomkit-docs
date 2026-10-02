@@ -93,6 +93,33 @@ id still in flight is refused and reported, and sends nothing: the id's result
 is the first call's. Ending the session reports each call it interrupted as
 cancelled.
 
+What the provider owes in return is the same everywhere. A refused, failed or
+unserved call goes back through `submit_tool_error`: ElevenLabs marks it as a
+tool error, the others send it like any result, its `{"error": ...}` body
+saying what happened. A call the provider abandons (Gemini's cancellation, an
+ElevenLabs `tool_timeout_s` or the conversation's end, a GPT-Live restart) is
+reported through `on_tool_call_cancelled`, so the channel cancels its handler
+and reports it once, cancelled. A provider whose model calls no tool (Anam,
+PersonaPlex) has `supports_tools` set to `False`: the channel declares it no
+tool and warns once at construction.
+
+```python
+class MyProvider(RealtimeVoiceProvider):
+    @property
+    def supports_tools(self) -> bool:
+        return True  # the default; False declares no tool to the model
+
+    async def submit_tool_error(self, session, call_id, result) -> None:
+        # Only when the protocol has an error marker; the default sends
+        # the result through submit_tool_result.
+        await self._send(session, {"call_id": call_id, "output": result, "is_error": True})
+
+    async def _start(self, session) -> None:
+        # A session's own tasks run in a fresh context, not the caller's
+        # (which may be a tool handler reconnecting the session).
+        self._receiver = self._session_task(self._receive(session), name="receive")
+```
+
 The transport is accepted before the AI provider finishes its handshake, so a
 caller on a phone line can already be speaking. That audio is buffered in order
 and flushed the moment the session goes live, up to a bound of roughly thirty
@@ -542,8 +569,9 @@ Install with `pip install roomkit[realtime-openai]` (the `websockets` extra).
 - **The session is fixed at start.** Model, instructions, voice, audio format
   and delegation mode are set once by `session.start`. `reconfigure()` appends
   a changed system prompt to the instructions and, in hosted mode, updates the
-  backend's tools without replacing the session; a voice change reconnects.
-  `supports_mid_session_reconfigure` is `False`, so skills default to
+  backend's tools without replacing the session; a voice or codec change
+  reconnects, and the hosted calls still open on the old connection are
+  reported cancelled. `supports_mid_session_reconfigure` is `False`, so skills default to
   `inline_full`.
 - **Text injection is paraphrased.** `inject_text(role="system")` appends
   instructions; `role="user"` adds spoken context the model relays in its own
@@ -759,8 +787,18 @@ the same path, blocking or not: call ids are connection-scoped, and the new
 socket never issued them. Driving the provider directly, register
 `provider.on_tool_call_cancelled(callback)`, called as `(session, call_ids)`.
 `examples/realtime_tool_call_cancelled.py` walks the whole path on the mock
-provider, with no key needed. OpenAI, ElevenLabs, xAI, PersonaPlex and
-Deepgram carry no such event, so the callback never fires there.
+provider, with no key needed. ElevenLabs fires the callback for a call its
+`tool_timeout_s` cuts or the conversation's end drops, GPT-Live for the calls
+a restart drops. OpenAI Realtime, xAI and Deepgram carry no such event.
+
+### A call the model could not write
+
+Gemini Live can end a turn on a function call it failed to produce, with
+`turn_complete_reason` set to `MALFORMED_FUNCTION_CALL`: no call arrives, and
+the turn would end in silence. RoomKit tells the model, as a `system`
+injection, that its call did not run and that it should call the tool again
+with valid arguments or answer without it. It does so once, until the user
+speaks again, so a model that keeps failing does not loop on the reminder.
 
 ### Available Voices
 
@@ -1047,7 +1085,7 @@ channel = RealtimeVoiceChannel(
 !!! warning "Names must match on both sides"
     A tool the agent knows but the channel did not declare comes back to the agent as an error; a tool the channel declared but the agent does not know is never called. The names are case-sensitive.
 
-A call is bounded by the channel (`tool_timeout_seconds`, 10 s by default on `RealtimeVoiceChannel`, and `tool_timeouts` per tool): past it the handler is cancelled and the agent reads the failure rather than its turn hanging. `tool_timeout_s` is off by default; set it only to cap the channel's bound for this provider, knowing a call cut there leaves the channel's handler running.
+A call is bounded by the channel (`tool_timeout_seconds`, 10 s by default on `RealtimeVoiceChannel`, and `tool_timeouts` per tool): past it the handler is cancelled and the agent reads the failure rather than its turn hanging. A refused, failed, timed-out or unserved call reaches the agent as a tool error (`is_error`), not as a result it could take for a success. `tool_timeout_s` is off by default; set it only to cap the channel's bound for this provider: a call cut there is reported cancelled, and the channel cancels its handler. A call still waiting when the conversation ends is reported the same way.
 
 !!! note "No mid-session reconfigure"
     `supports_mid_session_reconfigure` is `False`: ConvAI takes its overrides once, in the initiation message, and reconnecting would start a different conversation server-side — losing the transcript and every pending `tool_call_id`. Tool and skill surfaces are therefore fixed for the life of the session. Per-conversation tool sets are possible the ElevenLabs way, by creating the tools through the Agents API and passing their `tool_ids` in the prompt override (which the agent's Security settings must allow).
