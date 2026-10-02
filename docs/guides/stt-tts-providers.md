@@ -1477,8 +1477,24 @@ What the provider does with the context:
 **Paralinguistic tags**: Vui was trained with inline tags such as `[breath]`,
 `[laugh]`, `[sigh]`, `[hesitate]` or `[tut]` (`"So [breath] the thing is..."`).
 They reach the model as written, so an LLM asked to emit them makes the voice
-breathe, laugh or hesitate. `StripBrackets` removes every `[...]`: do not set
-it as the channel's `tts_filter` with Vui.
+breathe, laugh or hesitate. `VUI_TAGS` holds the ones Vui's prompting guide
+lists (`breath`, `laugh`, `sigh`, `gasp`, `cough`, `hesitate`); any other
+bracketed word is read aloud or garbled. A small model invents others
+(`[nod]`, `[smiles]`) and adds emoji even when the prompt forbids them, so
+filter what reaches Vui, keeping its own tags:
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.tts.filters import StripBrackets, StripEmoji, TTSFilterChain
+from roomkit.voice.tts.vui import VUI_TAGS
+
+voice = VoiceChannel(
+    "voice", stt=stt, tts=tts, backend=backend,
+    tts_filter=TTSFilterChain(StripEmoji(), StripBrackets(keep=VUI_TAGS)),
+)
+# "Oh [smiles] sure 😊 [laugh]" is spoken as "Oh sure [laugh]"
+```
 
 **Troubleshooting**: `CUDNN_STATUS_SUBLIBRARY_VERSION_MISMATCH` from the codec
 means a system cuDNN (for example under `/lib/x86_64-linux-gnu`) is loaded
@@ -1592,6 +1608,14 @@ clean = f("Sure [laughs] I can help [pause] with that.")
 # → "Sure  I can help  with that."
 ```
 
+`keep` passes a TTS's own tags through, matched ignoring case:
+
+```python
+f = StripBrackets(keep=("laugh", "sigh"))
+f("Oh [laugh] sure [smiles] fine.")
+# → "Oh [laugh] sure fine."
+```
+
 ### StripEmoji
 
 Removes emoji. Language models add them to replies even when the prompt forbids
@@ -1608,6 +1632,19 @@ from roomkit.voice.tts.filters import StripEmoji
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=StripEmoji())
 # "C'est rapide et super bon ! 😊" is spoken as "C'est rapide et super bon !"
+```
+
+### TTSFilterChain
+
+`tts_filter` takes one filter; `TTSFilterChain` runs several in order, on a
+whole text and on a streamed reply alike:
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.tts.filters import StripBrackets, StripEmoji, TTSFilterChain
+
+tts_filter = TTSFilterChain(StripEmoji(), StripBrackets(keep=("laugh",)))
 ```
 
 ### Using Filters with Streaming TTS
