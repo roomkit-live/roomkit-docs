@@ -155,6 +155,33 @@ reconnect never resumes them). Answer only when you know — the default `True`
 costs at worst a failed request the channel already reports, while a wrong
 `False` throws away live sessions.
 
+## Recovering a refused room prompt
+
+A custom transport's connection may raise
+`ACPSessionInvalidatedError(reason, recovery_authorized=True)` from `prompt()`
+only after proving the session is unusable **and no part of the prompt ran**.
+Authorization belongs to the host: reserve any durable retry identity before
+raising, and keep the refusal's receipt. An ordinary error or the default
+`recovery_authorized=False` authorizes nothing. This is a local Python contract,
+not a new ACP wire error or a general retry policy.
+
+RoomKit keeps the room's turn lock, closes the failed stream, forgets that
+session and its catch-up cursor, then opens a session normally on the same
+connection. The same event id, contributed blocks and request are prompted once
+more, with the visible room tail recomposed under `room_history`. Opening uses
+the usual cwd, MCP servers and transport-provided instructions/configuration;
+RoomKit does not restore private agent state or copy obsolete session options.
+A successful recovery reports one response without a stale `interrupted` mark.
+
+Any observed update (including a plan, usage or thinking) or permission request
+makes the refusal terminal. So do a second refusal, an opening failure and a
+standalone turn. Cancellation/abandonment during recovery discards the replacement
+session and releases the lock. Existing transports do not opt in implicitly.
+The host must enforce its retry budget across redelivery, restarts and workers;
+RoomKit limits only this one stream to two attempts.
+
+Runnable without a remote agent: `examples/acp_session_recovery.py`.
+
 ## Session config: model, mode, effort
 
 ACP agents advertise their tunables as *session config options* — a list of

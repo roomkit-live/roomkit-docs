@@ -686,6 +686,14 @@ readable and settable — `agent.session_config(room_id)` returns
 `await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
 with every change published as an ephemeral event.
 
+A custom transport can authorize one atomic reconstruction of a refused room
+prompt with `ACPSessionInvalidatedError(recovery_authorized=True)`: the room
+lock stays held, the new session receives the visible catch-up, and any partial
+activity or second refusal remains terminal. The host owns durable admission
+and retry limits; standalone turns do not recover. See the
+[ACP guide](guides/acp-channel.md#recovering-a-refused-room-prompt) and
+`examples/acp_session_recovery.py`.
+
 Completed ACP responses also carry `AIResponseEvent.usage_metadata`: native
 session identity, measurement source/scope, model snapshots and the available
 session report, separate from prompt token counters. Transports that opt in
