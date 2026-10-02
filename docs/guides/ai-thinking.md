@@ -162,6 +162,11 @@ it, raise `max_tokens`, lower `reasoning_effort`, or set
 - Temperature is automatically set to 1 (required by the API)
 - Thinking blocks include a `signature` for round-trip fidelity
 - `AIThinkingPart` is preserved verbatim in conversation history (Anthropic requires this)
+- Each block of a response is kept as its own part, with its own signature, and a
+  `redacted_thinking` block as its opaque data (`AIThinkingPart.redacted`): the next
+  round of the tool loop replays them one by one, where they came relative to the
+  round's text and calls. Anthropic refuses a round whose blocks were merged, split or
+  reordered. `AIResponse.thinking_parts` carries the blocks to a caller of `generate()`.
 
 ```python
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
@@ -492,7 +497,12 @@ part = AIThinkingPart(
     thinking="Let me reason step by step...",
     signature="abc123",  # Optional, used by Anthropic for round-trip
 )
+redacted = AIThinkingPart(thinking="", redacted="EuYB...")  # A block the vendor redacted
 ```
+
+A `StreamThinkingDelta` names its block (`block`, Anthropic's content block index) when the
+vendor's reasoning comes in blocks; `None` keeps one block per round, as every other provider
+reports it.
 
 ### StreamThinkingDelta
 
