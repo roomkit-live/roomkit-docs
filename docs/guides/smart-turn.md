@@ -165,6 +165,20 @@ again by the time the detector decides: the new speech joins it, as LiveKit
 Agents and Pipecat do. Only a turn judged complete in silence is answered at
 once.
 
+The silence is counted from the end of the speech, but a streaming STT gives
+its final transcript after the speech, sometimes later than the wait (1.8 to
+3 s for Nemotron on a busy CPU). The wait ends only once that transcript has
+joined the turn and been judged, or turned out empty, so the resumed sentence
+is answered once, whole. A transcript that never comes holds the turn at most
+10 s more.
+
+```
+"Mm so um"              → judged complete, but the user speaks again: held
+"...a poem about Quebec" ends at 12.5 s, wait over at 14.0 s
+its final arrives at 14.4 s → joins the turn → routed once:
+                          "Mm so um ...a poem about Quebec"
+```
+
 Resuming after the turn was routed, before its answer is heard, is covered too:
 the answer waits while the user speaks, and a continuation of at least
 `min_speech_ms` with a transcript supersedes it, so the model answers the two
