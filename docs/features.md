@@ -70,7 +70,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Speaker attribution from a diarizing STT: in continuous mode the channel keeps one stream across turns, routes one room message per speaker with `sender_name` ("Speaker A", renamable by an `ON_TRANSCRIPTION` hook), and fires `ON_SPEAKER_CHANGE` with `source="stt"` (RFC §12.2.3)
 - Speaker attribution from the pipeline's diarization stage when the STT labels nobody: `VoiceChannel(pipeline_speakers=True)` gives each transcript the speaker the stage heard the longest over it, as the same `speaker_label` / `sender_name` metadata (RFC §12.2.3)
 - Pluggable voice backends (FastRTC for WebSocket/WebRTC transport)
-- Barge-in detection (user interrupts TTS playback)
+- Barge-in detection (user interrupts TTS playback); with `InterruptionStrategy.SEMANTIC` and `PhraseBackchannelDetector`, an acknowledgement ("okay", "mm-hmm", "d'accord") lets the voice keep talking and anything else stops it, judged on the streaming STT's words ([Voice Interruption guide](guides/voice-interruption.md#phrasebackchanneldetector))
 - Audio bridging for human-to-human calls with N-party mixing and cross-rate resampling
 - 10 voice-specific hook triggers for fine-grained control
 - The same hook pipeline as text channels (transcription goes through the inbound pipeline)

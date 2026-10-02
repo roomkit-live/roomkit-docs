@@ -164,7 +164,7 @@ voice = VoiceChannel(
     stt=stt, tts=tts, backend=backend,
     interruption=InterruptionConfig(
         strategy=InterruptionStrategy.SEMANTIC,
-        backchannel_detector=my_detector,
+        backchannel_detector=PhraseBackchannelDetector(),
     ),
 )
 ```
@@ -207,7 +207,46 @@ full — while still hearing what the caller said during it.
 
 ## Backchannel Detection
 
-The SEMANTIC strategy requires a `BackchannelDetector` to classify short utterances:
+The SEMANTIC strategy requires a `BackchannelDetector` to classify short utterances.
+
+### PhraseBackchannelDetector
+
+RoomKit ships one that reads the words: an utterance made only of known
+acknowledgements is a backchannel. "Okay", "mm-hmm", "yeah, right",
+"d'accord" or "c'est ça" let the assistant keep talking; "okay, and what about
+Calgary?" does not, and since each partial transcript is classified as it
+grows, the words after the "okay" still cut in. Punctuation, case and held
+letters ("hmmm", "ouiii") do not matter.
+
+```python
+from __future__ import annotations
+
+from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice.pipeline.backchannel import (
+    ENGLISH_BACKCHANNELS,
+    PhraseBackchannelDetector,
+)
+
+interruption = InterruptionConfig(
+    strategy=InterruptionStrategy.SEMANTIC,
+    backchannel_detector=PhraseBackchannelDetector(),  # English and French
+)
+english_only = PhraseBackchannelDetector(ENGLISH_BACKCHANNELS + ("cheers",), max_words=3)
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `phrases` | `ENGLISH_BACKCHANNELS + FRENCH_BACKCHANNELS` | The acknowledgements, multi-word ones included ("i see", "tout à fait") |
+| `max_words` | `4` | A longer utterance is never a backchannel, whatever its words |
+
+It needs words: with no transcript it judges no utterance a backchannel, and
+SEMANTIC falls back on duration as CONFIRMED does. Pair it with a streaming
+STT. A short sound that ends before it can be confirmed (a breath, a remnant
+of echo) is dropped by the channel anyway, without cutting the assistant.
+
+### A detector of your own
+
+Implement the ABC, for an acoustic classifier for instance:
 
 ```python
 from __future__ import annotations
