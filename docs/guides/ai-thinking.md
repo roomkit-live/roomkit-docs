@@ -165,8 +165,12 @@ it, raise `max_tokens`, lower `reasoning_effort`, or set
 - Each block of a response is kept as its own part, with its own signature, and a
   `redacted_thinking` block as its opaque data (`AIThinkingPart.redacted`): the next
   round of the tool loop replays them one by one, where they came relative to the
-  round's text and calls. Anthropic refuses a round whose blocks were merged, split or
-  reordered. `AIResponse.thinking_parts` carries the blocks to a caller of `generate()`.
+  round's calls and stretches of text. Anthropic wants the blocks back as it sent them:
+  it refuses a round whose blocks changed in number, and a block without its signature,
+  so a block the response cut before its signature is not replayed.
+  `AIResponse.thinking_parts` carries the blocks to a caller of `generate()`, which
+  replays them first since a response does not say where they came;
+  `thinking_parts_of(response)` reads them off any provider's response.
 
 ```python
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
@@ -427,7 +431,7 @@ Two ephemeral events bracket the thinking phase:
 
 These are published via the `RealtimeBackend` and do not persist in the conversation store. Use them for real-time UI indicators (e.g., "AI is thinking...").
 
-A round can bracket **more than one** reasoning phase. A model that reasons, answers, then reasons again — the shape Anthropic's interleaved thinking produces — opens and closes a window per switch, so subscribers see several `THINKING_START` / `THINKING_END` pairs for a single round. Each `THINKING_END` carries **its own block only**, never the blocks the earlier ones already delivered: a client appends what it receives and never has to de-duplicate. The reasoning kept in conversation history stays whole, all blocks of the round concatenated.
+A round can bracket **more than one** reasoning phase. A model that reasons, answers, then reasons again — the shape Anthropic's interleaved thinking produces — opens and closes a window per switch, so subscribers see several `THINKING_START` / `THINKING_END` pairs for a single round. Each `THINKING_END` carries **its own block only**, never the blocks the earlier ones already delivered: a client appends what it receives and never has to de-duplicate. In conversation history, a provider whose reasoning comes in blocks (Anthropic) keeps each block, in its place; any other keeps the round's reasoning as one block.
 
 The window also closes on every abnormal exit of a round: a turn cancelled through `Cancel` steering, a provider that fails mid-reasoning, a consumer that stops reading the stream. The `THINKING_END` then carries the block reasoned so far, with the deltas still buffered flushed ahead of it, so a subscriber never stays on "thinking" for a turn that is over.
 
@@ -500,10 +504,6 @@ part = AIThinkingPart(
 redacted = AIThinkingPart(thinking="", redacted="EuYB...")  # A block the vendor redacted
 ```
 
-A `StreamThinkingDelta` names its block (`block`, Anthropic's content block index) when the
-vendor's reasoning comes in blocks; `None` keeps one block per round, as every other provider
-reports it.
-
 ### StreamThinkingDelta
 
 A streaming event for thinking content:
@@ -514,12 +514,20 @@ from roomkit.providers.ai.base import StreamThinkingDelta
 delta = StreamThinkingDelta(thinking="Step 1: Consider...")
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `thinking` | `str` | Reasoning text (may be empty) |
+| `signature` | `str \| None` | The block's signature, sent once its text is done (Anthropic) |
+| `block` | `int \| None` | The block the delta belongs to (Anthropic's content block index); `None` for reasoning without blocks, one block per round |
+| `redacted` | `str \| None` | A block the vendor redacted: its opaque data |
+
 ### AIResponse fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `thinking` | `str \| None` | Accumulated thinking text |
-| `thinking_signature` | `str \| None` | Provider-specific signature (Anthropic) |
+| `thinking` | `str \| None` | All the reasoning text the provider exposed |
+| `thinking_signature` | `str \| None` | The last block's signature (Anthropic) |
+| `thinking_parts` | `list[AIThinkingPart] \| None` | The blocks to replay, in order, each with its signature or redacted data; `None` for reasoning without blocks |
 
 ### AIContext fields
 
