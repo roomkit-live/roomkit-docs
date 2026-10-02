@@ -1583,7 +1583,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely. The hook sees the turn's toolset as the tool policy and skill gating leave it, under Tool Search its whole catalogue, deferred tools included, and the tools it leaves are the turn's toolset: one it removes is declared at no round, named by no `find_tools` or `list_tools` and a call to it is refused (the channel's own tools included); one it edits stays as the hook left it, and one it adds is declared at every round, never deferred by Tool Search, both still subject to the tool policy and skill gating:
 
 ```python
-from roomkit import add_turn_note
+from roomkit import add_turn_note, split_turn_notes
 from roomkit.models.enums import HookTrigger
 from roomkit.models.hook import HookResult
 
@@ -1603,10 +1603,15 @@ async def redact_pii(event, ctx):
     return HookResult.allow()
 
 # Knowledge injection — a block in the turn's notes, never the system prompt,
-# which a provider caches ahead of the whole history (RFC §6.4)
+# which a provider caches ahead of the whole history (RFC §6.4). The search
+# reads the participant's words, not the notes the channel already added.
 @kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def inject_knowledge(event, ctx):
-    docs = await knowledge_base.search(event.ai_context.messages[-1].content)
+    last = event.ai_context.messages[-1]
+    if last.role != "user" or not isinstance(last.content, str):
+        return HookResult.allow()
+    question, _notes = split_turn_notes(last.content)
+    docs = await knowledge_base.search(question)
     if docs:
         event.ai_context.messages = add_turn_note(
             event.ai_context.messages, f"Relevant context:\n{docs}"
@@ -1614,7 +1619,7 @@ async def inject_knowledge(event, ctx):
     return HookResult.allow()
 ```
 
-- **Turn notes** — what changes from one turn to the next (how speakers are named, the room's plan, the tools already used and what they returned, what memory retrieved) rides the turn's input as notes, under one header, after the input's own words, so the system prompt and the history stay the prefix a provider caches (RFC §6.4). A `BEFORE_AI_GENERATION` hook adds a block with `add_turn_note(messages, block)` (from `roomkit`): the block joins the section the channel opened, or opens it, and the notes read exactly as if they had been assembled at once (one header, the blocks joined by a blank line, a text input still text, an input with images keeping its notes in one text part). A compaction keeps them whole with the input. A reader that shows the input apart from its notes, a debug view say, calls `split_turn_notes(text)`, which returns the input and the notes; `TURN_NOTES_HEADER` is the header. The header is the notes' only mark and always opens a paragraph, so an input that quotes it as a paragraph of its own is the one a split misreads.
+- **Turn notes** — what changes from one turn to the next (how speakers are named, the room's plan, the tools already used and what they returned, what memory retrieved) rides the turn's input as notes, under one header, after the input's own words, so the system prompt and the history stay the prefix a provider caches (RFC §6.4). A `BEFORE_AI_GENERATION` hook adds a block with `add_turn_note(messages, block)` (from `roomkit`): the block joins the section the channel opened, or opens it, and the notes read exactly as if they had been assembled at once (one header, the blocks joined by a blank line, a text input still text, an input with images keeping its notes in one text part). A compaction keeps them whole with the input. A reader that shows the input apart from its notes, a debug view say, calls `split_turn_notes(text)`, which returns the input and the notes, header included (an input with images keeps its notes in a text part of their own); `TURN_NOTES_HEADER` is the header. Add notes before anything a hook appends to the input. The header is the notes' only mark, recognized as the channel places it, a paragraph of its own with a block after it: an input, or a note, that quotes it that way is what `add_turn_note` and `split_turn_notes` misread.
 
 ### Realtime Events (Typing, Presence, Read Receipts)
 
