@@ -302,12 +302,15 @@ every tool it asked for.
     no `tool_handler` asking its hooks to serve the call. That is a dispatch,
     not an outcome — skip it and wait for the firing that carries a result.
 
-A third outcome exists on realtime channels: the model abandoned the call.
-Gemini Live sends `tool_call_cancellation` when the caller interrupts while a
-tool is outstanding; RoomKit cancels the handler still running, sends nothing
-back, and fires the observers with `cancelled=True` beside `is_error=True`.
-A reconnect abandons outstanding calls the same way (call ids belong to the
-connection), with one exception: the call whose own handler reconfigured the
+A third outcome exists on realtime channels: the call was abandoned before
+its result was read. Gemini Live sends `tool_call_cancellation` when the
+caller interrupts while a tool is outstanding; RoomKit cancels the handler
+still running, sends nothing back, and fires the observers with
+`cancelled=True` beside `is_error=True`. A call the provider drops itself
+takes the same path: its own wait on the result timing out (ElevenLabs'
+`tool_timeout_s`), its connection lost or closed. A reconnect abandons
+outstanding calls the same way (call ids belong to the connection), with one
+exception: the call whose own handler reconfigured the
 session, as a speech-to-speech handoff does on Gemini Live, runs to its end,
 sends nothing back (the new connection never issued its id) and reaches the
 observers with its usual outcome, served when the handler returns a result.

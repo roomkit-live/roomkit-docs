@@ -96,12 +96,13 @@ cancelled.
 What the provider owes in return is the same everywhere. A refused, failed or
 unserved call goes back through `submit_tool_error`: ElevenLabs marks it as a
 tool error, the others send it like any result, its `{"error": ...}` body
-saying what happened. A call the provider abandons (Gemini's cancellation, an
-ElevenLabs `tool_timeout_s` or the conversation's end, a GPT-Live restart) is
-reported through `on_tool_call_cancelled`, so the channel cancels its handler
-and reports it once, cancelled. A provider whose model calls no tool (Anam,
-PersonaPlex) has `supports_tools` set to `False`: the channel declares it no
-tool and warns once at construction.
+saying what happened. Every call the provider abandons is reported through
+`on_tool_call_cancelled`, whatever the cause: Gemini's cancellation, a
+reconnect (a handoff included), an ElevenLabs `tool_timeout_s`, a connection
+lost or closed. The channel cancels its handler and reports it once,
+cancelled. A provider whose model calls no tool (Anam, PersonaPlex) has
+`supports_tools` set to `False`: the channel declares it no tool, advertises
+no skill or Tool Search in its prompt, and warns once at construction.
 
 ```python
 class MyProvider(RealtimeVoiceProvider):
@@ -118,6 +119,10 @@ class MyProvider(RealtimeVoiceProvider):
         # A session's own tasks run in a fresh context, not the caller's
         # (which may be a tool handler reconnecting the session).
         self._receiver = self._session_task(self._receive(session), name="receive")
+
+    async def _on_connection_lost(self, session) -> None:
+        # The calls still open die with the connection: report them.
+        await self._abandon_tool_calls(session, self._open_calls.pop(session.id, ()))
 ```
 
 The transport is accepted before the AI provider finishes its handshake, so a
@@ -787,9 +792,10 @@ the same path, blocking or not: call ids are connection-scoped, and the new
 socket never issued them. Driving the provider directly, register
 `provider.on_tool_call_cancelled(callback)`, called as `(session, call_ids)`.
 `examples/realtime_tool_call_cancelled.py` walks the whole path on the mock
-provider, with no key needed. ElevenLabs fires the callback for a call its
-`tool_timeout_s` cuts or the conversation's end drops, GPT-Live for the calls
-a restart drops. OpenAI Realtime, xAI and Deepgram carry no such event.
+provider, with no key needed. The other providers have no such event, but
+fire the callback for the calls they drop themselves: ElevenLabs for a call
+its `tool_timeout_s` cuts, GPT-Live for the calls a restart drops, and every
+provider for the calls still open when its connection is lost or closed.
 
 ### A call the model could not write
 
