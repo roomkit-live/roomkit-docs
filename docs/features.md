@@ -687,7 +687,7 @@ readable and settable — `agent.session_config(room_id)` returns
 with every change published as an ephemeral event.
 
 A custom transport can authorize one atomic reconstruction of a refused room
-prompt with `ACPSessionInvalidatedError(recovery_authorized=True)`: the room
+prompt with `ACPSessionInvalidatedError(reason, recovery_authorized=True)`: the room
 lock stays held, the new session receives the visible catch-up, and any partial
 activity or second refusal remains terminal. The host owns durable admission
 and retry limits; standalone turns do not recover. See the
