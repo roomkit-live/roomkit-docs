@@ -121,6 +121,8 @@ The autorouter answers `GET https://autorouter.polargrid.ai/v1/route?model=<id>`
 
 PolarGrid streams via OpenAI-shaped chunked SSE. RoomKit's provider exposes both plain text deltas and structured events.
 
+A streamed turn reports its usage on its `StreamDone`, like a non-streamed one. polargrid-sdk can neither ask for a stream's usage nor read it (no `stream_options` on its request, no `usage` on its chunk, as of 0.10.0), while PolarGrid's server sends it last when asked. Until the SDK carries it, the provider streams through a patch that asks for it and reads it, the SDK still building and authenticating the request (`roomkit.providers.polargrid.sdk_patch`). The counts are the server's: its `prompt_tokens` appears to leave out the chat template and the declared tools.
+
 ```python
 async for delta in provider.generate_stream(context):
     print(delta, end="", flush=True)
