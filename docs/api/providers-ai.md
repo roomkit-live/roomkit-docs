@@ -228,6 +228,10 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[gemini]`
 
+A tool result whose call was refused, failed, blocked, served by nothing or
+cancelled goes to Gemini under the `error` key of its function response, any
+other under `result`; the text the model reads is the same either way.
+
 ### Schema Cleaning
 
 Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. RoomKit auto-cleans schemas when building `FunctionDeclaration` objects:
