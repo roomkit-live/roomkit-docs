@@ -80,6 +80,13 @@ for event in timeline:
         print(f"[{event.created_at}] Tool done: {event.content.tool_name} ({event.content.duration_ms}ms)")
 ```
 
+A `TOOL_CALL_END` states how its call ended in `outcome`: `served`,
+`refused` (the channel or a gate stopped it, or the handler refused it),
+`failed`, `blocked` (an `ON_TOOL_CALL` hook withheld the result),
+`unserved` (nothing served it) or `cancelled`. `status` folds it into
+`completed` / `failed`; a row written before the field existed reads by its
+`status` (`outcome` is `None`).
+
 ### Which Way a Page Reads
 
 Every `list_events` read, and every read built on it, answers two questions

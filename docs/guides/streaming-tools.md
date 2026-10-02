@@ -89,14 +89,12 @@ Because `generate()` now delegates to `generate_structured_stream()` internally,
 
 ### Other providers (fallback)
 
-Providers that don't override `generate_structured_stream()` use the default fallback, which wraps `generate()`:
+Providers that don't override `generate_structured_stream()` use the default fallback, which reads what the provider has:
 
-1. Calls `generate()` to get a complete `AIResponse`
-2. Yields `StreamTextDelta` with the full response text
-3. Yields `StreamToolCall` for each tool call in the response
-4. Yields `StreamDone` with finish reason and usage
+- a turn without tools, from a provider whose `supports_streaming` is true, streams through `generate_stream()`: one `StreamTextDelta` per chunk, then `StreamDone` (no usage: a text stream reports none);
+- any other turn wraps `generate()`: the thinking with its signature, the text, each `StreamToolCall` with its metadata (a thought signature among them), then `StreamDone` with the finish reason, usage and metadata. Nothing `generate()` returned is lost on the way.
 
-This means every provider works with the streaming tool loop without changes, but text delivery is not truly incremental -- the full response arrives as a single delta. To get progressive delivery, providers should override `generate_structured_stream()` and set `supports_structured_streaming = True`.
+A provider that only implements `generate()` works unchanged, but its text arrives as one delta per round. To get progressive delivery, override `generate_structured_stream()` and set `supports_structured_streaming = True`.
 
 ### Implementing for a custom provider
 
@@ -147,15 +145,7 @@ class MyProvider(AIProvider):
 
 ### Routing logic
 
-`AIChannel.on_event()` routes based on provider capabilities:
-
-| `supports_streaming` | `supports_structured_streaming` | Has tools | Path |
-|---|---|---|---|
-| `True` | any | No | `_start_streaming_response` (plain `generate_stream`) |
-| any | `True` | No | `_start_streaming_response` (plain `generate_stream`) |
-| `True` | any | Yes | `_start_streaming_tool_response` (streaming tool loop) |
-| any | `True` | Yes | `_start_streaming_tool_response` (streaming tool loop) |
-| `False` | `False` | any | `_generate_response` (non-streaming with tool loop) |
+Every turn of an `AIChannel` runs this one tool loop, whatever its provider streams and whether the turn carries tools (a turn without tools is a round without calls). There is no other generation path, so every rule of the loop holds for every provider.
 
 ### Max rounds
 
@@ -164,7 +154,7 @@ The `max_tool_rounds` parameter (default 50) controls how many times tools can b
 - Generations 0 through `max_tool_rounds - 1`: if tool calls are returned, tools are executed and the loop continues
 - Generation `max_tool_rounds`: final generation only -- tool calls are **not** executed (since no generation would follow to use the results)
 
-This matches the non-streaming tool loop semantics and prevents side-effecting tools from executing when their results would be discarded.
+This prevents side-effecting tools from executing when their results would be discarded.
 
 ### Max tool calls per round
 
@@ -183,8 +173,7 @@ on the next round.
 
 The drop is invisible to the model (the calls it keeps are its own, in its own
 order) and loud in the log, which is where an operator diagnoses a looping
-model. The cap lives in the shared loop rules, so the streaming and
-non-streaming loops enforce it identically.
+model. The cap lives in the loop rules (`_ai_loop_rules.py`).
 
 ## Knowing why the loop stopped
 
@@ -252,9 +241,8 @@ protocol is a mixed `str | StreamMarker` and its consumers already dispatch on
 the markers they know, so a text-only consumer filtering on
 `isinstance(chunk, str)` is unaffected.
 
-**Streaming only.** The non-streaming loop hands back an `AIResponse` the
-caller already holds, so its end is not silent in the same way; giving it the
-same fact would change that return type.
+Every turn ends on one, whatever its provider streams: a provider read
+through its `generate()` runs the same loop.
 
 ### Error handling
 

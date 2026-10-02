@@ -1750,24 +1750,22 @@ named rather than folded into `completed`. `error` is a turn the provider
 interrupted after a tool round: the rounds are kept, each round's text as its
 own message, `ON_AI_RESPONSE` reports it with the usage of its rounds, and it
 is an error too, surfaced through `ON_ERROR` and the caller's
-`InboundResult.error`. The non-streaming loop ends it on the
-`[Response interrupted]` marker alone, a message carrying
-`metadata["interruption_marker"] = True`
-(`roomkit.models.event.is_interruption_marker`) that solicits no agent and that
-no strategy or delegation takes for an answer: a delegated turn it ends fails.
-The streaming loop yields its `LoopEndMarker` with `reason="error"`, then the
-exception reaches the consumer. `LoopEndMarker.usage` is what the turn's
+`InboundResult.error`. No message is added to say so: the loop yields its
+`LoopEndMarker` with `reason="error"`, then the exception reaches the
+consumer, and a delegated turn it ends fails. A stored `[Response interrupted]`
+message (`metadata["interruption_marker"] = True`,
+`roomkit.models.event.is_interruption_marker`) solicits no agent and no
+strategy or delegation takes it for an answer. `LoopEndMarker.usage` is what the turn's
 generations used, summed over its rounds; a response without tools yields the
-marker too, with `rounds=0`, unless its provider streams text only.
+marker too, with `rounds=0`, a provider that streams text alone included.
 
 ### Why a turn stopped, read from its reply
 
-Both loops record the reason on the turn's reply: its last MESSAGE event
+The loop records the reason on the turn's reply: its last MESSAGE event
 carries `loop_end_reason` with the same values, next to `ai_usage` (which sums
 every generation round of the turn, not just the last). That is the final
-answer (the interruption marker, for a non-streaming turn the provider
-interrupted), or, for a turn that ended without one (a cancellation between
-rounds, a streamed interruption), the last round's text. A streamed turn
+answer, or, for a turn that ended without one (a cancellation between
+rounds, an interruption), the last round's text. A streamed turn
 learns its end after that message was written: its stored row is updated once
 the turn's deliveries are done (`ON_EVENT_UPDATED` fires), so read it from the
 store or the `InboundResult`, not from the frames a channel was streamed.
@@ -1790,8 +1788,8 @@ WebSocket or CLI channel will therefore not see it; wrap the AI channel's own
 Additive by construction: the streaming protocol is a mixed
 `str | StreamMarker` whose consumers already dispatch on the markers they
 know, so a text-only consumer filtering on `isinstance(chunk, str)` is
-unaffected. Streaming only — the non-streaming loop returns an `AIResponse`
-the caller already holds.
+unaffected. Every turn ends on one, whatever its provider streams: a
+provider read through its `generate()` runs the same loop.
 
 Every provider hands the loop a call the same way (RFC §6.4): arguments as
 a mapping, never an error (none or `null` is `{}`, anything unparseable is
@@ -1805,7 +1803,7 @@ Two bounds keep a degenerate model from running away with a turn:
 ceiling per round** caps how wide one round may be. The per-round cap is applied before
 the assistant message is assembled, so a dropped call is absent from the
 transcript as well as from the results — no provider sees a tool call with no
-matching result. Both loops enforce it from the shared loop rules.
+matching result. The loop enforces it from its round rules.
 
 A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for. Both are off by default and can be set on the channel, per room (binding metadata) or per turn (`AIChannelTurnConfig`). A budget that is not a positive number, or a cost budget on a model with no catalogue price, raises `ValueError`: on the channel when it is built, otherwise in the turn that reads it. A generation the `fallback_provider` serves is priced at the primary provider's rate (RFC §6.4).
 

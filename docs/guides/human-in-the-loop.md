@@ -80,7 +80,7 @@ human.handler.resolve(pending_id, '{"answer": "blue"}')
 
 ### External Provider (Claude Code)
 
-For providers that execute tools internally (like Claude Code sandboxes), use `HumanInputHandler` directly inside your `ExternalToolHandler`:
+For providers that execute tools internally (like Claude Code sandboxes), use `HumanInputHandler` directly inside your `ExternalToolHandler`. The channel decides who serves each call: one the provider already ran (its result rides it) is reported; a pending call to a tool the channel does not serve goes to the `ExternalToolHandler`; every other call is the channel's own, gate first, so a `BEFORE_TOOL_USE` block refuses it even on a channel without a `tool_handler`.
 
 ```python
 from roomkit.tools.human_input import HumanInputHandler

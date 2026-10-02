@@ -164,9 +164,11 @@ All transport channels (SMS, RCS, Email, WhatsApp, Messenger, HTTP) use the unif
 
 The `TransportChannel` class is data-driven: it reads a `recipient_key` from binding metadata for the delivery address, and passes configurable `defaults` to the provider's `send()` method. This eliminates the need for per-channel subclasses.
 
-#### AI streaming tool loop
+#### AI tool loop
 
-`AIChannel` separates the lifetime of a conversation turn from the generation
+Every turn of an `AIChannel` runs one tool loop, whatever its provider streams
+(a provider that does not is read through its `generate()`) and whether the
+turn carries tools. `AIChannel` separates the lifetime of a conversation turn from the generation
 rounds and provider attempts within it. Each turn and round owns its mutable
 state, so concurrent rooms sharing a channel keep separate transcripts, tool
 contexts and token counters.
@@ -175,8 +177,9 @@ contexts and token counters.
 |---|---|
 | `_ai_streaming.py` | Orchestrates rounds, applies termination decisions and emits local tool lifecycle markers. Owns turn registration, cumulative usage and the final response report. |
 | `_ai_stream_round.py` | Consumes one generation on demand. Tracks raw text and delivered text separately, filters repeated prefixes, and closes reasoning and tool-composition windows. |
-| `_ai_stream_external_tools.py` | Handles provider-served tool calls. Pending calls receive their pre-execution check; calls carrying an existing result are observed after execution. |
-| `_ai_loop_rules.py` | Supplies the rules shared with non-streaming generation: context preparation, bounded empty-response retries, budgets, message assembly and tool execution. |
+| `_ai_stream_external_tools.py` | Handles the calls the provider serves itself: one carrying its result is reported; a pending call to a tool the channel does not serve goes to the external tool handler. Every other call is the loop's (gate, handler, or unserved). |
+| `_ai_loop_rules.py` | Supplies the per-round rules: context preparation, bounded empty-response retries, budgets, message assembly and tool execution. |
+| `_ai_generation.py` | Fires `BEFORE_AI_GENERATION`, logs a provider error that fails a turn before any round, and gives the telemetry provider. |
 | `_ai_tools.py` | Validates and authorizes local calls, dispatches them concurrently and joins abandoned calls before propagating an abort. |
 | `_ai_resilience.py`, `_ai_coalescers.py` | Own provider retries, compaction and fallback, and batch observable reasoning/composition events respectively. |
 
