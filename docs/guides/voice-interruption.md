@@ -151,6 +151,14 @@ While one is transcribing the speech, SEMANTIC waits for them up to
 for a slow STT; lower it if a real interruption with no words should still cut
 quickly.
 
+Speech that ends before its first word is judged on its final transcript: a
+streaming transducer often releases a short word only once the speech is over
+(Nemotron gives "okay" and "no" only at the end). No words, or a backchannel,
+is discarded and the assistant talks on; anything else ("stop") cuts it off
+as soon as the STT has finalized, and becomes the user's turn. So a longer
+`transcript_wait_ms` (2000 in the local examples) spares the assistant from
+being cut by an "okay" without swallowing a short "stop".
+
 In continuous-STT mode (no local VAD), the energy barge-in classifies the
 words of the burst under way: a burst recognized as "uh-huh" fires
 `ON_BACKCHANNEL` once and is not cut for running long, while words that turn
