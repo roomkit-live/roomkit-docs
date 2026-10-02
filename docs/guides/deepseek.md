@@ -50,6 +50,8 @@ Per turn, `AIChannel(thinking_budget=...)` overrides the config: `0` switches th
 
 The reasoning trace comes back in a dedicated field and surfaces as `AIResponse.thinking` (and as `StreamThinkingDelta` while streaming).
 
+In a tool loop the reasoning goes back the way DeepSeek reads it: each round that called tools carries its reasoning in `reasoning_content`, empty when the round did not reason. In thinking mode DeepSeek refuses a round of the turn in progress without that field (400, *The `reasoning_content` in the thinking mode must be passed back*); it recovers the reasoning of a call it issued itself a moment ago, and refuses a call id it does not know. Sending the reasoning in the field rather than as a `<think>` block in the content also keeps it from being billed twice: measured on `deepseek-v4-pro`, a two-call round went back in 813 prompt tokens instead of 1,057.
+
 ## Prompt caching and cost
 
 DeepSeek's context cache is **automatic** — there is nothing to mark, and populating it is free. Cache hits are billed at roughly 3% of the uncached input rate, and the provider maps DeepSeek's own `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` counters onto RoomKit's canonical `cache_read_input_tokens` and `input_tokens`, so a cost dashboard prices them at the cache rate instead of full input.
