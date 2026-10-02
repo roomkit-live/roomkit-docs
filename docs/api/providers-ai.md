@@ -495,6 +495,13 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[ollama]`
 
+A tool's parameter schema reaches the model whole, nested objects, `anyOf`,
+`$ref` and constraints included. ollama-python drops all of these from a
+declaration before the request leaves (ollama/ollama-python#724; measured on
+0.6.2 and 0.6.3), while the Ollama server keeps them. Until a release fixes
+it, a request that declares tools goes through the SDK's own request method
+with the declarations as given (`roomkit.providers.ollama.sdk_patch`).
+
 ## Streaming
 
 ::: roomkit.providers.ai.base.StreamEvent
