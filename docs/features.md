@@ -761,7 +761,7 @@ trusting a stale number.
   `available_models()`.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
-  `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
+  `capabilities`, `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
   Meta, DeepSeek, Qwen, Cerebras, Ollama, and PolarGrid. Most catalogs are verified against a live upstream mirror on every
   release (`make check-models`), which is what catches a vendor shipping a new
   flagship — a stale list is internally consistent, so no test can. Cerebras

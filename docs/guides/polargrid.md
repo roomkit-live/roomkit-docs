@@ -110,10 +110,10 @@ for m in await provider.list_models():
 | `qwen-3.8-27b` | chat (tools, **thinking**), 256K context, $0.20 / $0.75 per 1M tokens | fleet-wide (every public edge) |
 | `qwen-3.6-35b-a3b` | chat (tools, **thinking**, **vision**), 8K served context | **customer pilot**: no public edge; recognised (`supports_vision`, `list_models` backfill) but not advertised |
 | `qwen-3.5-27b` | chat | **retired 2026-08-20**: `404 model_not_loaded` everywhere, dropped from the catalog |
-| `whisper-large-v3-turbo` | STT | all edges except dfw-02 |
-| `cohere-transcribe-03-2026` | STT | all edges except dfw-02 |
-| `kokoro-82m` | TTS | all edges except dfw-02 |
-| `tada-3b-ml` | TTS | all edges |
+| `whisper-large-v3-turbo` | STT, tagged `transcription` | all edges (dfw-02 included, checked 2026-10-02) |
+| `cohere-transcribe-03-2026` | STT, tagged `transcription` | all edges (dfw-02 included, checked 2026-10-02) |
+| `kokoro-82m` | TTS, tagged `speech` | all edges (dfw-02 included, checked 2026-10-02) |
+| `tada-3b-ml` | TTS, tagged `speech` | all edges |
 
 The autorouter answers `GET https://autorouter.polargrid.ai/v1/route?model=<id>` with `404` when no edge serves an id, which is how the catalog is checked without a key. The default `qwen-3.8-27b` reasons via `enable_thinking`. See [`examples/list_models.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/list_models.py) for a runnable catalog dump across providers.
 
