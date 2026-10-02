@@ -2297,7 +2297,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `GeminiTTSProvider` | Generative speech on `gemini-3.8-flash-tts` by default, natural-language style direction, inline audio tags, 30 voices, 80+ languages. About a second to first audio — for prompts and messages, not live turn-taking | `roomkit[gemini]` |
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `VuiTTSProvider` | Vui Nano on a local CUDA GPU: replies generated inside the dialogue (`TTSContextLevel.AUDIO`), the user's voice included, cut to what was heard after a barge-in; preset or cloned voices; English | `roomkit[vui]` (Python 3.12) |
-| `FluxionsTTSProvider` | Vui hosted by fluxions.ai: no GPU, streamed 24 kHz PCM, 67 voices and the account's cloned ones; each text on its own (no context); English | `roomkit[fluxions]` |
+| `FluxionsTTSProvider` | Vui hosted by fluxions.ai: no GPU, streamed 24 kHz PCM, the hosted voices and the account's cloned ones; each text on its own (no context); English | `roomkit[fluxions]` |
 | `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 

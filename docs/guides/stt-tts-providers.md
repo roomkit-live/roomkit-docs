@@ -1492,9 +1492,9 @@ with a barge-in and writes what the user heard to a WAV file.
 
 ## Fluxions (Cloud API, Hosted Vui)
 
-[fluxions.ai](https://fluxions.ai) hosts the Vui model behind an API key: the
-same voices as Vui Nano, with no GPU. Each text is rendered on its own, streamed
-as 24 kHz PCM.
+[fluxions.ai](https://fluxions.ai) hosts the Vui model behind an API key, with
+no GPU: Vui Nano's four presets are among its hosted voices. Each text is
+rendered on its own, streamed as 24 kHz PCM.
 
 ```python
 from __future__ import annotations
@@ -1521,11 +1521,12 @@ async for chunk in tts.synthesize_stream("Hello from Vui, hosted by Fluxions."):
 |---|---|---|
 | Runs on | Your CUDA GPU (about 3.4 GB), Python 3.12 | Fluxions' servers, any Python |
 | Conversation context | `AUDIO`: replies generated inside the dialogue, the user's voice included, cut to what was heard | `NONE`: each text on its own |
-| Voices | The four presets, or a clip you clone | The 67 hosted voices (presets included) and the account's cloned voices |
+| Voices | The four presets, or a clip you clone | The hosted voices (presets included) and the account's cloned voices |
 | Cost | Free | Per character |
 
-**Voices**: `list_voices()` returns each voice's short id (`maeve`), which
-`voice` accepts. A render needs the voice's full id, which carries the model's
+**Voices**: `list_voices()` returns the hosted voices by their short id
+(`maeve`), then the account's cloned voices by their `u-...` id; `voice`
+accepts either. A render needs the voice's full id, which carries the model's
 checkpoint (`maeve.h8ff7e07da`) and changes when Fluxions ships a new model: the
 provider resolves the short id from the voice list, and lists again once when
 the server no longer knows the id it cached. A full id (or a cloned voice's
@@ -1535,11 +1536,12 @@ the server no longer knows the id it cached. A full id (or a cloned voice's
 
 - No conversation context: the speech API takes no previous turns, no user
   audio and no session. For context-aware replies, use Vui Nano.
-- English only, as the model.
+- The local model speaks English; Fluxions documents no other language.
 - A cold start after an idle period can take up to about 30 s before the first
   audio; the read timeout is 60 s by default.
 - Errors come back as `httpx.HTTPStatusError`: 402 when the account is out of
-  credit, 429, 502 or 503 when Fluxions is at capacity.
+  credit, 429 when requests are rate-limited, 502 or 503 when Fluxions is at
+  capacity.
 - Fluxions keeps every render in the account's history; it documents no
   retention period or opt-out.
 
