@@ -1462,12 +1462,12 @@ What the provider does with the context:
 - One active conversation per provider: `Engine(max_rows=1)` gives it a single
   cache, and calls are serialized.
 - A reply longer than `max_secs` (30 s by default) is cut off there.
-- Three private `vui-tts` attributes are used (the mid-turn rewind, a preset's
-  speaker token, and re-seeding the audio decoder at the start of each reply
-  so its 10 s restart does not land in a reply's first ~9 s), so the
-  dependency is pinned to `vui-tts>=1.1.4,<1.2`.
-- `vui-tts` prints the first 40 characters of every user turn to stdout
-  (`[Engine._add_user] ...`). Route or silence stdout in production if
+- `vui-tts>=1.2.0,<1.3`, through its public API only: `Row.truncate` for the
+  cut after a barge-in, `load_official_prompt` and `Row.prefill(cond_bias=...)`
+  for a preset's speaker token and conditioning bias, as Vui's own server
+  applies them.
+- `vui-tts` logs the first 40 characters of every user turn at DEBUG on the
+  `vui.engine` logger. Keep that logger above DEBUG in production if
   transcripts must not reach the logs.
 
 **Paralinguistic tags**: Vui was trained with inline tags such as `[breath]`,
