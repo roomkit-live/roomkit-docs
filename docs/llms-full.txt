@@ -384,7 +384,7 @@ When you send a message from a transport channel, it flows to the AI and back au
 3. EventRouter.broadcast() → delivers event to ALL attached channels
    ├── Transport channels: note delivery (no response)
    └── AI channel: calls LLM provider → generates response
-       └── Returns ChannelOutput(response_events=[RoomEvent])
+       └── Returns ChannelOutput(response_stream=…), stored segment by segment
 4. REENTRY LOOP: AI response re-enters as new inbound event
    ├── BEFORE_BROADCAST hooks run again (ConversationRouter stamps routing)
    ├── Event stored in timeline

@@ -261,9 +261,9 @@ str("Here are results")  ->  transport channels (real-time display)
 
 Transport channels only see string deltas for real-time rendering. The framework's streaming consumer intercepts markers and persists events at each boundary.
 
-### Non-Streaming Path
+### Providers That Do Not Stream
 
-The non-streaming tool loop tracks each round (text + tool calls + results + duration) and builds the interleaved event list when the response is complete. All events are returned via `ChannelOutput.response_events` and persisted by the inbound pipeline.
+A provider that does not stream takes the same path. The default `generate_structured_stream` wraps its `generate()` response into the same events, so its turn yields the same markers and its rows are stored at the same boundaries.
 
 ### Broadcast Behavior
 
