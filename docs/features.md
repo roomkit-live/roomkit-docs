@@ -755,8 +755,10 @@ trusting a stale number.
 
 - **`list_models()`** -- async query against the provider's models endpoint
   (OpenAI `/v1/models`, Anthropic/Mistral `models.list`, Gemini `models.list()`,
-  Ollama `/api/tags`), backfilling metadata from the offline list. Providers
-  without an endpoint fall back to `available_models()`.
+  Ollama `/api/tags`), backfilling metadata from the offline list, the
+  capability tags included where the endpoint reports none (an empty list
+  means unknown, not none). Providers without an endpoint fall back to
+  `available_models()`.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
   `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,

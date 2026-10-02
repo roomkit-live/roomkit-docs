@@ -103,7 +103,7 @@ for m in await provider.list_models():
     print(m.id)
 ```
 
-`available_models()` is the curated snapshot of the **chat** models on the public edges (sourced from PolarGrid's [model pages](https://polargrid.mintlify.app/models) and [model availability guide](https://polargrid.mintlify.app/guides/model-availability), cross-checked against the autorouter on 2026-09-02); `list_models()` returns whatever is actually loaded on the connected edge, **including the STT/TTS models**, and backfills display names, context windows and vision flags from the catalog.
+`available_models()` is the curated snapshot of the **chat** models on the public edges (sourced from PolarGrid's [model pages](https://polargrid.mintlify.app/models) and [model availability guide](https://polargrid.mintlify.app/guides/model-availability), cross-checked against the autorouter on 2026-09-02); `list_models()` returns whatever is actually loaded on the connected edge, **including the STT/TTS models**. The edge reports no model type, so the catalog backfills display names, context windows, vision flags and capabilities: a chat model's (`completion`, `tools`, `thinking`…), `transcription` on `whisper-large-v3-turbo` and `cohere-transcribe-03-2026`, `speech` on `kokoro-82m` and `tada-3b-ml`, so a model picker can keep the speech models out of a chat list. An id the catalog does not know comes with no capabilities: unknown, not none.
 
 | Model | Type | Availability |
 |-------|------|--------------|
@@ -198,18 +198,19 @@ PolarGridConfig(api_key="pg_...", model="qwen-3.6-35b-a3b", region="yul-02")
 
 ## Error handling
 
-The provider maps the PolarGrid SDK's exception hierarchy onto RoomKit's `ProviderError`:
+The provider maps the PolarGrid SDK's exception hierarchy onto RoomKit's `ProviderError`, with the HTTP status the SDK built each exception from (only `ServerError` carries its own):
 
-| PolarGrid exception | `retryable` |
-|---------------------|-------------|
-| `AuthenticationError` | `False` |
-| `ValidationError` | `False` |
-| `NotFoundError` | `False` |
-| `RateLimitError` | `True` |
-| `NetworkError` | `True` |
-| `TimeoutError` | `True` |
-| `ServerError` | `True` |
-| _unknown_ | `True` (let `RetryPolicy` decide) |
+| PolarGrid exception | `retryable` | `status_code` |
+|---------------------|-------------|---------------|
+| `AuthenticationError` | `False` | `401` (the SDK folds 403 into it too) |
+| `BillingError` | `False` | `402` |
+| `ValidationError` | `False` | `400` |
+| `NotFoundError` | `False` | `404` |
+| `RateLimitError` | `True` | `429` |
+| `NetworkError` | `True` | none |
+| `TimeoutError` | `True` | none |
+| `ServerError` | `True` | its own (5xx) |
+| _unknown_ | `True` (let `RetryPolicy` decide) | none |
 
 ## Roadmap
 
