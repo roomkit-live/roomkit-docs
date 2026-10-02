@@ -10,6 +10,17 @@
 
 ::: roomkit.AIChannel
 
+## Turn notes
+
+What changes from one turn to the next rides the turn's input as notes (RFC §6.4).
+A `BEFORE_AI_GENERATION` hook adds to them; a debug view splits them off.
+
+::: roomkit.add_turn_note
+
+::: roomkit.split_turn_notes
+
+::: roomkit.TURN_NOTES_HEADER
+
 ::: roomkit.ACPChannel
 
 ::: roomkit.WebSocketChannel
