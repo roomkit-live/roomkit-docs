@@ -17,7 +17,7 @@ pip install "roomkit[acp]"
 ```
 
 The extra currently targets the official Python SDK
-`agent-client-protocol>=0.11.0,<0.12` and the stable ACP wire protocol v1. ACP
+`agent-client-protocol>=0.11.0,<0.13` and the stable ACP wire protocol v1. ACP
 artifact/package versions and wire protocol versions are separate; RoomKit
 validates the negotiated `protocolVersion`.
 
