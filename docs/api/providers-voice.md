@@ -161,6 +161,14 @@ Install with: `pip install roomkit[meta-stt]`
 
 Install with: `pip install roomkit[vui]` (Python 3.12, CUDA GPU).
 
+### Fluxions TTS (Hosted Vui)
+
+::: roomkit.voice.tts.fluxions.FluxionsTTSProvider
+
+::: roomkit.voice.tts.fluxions.FluxionsTTSConfig
+
+Install with: `pip install roomkit[fluxions]`.
+
 ### Pocket TTS
 
 ::: roomkit.voice.tts.pocket.PocketTTSProvider

@@ -1490,6 +1490,64 @@ with a barge-in and writes what the user heard to a WAV file.
 
 ---
 
+## Fluxions (Cloud API, Hosted Vui)
+
+[fluxions.ai](https://fluxions.ai) hosts the Vui model behind an API key: the
+same voices as Vui Nano, with no GPU. Each text is rendered on its own, streamed
+as 24 kHz PCM.
+
+```python
+from __future__ import annotations
+
+import os
+
+from roomkit.voice.tts.fluxions import FluxionsTTSConfig, FluxionsTTSProvider
+
+tts = FluxionsTTSProvider(
+    FluxionsTTSConfig(
+        api_key=os.environ["FLUXIONS_API_KEY"],
+        voice="maeve",  # a short id from list_voices(), or a full id
+    )
+)
+await tts.warmup()  # fetches the voice list
+
+async for chunk in tts.synthesize_stream("Hello from Vui, hosted by Fluxions."):
+    ...
+```
+
+**Local or hosted**:
+
+| | Vui Nano (`roomkit[vui]`) | Fluxions (`roomkit[fluxions]`) |
+|---|---|---|
+| Runs on | Your CUDA GPU (about 3.4 GB), Python 3.12 | Fluxions' servers, any Python |
+| Conversation context | `AUDIO`: replies generated inside the dialogue, the user's voice included, cut to what was heard | `NONE`: each text on its own |
+| Voices | The four presets, or a clip you clone | The 67 hosted voices (presets included) and the account's cloned voices |
+| Cost | Free | Per character |
+
+**Voices**: `list_voices()` returns each voice's short id (`maeve`), which
+`voice` accepts. A render needs the voice's full id, which carries the model's
+checkpoint (`maeve.h8ff7e07da`) and changes when Fluxions ships a new model: the
+provider resolves the short id from the voice list, and lists again once when
+the server no longer knows the id it cached. A full id (or a cloned voice's
+`u-...` id) is passed as given.
+
+**Constraints**:
+
+- No conversation context: the speech API takes no previous turns, no user
+  audio and no session. For context-aware replies, use Vui Nano.
+- English only, as the model.
+- A cold start after an idle period can take up to about 30 s before the first
+  audio; the read timeout is 60 s by default.
+- Errors come back as `httpx.HTTPStatusError`: 402 when the account is out of
+  credit, 429, 502 or 503 when Fluxions is at capacity.
+- Fluxions keeps every render in the account's history; it documents no
+  retention period or opt-out.
+
+**Output**: Fixed 24kHz PCM. `examples/voice_fluxions.py` lists the voices,
+streams a sentence, renders another whole and writes both to a WAV file.
+
+---
+
 ## TTS Filters
 
 Filters clean AI-generated text before it reaches the TTS provider. Essential for removing reasoning markers, annotations, or bracketed instructions.
@@ -1604,6 +1662,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Qwen3 TTS** | Local TTS | Post-gen | Medium | Free | Voice cloning, GPU |
 | **NeuTTS** | Local TTS | GGUF only | Medium | Free | Voice cloning, GGUF quantized |
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
+| **Fluxions** | Cloud TTS | Yes | Low | Per-character | Vui without a GPU, English |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Six languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
