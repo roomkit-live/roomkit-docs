@@ -755,10 +755,12 @@ trusting a stale number.
 
 - **`list_models()`** -- async query against the provider's models endpoint
   (OpenAI `/v1/models`, Anthropic/Mistral `models.list`, Gemini `models.list()`,
-  Ollama `/api/tags`), backfilling metadata from the offline list, the
-  capability tags included where the endpoint reports none (an empty list
-  means unknown, not none). Providers without an endpoint fall back to
-  `available_models()`.
+  Ollama `/api/tags`), backfilling metadata from the offline list (a
+  catalog's `capabilities` excepted: most are internal routing flags). The
+  speech models a chat listing surfaces carry `transcription` or `speech`
+  (OpenAI, Gemini, Mistral, PolarGrid) so a model picker can keep them out of
+  a chat list; an empty list means unknown, not none. Providers without an
+  endpoint fall back to `available_models()`.
 - **`available_models()`** -- classmethod returning `list[ModelInfo]`
   (`id`, `display_name`, `context_window`, `supports_vision`, `deprecated`,
   `capabilities`, `pricing`), shipped for Anthropic, OpenAI, OpenRouter, Gemini, Mistral, xAI,
