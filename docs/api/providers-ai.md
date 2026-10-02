@@ -27,6 +27,16 @@ producing a negative or non-finite cost.
 
 ::: roomkit.providers.ai.mock.MockAIProvider
 
+## Model capability tags
+
+A conversational provider's `list_models()` also lists the speech models its
+vendor serves. They carry `transcription` (speech-to-text) or `speech`
+(text-to-speech) in `ModelInfo.capabilities`, read from what the vendor
+reports or from the model's name, so a model picker can keep them out of a
+chat list. A curated catalog's own `capabilities` stay out of a live listing.
+
+::: roomkit.providers.ai.model_tags
+
 ## Response schema
 
 `AIContext.response_schema` constrains the answer of `generate()` to a JSON
