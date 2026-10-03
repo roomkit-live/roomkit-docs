@@ -474,8 +474,10 @@ Hook features:
 **Between two rounds of a tool loop.** `AFTER_TOOL_ROUND` fires after each
 round an AI channel ran calls in, before the next round is built. Its
 `ToolRoundEvent` carries the round whole (`calls`, the channel's `results`,
-the provider's `answered`) and the names of the turn's toolset (`tools`, Tool
-Search's whole catalogue included): the calls of a round run concurrently, so
+the provider's `answered`) and the names of the turn's toolset as
+`BEFORE_AI_GENERATION` is shown it (`tools`: what the policy and skill gating
+let the turn reach, Tool Search's whole catalogue included, nothing
+withdrawn): the calls of a round run concurrently, so
 a rule about them reads the round, not one call, and names what it withdraws.
 `event.withdraw(*names)` takes tools out of the rest of the turn with every
 guarantee of a `BEFORE_AI_GENERATION` withdrawal (never declared again, refused

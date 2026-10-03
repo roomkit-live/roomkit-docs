@@ -335,7 +335,7 @@ running. These accessors read the current turn from a contextvar instead:
 | `current_tool_room_id()` | Which room this turn belongs to |
 | `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `status` without a store round trip. It is the room as the store loaded it when the turn began, shared with the whole turn: a patch written to the store mid-turn is not in it, and the object itself must not be mutated (room changes go through the store); on a realtime tool call, which runs no turn, the room as loaded for that call |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
-| `current_tool_allowed_names()` | Every tool name the turn resolved that its tool policy admits, so a call is validated against the live toolset rather than an attach-time snapshot (a tool a skill keeps closed stays in); on a realtime tool call, every tool the session declares that its policy admits (`None` when it declares no catalogue: no list, the gate still judges each call) |
+| `current_tool_allowed_names()` | Every tool name the turn resolved, and every tool a round declared beyond it (`read_stored_result`, `plan_tasks`), nothing withdrawn, that its tool policy admits, so a call is validated against the live toolset rather than an attach-time snapshot (a tool a skill keeps closed stays in); on a realtime tool call, every tool the session declares that its policy admits (`None` when it declares no catalogue: no list, the gate still judges each call) |
 | `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
 | `current_response_metadata()` | The turn's response-metadata record — what the reply's MESSAGE events will carry (see below) |
 
@@ -523,7 +523,7 @@ ai = AIChannel("ai", provider=provider, tools=[weather_tool, search_tool], tool_
 Patterns use `fnmatch` glob syntax: `search_*`, `mcp_*`, `tool_?`.
 
 !!! note "What the policy covers"
-    The policy governs every tool the channel offers, including the ones it injects itself: sandbox commands (`sandbox_*`), `run_skill_script` and `plan_tasks` must be allowed like any host tool. Five tools only read or unlock and are never filtered when the channel serves them itself: `activate_skill`, `read_skill_reference`, `read_stored_result`, `find_tools` and `list_tools`. A tool of yours or of an MCP server under one of these names is filtered like any other; better, don't use them: a tool passed to the channel's `tools=` under a name the channel serves raises `ValueError` at construction (pass `tool_search=False` to free `find_tools` and `list_tools`), and one that arrives later (a binding's tools, orchestration) is not declared, with a warning. No name is declared twice. The same rule decides what the model is offered and what it may call, and Tool Search's `find_tools` / `list_tools` never name a tool the policy denies or a skill gates.
+    The policy governs every tool the channel offers, including the ones it injects itself: sandbox commands (`sandbox_*`), `run_skill_script` and `plan_tasks` must be allowed like any host tool. Six tools only read or unlock and are never filtered when the channel serves them itself: `activate_skill`, `read_skill_reference`, `read_stored_result`, `find_tools`, `list_tools`, and `call_tool`, which only carries a call on a fixed-declaration realtime provider: the policy judges the tool it names. A provider's native tool without a name (`{"google_search": {}}`) is never filtered nor hidden by Tool Search: a policy names the tools it governs. A tool of yours or of an MCP server under one of these names is filtered like any other; better, don't use them: a tool passed to the channel's `tools=` under a name the channel serves raises `ValueError` at construction (pass `tool_search=False` to free `find_tools` and `list_tools`), and one that arrives later (a binding's tools, orchestration) is not declared, with a warning. No name is declared twice. The same rule decides what the model is offered and what it may call, and Tool Search's `find_tools` / `list_tools` never name a tool the policy denies or a skill gates.
 
 ## MCP Tool Provider
 
@@ -678,8 +678,9 @@ Tool Search on. The agent is told to call these tools, not to go and find them.
 A `BEFORE_AI_GENERATION` hook sees the whole catalogue under Tool Search,
 deferred tools included, so it can withdraw one: `find_tools` and `list_tools`
 do not name it and a call to it is refused. An `AFTER_TOOL_ROUND` hook, between
-two rounds, withdraws with the same guarantees, and its event names the whole
-catalogue too (`tools`). A tool the hook adds is declared at
+two rounds, withdraws with the same guarantees, and its event names what
+`BEFORE_AI_GENERATION` is shown (`tools`): the whole catalogue the policy and
+skill gating let the turn reach, nothing withdrawn. A tool the hook adds is declared at
 every round of the turn, as a pinned tool is, and `find_tools` does not name it.
 
 The record is scoped per room and kept in memory; after a process restart it is
