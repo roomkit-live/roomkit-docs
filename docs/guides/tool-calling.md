@@ -283,6 +283,10 @@ The channel cancels the handler (it sees `asyncio.CancelledError` at its next
 `await`), sends nothing back, and fires the observers with `cancelled=True`
 beside `is_error=True`. The provider-level callback is described in the
 [realtime providers guide](realtime-voice-providers.md#background-tool-calls).
+An AI channel reports the same way a call a stop or the turn's cancellation
+cut: one the model announced but that never ran, and one whose handler was
+running when the turn was cancelled. Each is stored `cancelled` and reaches
+the observers once, with `cancelled=True`.
 
 A handler that declines a call it owns raises `ToolRefusedError`. A refusal
 returned as a body reads as work that was done, and any other exception reads

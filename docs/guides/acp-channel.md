@@ -758,6 +758,12 @@ hook is never asked about a tool it may not run; `BEFORE_TOOL_USE` then decides
 what the policy admits. An approval chooses `allow_once` when the agent
 offers it; RoomKit does not silently grant durable permissions.
 
+Every call the agent runs reaches `ON_TOOL_CALL` once it ends, as a report on
+a call the agent already read, with or without an external handler. Its stored
+outcome is the one every channel names: `cancelled` when the turn ended under
+it (a Stop, a process restart), `refused` when RoomKit refused the agent's
+permission request for it, else `failed` or `served` as the agent reported.
+
 A handler serves **one** channel — that is what makes the injected hooks
 attributable — and it can say which, so a prompt can name who is asking:
 
