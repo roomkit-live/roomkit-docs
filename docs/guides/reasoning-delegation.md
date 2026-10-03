@@ -103,12 +103,20 @@ budget) and everything that loop does at the end of a round:
 - a call whose arguments do not read is refused without running, and reported
   to the voice channel's `ON_TOOL_CALL` observers;
 - the turn has its `llm.generate` span, under the voice session's span, with
-  the tokens it used.
+  the tokens it used;
+- a result larger than the agent's `evict_threshold_tokens` is stored, and the
+  model reads it back with `read_stored_result`, as on any agent turn.
 
 Its tools are the voice session's catalogue, each call served through the
 voice channel's gate. An agent that carries tools of its own (tools, skills, a
 sandbox, planning, an external or human-input handler) is refused at
-construction: those would run outside the gate.
+construction: those would run outside the gate. So is an agent registered with
+a kit, whose hooks would judge each call a second time: build one for the
+backend and keep it out of rooms.
+
+A session's delegations run one at a time, each reading what the one before it
+worked out. A call a delegation left unanswered (its run timed out mid-call) is
+answered before the next generation, as an interrupted room turn's is.
 
 ## Spoken and silent outputs
 
@@ -166,12 +174,14 @@ something. The channel therefore always answers, with one spoken output:
 | No `reasoning_backend` configured | "No backend is available to handle delegated work in this session." |
 | The backend yielded nothing (or only blank text) | "The delegated work finished without an answer." |
 | The backend raised | "The delegated work could not be completed." |
-| The backend's turn was cut short (round cap, deadline, budget) | "The delegated work could not be completed." |
+| The backend's turn did not complete (round cap, deadline, budget, an answer cut or empty) | "The delegated work could not be completed." |
 | The run exceeded `reasoning_timeout_s` | "The delegated work took too long and was abandoned." |
 
-A turn cut short has no answer: the built-in backends yield what the model
-said before each tool round as progress, never as the answer, and raise
-`ReasoningCutShortError`, which the channel answers as a failed backend.
+A turn that did not complete has no answer: the built-in backends yield what
+the model said before each tool round as progress, never as the answer, and
+raise `ReasoningCutShortError` (its `reason` is the loop's
+`loop_end_reason`), which the channel answers as a failed backend. A backend
+call the run's timeout cut reaches `ON_TOOL_CALL` once, `cancelled`.
 
 A running delegation counts as activity for `wait_idle()`, and ending the
 session cancels it.
