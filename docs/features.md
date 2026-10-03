@@ -3376,6 +3376,23 @@ per transition rather than per rejected delivery, and `process_timeout`
 
 **Voice** — `voice_session_ready` (the audio path is live)
 
+### Failure Logs
+
+A failed turn, delivery or delegated task is logged once, by the component
+that catches the failure, never by the one that raises it (RFC §15.2):
+
+- A `ProviderError` is logged without a traceback, and its line names the
+  provider and the status. A missing model (404) or a server fault (5xx) is
+  `ERROR`; no status (connect refused, timeout), a 429 or another 4xx is
+  `WARNING`.
+- A caller that receives the failure owns its line: `process_inbound` and
+  `regenerate_response` return it on `InboundResult.error`, and a delegated
+  task's runner logs its child turn's failure as the task's. When such a turn
+  had no streaming target, RoomKit's own stream line is `DEBUG`, so log
+  `result.error` yourself after `process_inbound`. `send_event` returns only
+  the stored event, so a failure behind it keeps its level.
+- Any other exception is logged with its full traceback.
+
 ### Telemetry Providers
 
 RoomKit includes a provider-agnostic telemetry system for tracing spans and recording metrics. Instrument STT, TTS, LLM, hooks, audio pipeline, and realtime voice sessions with zero configuration overhead.
