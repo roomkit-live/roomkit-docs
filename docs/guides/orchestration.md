@@ -101,8 +101,13 @@ With `auto_delegate=True` and `refine_task=True` (default), the supervisor first
 extracts a clean topic from the user's message (pass 1), then the workers run.
 Pass 1 is read as any streamed turn: the workers get its final answer, not the
 narration of its tool rounds, and a pass its round cap, deadline or budget cut
-short hands on no task, so no worker runs. The tools it calls are stored in the
-room as any turn's, through `BEFORE_BROADCAST`; its text is not stored.
+short hands on no task, so no worker runs. The user's message still gets an
+answer: the supervisor's fallback ("The delegated work could not be
+completed."), stored and delivered with `metadata["loop_end_reason"]` naming
+the cut (`max_rounds`...). A pass whose provider failed gives the caller its
+error on `InboundResult.error`, with no fallback. The tools it calls are
+stored in the room as any turn's, through `BEFORE_BROADCAST`; its text is not
+stored.
 What happens during the worker run depends on the strategy:
 
 **Parallel** — all workers run concurrently on the same topic, then the
