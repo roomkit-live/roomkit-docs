@@ -14,6 +14,8 @@ Agent skills framework for structured tool definitions. See the [Agent Skills gu
 
 ::: roomkit.skills.executor.ScriptExecutor
 
+::: roomkit.channels.skill_script_tool.RunSkillScriptTool
+
 ## Exceptions
 
 ::: roomkit.skills.parser.SkillParseError

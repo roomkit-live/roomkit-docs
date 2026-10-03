@@ -1638,7 +1638,7 @@ The `context` a provider receives is already the requesting channel's view of th
 
 Built-in providers: `SlidingWindowMemory` (last N events), `BudgetAwareMemory` (token-budget trimming), `CompactingMemory` (LLM summarization), and `SummarizingMemory` (two-tier proactive budget management with truncation + summarization). See the [Advanced Memory guide](guides/advanced-memory.md) for details.
 
-Before it reads its memory, an AI channel measures the turn's footprint as the first round sends it (system prompt with an `Agent`'s identity, tools declared under Tool Search and the tool policy, reply budget), readable as `current_turn_footprint()`; `BudgetAwareMemory` reserves at least that, so the history is sized to what the window really leaves (RFC §20).
+Before it reads its memory, an AI channel measures the turn's footprint as the first round sends it, readable as `current_turn_footprint()`: its input (system prompt with an `Agent`'s identity, tools declared under Tool Search and the tool policy, the channel's own notes) and its reply budget. `BudgetAwareMemory` reserves the larger of that input and its `reserved_tokens`, and the reply once, the larger of its margin and the reply budget (RFC §20).
 
 ### Agentic AI Features
 

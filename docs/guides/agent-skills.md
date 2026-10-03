@@ -138,21 +138,6 @@ and who can activate it:
 | **Unlisted** | No | Yes | `mark_unlisted(name)` |
 | **Unavailable** | Name only, in `<unavailable_skills>` with a reason | No | `mark_unavailable(name, reason)` |
 
-### Skills from a store, and an agent's subset
-
-A host that keeps its skills elsewhere (a database, a marketplace) registers each
-one it rebuilds with `registry.add(skill)`, as `register()` does a directory: the
-skill's `path` is where its scripts and references are read from, and adding it
-clears its marks. A host that narrows a registry for one agent copies it:
-
-```python
-allowed = registry.copy(["refunds", "invoices"])           # paths and marks kept
-picked = registry.copy(["refunds"], marks=False)           # every copied skill advertised
-```
-
-A copy finds every skill the source finds, one discovered but not yet loaded
-included (RFC §24.3). See `examples/agent_skills_in_memory.py`.
-
 **Unlisted** keeps a skill activatable without advertising it. For catalogues
 where advertising every entry would drown the ones that matter: the host keeps
 quiet about a skill while any path that names it — a recommender nudge, a user
@@ -196,6 +181,21 @@ The prompt block then carries both:
 Re-registering a skill clears either mark and makes it fully available again.
 
 See the [skill_visibility.py example](https://github.com/roomkit-live/roomkit/blob/main/examples/skill_visibility.py) for a runnable demo of all three states, including a recommender hook that surfaces an unlisted skill by name.
+
+### Skills from a store, and an agent's subset
+
+A host that keeps its skills elsewhere (a database, a marketplace) registers each
+one it rebuilds with `registry.add(skill)`, as `register()` does a directory: the
+skill's `path` is where its scripts and references are read from, and adding it
+clears its marks. A host that narrows a registry for one agent copies it:
+
+```python
+allowed = registry.copy(["refunds", "invoices"])           # paths and marks kept
+picked = registry.copy(["refunds"], marks=False)           # every copied skill advertised
+```
+
+A copy finds every skill the source finds, one discovered but not yet loaded
+included (RFC §24.3). See `examples/agent_skills_in_memory.py`.
 
 ---
 
