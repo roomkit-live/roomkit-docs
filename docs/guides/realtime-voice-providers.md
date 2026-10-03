@@ -1119,7 +1119,7 @@ channel = RealtimeVoiceChannel(
 ```
 
 !!! warning "Names must match on both sides"
-    A tool the agent knows but the channel did not declare reaches the channel all the same: its gate refuses it as undeclared, the agent reads the error, and `ON_TOOL_CALL` hears of it, as on every other provider. A tool the channel declared but the agent does not know is never called. The names are case-sensitive.
+    A tool the agent knows but the channel did not declare reaches the channel all the same, as on every other provider. A channel that declares tools refuses it as undeclared: the agent reads the error, and `ON_TOOL_CALL` hears of it. A channel that declares none has no list to hold it against, so its gate judges the call alone and its `tool_handler` runs it, under any name the agent sends. A tool the channel declared but the agent does not know is never called. The names are case-sensitive.
 
 A call is bounded by the channel (`tool_timeout_seconds`, 10 s by default on `RealtimeVoiceChannel`, and `tool_timeouts` per tool): past it the handler is cancelled and the agent reads the failure rather than its turn hanging. A refused, failed, timed-out or unserved call reaches the agent as a tool error (`is_error`), not as a result it could take for a success. `tool_timeout_s` is off by default; set it only to cap the channel's bound for this provider: a call cut there is reported cancelled, and the channel cancels its handler. A call still waiting when the conversation ends is reported the same way.
 
