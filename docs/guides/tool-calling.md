@@ -88,6 +88,18 @@ before the request, rather than letting the vendor reject the turn:
 | Mistral | `[A-Za-z0-9_.-]+`: a dot, no colon |
 | A server behind a custom URL (`base_url`, Mistral's `server_url`) | not checked: the server decides |
 
+A realtime provider checks the same way when it declares a session's tools, at
+connection and at every reconfiguration. Where the endpoint hands the tools to
+another model, the rule is that model's vendor's (measured 2026-10-03):
+
+| Realtime provider | Tool names it accepts |
+|---|---|
+| OpenAI Realtime (its own endpoint), GPT-Live with `HostedReasoning` | `[A-Za-z0-9_-]{1,128}` |
+| Deepgram | its think provider's: `open_ai` and `anthropic` as above, `google` as Gemini; any other, or a `think_endpoint`, not checked |
+| Gemini Live | as Gemini |
+| xAI | not checked: it accepts any name |
+| GPT-Live with `IntegratorReasoning`, ElevenLabs | not checked here: the reasoning backend's provider, or the agent's own configuration, decides |
+
 So an MCP tool named `files.read` works on Gemini and Mistral and is refused
 up front on OpenAI and Anthropic. A tool without parameters (`parameters={}`
 or none) is declared as an object with no properties, which every provider

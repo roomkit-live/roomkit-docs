@@ -104,11 +104,32 @@ cancelled. A provider whose model calls no tool (Anam, PersonaPlex) has
 `supports_tools` set to `False`: the channel declares it no tool, advertises
 no skill or Tool Search in its prompt, and warns once at construction.
 
+A provider reads a call's arguments with the shared rule,
+`readable_arguments`: a mapping when they read as an object, the text the
+model wrote when they do not (invalid JSON, an array, a cut fragment). The
+channel, and a conference, refuse a call that arrives as text before the gate:
+no handler runs on a mapping that only passes for arguments, the model reads
+`Tool call arguments unreadable`, and the observers receive the refusal, as in
+the AI channel's tool loop. A provider also checks its endpoint's tool-name
+rule when it declares the session's tools, the way an AI provider checks a
+turn's (see [Tool Calling](tool-calling.md)): an endpoint that accepts the
+declaration can still fail the call later, opaquely, once the model reaches
+for it. A tool given to the channel or a conference under a name no vendor
+accepts is refused at construction, as an `AITool` is.
+
 ```python
 class MyProvider(RealtimeVoiceProvider):
     @property
     def supports_tools(self) -> bool:
         return True  # the default; False declares no tool to the model
+
+    async def _on_function_call(self, session, event) -> None:
+        # A mapping, or the model's text when it does not read as one.
+        arguments = readable_arguments(event["arguments"])
+        await self._fire(
+            self._tool_call_callbacks, session, event["id"], event["name"], arguments,
+            label="tool_call",
+        )
 
     async def submit_tool_error(self, session, call_id, result) -> None:
         # Only when the protocol has an error marker; the default sends

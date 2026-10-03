@@ -73,8 +73,13 @@ the response gave. The model reads why: `garbled=True` says the model wrote
 the arguments unreadable; a partial call that is not garbled was cut (the
 output cap, a content filter, a stream that stopped without a stop reason).
 A custom provider builds its calls through these rules rather than its own.
+A realtime provider hands `on_tool_call` the result of `readable_arguments`:
+the mapping, or the model's text for a call whose arguments do not read, which
+the channel refuses (RFC §12.4).
 
 ::: roomkit.providers.ai.tool_calls.tool_arguments
+
+::: roomkit.providers.ai.tool_calls.readable_arguments
 
 ::: roomkit.providers.ai.tool_calls.unreadable_arguments
 
