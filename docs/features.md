@@ -476,13 +476,15 @@ round an AI channel ran calls in, before the next round is built. Its
 `ToolRoundEvent` carries the round whole (`calls`, the channel's `results`,
 the provider's `answered`) and the names of the turn's toolset (`tools`, Tool
 Search's whole catalogue included): the calls of a round run concurrently, so
-a rule about them reads the round, not one call, and names what it withdraws. `event.withdraw(*names)` takes tools
-out of the rest of the turn with every guarantee of a `BEFORE_AI_GENERATION`
-withdrawal (never declared again, refused if called, a tool the channel
-provides itself included, never handed to an external handler), and
-`event.add_message(text)` is what the next round reads after the results. A
-BLOCK changes nothing, the round having run; neither a realtime session nor a
-reasoning backend's own loop fires it.
+a rule about them reads the round, not one call, and names what it withdraws.
+`event.withdraw(*names)` takes tools out of the rest of the turn with every
+guarantee of a `BEFORE_AI_GENERATION` withdrawal (never declared again, refused
+if called, a tool the channel provides itself included, never handed to an
+external handler), and `event.add_message(text)` is what the next round reads
+after the results. A hook acts on the event in place: a BLOCK stops the hooks
+after it, as on any sync trigger, and changes nothing of the round, which has
+run; a MODIFY's returned event is not read. Neither a realtime session, nor a
+reasoning backend's agent, nor an ACP agent's own loop fires it.
 
 ```python
 @kit.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")

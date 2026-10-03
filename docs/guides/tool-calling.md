@@ -371,8 +371,11 @@ to the turn instead, and both travel through the per-call context:
   every MESSAGE event the turn produces, as it stands when each event is
   created. A memory provider writes it while the context is built, a
   `BEFORE_AI_GENERATION` hook writes `event.ai_context.response_metadata`, and a
-  tool handler writes here — all three reach the same object. A document the
-  tool read mid-loop can therefore be named as a source of the reply.
+  tool handler or a `BEFORE_TOOL_USE` hook writes here: all of them reach the
+  same object, the one `InboundResult.response_metadata` hands the caller,
+  whether the turn answered or failed. A document the tool read mid-loop can
+  therefore be named as a source of the reply, and a host can count the calls a
+  turn started.
 - **`current_tool_call().structured_content`** is the structured copy of an MCP
   result that the tool-call events persist verbatim for UI surfaces. A handler
   that rewrites the text before the model reads it (a provider's private
@@ -669,7 +672,9 @@ Tool Search on. The agent is told to call these tools, not to go and find them.
 
 A `BEFORE_AI_GENERATION` hook sees the whole catalogue under Tool Search,
 deferred tools included, so it can withdraw one: `find_tools` and `list_tools`
-do not name it and a call to it is refused. A tool the hook adds is declared at
+do not name it and a call to it is refused. An `AFTER_TOOL_ROUND` hook, between
+two rounds, withdraws with the same guarantees, and its event names the whole
+catalogue too (`tools`). A tool the hook adds is declared at
 every round of the turn, as a pinned tool is, and `find_tools` does not name it.
 
 The record is scoped per room and kept in memory; after a process restart it is
