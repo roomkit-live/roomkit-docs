@@ -1045,7 +1045,7 @@ Each provider declares the turn's tools in its vendor's format. A tool without p
 
 Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` (50 by default) caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls. A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for, so the turn overshoots by one generation at most. Both are off by default and can be set per room (binding metadata) or per turn (`AIChannelTurnConfig`). A budget that is not a positive number, or a cost budget on a model with no catalogue price, raises `ValueError`: on the channel when it is built, otherwise in the turn that reads it. A generation the `fallback_provider` serves is priced at the primary provider's rate; a fallback priced otherwise is logged once (RFC §6.4).
 
-The loop yields a final `LoopEndMarker(reason, rounds)` on every exit, `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
+The loop yields a final `LoopEndMarker` on every exit (its `reason`, the tool `rounds` that ran, and the limits the turn ran under), `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
 
 ```python
 from roomkit.models.streaming import LoopEndMarker
@@ -1059,7 +1059,7 @@ async def _observe(self, inner):
         yield delta
 ```
 
-`reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. Without it, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
+`reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. `max_rounds`, `timeout_seconds`, `budget_tokens` and `budget_usd` name the limits the turn ran under (`None` for no such limit; the budget is the turn's, resolved per turn), so a consumer names the one its reason refers to without reading the channel. Without the reason, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
 
 **An answer that did not act.** `AIChannel(continuation=...)` takes a policy
 that reads the text of a round the model ended itself, without a call and with

@@ -238,8 +238,19 @@ class ObservingAIChannel(AIChannel):
 | `cancelled` | The turn was cancelled |
 | `error` | The provider failed after a tool round; the rounds are kept and the exception follows the marker |
 
-`rounds` is how many tool rounds ran before the stop. The limits each reason
-refers to are your own configuration, so they are not repeated on the marker.
+`rounds` is how many tool rounds ran before the stop, as `ON_AI_RESPONSE`
+counts them (`round_count`): a round the loop tried again without a call is
+none. The marker also states the limits the turn ran under, so you name the
+one its reason refers to without reading the channel:
+
+| Field | The limit |
+|---|---|
+| `max_rounds` | `max_tool_rounds` |
+| `timeout_seconds` | `tool_loop_timeout_seconds`, `None` for no deadline |
+| `budget_tokens`, `budget_usd` | the turn's budget, `None` when it has none |
+
+The budget is resolved per turn (the binding, then the turn's config, then
+the channel), which the channel itself cannot say.
 
 A round the loop tries again without a call (an empty one, one whose call
 could not be parsed, one the continuation policy goes on) ends on a
