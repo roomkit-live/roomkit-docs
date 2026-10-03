@@ -109,9 +109,10 @@ budget) and everything that loop does at the end of a round:
 
 Its tools are the voice session's catalogue, each call served through the
 voice channel's gate, which also bounds it: the voice channel's
-`tool_timeout_seconds` and `tool_timeouts` apply, a tool that waits by design
-(`delegate_task`) is unbounded, and the agent's own `tool_timeout_seconds` does
-not cut the call first. An agent that carries tools of its own (tools, skills, a
+`tool_timeout_seconds` and `tool_timeouts` apply, and a tool that waits by
+design (`delegate_task`) has no bound per call, the run's `reasoning_timeout_s`
+still applying. The agent's own `tool_timeout_seconds` and `tool_timeouts` do
+not apply: set a backend call's bound on the voice channel. An agent that carries tools of its own (tools, skills, a
 sandbox, planning, an external or human-input handler) is refused at
 construction: those would run outside the gate. So is an agent registered with
 a kit, whose hooks would judge each call a second time: build one for the
