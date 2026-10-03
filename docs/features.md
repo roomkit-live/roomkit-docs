@@ -628,7 +628,7 @@ Filter options:
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
-| `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. `loop_end_reason` names which of the tool loop's rules ended the turn — `completed`, or `max_rounds` / `timeout` / `budget_exceeded` / `cancelled` / `force_stopped` / `truncated` / `empty_response` / `error` for a turn that was cut (`error`: the provider interrupted it after a tool round; its rounds are kept, no message is added to say so, the report carries their usage and `ON_ERROR` fires after it; a stored `[Response interrupted]` message, marked `interruption_marker`, is no answer: no agent answers it and no strategy or delegation takes it for one); infer that from `tool_calls_count` and a healthy multi-round answer reads as a cut-off. `thinking` is the turn's reasoning, each round's. The loop also records `loop_end_reason` and `ai_usage` on the turn's last message, a turn without tools included, whatever the provider streams. A turn whose loop did not reach its end (a barge-in, a stream the transport stopped reading, a task cancelled from outside, an error raised before any round ended) fires nothing; its `llm.generate` span carries what its rounds used. `declared_tools` is the union, over every round of the turn, of the tools the provider received (name, description, `parameters` as declared), each with the reason Tool Search let it through (`always`, `pinned`, `sticky`, `revealed`; a tool Tool Search never gates, such as one orchestration injected or one of the channel's own like `plan_tasks`, is `always`, after its first use too); `BEFORE_AI_GENERATION` sees the turn's catalogue, not the rounds' declarations, so a tool `find_tools` revealed shows up here and nowhere else. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included (whose `declared_tools` stays empty: the toolset is the agent's) |
+| `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. `loop_end_reason` names which of the tool loop's rules ended the turn — `completed`, or `max_rounds` / `timeout` / `budget_exceeded` / `cancelled` / `force_stopped` / `truncated` / `empty_response` / `unfinished` / `error` for a turn that was cut (`error`: the provider interrupted it after a tool round; its rounds are kept, no message is added to say so, the report carries their usage and `ON_ERROR` fires after it; a stored `[Response interrupted]` message, marked `interruption_marker`, is no answer: no agent answers it and no strategy or delegation takes it for one); infer that from `tool_calls_count` and a healthy multi-round answer reads as a cut-off. `thinking` is the turn's reasoning, each round's. The loop also records `loop_end_reason` and `ai_usage` on the turn's last message, a turn without tools included, whatever the provider streams. A turn whose loop did not reach its end (a barge-in, a stream the transport stopped reading, a task cancelled from outside, an error raised before any round ended) fires nothing; its `llm.generate` span carries what its rounds used. `declared_tools` is the union, over every round of the turn, of the tools the provider received (name, description, `parameters` as declared), each with the reason Tool Search let it through (`always`, `pinned`, `sticky`, `revealed`; a tool Tool Search never gates, such as one orchestration injected or one of the channel's own like `plan_tasks`, is `always`, after its first use too); `BEFORE_AI_GENERATION` sees the turn's catalogue, not the rounds' declarations, so a tool `find_tools` revealed shows up here and nowhere else. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included (whose `declared_tools` stays empty: the toolset is the agent's) |
 | `ON_PLAN_UPDATED` | Async | An agent rewrote its structured task plan. Carries a `PlanUpdatedEvent` with the plan as the agent wrote it |
 | `ON_STATUS_POSTED` | Async | A status reached the inter-agent StatusBus. Fires for the room named in the entry's `metadata["room_id"]` — the bus itself is global |
 
@@ -1059,7 +1059,30 @@ async def _observe(self, inner):
         yield delta
 ```
 
-`reason` is one of `completed`, `max_rounds`, `timeout`, `truncated`, `empty_response` or `cancelled`. Without it, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
+`reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. Without it, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
+
+**An answer that did not act.** `AIChannel(continuation=...)` takes a policy
+that reads the text of a round the model ended itself, without a call and with
+a tool declared, and returns the instruction that makes the model go on, or
+`None` when the answer stands. The loop decides the natural stop from what the
+round carried, every provider alike (`stop`, `end_turn`, `STOP`; never a
+truncation, a filter or a call it could not parse), hands the next round the
+text as the assistant's message and the instruction as the user's, and keeps
+its guards (no continuation after a cancellation or a force-stop, nor past the
+turn's deadline or budget). The policy shares the empty round's bound
+(`max_empty_retries`); a turn whose policy still asks once it has run out ends
+`unfinished`, never `completed`.
+
+```python
+def go_on(text: str) -> str | None:
+    if text.lower().startswith("i will check"):
+        return "You announced a check but did not run it: run it now."
+    return None
+
+agent = AIChannel("agent", provider=provider, tools=tools, continuation=go_on)
+```
+
+See `examples/ai_continuation_policy.py`.
 
 See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture details and the full event protocol.
 
