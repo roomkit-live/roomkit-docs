@@ -86,6 +86,14 @@ else:
     print(f"Failed: {result.error}")
 ```
 
+A worker whose turn its round cap, deadline or budget cut short has no answer:
+the task fails, `error` says how the turn ended ("The worker's turn ended
+max_rounds before its answer"), `output` keeps the worker's last narration
+("Still checking.") for a caller that wants it, and
+`metadata["loop_end_reason"]` carries the reason (`max_rounds`, `timeout`,
+`budget_exceeded`). The same holds streamed or buffered, inline or in the
+background, with shared channels or not.
+
 ## Parallel delegation
 
 ```python
@@ -336,7 +344,9 @@ completion guard: if the agent ends a turn without calling it, the agent is
 re-prompted to use the tool (up to `max_result_retries` times); if it still
 hasn't, the orchestration submits a failure on its behalf
 (`status="failed"`, `by="orchestration"`) carrying the worker's last raw output
-so the caller knows what went wrong.
+so the caller knows what went wrong. A turn cut short (above) keeps a result
+the worker submitted before the cut; without one, the task fails at once,
+with no re-prompt.
 
 The `submit_result` payload:
 
