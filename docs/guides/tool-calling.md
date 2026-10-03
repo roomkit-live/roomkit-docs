@@ -331,7 +331,7 @@ running. These accessors read the current turn from a contextvar instead:
 | `current_tool_room_id()` | Which room this turn belongs to |
 | `current_tool_room()` | The turn's `Room` itself, the object `RoomContext.room` holds for the same turn: read its `organization_id`, `metadata` or `status` without a store round trip. It is the room as the store loaded it when the turn began, shared with the whole turn: a patch written to the store mid-turn is not in it, and the object itself must not be mutated (room changes go through the store); on a realtime tool call, which runs no turn, the room as loaded for that call |
 | `current_tool_actor_id()` | Whose turn it is — the participant id of the event that woke the channel |
-| `current_tool_allowed_names()` | Every tool name the turn resolved that its tool policy admits, so a call is validated against the live toolset rather than an attach-time snapshot (a tool a skill keeps closed stays in); on a realtime tool call, every tool the session declares that its policy admits (`None` when it declares no catalogue, which admits any name) |
+| `current_tool_allowed_names()` | Every tool name the turn resolved that its tool policy admits, so a call is validated against the live toolset rather than an attach-time snapshot (a tool a skill keeps closed stays in); on a realtime tool call, every tool the session declares that its policy admits (`None` when it declares no catalogue: no list, the gate still judges each call) |
 | `current_tool_call()` | The per-call context: the call's id, its channel, and the `structured_content` reverse channel the handler may fill |
 | `current_response_metadata()` | The turn's response-metadata record — what the reply's MESSAGE events will carry (see below) |
 
@@ -343,7 +343,8 @@ participant, so its actor is `None`), so one handler works on every path for
 the room id, the `Room`, `current_tool_call()` and
 `current_tool_allowed_names()` (there, every tool the session declares that
 its policy admits: its catalogue, what orchestration set up, the channel's
-own; `None` for a session that declares no catalogue, which admits any name);
+own; `None` for a session that declares no catalogue: no list, its gate still
+judges each call);
 `current_response_metadata()` returns `None` there (no turn merges a record on
 that path, so the `if record is not None` guard below skips a write nothing
 would carry). Each returns `None` outside a
