@@ -288,7 +288,11 @@ An AI channel reports the same way every call its turn announced and nothing
 else reported, whatever cut it: a stop while the calls were announced, a
 transport that stopped reading (a voice barge-in), the turn cancelled in the
 gate, in the handler or while `ON_TOOL_CALL` judged the call. Each is stored
-`cancelled` and reaches the observers once, with `cancelled=True`.
+`cancelled` and reaches the observers once, with `cancelled=True`. A call
+whose outcome the model already read (one the provider ran, one an external
+handler decided, a realtime Tool Search result already sent) keeps that
+outcome when a cut interrupts its own report: the observers hear it once,
+with that outcome, never a second time cancelled.
 
 A handler that declines a call it owns raises `ToolRefusedError`. A refusal
 returned as a body reads as work that was done, and any other exception reads
