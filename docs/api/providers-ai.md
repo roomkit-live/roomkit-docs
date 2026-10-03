@@ -14,6 +14,8 @@
 
 ::: roomkit.providers.ai.base.AIToolCall
 
+::: roomkit.providers.ai.base.ServedCall
+
 ::: roomkit.providers.ai.base.AIResponse
 
 ::: roomkit.providers.ai.base.ModelInfo

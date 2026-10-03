@@ -67,7 +67,7 @@ The streaming tool loop is built on three event types emitted by `AIProvider.gen
 | Event | Fields | Description |
 |-------|--------|-------------|
 | `StreamTextDelta` | `text` | A chunk of generated text |
-| `StreamToolCall` | `id`, `name`, `arguments`, `partial`, `garbled` | A complete tool call extracted after streaming; `partial` marks one whose arguments do not read as an object, which the loop answers without running, and `garbled` says the model wrote them so rather than the response cutting them |
+| `StreamToolCall` | `id`, `name`, `arguments`, `metadata`, `served`, `partial`, `garbled` | A complete tool call extracted after streaming; `partial` marks one whose arguments do not read as an object, which the loop answers without running, and `garbled` says the model wrote them so rather than the response cutting them; `served` is set only by a provider that already ran the call (`ServedCall(result, is_error)`): the channel reports that outcome instead of serving it. The arguments never carry that mark |
 | `StreamDone` | `finish_reason`, `usage`, `metadata` | Signals the end of one generation round |
 
 These are Pydantic models exported from `roomkit`:
