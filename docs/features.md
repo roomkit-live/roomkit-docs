@@ -2362,6 +2362,15 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
+**PCM only.** A Voice Channel plays decoded 16-bit PCM (RFC §12.2): the
+backends and the outbound pipeline read every chunk as samples, and encoding
+for the wire belongs to the backend. A TTS chunk in another encoding (MP3,
+Opus, G.711) is refused before a byte plays, with an error naming the format
+(`VoiceChannel expects decoded PCM, got format 'mp3'`), on `say()`, `deliver()`
+and streamed responses alike. Configure the TTS for PCM: `ElevenLabsTTSProvider`
+streams MP3 by default, so give it `output_format="pcm_16000"` (or the rate of
+the transport); Grok and Gradium default to PCM.
+
 #### Proactive Audio: `say()` and `play()`
 
 The channel can speak without an inbound message: `say()` synthesizes text through TTS, `play()` sends a pre-recorded WAV straight to the transport (no TTS, no LLM round-trip).

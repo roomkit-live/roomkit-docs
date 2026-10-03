@@ -871,7 +871,7 @@ for v in await tts.list_voices(language="fr"):
 | `stability` | `0.5` | Voice stability (0–1) |
 | `similarity_boost` | `0.75` | Voice similarity (0–1) |
 | `style` | `0.0` | Style exaggeration (0–1) |
-| `output_format` | `"mp3_44100_128"` | `<codec>_<rate>[_<bitrate>]`: `mp3_44100_128`, `pcm_16000`, `ulaw_8000`, `opus_48000_64`... Chunks declare the codec and the rate it names. `wav_*` is for `synthesize()` only: ElevenLabs refuses it on a streamed request |
+| `output_format` | `"mp3_44100_128"` | `<codec>_<rate>[_<bitrate>]`: `mp3_44100_128`, `pcm_16000`, `ulaw_8000`, `opus_48000_64`... Chunks declare the codec and the rate it names. `wav_*` is for `synthesize()` only: ElevenLabs refuses it on a streamed request. On a `VoiceChannel`, use `pcm_<rate>`: it plays PCM only and refuses MP3, Opus or G.711 chunks |
 | `optimize_streaming_latency` | `None` | Latency optimization level (0–4, higher is faster at some cost of quality). Sent to the v2 / v2.5 models only: v3 and v4 refuse it, and a value set for them is left out with a warning. `None` sends nothing |
 | `expressive` | `False` | Eleven v4 Turbo with inline audio tags (see below) |
 | `use_context` | `True` | Request stitching from the conversation context |
