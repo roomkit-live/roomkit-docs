@@ -383,7 +383,8 @@ kit = RoomKit(
 
 The result event carries loop status in `event.metadata`:
 
-- `approved` — `True` if all reviewers approved, `False` if max iterations reached
+- `approved` — `True` if all reviewers approved, `False` otherwise
+- `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer, and the caller reads the producer's failure on `InboundResult.error`)
 - `iteration` — number of iterations completed
 
 ```python
