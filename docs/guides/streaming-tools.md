@@ -99,7 +99,7 @@ A provider that only implements `generate()` works unchanged, but its text arriv
 ### Implementing for a custom provider
 
 ```python
-from roomkit.providers.ai import CallIds, call_garbled, tool_arguments, unreadable_arguments
+from roomkit.providers.ai import CallIds, call_garbled, call_partial, tool_arguments
 from roomkit.providers.ai.base import AIProvider, AIContext
 from roomkit.providers.ai.base import (
     StreamTextDelta, StreamToolCall, StreamDone, StreamEvent,
@@ -124,17 +124,21 @@ class MyProvider(AIProvider):
                 yield StreamTextDelta(text=chunk.text)
 
         # After streaming, yield any tool calls through the shared rules:
-        # every call its own id, arguments as a mapping, an unreadable call
-        # partial (and garbled when the response was not cut over it).
+        # every call its own id, arguments as a mapping, a call that must not
+        # run partial (its arguments do not read, or the response was cut
+        # over it), and garbled when the response was not cut over it. Only
+        # the last call can be cut: a call another followed was closed by it.
         ids = CallIds()
         finish_reason = self._finish_reason
-        for tool_call in self._pending_tool_calls:
+        calls = self._pending_tool_calls
+        for n, tool_call in enumerate(calls):
+            raw, last = tool_call.raw_arguments, n == len(calls) - 1
             yield StreamToolCall(
                 id=ids(tool_call.id, tool_call.name),
                 name=tool_call.name,
-                arguments=tool_arguments(tool_call.raw_arguments),
-                partial=unreadable_arguments(tool_call.raw_arguments),
-                garbled=call_garbled(tool_call.raw_arguments, finish_reason),
+                arguments=tool_arguments(raw),
+                partial=call_partial(raw, finish_reason, last=last),
+                garbled=call_garbled(raw, finish_reason, last=last),
             )
 
         yield StreamDone(
@@ -180,7 +184,7 @@ model. The cap lives in the loop rules (`_ai_loop_rules.py`).
 ## Knowing why the loop stopped
 
 The loop ends on rules of its own: the round cap, the wall-clock deadline, a
-round truncated at the output cap, a model that answered nothing after its
+round truncated at the output cap or the context window, a model that answered nothing after its
 tools, a cancellation. It knew which one fired and wrote it to the log — but
 the stream just ended, so a consumer could not tell a finished answer from a
 loop cut mid-work, and had to re-derive the cause by counting tool calls and
@@ -231,8 +235,8 @@ class ObservingAIChannel(AIChannel):
 | `max_rounds` | `max_tool_rounds` was reached |
 | `timeout` | The wall-clock deadline passed |
 | `budget_exceeded` | The turn reached its `turn_budget_tokens` or `turn_budget_usd`; the round's calls did not run |
-| `truncated` | The final round hit the output cap with no text — often reasoning consuming the whole budget |
-| `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed (Gemini's `MALFORMED_FUNCTION_CALL`), and the bounded retries were spent |
+| `truncated` | The final round ran out of room with no text: the output cap (often reasoning consuming the whole budget) or the context window filling up (`model_context_window_exceeded`, `model_length`). Not retried: the same room runs out again |
+| `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed or taken (Gemini's `MALFORMED_FUNCTION_CALL`, `UNEXPECTED_TOOL_CALL`), and the bounded retries were spent |
 | `unfinished` | The channel's continuation policy still asked to go on once the retries it shares with an empty round were spent |
 | `force_stopped` | The anti-loop guard cut a model that kept repeating a blocked call; the text it ends on is a summary of a cut turn, not an answer |
 | `cancelled` | The turn was cancelled |

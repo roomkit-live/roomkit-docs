@@ -85,6 +85,8 @@ the channel refuses (RFC §12.4).
 
 ::: roomkit.providers.ai.tool_calls.unreadable_arguments
 
+::: roomkit.providers.ai.tool_calls.call_partial
+
 ::: roomkit.providers.ai.tool_calls.call_cut
 
 ::: roomkit.providers.ai.tool_calls.call_garbled

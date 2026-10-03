@@ -98,8 +98,9 @@ Each delegation runs on the agent's tool loop, the one every AI channel turn
 runs on, with its settings (prompt, temperature, thinking, round cap, deadline,
 budget) and everything that loop does at the end of a round:
 
-- a call the provider could not parse (Gemini's `MALFORMED_FUNCTION_CALL`) or
-  an empty answer after a tool round is asked again;
+- a call the provider could not parse or would not take (Gemini's
+  `MALFORMED_FUNCTION_CALL`, `UNEXPECTED_TOOL_CALL`) or an empty answer after a
+  tool round is asked again;
 - a call whose arguments do not read is refused without running, and reported
   to the voice channel's `ON_TOOL_CALL` observers;
 - the turn has its `llm.generate` span, under the voice session's span, with
