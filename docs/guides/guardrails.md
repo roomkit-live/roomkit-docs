@@ -376,8 +376,8 @@ from roomkit.models.steering import Cancel
 
 ai_channel = kit.get_channel("ai-assistant")
 
-# Cancel the active tool loop
-ai_channel.steer(Cancel(reason="User requested stop"))
+# Cancel the tool loops of the room the user stopped, and no other room's
+ai_channel.steer(Cancel(reason="User requested stop"), room_id="room-1")
 ```
 
 See the [AI Steering guide](ai-steering.md) for the full directive API (`Cancel`, `InjectMessage`, `UpdateSystemPrompt`).

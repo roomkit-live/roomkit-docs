@@ -104,7 +104,8 @@ from roomkit.models.steering import Cancel
 @kit.hook(HookTrigger.ON_SESSION_ENDED)
 async def cancel_on_disconnect(event, ctx):
     ai = kit.get_channel("ai-assistant")
-    ai.steer(Cancel(reason="user_disconnected"))
+    # The channel serves every room it is bound to: stop this room's turns only.
+    ai.steer(Cancel(reason="user_disconnected"), room_id=ctx.room.id)
 ```
 
 ### Inject Real-Time Context from Another Channel
@@ -118,10 +119,13 @@ from roomkit.models.steering import InjectMessage
 @kit.hook(HookTrigger.BEFORE_BROADCAST, channel_types={ChannelType.SMS})
 async def inject_sms_context(event, ctx):
     ai = kit.get_channel("ai-assistant")
-    ai.steer(InjectMessage(
-        content=f"SMS received from {event.source.participant_id}: {event.content.body}",
-        role="user",
-    ))
+    ai.steer(
+        InjectMessage(
+            content=f"SMS received from {event.source.participant_id}: {event.content.body}",
+            role="user",
+        ),
+        room_id=event.room_id,
+    )
 ```
 
 ### Dynamic VIP System Prompt
