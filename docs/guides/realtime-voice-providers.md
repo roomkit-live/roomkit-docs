@@ -191,9 +191,10 @@ as Gemini 3.1 Live, use three stable functions instead:
 | `call_tool(name="calendar", arguments_json='{"action":"list"}')` | The result of calling the named tool with the decoded arguments |
 
 Without `name`, `list_tools(category=...)` returns the compact inventory of
-every tool the session can call, declared or hidden (the orchestration tools
-included, the policy's refusals and skill-gated tools left out), as on a text
-turn. A schema lookup returns one complete JSON document and is not cut by
+every tool the session can call, declared or hidden (the orchestration and
+skill tools included, the policy's refusals and skill-gated tools left out), as
+on a text turn; on a fixed-declaration provider, `list_tools(name=...)` and
+`call_tool` reach every tool it lists. A schema lookup returns one complete JSON document and is not cut by
 the business tool-result length limit. The tool name and an operation such as
 `list` are separate: the operation belongs in the tool's arguments when its
 schema declares one.
