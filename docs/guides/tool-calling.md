@@ -661,8 +661,10 @@ do not name it and a call to it is refused. A tool the hook adds is declared at
 every round of the turn, as a pinned tool is, and `find_tools` does not name it.
 
 The record is scoped per room and kept in memory; after a process restart it is
-rebuilt once per room from the persisted `TOOL_CALL_END` events, so a
-conversation that outlives its channel object keeps its tool memory. Those
+rebuilt once per room from the channel's own persisted tool-call events, so a
+conversation that outlives its channel object keeps its tool memory. Another
+agent's calls in the room are not part of it, whatever that agent let it see,
+and each call keeps the arguments of its own turn. Those
 events hold what the model was given: a result that had been evicted comes back
 as a short preview, not as the stored id.
 

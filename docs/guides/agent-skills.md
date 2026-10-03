@@ -247,8 +247,9 @@ Consequences worth knowing:
   restart, a channel object replaced) and the prompt block goes with it, so the next
   activation returns the body again. The mechanism degrades to reloading; it never
   leaves the model holding an ack with no rules.
-- **The record is hydrated** from the room's persisted tool-call history, so a channel
-  swapped mid-conversation doesn't restart amnesic.
+- **The record is hydrated** from the channel's own persisted tool-call history in the
+  room, so a channel swapped mid-conversation doesn't restart amnesic; another agent's
+  activations in the room are not its own.
 - **Bodies are never truncated.** Large tool results are normally evicted behind
   `read_stored_result`; a skill's instructions are exempt, because binding rules
   reduced to a head/tail preview are not rules. References stay evictable — those are
