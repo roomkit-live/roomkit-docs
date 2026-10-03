@@ -94,7 +94,11 @@ max_rounds before its answer"), `output` keeps the worker's last narration
 `metadata["loop_end_reason"]` carries the reason (`max_rounds`, `timeout`,
 `budget_exceeded`...), as does the `ON_TASK_COMPLETED` event. The same holds
 streamed or buffered, inline or in the background, with shared channels or
-not, and for a turn that wrote no text at all. An ACP worker is cut the same
+not, and for a turn that wrote no text at all. A turn that failed after it
+began (the provider errored after a round, an ACP agent's prompt raised)
+fails the task with that error (`error="upstream 400"`), and the task still
+carries `metadata["loop_end_reason"]` (`error`, or `interrupted` for ACP) and
+the narration as its `output`, as `ON_TASK_COMPLETED` does. An ACP worker is cut the same
 way when its prompt stops on any reason but `end_turn` (`max_tokens`,
 `max_turn_requests`, `refusal`, `cancelled`) or never returns
 (`interrupted`, the channel closing mid-turn): the reason is the one the task
