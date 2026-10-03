@@ -103,7 +103,8 @@ another model, the rule is that model's vendor's (measured 2026-10-02):
 So an MCP tool named `files.read` works on Gemini and Mistral and is refused
 up front on OpenAI and Anthropic. A tool without parameters (`parameters={}`
 or none) is declared as an object with no properties, which every provider
-accepts.
+accepts, and a schema whose root has no `type` is declared an object's:
+Anthropic and OpenAI refuse it untyped.
 
 ### As Dicts in Binding Metadata
 
