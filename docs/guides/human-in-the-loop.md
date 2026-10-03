@@ -105,6 +105,13 @@ async def process_tool_call(self, tool_name, tool_input, *, room_id=None, **kw):
 handler.resolve(pending_id, answer_json)
 ```
 
+A turn cut while the handler still waits (a cancelled task, a transport
+that stopped reading) cancels `process_tool_call` and calls the
+handler's `on_tool_cancelled(tool_name, tool_input, tool_call_id=..., room_id=...)`.
+Its default reports the call to `ON_TOOL_CALL` as cancelled, once; override it
+to withdraw the question the human was shown, then call
+`await super().on_tool_cancelled(...)` to keep the report.
+
 ---
 
 ## How It Works
