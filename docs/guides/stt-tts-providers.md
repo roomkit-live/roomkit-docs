@@ -1461,7 +1461,13 @@ What the provider does with the context:
   real time on an RTX 4070 without flash-attn).
 - One active conversation per provider: `Engine(max_rows=1)` gives it a single
   cache, and calls are serialized.
-- A reply longer than `max_secs` (30 s by default) is cut off there.
+- A reply longer than `max_secs` (60 s by default) is cut off there, with a
+  warning in the log.
+- Vui invents syllables at a line break and after a text that ends on a
+  comma, so the provider joins a reply's lines into running sentences before
+  speaking it: a poem written one line per verse came out with 15 % of its
+  words wrong, 4 % once joined. The hosted Vui (Fluxions) reads line breaks
+  cleanly on its own.
 - `vui-tts>=1.2.0,<1.3`, through its public API only: `Row.truncate` for the
   cut after a barge-in, `load_official_prompt` and `Row.prefill(cond_bias=...)`
   for a preset's speaker token and conditioning bias, as Vui's own server
