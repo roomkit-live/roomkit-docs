@@ -74,9 +74,13 @@ start all or nothing, under the room's lock; and `ON_RECORDING_STARTED` fires
 for each before the call returns, so a resumed recording announces its consent
 point again before any media.
 
-A channel joined to the room wires its own audio and video. A capture the
-framework does not wire itself declares its track and hands its media through
-the framework:
+The recording captures the room's declared tracks: a recording that starts on
+a live room is told each one before any of its media, after its announcement.
+A channel the framework wires itself declares a session's tracks when the
+session joins a room that records, so a session that joined while the room
+recorded nothing is recorded once it joins again. A capture the framework
+does not wire itself declares its track and hands its media through the
+framework:
 
 ```python
 feed = kit.add_room_recording_track(
@@ -92,9 +96,9 @@ if feed is not None:          # None: the room records nothing
 
 `kit.room_recordings(room_id)` lists the running handles (each with its
 `path`), and `kit.stop_room_recording(room_id)` stops them and returns the
-results. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
+results, a room whose row is gone included. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
 `session` `None` and its `room_id` set): an explicit stop, `close_room`,
-`archive_room` and `kit.close()` alike. See
+`archive_room`, a room closed by its timer and `kit.close()` alike. See
 `examples/room_recording_on_demand.py`.
 
 ## Configuration

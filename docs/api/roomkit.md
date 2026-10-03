@@ -10,6 +10,7 @@
         - create_room
         - get_room
         - close_room
+        - archive_room
         - check_room_timers
         - check_all_timers
         - update_room_metadata
@@ -33,6 +34,11 @@
         - leave
         - process_inbound
         - send_event
+        - commit_event
+        - start_room_recording
+        - room_recordings
+        - add_room_recording_track
+        - stop_room_recording
         - regenerate_response
         - regenerate_target
         - ensure_participant
