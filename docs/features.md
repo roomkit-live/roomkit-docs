@@ -104,7 +104,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
 - Per-connection server ICE callbacks refresh short-lived TURN credentials without network access during route mounting; failed lookups leave the endpoint available for later offers. See [FastRTC configuration](guides/fastrtc-backend.md#short-lived-turn-credentials).
 - Full-duplex providers (OpenAI GPT-Live) — the model listens and speaks at once and handles being talked over itself; the channel reads `provider.full_duplex` and leaves interruption to it: no playback flush, no gating of the model's audio on user speech, pipeline VAD in the observation role (RFC §12.4.1)
-- Reasoning delegation — a full-duplex model hands reasoning and tool use to a backend while it keeps talking: hosted by OpenAI (`HostedReasoning`, the channel's tools served as usual) or yours (`ReasoningBackend`, default `AIProviderReasoningBackend` over any `AIProvider`, tool calls through the channel gate); `ON_REALTIME_DELEGATION` announces every hand-over — see the [Reasoning Delegation guide](guides/reasoning-delegation.md)
+- Reasoning delegation — a full-duplex model hands reasoning and tool use to a backend while it keeps talking: hosted by OpenAI (`HostedReasoning`, the channel's tools served as usual) or yours (`ReasoningBackend`; `AgentReasoningBackend` runs any agent on the AI channel's tool loop, `AIProviderReasoningBackend` builds one over any `AIProvider`; tool calls through the channel gate); `ON_REALTIME_DELEGATION` announces every hand-over — see the [Reasoning Delegation guide](guides/reasoning-delegation.md)
 
 #### Images in the Conversation
 

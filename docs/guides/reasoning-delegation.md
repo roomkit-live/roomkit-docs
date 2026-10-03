@@ -53,7 +53,7 @@ from roomkit.providers.openai.live import IntegratorReasoning, OpenAILiveProvide
 backend = AIProviderReasoningBackend(
     AnthropicAIProvider(AnthropicConfig(api_key="sk-ant-...", model="claude-sonnet-5")),
     system_prompt=BACKEND_INSTRUCTIONS,
-    max_tool_rounds=5,          # generate → tools → generate, at most this many rounds
+    max_tool_rounds=5,          # tool rounds per delegation, the AI channel's loop bound
     spoken_progress=False,      # text before a tool round stays silent context
 )
 
@@ -69,10 +69,46 @@ channel = RealtimeVoiceChannel(
 )
 ```
 
-`AIProviderReasoningBackend` is the default backend: any `AIProvider` run
-through a small tool loop. It keeps its own conversation per voice session, so
-a second delegation sees what it worked out for the first, and the channel
-releases that memory when the session ends.
+`AIProviderReasoningBackend` is the default backend: any `AIProvider`, made an
+agent that runs on the AI channel's tool loop. It keeps its own conversation
+per voice session, tool rounds included, so a second delegation sees what it
+worked out for the first, and the channel releases that memory when the
+session ends.
+
+## An agent as the backend
+
+The backend is an agent like any other, driven by the voice instead of a room.
+`AgentReasoningBackend` takes one you already configured:
+
+```python
+from roomkit import Agent, AgentReasoningBackend
+
+reasoner = Agent(
+    "flight-desk",
+    provider=AnthropicAIProvider(AnthropicConfig(api_key="sk-ant-...")),
+    system_prompt=BACKEND_INSTRUCTIONS,
+    temperature=0.2,
+    max_tool_rounds=8,
+    tool_loop_timeout_seconds=90.0,
+)
+backend = AgentReasoningBackend(reasoner, spoken_progress=False)
+```
+
+Each delegation runs on the agent's tool loop, the one every AI channel turn
+runs on, with its settings (prompt, temperature, thinking, round cap, deadline,
+budget) and everything that loop does at the end of a round:
+
+- a call the provider could not parse (Gemini's `MALFORMED_FUNCTION_CALL`) or
+  an empty answer after a tool round is asked again;
+- a call whose arguments do not read is refused without running, and reported
+  to the voice channel's `ON_TOOL_CALL` observers;
+- the turn has its `llm.generate` span, under the voice session's span, with
+  the tokens it used.
+
+Its tools are the voice session's catalogue, each call served through the
+voice channel's gate. An agent that carries tools of its own (tools, skills, a
+sandbox, planning, an external or human-input handler) is refused at
+construction: those would run outside the gate.
 
 ## Spoken and silent outputs
 
@@ -130,7 +166,12 @@ something. The channel therefore always answers, with one spoken output:
 | No `reasoning_backend` configured | "No backend is available to handle delegated work in this session." |
 | The backend yielded nothing (or only blank text) | "The delegated work finished without an answer." |
 | The backend raised | "The delegated work could not be completed." |
+| The backend's turn was cut short (round cap, deadline, budget) | "The delegated work could not be completed." |
 | The run exceeded `reasoning_timeout_s` | "The delegated work took too long and was abandoned." |
+
+A turn cut short has no answer: the built-in backends yield what the model
+said before each tool round as progress, never as the answer, and raise
+`ReasoningCutShortError`, which the channel answers as a failed backend.
 
 A running delegation counts as activity for `wait_idle()`, and ending the
 session cancels it.
@@ -160,8 +201,12 @@ class FlightDeskBackend(ReasoningBackend):
 ```
 
 `run()` is an async generator: yield outputs as you learn things. Route every
-tool call through `request.execute_tool_call` (or `request.execute_tool`). Implement `session_ended()` if you
-keep state per session and `close()` if you hold resources.
+tool call through `request.execute_tool_call` (or `request.execute_tool`). A
+call your own loop refuses before the gate (its arguments did not parse) goes
+to `request.report_refusal(name, arguments, body)`, so the channel's
+`ON_TOOL_CALL` observers see it as they see every refused call. Implement
+`session_ended()` if you keep state per session and `close()` if you hold
+resources.
 
 ## Observability
 

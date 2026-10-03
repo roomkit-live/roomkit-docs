@@ -180,7 +180,11 @@ through (RFC §12.4.1). See the [Reasoning Delegation guide](../guides/reasoning
 
 ::: roomkit.voice.realtime.reasoning.TranscriptLine
 
+::: roomkit.voice.realtime.reasoning.AgentReasoningBackend
+
 ::: roomkit.voice.realtime.reasoning.AIProviderReasoningBackend
+
+::: roomkit.voice.realtime.reasoning.ReasoningCutShortError
 
 ## Transports
 
