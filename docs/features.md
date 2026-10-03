@@ -4,9 +4,9 @@
 
 RoomKit is designed around architectural patterns that solve real problems in multi-channel conversation systems. Here's what makes it valuable for production use:
 
-### Hook System with 65 Triggers
+### Hook System with 78 Triggers
 
-Instead of a single "webhook" callback, RoomKit provides **65 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
+Instead of a single "webhook" callback, RoomKit provides **78 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
 
 - **Memory injection** — Add context before AI generates responses (`BEFORE_BROADCAST`)
 - **Compliance filtering** — Block or modify messages based on content rules
@@ -470,6 +470,32 @@ Hook features:
 - **Event filtering** -- Hooks can be filtered by channel type, channel ID, and direction
 - **Fail-closed hooks** -- `fail_closed=True` blocks the payload when that hook times out, raises or returns something unusable (see below)
 - **Off-lock checks** -- `needs_lock=False` runs a `BEFORE_BROADCAST` check before the room lock is taken (see below)
+
+**Between two rounds of a tool loop.** `AFTER_TOOL_ROUND` fires after each
+round an AI channel ran calls in, before the next round is built. Its
+`ToolRoundEvent` carries the round whole (`calls`, the channel's `results`,
+the provider's `answered`): the calls of a round run concurrently, so a rule
+about them reads the round, not one call. `event.withdraw(*names)` takes tools
+out of the rest of the turn with every guarantee of a `BEFORE_AI_GENERATION`
+withdrawal (never declared again, refused if called, a tool the channel
+provides itself included, never handed to an external handler), and
+`event.add_message(text)` is what the next round reads after the results. A
+BLOCK changes nothing, the round having run; neither a realtime session nor a
+reasoning backend's own loop fires it.
+
+```python
+@kit.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")
+async def close_mailbox(event: ToolRoundEvent, ctx: RoomContext) -> HookResult:
+    if event.results and all(r.is_error for r in event.results):
+        event.withdraw("mail_search", "mail_read")
+        event.add_message("The mailbox is unavailable for the rest of this turn.")
+    return HookResult.allow()
+```
+
+A `BEFORE_TOOL_USE` hook runs under the call's turn: what it writes through
+`current_response_metadata()` is the record `InboundResult.response_metadata`
+hands the caller, the turn answered or failed, which is how a host counts the
+calls a turn started before any ran. See `examples/hook_after_tool_round.py`.
 
 **Content checks that call out.** A PII scan or a moderation API is a
 `BEFORE_BROADCAST` sync hook with a network round trip. Two flags make it
