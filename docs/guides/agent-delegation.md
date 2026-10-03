@@ -94,7 +94,10 @@ max_rounds before its answer"), `output` keeps the worker's last narration
 `metadata["loop_end_reason"]` carries the reason (`max_rounds`, `timeout`,
 `budget_exceeded`...), as does the `ON_TASK_COMPLETED` event. The same holds
 streamed or buffered, inline or in the background, with shared channels or
-not. The orchestration strategies (Loop, Supervisor) and a notified agent
+not, and for a turn that wrote no text at all. An ACP worker is cut the same
+way when its prompt stops on any reason but `end_turn` (`max_tokens`,
+`max_turn_requests`, `refusal`, `cancelled`): the reason is the one the task
+names. The orchestration strategies (Loop, Supervisor) and a notified agent
 read a failed task's work as none, whatever its `output` keeps:
 `roomkit.tasks.models.task_work(result)` is that reading. In the supervised
 flow, a worker cut short stops the chain as a failed delegation does. The
