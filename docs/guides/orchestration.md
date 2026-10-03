@@ -384,8 +384,8 @@ kit = RoomKit(
 The result event carries loop status in `event.metadata`:
 
 - `approved` — `True` if all reviewers approved, `False` otherwise
-- `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer, and the caller reads the producer's failure on `InboundResult.error`)
-- `iteration` — number of iterations completed
+- `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer). On `producer_failed` the caller reads the producer's failure on `InboundResult.error`, and `ON_ERROR` fires, whether an output went out or not
+- `iteration` — number of iterations completed: the one whose output went out
 
 ```python
 @kit.hook(HookTrigger.AFTER_BROADCAST, execution=HookExecution.ASYNC)
