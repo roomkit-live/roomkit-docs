@@ -189,10 +189,11 @@ Works for both streaming and non-streaming generation.
 The fallback receives the rounds the primary already ran in the turn, in a
 form its vendor takes. A reasoning block without a signature (DeepSeek, Qwen,
 vLLM and every vendor but Anthropic) does not go to Anthropic, which refuses
-it and takes the round without it. A round none of whose calls carries a
-thought signature goes to a Gemini 3 model as text (what the primary said,
-each call, each result), since Gemini 3 refuses a call it did not sign. Both
-were measured on the vendors' APIs (2026-10-03).
+it and takes the round without it. A round of the current turn none of whose
+calls carries a thought signature goes to a Gemini 3 model as text (what the
+primary said, each call, each result with its images), since Gemini 3 refuses
+a call it did not sign in the current turn; an earlier turn's round keeps its
+form. Both were measured on the vendors' APIs (2026-10-03).
 
 ## Retry Policy
 
