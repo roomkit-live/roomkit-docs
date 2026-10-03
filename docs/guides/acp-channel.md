@@ -765,8 +765,10 @@ it (a Stop, a process restart), `refused` when RoomKit refused the agent's
 permission request for it, else `failed` or `served` as the agent reported.
 With an external handler, a call the turn ended under reaches it through
 `on_tool_cancelled` rather than `on_tool_result`; by default that reports it
-cancelled, and an override can withdraw what the call left pending (an
-approval prompt) before calling `super().on_tool_cancelled(...)`.
+cancelled. A permission request runs in the connection's own task, so
+cancelling the turn does not cancel a pending `process_tool_call`: an override
+resolves it itself (it denies the approval still pending) before calling
+`super().on_tool_cancelled(...)`.
 
 A handler serves **one** channel — that is what makes the injected hooks
 attributable — and it can say which, so a prompt can name who is asking:
