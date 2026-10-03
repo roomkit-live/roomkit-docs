@@ -71,9 +71,11 @@ Guarantees and behaviour:
 - **Callbacks still run on the event loop**: only the stages move to the
   pool. Everything a frame fires (VAD events, speech frames, speech end,
   processed frames, including a tap added with `add_media_tap`) is sent
-  back to the loop the pipeline was built on, in the order the chain fired
-  it. A callback can touch asyncio queues and tasks exactly as it does
-  inline, and its own work runs on the loop, not on a worker.
+  back to the pipeline's event loop (the one it was built on, or the one
+  its first session started on), in the order the chain fired it. A
+  callback can touch asyncio queues and tasks exactly as it does inline,
+  and its own work runs on the loop, not on a worker: the audio bridge's
+  forwarding (resampling, mixing, outbound processing per target) is one.
 - Applies to both `VoiceChannel` and `RealtimeVoiceChannel`. Unset keeps
   today's inline processing.
 

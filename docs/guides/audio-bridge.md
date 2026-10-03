@@ -273,7 +273,9 @@ async def monitor_bridge(event, ctx):
 
 !!! tip "Performance: fast path"
     When no `BEFORE_BRIDGE_AUDIO` hooks are registered, the bridge
-    forwards frames directly in the audio thread with zero overhead.
+    forwards frames directly from the pipeline's frame callback, with no
+    task in between. That callback runs on the event loop, with or without
+    `inbound_dsp_threads`: the pool takes the DSP stages, not the bridge.
     When hooks are registered, frames are routed through the event loop
     for hook evaluation.
 
@@ -297,8 +299,8 @@ async def duck_when_flagged(event, ctx):
 ```
 
 For synchronous, ultra-low-latency frame filtering (< 1ms), use
-`set_bridge_filter()` instead. It runs in the audio thread and builds no
-room context, so it is the right place for a transform applied to *every*
+`set_bridge_filter()` instead. It runs synchronously in the frame callback
+and builds no room context, so it is the right place for a transform applied to *every*
 frame; the hook is for the occasional frame a policy has to reshape.
 
 ### Other Voice Hooks
