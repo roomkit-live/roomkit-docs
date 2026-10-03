@@ -497,7 +497,7 @@ except SkillValidationError as e:
 
 When the AI calls `activate_skill` with an unknown name, the handler returns an error with the list of available skills so the AI can self-correct.
 
-A model often takes tools for a skill ("activate the spotify skill" when `spotify_play` and `spotify_search` are tools). When the unknown name matches tools the turn may call, the answer adds a `tools_hint` naming them, and they are revealed as `find_tools` reveals its matches: declared from the next round, and still there in the next turns. Text and realtime channels answer and reveal alike. A skill that exists but is unavailable answers with its reason, never with that hint.
+A model often takes tools for a skill ("activate the spotify skill" when `spotify_play` and `spotify_search` are tools). When the unknown name matches tools the turn may call, the answer adds a `tools_hint` naming them, and once the call is served (an `ON_TOOL_CALL` block reveals nothing) they are revealed as `find_tools` reveals its matches: declared from the next round, and still there in the next turns. Text and realtime channels answer and reveal alike; on a realtime provider whose declarations are fixed, the hint points to `list_tools(name=...)` and `call_tool` instead. A skill that exists but is unavailable answers with its reason, never with that hint.
 
 ---
 
