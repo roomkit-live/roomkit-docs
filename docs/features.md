@@ -358,11 +358,14 @@ result.response_metadata       # final AI/ACP response record, also backfilled
 `response_metadata` merges the root intelligence outputs for the turn. It is
 available after ordinary streaming or non-streaming delivery and can contain
 citations, provenance, or protocol-specific outcomes. `response_metadata["turns"]`
-names how each replying channel's turn ended, keyed by channel id
-(`{"ai": {"loop_end_reason": "max_rounds", "ai_usage": {...}}}`; an ACP
-agent's entry carries its stop reason, `completed` for `end_turn`), even for a
-turn that wrote no message, and an ACP turn's `ON_AI_RESPONSE` carries the
-same reason. A deferred result may be
+names how each channel that replied to the caller's event ended, streamed or
+buffered, keyed by channel id (`{"ai": {"loop_end_reason": "max_rounds",
+"ai_usage": {...}}}`; an ACP agent's entry carries its stop reason, `completed`
+once its prompt returned on `end_turn`, `interrupted` when it never returned,
+and no `ai_usage`), even for a turn that wrote no message; an answer to an
+answer has no entry, and `turns` is RoomKit's key, so a value a hook or tool
+writes there is not carried. An ACP turn's `ON_AI_RESPONSE` carries the same
+reason. A deferred result may be
 empty at the commit point; `DeliveryHandle.wait()` backfills the same result
 object after the stream and every reentry pass have completed.
 
