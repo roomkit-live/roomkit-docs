@@ -752,7 +752,10 @@ agent = ACPChannel(
 ```
 
 RoomKit injects `BEFORE_TOOL_USE` and `ON_TOOL_CALL` hooks into the handler when
-the channel is registered. An approval chooses `allow_once` when the agent
+the channel is registered. The policy refuses first, with the text every gate
+gives (`Tool 'X' is not permitted by the agent's tool policy.`), so an approval
+hook is never asked about a tool it may not run; `BEFORE_TOOL_USE` then decides
+what the policy admits. An approval chooses `allow_once` when the agent
 offers it; RoomKit does not silently grant durable permissions.
 
 A handler serves **one** channel — that is what makes the injected hooks

@@ -367,7 +367,10 @@ to the turn instead, and both travel through the per-call context:
 - **`current_tool_call().structured_content`** is the structured copy of an MCP
   result that the tool-call events persist verbatim for UI surfaces. A handler
   that rewrites the text before the model reads it (a provider's private
-  address turned into a relay link, say) rewrites the copy here too.
+  address turned into a relay link, say) rewrites the copy here too. The copy
+  reaches `ON_TOOL_CALL` the same way on an AI channel, a realtime session and
+  a conference: a SYNC hook sees it and may replace or clear it, and the
+  observers receive what the chain left.
 
 ```python
 from roomkit.tools import current_response_metadata
