@@ -156,6 +156,21 @@ Configure any one of `stt=`, `tts=` or `recording=` and every trigger above
 is restored unchanged — and none of the three has to be configured at
 construction: the next section is how a running channel gains and loses them.
 
+### Awaiting the join from the host
+
+The triggers start the join without waiting on it. A host that must know the
+bot is in, to listen before it lets a meeting begin, awaits it (RFC §12.10.4):
+
+```python
+bot = await channel.ensure_bot("standup")   # the BotSession
+```
+
+A live session is returned as it is; concurrent calls and the triggers are
+serialised, so the room is joined once; a session that was lost is joined
+again; a new join fires `ON_SESSION_STARTED` and `conference_started` before
+it returns. A room the channel is not attached to raises
+`RoomNotAttachedError`, and leaves no record behind.
+
 ## Hot-plugging intelligence
 
 The configuration first need is read from is not fixed at construction (RFC

@@ -114,6 +114,9 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `tool_names` | `list[str]` | Names of all discovered tools |
 | `call_tool(name, args)` | `str` | Call a tool directly and get the result |
 | `as_tool_handler(gate_discovery=True)` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
+| `tool_meta()` | `dict[str, dict]` | Each discovered tool's `_meta`, from the listing made at connection (an MCP App's `ui`) |
+| `read_resource(uri, timeout=30)` | `ReadResourceResult` | A resource as the server returns it (an MCP App's HTML) |
+| `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `isError` included, for a host relaying it |
 
 By default the handler raises `UnservedToolCallError` for a name this
 connection did not discover, which is what lets `compose_tool_handlers` fall
@@ -124,6 +127,24 @@ never showed this connection, and a host with its own allow-list in front has
 already decided what the model may call. A server refusal raises
 `ToolRefusedError` on either side of the gate. Such a handler produces no
 unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
+
+### MCP Apps: what the host reads beside the model's tools
+
+An MCP App renders a tool's result in a frame. The host reads what the frame
+needs from the same connection, without a second `tools/list`:
+
+```python
+ui = mcp.tool_meta().get("show_board", {}).get("ui")   # resourceUri, csp
+html = await mcp.read_resource(ui["resourceUri"])      # ReadResourceResult
+result = await mcp.call_tool_result("save_checkpoint", {"state": "s1"})
+if result.isError:
+    ...
+```
+
+Like `call_tool`, `call_tool_result` calls any tool the server has:
+`tool_filter` shapes what discovery offers the model, not what the host may
+call, so a frame calling an app-only tool the model never sees works, and the
+host authorizes that call itself.
 
 ### Result serialization
 

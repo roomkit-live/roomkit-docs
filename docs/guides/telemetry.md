@@ -168,6 +168,18 @@ kit = RoomKit(telemetry=OpenTelemetryProvider(tracer_provider=provider))
 
 The provider also supports `meter_provider` for OTel metrics.
 
+Exporting never runs on the event loop. The SDK's `force_flush` exports in the
+thread that calls it, behind the exporter's retries, and ignores its timeout:
+from the loop, a slow collector froze every task. `flush()`, which RoomKit
+calls at the end of a voice session, hands the export to a thread and returns
+at once (a flush asked while one runs is skipped). `close()` waits for it at
+most `shutdown_flush_timeout` seconds (4.0 by default), then logs that spans
+may be lost:
+
+```python
+OpenTelemetryProvider(tracer_provider=provider, shutdown_flush_timeout=4.0)
+```
+
 ### PyroscopeProfiler
 
 Continuous CPU profiling with [Pyroscope](https://pyroscope.io/) / Grafana Pyroscope. Unlike span-based telemetry, Pyroscope captures **CPU flamegraphs** showing where your application spends time. This is essential for identifying performance bottlenecks in voice pipelines, audio processing, and bridge mixing.

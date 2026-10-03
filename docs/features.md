@@ -832,6 +832,15 @@ trusting a stale number.
 
 See `examples/list_models.py`.
 
+#### Outbound policy on OpenAI-compatible providers
+
+`OpenAIAIProvider(config, transport=...)`, every provider built on it, and
+`create_vllm_provider(config, transport=...)` send every request through an
+`httpx.AsyncBaseTransport` placed inside the SDK's own default client (its
+redirects and connection limits kept, each hop through the transport). A host
+that lets users name the endpoint puts there a policy judging the address
+actually dialled. See `examples/openai_outbound_policy.py`.
+
 #### Model Pricing
 
 A `ModelInfo` carries its vendor's list price, so pricing a turn needs no
@@ -2274,7 +2283,7 @@ provider = WebhookHTTPProvider(HTTPProviderConfig(
 http = HTTPChannel("http-channel", provider=provider)
 ```
 
-Recipient ID read from `binding.metadata["recipient_id"]`. Includes `parse_http_webhook()` for inbound webhook parsing.
+Recipient ID read from `binding.metadata["recipient_id"]`. Includes `parse_http_webhook()` for inbound webhook parsing. A subclass sends another body or signs another way by overriding `build_payload(event, to, text)` and `build_headers(body)`, and reads its settings through `config`; `transport=` carries the POST (an outbound policy, a `MockTransport`).
 
 ### CLI Channel
 

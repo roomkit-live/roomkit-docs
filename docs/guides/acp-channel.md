@@ -155,6 +155,12 @@ reconnect never resumes them). Answer only when you know — the default `True`
 costs at worst a failed request the channel already reports, while a wrong
 `False` throws away live sessions.
 
+### The text the agent reads for an event
+
+A relay that builds the agent's prompt on its side reads events as the channel
+does with `acp_event_text(event)` (from `roomkit`): a `RichContent` is read as
+its `plain_text`, where `extract_event_text` keeps the markup body.
+
 ## Recovering a refused room prompt
 
 A custom transport's connection may raise

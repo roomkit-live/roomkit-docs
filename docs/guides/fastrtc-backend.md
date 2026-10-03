@@ -435,6 +435,24 @@ async def authenticate(ctx) -> dict[str, object] | None:
 mount_fastrtc_realtime(app, transport, path="/rtc-realtime", auth=authenticate)
 ```
 
+A peer `auth` refuses (it returns `None` or raises) is closed: its peer
+connection closed and the stream cleaned, not left connected with its audio
+ignored.
+
+### Refusing a peer the app will not serve
+
+A peer can be authenticated and still have nothing to serve it: no session
+waits for its `webrtc_id`, or its call expired. The app refuses it:
+
+```python
+await transport.reject_connection(webrtc_id, message='{"type": "error", "message": "Call expired"}')
+```
+
+`message` is sent as is on the peer's data channel, then the peer connection
+is closed, the stream cleaned and the handler unregistered (the disconnect
+callbacks of a session bound to it fire). Each step runs even when an earlier
+one fails; an unknown id does nothing.
+
 ## Comparing the two backends
 
 | Aspect | FastRTCVoiceBackend | FastRTCRealtimeTransport |
