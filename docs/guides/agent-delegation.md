@@ -105,6 +105,17 @@ read a failed task's work as none, whatever its `output` keeps:
 flow, a worker cut short stops the chain as a failed delegation does. The
 failure is logged once, as a warning, without a traceback.
 
+A task cancelled from outside ends the same way inline or in the background:
+a caller's timeout (`asyncio.wait_for` around `kit.delegate(..., wait=True)`,
+as a Supervisor's `task_timeout` does), `kit.task_runner.cancel(task_id)` or
+the runner's `close()`, even right after `delegate()` returned. The result is
+`status="cancelled"`, `error="cancelled"`, no output; `ON_TASK_COMPLETED` and
+the `on_complete` callback still run, a notified agent is told
+`[Background task from <worker> cancelled. ...]`, and a Supervisor's worker
+can be delegated to again. The delegation span ends `ok` for a completed
+task, `error` for a failed one (with its error), `cancelled` for a cancelled
+one.
+
 ## Parallel delegation
 
 ```python
