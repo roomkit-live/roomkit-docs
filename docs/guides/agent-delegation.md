@@ -86,13 +86,19 @@ else:
     print(f"Failed: {result.error}")
 ```
 
-A worker whose turn its round cap, deadline or budget cut short has no answer:
-the task fails, `error` says how the turn ended ("The worker's turn ended
+A worker whose turn did not complete (its round cap, deadline or budget cut
+it, a stop cancelled it, its answer was cut or never came) has no answer: the
+task fails, `error` says how the turn ended ("The worker's turn ended
 max_rounds before its answer"), `output` keeps the worker's last narration
 ("Still checking.") for a caller that wants it, and
 `metadata["loop_end_reason"]` carries the reason (`max_rounds`, `timeout`,
-`budget_exceeded`). The same holds streamed or buffered, inline or in the
-background, with shared channels or not.
+`budget_exceeded`...), as does the `ON_TASK_COMPLETED` event. The same holds
+streamed or buffered, inline or in the background, with shared channels or
+not. The orchestration strategies (Loop, Supervisor) and a notified agent
+read a failed task's work as none, whatever its `output` keeps:
+`roomkit.tasks.models.task_work(result)` is that reading. In the supervised
+flow, a worker cut short stops the chain as a failed delegation does. The
+failure is logged once, as a warning, without a traceback.
 
 ## Parallel delegation
 
