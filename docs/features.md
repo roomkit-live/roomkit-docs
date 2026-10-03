@@ -2303,7 +2303,7 @@ from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend, mount_fastrtc_vo
 
 # Create providers
 stt = DeepgramSTTProvider(DeepgramConfig(api_key="..."))
-tts = ElevenLabsTTSProvider(ElevenLabsConfig(api_key="..."))
+tts = ElevenLabsTTSProvider(ElevenLabsConfig(api_key="...", output_format="pcm_24000"))
 backend = FastRTCVoiceBackend(input_sample_rate=48000, output_sample_rate=24000)
 
 # Create voice channel

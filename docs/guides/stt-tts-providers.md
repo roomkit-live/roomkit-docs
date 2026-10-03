@@ -1722,7 +1722,9 @@ from roomkit.voice.stt.deepgram import DeepgramConfig, DeepgramSTTProvider
 from roomkit.voice.tts.elevenlabs import ElevenLabsConfig, ElevenLabsTTSProvider
 
 stt = DeepgramSTTProvider(config=DeepgramConfig(api_key="..."))
-tts = ElevenLabsTTSProvider(config=ElevenLabsConfig(api_key="..."))
+tts = ElevenLabsTTSProvider(
+    config=ElevenLabsConfig(api_key="...", output_format="pcm_16000")  # a VoiceChannel plays PCM
+)
 
 voice = VoiceChannel(
     "voice-main",

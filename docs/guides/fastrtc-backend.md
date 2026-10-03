@@ -56,7 +56,9 @@ backend = FastRTCVoiceBackend(
 vad = EnergyVADProvider(energy_threshold=300.0, silence_threshold_ms=600)
 pipeline = AudioPipelineConfig(vad=vad)
 stt = DeepgramSTTProvider(config=DeepgramConfig(api_key="...", model="nova-3"))
-tts = ElevenLabsTTSProvider(config=ElevenLabsConfig(api_key="..."))
+tts = ElevenLabsTTSProvider(
+    config=ElevenLabsConfig(api_key="...", output_format="pcm_24000")  # PCM at the output rate
+)
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeline)
 kit.register_channel(voice)
