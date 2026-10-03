@@ -171,7 +171,9 @@ channel's. Set `tool_search=True` to enable it for a smaller catalogue or
 `False` to expose the catalogue directly. Unless `tool_search=False`, the
 channel serves `find_tools` and `list_tools` itself, and `call_tool` on a
 provider whose declarations are fixed, so a host tool under one of those names
-is refused at construction.
+is refused at construction. A session whose catalogue Tool Search does not
+hide declares none of them, and a call to one is refused as undeclared, as on
+a text turn.
 `tool_search_pinned` keeps selected tools directly callable alongside discovery.
 The tools orchestration adds to the channel stay declared the same way: a voice
 supervisor's `delegate_workers`, a voice loop's `delegate_loop`,
@@ -188,8 +190,10 @@ as Gemini 3.1 Live, use three stable functions instead:
 | `list_tools(name="calendar")` | One tool's complete description and parameter schema |
 | `call_tool(name="calendar", arguments_json='{"action":"list"}')` | The result of calling the named tool with the decoded arguments |
 
-Without `name`, `list_tools(category=...)` returns the compact catalogue
-overview. A schema lookup returns one complete JSON document and is not cut by
+Without `name`, `list_tools(category=...)` returns the compact inventory of
+every tool the session can call, declared or hidden (the orchestration tools
+included, the policy's refusals and skill-gated tools left out), as on a text
+turn. A schema lookup returns one complete JSON document and is not cut by
 the business tool-result length limit. The tool name and an operation such as
 `list` are separate: the operation belongs in the tool's arguments when its
 schema declares one.

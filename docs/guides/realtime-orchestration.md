@@ -64,8 +64,8 @@ The reconnect takes ~200-500ms — a natural pause, similar to a phone transfer.
 When `pipeline.install()` detects that `voice_channel_id` points to a `RealtimeVoiceChannel`:
 
 1. **Agents are NOT registered as channels** — they have no provider, they're config-only
-2. **A session starts with its room's active agent** — system_prompt, voice, and tools are passed to `provider.connect()`, read from the room's conversation state when the session opens. The tools are the channel's own (the `tools=` it was built with), the agent's own (`Agent(tools=...)`), and the handoff tool; an agent tool with the same name as a channel tool replaces its declaration for that agent. The channel's own `system_prompt`, `voice` and `tools` are left as they are
-3. **The handoff tool is served by the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by the `tool_handler` the agent was given; a call to a channel tool (one sharing its name included) and to an agent tool the agent has no handler for, by the channel's
+2. **A session starts with its room's active agent** — system_prompt, voice, and tools are passed to `provider.connect()`, read from the room's conversation state when the session opens. The tools are the channel's own, as they are when the session opens or the handoff lands (a channel reconfigured after the install keeps them under every agent), the agent's own (`Agent(tools=...)`), and the handoff tool. A name the channel's tools carry is the channel's: an agent tool of the same name is neither declared nor served, and a warning names it at the install. The channel's own `system_prompt`, `voice` and `tools` are left as they are
+3. **The handoff tool is served by the RealtimeVoiceChannel** — Gemini calls it natively via its built-in tool calling. A call to one of the active agent's own tools is served by the `tool_handler` the agent was given; a call to a channel tool and to an agent tool the agent has no handler for, by the channel's
 4. **On handoff, `reconfigure_session()` is called for the room's sessions** — disconnects and reconnects with the new agent's config. Another room's sessions, and the next session of another room, keep their own room's agent
 
 ```
@@ -259,7 +259,7 @@ def install(self, kit, agents, *, voice_channel_id=None, ...):
 
 In speech-to-speech mode, `_wire_realtime()`:
 
-1. Builds each agent's config with identity block, and its tools: the channel's, the agent's, the handoff tool
+1. Builds each agent's config with identity block, and its handoff tool; its tools (the channel's as they are, the agent's, the handoff tool) are read when a session opens or a handoff lands
 2. Builds per-agent handoff tools (enum-constrained targets with descriptions)
 3. Serves `handoff_conversation` and the agents' own tools on the RealtimeVoiceChannel
 4. Gives the channel the config a new session of a room starts with: the room's active agent's
