@@ -665,6 +665,9 @@ AI features:
 - **Capability-aware generation** -- AI considers target transport channel capabilities when generating responses
 - **Mute-aware** -- Muted AI channels still process events (tasks, observations) but suppress response messages
 - **Vision support** -- Providers with vision capability can receive and process images
+- **What an empty event says** -- `AIChannel(describe_empty_event=...)` is asked only for an event whose content extracts to nothing (a captionless upload, an image a text-only provider cannot read); its text stands in for the event in the history and the turn's input, `None` keeps the omission, and the stored event is untouched
+- **The host's own identity** -- `Agent(identity_in_prompt=False)` turns RoomKit's `--- Agent Identity ---` block off in a turn, a handoff and a realtime pipeline alike, for a host that renders identity in its own prompt; `role`, `scope` and `language` stay readable
+- **Steering scoped to a room** -- `steer(directive, room_id=...)`: a `Cancel` reaches every loop of that room and no other, another directive the room's most recent loop; `steer()` returns how many loops it reached (RFC §21.3, [AI Steering guide](guides/ai-steering.md))
 - **Function calling** -- Tools can be defined for AI to call external functions
 
 #### Local Models with llama.cpp

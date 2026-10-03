@@ -138,15 +138,28 @@ async def on_vip_detected(participant_id: str):
     ))
 ```
 
-### Target a Specific Loop
+### Target a Room or a Loop
 
-When multiple tool loops may be active, target a specific one:
+One channel object serves every room it is bound to, so its running loops
+can belong to several members' turns at once. A host acting for one room
+addresses that room (RFC §21.3):
 
 ```python
+# A member's Stop: every loop of their room, and no other room's
+reached = ai.steer(Cancel(reason="stop pressed"), room_id="room-a")
+
+# Another directive reaches the room's most recent loop
+ai.steer(InjectMessage(content="The user attached a file."), room_id="room-a")
+
+# Or one loop by its id
 ai.steer(Cancel(reason="timeout"), loop_id="loop-abc123")
 ```
 
-If `loop_id` is `None` (default), the directive targets the most recently started loop.
+`steer()` returns how many loops it reached. With neither `room_id` nor
+`loop_id`, the directive reaches the most recently started loop, whatever its
+room; giving both raises `ValueError`. A loop is reachable once its turn has
+started (its response stream is read): a directive that comes before reaches
+none, and `steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
 ## Fallback Provider Chain
 
