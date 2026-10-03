@@ -56,6 +56,47 @@ All three can run simultaneously without interference.
 
 A conference uses the `MediaRecorder` interface at a different granularity — one recording per track rather than one per room. See [Conference recording](#conference-recording).
 
+## Recording a room that already exists
+
+`create_room(recorders=...)` records from the room's first moment. A host that
+starts later, or resumes a recording after a restart, starts the recorders on
+the existing room:
+
+```python
+handles = await kit.start_room_recording(
+    "meeting", [RoomRecorderBinding(recorder=recorder, config=config)], organization_id="acme"
+)
+```
+
+The rules are the creation's (RFC §12.11): a room that is missing, another
+organization's, or closed is refused before any recorder starts; the recorders
+start all or nothing, under the room's lock; and `ON_RECORDING_STARTED` fires
+for each before the call returns, so a resumed recording announces its consent
+point again before any media.
+
+A channel joined to the room wires its own audio and video. A capture the
+framework does not wire itself declares its track and hands its media through
+the framework:
+
+```python
+feed = kit.add_room_recording_track(
+    "meeting",
+    RecordingTrack(id="audio:s1", kind="audio", channel_id="capture",
+                   codec="pcm_s16le", sample_rate=48000),
+)
+if feed is not None:          # None: the room records nothing
+    feed.feed(pcm_bytes, timestamp_ms)
+    ...
+    feed.close()              # the track ended: each recording flushes it
+```
+
+`kit.room_recordings(room_id)` lists the running handles (each with its
+`path`), and `kit.stop_room_recording(room_id)` stops them and returns the
+results. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
+`session` `None` and its `room_id` set): an explicit stop, `close_room`,
+`archive_room` and `kit.close()` alike. See
+`examples/room_recording_on_demand.py`.
+
 ## Configuration
 
 ### MediaRecordingConfig

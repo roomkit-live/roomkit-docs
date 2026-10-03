@@ -153,7 +153,9 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 ### Extending the Schema
 
-Applications can add custom columns to RoomKit's tables for business-specific needs. RoomKit reads `SELECT *` and maps known columns — extra columns are ignored by the row-to-model converters. Use RoomKit's `metadata` JSONB fields for application-specific data that doesn't need its own column, or add columns via your own migrations for data that benefits from indexing.
+Applications can add custom columns to RoomKit's tables for business-specific needs. RoomKit reads `SELECT *` and maps known columns — extra columns are ignored by the row-to-model converters.
+
+A host that reads events with a query of its own (a page filtered by a rule the store does not know) maps each row as the store does with `PostgresStore.event_from_row(row)`. The row carries every column of `events`; columns beyond them, an alias or a joined value, are ignored. Use RoomKit's `metadata` JSONB fields for application-specific data that doesn't need its own column, or add columns via your own migrations for data that benefits from indexing.
 
 ## Room Operations
 

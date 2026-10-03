@@ -2979,7 +2979,9 @@ room = await kit.create_room(
 )
 ```
 
-Recording starts automatically when all tracks receive their first frame. A/V sync is maintained via a shared monotonic clock. `PyAVMediaRecorder` refuses to start without a `RecordingEncryption` or `storage_encrypted_at_rest=True` (RFC §17.6, encryption at rest). See the [Room Media Recorder guide](guides/room-media-recorder.md) for configuration, encryption, custom recorders, and testing patterns.
+Recording starts automatically when all tracks receive their first frame. A/V sync is maintained via a shared monotonic clock.
+
+A recording can also start on a room that already exists, a meeting resumed after a restart for instance: `kit.start_room_recording(room_id, recorders, organization_id=...)` starts the recorders all or nothing and announces each (`ON_RECORDING_STARTED`, the consent point) before it returns. `kit.add_room_recording_track(room_id, track)` feeds a capture the framework does not wire itself through a `RoomRecordingFeed`, `kit.room_recordings(room_id)` lists the running handles, and `kit.stop_room_recording(room_id)` returns the results. Every end is announced with its result (`ON_RECORDING_STOPPED`): an explicit stop, `close_room`, `archive_room` and `kit.close()` alike. `PyAVMediaRecorder` refuses to start without a `RecordingEncryption` or `storage_encrypted_at_rest=True` (RFC §17.6, encryption at rest). See the [Room Media Recorder guide](guides/room-media-recorder.md) for configuration, encryption, custom recorders, and testing patterns.
 
 ---
 
@@ -3664,6 +3666,8 @@ event = await kit.send_event(
     content=TextContent(body="System maintenance in 5 minutes"),
 )
 ```
+
+A record no member receives (a trace, a display snapshot, the copy a branched conversation starts from) is committed outside the pipeline with `kit.commit_event(room_id, event, organization_id=...)` (RFC §10.5). The room is read under its lock, scoped to the tenant, and a room that refuses events raises `RoomClosedError`; the record takes the next index, which the room's delivery lane counts as delivered at once, so the next event never waits on it. No hook and no broadcast follow, and it is stored as given.
 
 ### Webhook Parsers
 
