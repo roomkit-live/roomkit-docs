@@ -95,8 +95,9 @@ cancelled.
 
 What the provider owes in return is the same everywhere. A refused, failed or
 unserved call goes back through `submit_tool_error`: ElevenLabs marks it as a
-tool error, the others send it like any result, its `{"error": ...}` body
-saying what happened. Every call the provider abandons is reported through
+tool error and Gemini Live sends it under the function response's `error` key
+(a served result goes under `result`, whatever its text), the others send it
+like any result, its `{"error": ...}` body saying what happened. Every call the provider abandons is reported through
 `on_tool_call_cancelled`, whatever the cause: Gemini's cancellation, a
 reconnect (a handoff included), an ElevenLabs `tool_timeout_s`, a connection
 lost or closed. The channel cancels its handler and reports it once,
@@ -118,6 +119,9 @@ for it. A tool given to the channel or a conference under a name no vendor
 accepts is refused at construction, as an `AITool` is.
 
 ```python
+from roomkit.providers.ai import readable_arguments
+
+
 class MyProvider(RealtimeVoiceProvider):
     @property
     def supports_tools(self) -> bool:

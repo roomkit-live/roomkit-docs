@@ -90,11 +90,11 @@ before the request, rather than letting the vendor reject the turn:
 
 A realtime provider checks the same way when it declares a session's tools, at
 connection and at every reconfiguration. Where the endpoint hands the tools to
-another model, the rule is that model's vendor's (measured 2026-10-03):
+another model, the rule is that model's vendor's (measured 2026-10-02):
 
 | Realtime provider | Tool names it accepts |
 |---|---|
-| OpenAI Realtime (its own endpoint), GPT-Live with `HostedReasoning` | `[A-Za-z0-9_-]{1,128}` |
+| OpenAI Realtime and GPT-Live with `HostedReasoning`, each on its own endpoint | `[A-Za-z0-9_-]{1,128}` |
 | Deepgram | its think provider's: `open_ai` and `anthropic` as above, `google` as Gemini; any other, or a `think_endpoint`, not checked |
 | Gemini Live | as Gemini |
 | xAI | not checked: it accepts any name |
