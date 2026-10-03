@@ -110,11 +110,16 @@ a caller's timeout (`asyncio.wait_for` around `kit.delegate(..., wait=True)`,
 as a Supervisor's `task_timeout` does), `kit.task_runner.cancel(task_id)` or
 the runner's `close()`, even right after `delegate()` returned. The result is
 `status="cancelled"`, `error="cancelled"`, no output; `ON_TASK_COMPLETED` and
-the `on_complete` callback still run, a notified agent is told
-`[Background task from <worker> cancelled. ...]`, and a Supervisor's worker
-can be delegated to again. The delegation span ends `ok` for a completed
-task, `error` for a failed one (with its error), `cancelled` for a cancelled
-one.
+the `on_complete` callback still run, once, a notified agent is told
+`[Background task from <worker> cancelled. ...]` (not while `kit.close()`
+runs: a closing framework starts no turn), and a Supervisor's worker can be
+delegated to again. A task whose work already ran when the cancel arrives
+ends as it stands, completed or failed. The delegation span ends `ok` for a
+completed task, `error` for a failed one (with its error), `cancelled` for a
+cancelled one. `task.cancel()` on the handle only unblocks its waiters; to
+cancel the work, use `kit.task_runner.cancel(task.id)`. A custom
+`TaskRunner` ends a cancelled task through its `on_complete`, with
+`roomkit.tasks.models.cancelled_task_fields(context)`.
 
 ## Parallel delegation
 
