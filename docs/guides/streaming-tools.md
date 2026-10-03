@@ -233,10 +233,19 @@ class ObservingAIChannel(AIChannel):
 | `budget_exceeded` | The turn reached its `turn_budget_tokens` or `turn_budget_usd`; the round's calls did not run |
 | `truncated` | The final round hit the output cap with no text — often reasoning consuming the whole budget |
 | `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed (Gemini's `MALFORMED_FUNCTION_CALL`), and the bounded retries were spent |
+| `unfinished` | The channel's continuation policy still asked to go on once the retries it shares with an empty round were spent |
+| `force_stopped` | The anti-loop guard cut a model that kept repeating a blocked call; the text it ends on is a summary of a cut turn, not an answer |
 | `cancelled` | The turn was cancelled |
+| `error` | The provider failed after a tool round; the rounds are kept and the exception follows the marker |
 
 `rounds` is how many tool rounds ran before the stop. The limits each reason
 refers to are your own configuration, so they are not repeated on the marker.
+
+A round the loop tries again without a call (an empty one, one whose call
+could not be parsed, one the continuation policy goes on) ends on a
+`SegmentBreakMarker`: its text is a segment of its own, as text before a call
+is, and the room writes it as its own message, so the next round's text never
+runs on from it.
 
 The marker is additive by construction rather than by promise: the streaming
 protocol is a mixed `str | StreamMarker` and its consumers already dispatch on

@@ -1735,7 +1735,7 @@ class ObservingAIChannel(AIChannel):
 ```
 
 `reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`,
-`truncated`, `empty_response`, `force_stopped`, `cancelled`, `error`. The limits each
+`truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled`, `error`. The limits each
 reason refers to are the caller's own configuration and are not repeated on
 the marker.
 

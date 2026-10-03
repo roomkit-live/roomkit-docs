@@ -1065,9 +1065,11 @@ async def _observe(self, inner):
 that reads the text of a round the model ended itself, without a call and with
 a tool declared, and returns the instruction that makes the model go on, or
 `None` when the answer stands. The loop decides the natural stop from what the
-round carried, every provider alike (`stop`, `end_turn`, `STOP`; never a
-truncation, a filter or a call it could not parse), hands the next round the
-text as the assistant's message and the instruction as the user's, and keeps
+round carried, every provider alike (`stop`, `end_turn`, `stop_sequence`,
+`STOP`; never a truncation, a filter or a call it could not parse), hands the
+next round the text as the assistant's message and the instruction as the
+user's (the text stays its own message: the loop yields a
+`SegmentBreakMarker` there, where a segment ends as at a call's start), and keeps
 its guards (no continuation after a cancellation or a force-stop, nor past the
 turn's deadline or budget). The policy shares the empty round's bound
 (`max_empty_retries`); a turn whose policy still asks once it has run out ends
