@@ -110,11 +110,16 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 | `max_context_tokens` | required | Total token budget for context |
 | `safety_margin_ratio` | `0.15` | Reserve this fraction of budget (15%) |
 | `min_events` | `3` | Minimum events to preserve |
+| `reserved_tokens` | `0` | What else the window must hold, beyond what the channel measures |
 
 **How it works**:
 
 1. Calls `inner.retrieve()` to get events
-2. Effective budget = `max_context_tokens * (1 - safety_margin_ratio)`
+2. Effective budget = `max_context_tokens * (1 - safety_margin_ratio)`, less the turn's
+   footprint: the AI channel measures the rest of the turn (system prompt with an
+   `Agent`'s identity, tools declared under Tool Search and the tool policy, the reply
+   budget) before it reads its memory, readable as `current_turn_footprint()` (RFC §20),
+   and the memory reserves the larger of that measure and `reserved_tokens`
 3. If total tokens exceed budget, trims oldest events first
 4. Never drops below `min_events`
 5. Preserves pre-built messages from inner provider unchanged

@@ -138,6 +138,21 @@ and who can activate it:
 | **Unlisted** | No | Yes | `mark_unlisted(name)` |
 | **Unavailable** | Name only, in `<unavailable_skills>` with a reason | No | `mark_unavailable(name, reason)` |
 
+### Skills from a store, and an agent's subset
+
+A host that keeps its skills elsewhere (a database, a marketplace) registers each
+one it rebuilds with `registry.add(skill)`, as `register()` does a directory: the
+skill's `path` is where its scripts and references are read from, and adding it
+clears its marks. A host that narrows a registry for one agent copies it:
+
+```python
+allowed = registry.copy(["refunds", "invoices"])           # paths and marks kept
+picked = registry.copy(["refunds"], marks=False)           # every copied skill advertised
+```
+
+A copy finds every skill the source finds, one discovered but not yet loaded
+included (RFC §24.3). See `examples/agent_skills_in_memory.py`.
+
 **Unlisted** keeps a skill activatable without advertising it. For catalogues
 where advertising every entry would drown the ones that matter: the host keeps
 quiet about a skill while any path that names it — a recommender nudge, a user
@@ -413,6 +428,11 @@ ai = AIChannel(
 ```
 
 When `script_executor` is set, the `run_skill_script` tool is added and the AI can execute scripts from skill directories.
+
+A realtime voice channel whose skills belong to another agent (a reasoning
+backend's) runs their scripts behind its own gate with
+`RunSkillScriptTool(skills, executor)` in its `tools=`: the same schema and the
+same handler, so a script outside its skill is refused there too.
 
 ---
 
