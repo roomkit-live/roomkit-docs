@@ -96,8 +96,10 @@ max_rounds before its answer"), `output` keeps the worker's last narration
 streamed or buffered, inline or in the background, with shared channels or
 not, and for a turn that wrote no text at all. An ACP worker is cut the same
 way when its prompt stops on any reason but `end_turn` (`max_tokens`,
-`max_turn_requests`, `refusal`, `cancelled`): the reason is the one the task
-names. The orchestration strategies (Loop, Supervisor) and a notified agent
+`max_turn_requests`, `refusal`, `cancelled`) or never returns
+(`interrupted`, the channel closing mid-turn): the reason is the one the task
+names. With several agents answering in the child room, the answer and how
+its turn ended are read off the same agent. The orchestration strategies (Loop, Supervisor) and a notified agent
 read a failed task's work as none, whatever its `output` keeps:
 `roomkit.tasks.models.task_work(result)` is that reading. In the supervised
 flow, a worker cut short stops the chain as a failed delegation does. The
