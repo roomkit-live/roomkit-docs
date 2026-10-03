@@ -241,7 +241,8 @@ class ObservingAIChannel(AIChannel):
 `rounds` is how many tool rounds ran before the stop, as `ON_AI_RESPONSE`
 counts them (`round_count`): a round the loop tried again without a call is
 none. The marker also states the limits the turn ran under, so you name the
-one its reason refers to without reading the channel:
+one a `max_rounds`, `timeout` or `budget_exceeded` end hit without reading the
+channel (they ride the marker only, not `ON_AI_RESPONSE`):
 
 | Field | The limit |
 |---|---|

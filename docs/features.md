@@ -1059,7 +1059,7 @@ async def _observe(self, inner):
         yield delta
 ```
 
-`reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. `max_rounds`, `timeout_seconds`, `budget_tokens` and `budget_usd` name the limits the turn ran under (`None` for no such limit; the budget is the turn's, resolved per turn), so a consumer names the one its reason refers to without reading the channel. Without the reason, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
+`reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. `max_rounds`, `timeout_seconds`, `budget_tokens` and `budget_usd` name the limits the turn ran under (`None` for no such limit; the budget is the turn's, resolved per turn), so a consumer names the one a `max_rounds`, `timeout` or `budget_exceeded` end hit without reading the channel. They ride the marker only, not `ON_AI_RESPONSE`. Without the reason, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The terminal marker is not forwarded to downstream channels' `deliver_stream`, where it would arrive at a renderer as noise.
 
 **An answer that did not act.** `AIChannel(continuation=...)` takes a policy
 that reads the text of a round the model ended itself, without a call and with
