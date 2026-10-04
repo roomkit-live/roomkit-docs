@@ -115,6 +115,13 @@ observers as cancelled, once; override it to withdraw the question the human
 was shown, then call `await super().on_tool_cancelled(...)` to keep the report.
 It runs in the turn's teardown: keep it short.
 
+A call the handler refuses (`process_tool_call` returns `approved=False`) comes
+back to it through `on_tool_refused(tool_name, tool_input, reason,
+tool_call_id=..., room_id=...)`, not `on_tool_result`; the default reports it to
+`ON_TOOL_CALL`'s observers only, marked `refused`. A call the channel refuses
+itself (its arguments were cut) and a `process_tool_call` that raises are
+reported by the channel, the latter with what failed (`error_detail`).
+
 ---
 
 ## How It Works

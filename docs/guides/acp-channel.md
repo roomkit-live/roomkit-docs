@@ -776,6 +776,14 @@ cancelling the turn does not cancel a pending `process_tool_call`: an override
 resolves it itself (it denies the approval still pending) before calling
 `super().on_tool_cancelled(...)`.
 
+A call that never ran reaches `ON_TOOL_CALL`'s ASYNC observers only, never a
+SYNC hook: a rejected permission is marked `refused`, a call the turn ended
+under `cancelled`. With an external handler, its own refusal comes back to it
+through `on_tool_refused(tool_name, tool_input, reason, ...)`, which reports it
+so by default; a handler that raises while deciding fails the call, and the
+channel reports it with what failed (`error_detail`). The report carries the
+same body with a handler as without one.
+
 A handler serves **one** channel — that is what makes the injected hooks
 attributable — and it can say which, so a prompt can name who is asking:
 
