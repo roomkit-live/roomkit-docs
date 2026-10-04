@@ -256,11 +256,28 @@ number, `None`) reaches the model as its JSON serialization, the same on
 and `None` as `null`. A result an `ON_TOOL_CALL` hook supplies in its place is
 read the same way.
 
-The pre-execution gates — the declared-catalogue check, argument validation
-against the declared schema, and the `BEFORE_TOOL_USE` hook — are a property of
-the channel, not of the handler. They run before the call is routed, so a tool
-served by an `ON_TOOL_CALL` hook on a `RealtimeVoiceChannel` with no
-`tool_handler` is gated exactly like one served by a handler.
+The pre-execution gates — the declared-catalogue check, the tool policy, skill
+gating, argument validation against the declared schema, and the
+`BEFORE_TOOL_USE` hook, in that order — are a property of the channel, not of
+the handler. They run before the call is routed, so a tool served by an
+`ON_TOOL_CALL` hook on a `RealtimeVoiceChannel` with no `tool_handler` is gated
+exactly like one served by a handler. Access comes before the arguments: a tool
+the policy denies is refused without its arguments being read, so its refusal
+never names what its schema requires.
+
+A refusal reads the same text for the same cause on every door — an
+`AIChannel` turn, a reasoning backend's turn, a `RealtimeVoiceChannel` session,
+a conference:
+
+| Cause | What the model reads |
+|---|---|
+| The tool policy denies it | `Tool 'X' is not permitted by the agent's tool policy.` |
+| A skill keeps it closed | `Tool 'X' is gated by a skill. Activate the skill first using activate_skill.` |
+| Nothing carries the name | `Tool 'X' is not declared.` (under Tool Search: none exists, with a hint to search) |
+
+A tool of the turn's catalogue that the round did not declare because the
+policy or a skill hides it reads its cause, not "not declared", so a model
+learns to activate the skill rather than give up.
 
 A declared tool that no handler serves reaches the `ON_TOOL_CALL` sync hooks
 with `result=None`: a hook may serve it by supplying the result (`HookResult`

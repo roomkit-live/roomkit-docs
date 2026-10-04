@@ -1582,9 +1582,9 @@ a call followed by more speech.
 
 The recovered call is a tool call like any other:
 
-- it passes the same pre-execution gate — the declared catalogue, the argument
-  schema, skill gating and `BEFORE_TOOL_USE`, so a hook that denies it prevents
-  the side effect rather than reporting it afterwards;
+- it passes the same pre-execution gate — the declared catalogue, the tool
+  policy, skill gating, the argument schema and `BEFORE_TOOL_USE`, so a hook
+  that denies it prevents the side effect rather than reporting it afterwards;
 - it fires `ON_TOOL_CALL` through the same dispatch, so a serving hook or a
   handler answers it normally;
 - its outcome — result *or* refusal — returns as **injected context**, never as
