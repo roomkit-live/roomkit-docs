@@ -230,9 +230,13 @@ call your own loop refuses before the gate (its arguments did not parse) goes
 to `request.report_refusal(name, arguments, body)`, so the channel's
 `ON_TOOL_CALL` observers see it as they see every refused call; pass
 `cancelled=True` for a call your loop cut, or `refused=False` (and
-`detail=`, what failed) for one that failed. Implement
-`session_ended()` if you keep state per session and `close()` if you hold
-resources.
+`detail=`, what failed) for one that failed. A call your provider ran
+itself (a provider-side tool such as web search) goes to
+`request.report_call(name, arguments, result, is_error=..., detail=...,
+tool_call_id=...)`: the channel's `ON_TOOL_CALL` hooks hear it once, as they
+hear a provider-side call on an AI channel. `AgentReasoningBackend` does both
+for you. Implement `session_ended()` if you keep state per session and
+`close()` if you hold resources.
 
 ## Observability
 
