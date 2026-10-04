@@ -31,6 +31,11 @@ await kit.ensure_participant("standup", "conf", "alice", display_name="Alice")
 access = await conference.mint_access("standup", "alice")
 ```
 
+A host serving several organizations passes the caller's tenant as
+`mint_access(..., organization_id="acme")`: the room is read with that scope
+before anything is admitted, so another organization's room raises
+`RoomNotFoundError` and no credential is minted for it (RFC §17.2).
+
 For a real SFU, swap the backend:
 
 ```python

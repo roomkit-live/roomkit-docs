@@ -271,7 +271,9 @@ await kit.join(room_id, "voice", session=session)
 A host serving several organizations passes the call's tenant as
 `organization_id=`: the room is read with that scope before the session is
 bound, so a room of another organization raises `RoomNotFoundError` and the
-call never enters it nor its recordings (RFC §17.2).
+call's audio never enters it nor its recordings (RFC §17.2). The SIP call
+itself is still up: hang it up with `backend.disconnect(session)` when the
+join is refused.
 
 ## Disconnecting
 

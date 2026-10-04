@@ -77,7 +77,9 @@ point again before any media.
 The recording captures the room's declared tracks: a recording that starts on
 a live room is told each one before any of its media, after its announcement.
 A channel the framework wires itself declares a session's tracks when the
-session joins a room that records, so a session that joined while the room
+session joins a room that records, once the join has read the room with the
+caller's `organization_id` (another organization's room is not found, and its
+recordings are told nothing), so a session that joined while the room
 recorded nothing is recorded once it joins again. A capture the framework
 does not wire itself declares its track and hands its media through the
 framework:
