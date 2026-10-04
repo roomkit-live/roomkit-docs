@@ -290,13 +290,19 @@ see [What a handler knows about the call](tool-calling.md#what-a-handler-knows-a
 If the user doesn't respond within the timeout:
 
 - `wait()` raises `TimeoutError`
-- `HumanInputToolHandler` catches it and refuses the call
-  (`ToolRefusedError`): the call is marked failed (`is_error`), the
-  `ON_TOOL_CALL` observers see it, and the AI reads:
+- `HumanInputToolHandler` catches it and fails the call
+  (`ToolFailedError`): the tool ran and nobody answered, so the call is
+  failed (`is_error`, `refused=False`), the `ON_TOOL_CALL` observers see it,
+  and the AI reads:
   ```json
   {"error": "Human input timed out after 300s for tool 'AskUserQuestion'"}
   ```
-- A request the human rejects is refused the same way
+- A request that was rejected (by the human, an `ON_USER_INPUT_REQUIRED`
+  hook, or the handler closing) makes `wait()` raise
+  `HumanInputRejectedError`, a `RuntimeError`; the tool refuses the call
+  (`ToolRefusedError`) and the AI reads the reason given
+- Any other error takes the generic failure path: the AI reads that the call
+  failed, never the error's message
 - The AI sees the error and can retry, skip, or inform the user
 
 ---

@@ -167,8 +167,10 @@ the bound on the result:
 
 - `execute_tool_call(name, arguments)` returns a `ToolCallResult`: the `text`
   the model reads and `is_error`, set when the call was refused, failed, was
-  blocked, was served by nothing or was cancelled. Prefer it: the model then
-  reads a failed call as one, as every tool loop marks it.
+  blocked, was served by nothing or was cancelled, and `refused`, set when
+  among those the call was refused. Prefer it: the model then reads a failed
+  call as one, as every tool loop marks it, and an agent backend's loop reads
+  a refusal as refused and any other error as failed.
 - `execute_tool(name, arguments)` returns the text alone.
 
 A `BEFORE_TOOL_USE` hook that blocks `rebook_flight` blocks it for the backend
