@@ -158,9 +158,14 @@ It runs in the turn's teardown: keep it short.
 A call the handler refuses (`process_tool_call` returns `approved=False`) comes
 back to it through `on_tool_refused(tool_name, tool_input, reason,
 tool_call_id=..., room_id=...)`, not `on_tool_result`; the default reports it to
-`ON_TOOL_CALL`'s observers only, marked `refused`. A call the channel refuses
-itself (its arguments were cut) and a `process_tool_call` that raises are
-reported by the channel, the latter with what failed (`error_detail`).
+`ON_TOOL_CALL`'s observers only, marked `refused`. A decision that carries a
+`detail` (what failed, for a refusal that came from a failure, as
+`PolicyExternalToolHandler` sets it for a `BEFORE_TOOL_USE` hook that failed
+closed) reaches `on_tool_refused(..., detail=...)` and the report's
+`error_detail`; it is passed only to an override that takes it, so write
+overrides with `**kwargs`. A call the channel refuses itself (its arguments
+were cut) and a `process_tool_call` that raises are reported by the channel,
+the latter with what failed (`error_detail`).
 
 ---
 

@@ -784,6 +784,18 @@ so by default; a handler that raises while deciding fails the call, and the
 channel reports it with what failed (`error_detail`). The report carries the
 same body with a handler as without one.
 
+A refusal that came from a failure (a `BEFORE_TOOL_USE` hook that failed
+closed) carries what failed: `ToolDecision.detail` reaches
+`on_tool_refused(..., detail=...)` and the report's `error_detail`. An agent
+that runs a call RoomKit refused anyway, and closes it completed, is reported
+as it ended, served, with `refused_but_ran=True` on the report, its end row
+and its `tool_call` framework event; the handler hears it through
+`on_tool_result(..., refused_but_ran=True)`. Both keywords are passed only
+when they apply, and only to an override that takes them: write overrides
+with `**kwargs` and hand them to `super()`. An override that cannot take
+`refused_but_ran` leaves that call's report to the channel, so the marker is
+never lost.
+
 A handler serves **one** channel — that is what makes the injected hooks
 attributable — and it can say which, so a prompt can name who is asking:
 
