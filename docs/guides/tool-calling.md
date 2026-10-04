@@ -824,22 +824,34 @@ exception included:
 
 ```python
 from roomkit.providers.ai.base import AITool
-from roomkit.tools import ToolCallContext, current_response_metadata, tool_turn_context
+from roomkit.tools import (
+    ToolCallContext,
+    current_response_metadata,
+    current_tool_actor_id,
+    tool_turn_context,
+)
+
+
+async def whoami(name: str, arguments: dict) -> str:
+    record = current_response_metadata()
+    if record is not None:
+        record["sources"] = ["roster"]  # what the handler tells the turn
+    return f"you are {current_tool_actor_id()}"
 
 
 async def test_the_handler_answers_the_speaker() -> None:
     call = ToolCallContext(room_id="r1", tool_call_id="tc1")
     with tool_turn_context(
         room_id="r1",
-        actor_id="telegram:tg_user:42",
-        tools=[AITool(name="my_invoices", description="List invoices")],
+        actor_id="alice",
+        tools=[AITool(name="whoami", description="Say who is asking")],
         call=call,
     ):
-        result = await my_invoices("my_invoices", {})
-        cited = current_response_metadata().get("sources")  # what the handler told the turn
+        result = await whoami("whoami", {})
+        record = current_response_metadata()
 
-    assert "INV-1001" in result
-    assert cited == ["billing-db"]
+    assert result == "you are alice"
+    assert record is not None and record["sources"] == ["roster"]
 ```
 
 | Argument | What the handler reads |
@@ -849,7 +861,7 @@ async def test_the_handler_answers_the_speaker() -> None:
 | `actor_id` | `current_tool_actor_id()`; leave it out for a turn with no author |
 | `tools` | `current_tool_allowed_names()`; `None` (the default) for a toolset not resolved, `[]` for an empty one |
 | `chain_depth` | The depth a result delivered later on the turn's behalf inherits |
-| `call` | `current_tool_call()`; a handler writing `structured_content` writes this object |
+| `call` | `current_tool_call()`; a handler writing `structured_content` writes this object. Its `room_id` is the turn's (`ValueError` otherwise) |
 
 The block always carries a response-metadata record, as an AI channel's turn
 does; the realtime path, which carries none, is not what it describes.
