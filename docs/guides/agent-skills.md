@@ -165,6 +165,15 @@ registry.get_unavailable_reason("deploy-helper")
 registry.unavailable_skills  # {name: reason}
 ```
 
+The tools an unavailable skill gates (`allowed_tools`) stay closed: nothing can
+activate it any more, so marking it never opens them.
+
+Every activation checks a skill's `requires` the same way, on a text turn as on
+a realtime session: against the tools the conversation declares once its tool
+policy is applied (skill gating aside, since the skill opens what it gates). A
+required tool that is absent or denied by the policy refuses the activation
+with `Required tools not available: <names>`.
+
 The prompt block then carries both:
 
 ```xml
@@ -287,7 +296,8 @@ preloads every body at connection time. `on_demand` advertises metadata and load
 only activated bodies: reconfigurable providers receive system instructions;
 fixed providers receive the full instructions and reference inventory in the tool
 result. Activation also returns the exact schemas of `requires` prerequisites
-from the session's authorized catalogue. This metadata describes dependencies,
+from the session's authorized catalogue, the tool policy applied: a tool the
+policy denies refuses the activation and its schema never goes out. This metadata describes dependencies,
 not permission grants; applications still resolve skill availability first.
 
 For fixed providers, `on_demand` requires
