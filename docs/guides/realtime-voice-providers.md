@@ -120,9 +120,10 @@ no handler runs on a mapping that only passes for arguments, the model reads
 `Tool call arguments unreadable`, and the observers receive the refusal, as in
 the AI channel's tool loop. A wire that says whether the response cut a call
 (OpenAI Realtime's and GPT-Live's item `status: "incomplete"`, after the
-output cap or a cancel) is read with `realtime_call_arguments(raw, cut=...)`:
-a cut call runs only when its argument text arrived and reads, and otherwise
-reaches the channel marked cut (`CutArguments`), which the model reads as
+output cap or a cancel) is read with `realtime_call_arguments(raw, cut=...)`,
+exported from `roomkit.providers.ai` beside `readable_arguments`: a cut call
+runs only when its argument text arrived and reads, and otherwise reaches the
+channel marked cut (`CutArguments`), which the model reads as
 `Tool call cut off`. OpenAI Realtime and xAI hand a call on once its item is
 done (`response.output_item.done`), the first event that carries that status. A provider also checks its endpoint's tool-name
 rule when it declares the session's tools, the way an AI provider checks a
@@ -132,7 +133,7 @@ for it. A tool given to the channel or a conference under a name no vendor
 accepts is refused at construction, as an `AITool` is.
 
 ```python
-from roomkit.providers.ai import readable_arguments
+from roomkit.providers.ai import readable_arguments, realtime_call_arguments
 
 
 class MyProvider(RealtimeVoiceProvider):
@@ -143,6 +144,8 @@ class MyProvider(RealtimeVoiceProvider):
     async def _on_function_call(self, session, event) -> None:
         # A mapping, or the model's text when it does not read as one.
         arguments = readable_arguments(event["arguments"])
+        # A wire that tells a cut reads the call through the cut rule instead:
+        # realtime_call_arguments(event["arguments"], cut=event["status"] == "incomplete")
         await self._fire(
             self._tool_call_callbacks, session, event["id"], event["name"], arguments,
             label="tool_call",

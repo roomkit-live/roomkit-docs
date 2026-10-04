@@ -79,11 +79,17 @@ another followed was closed by it.
 A custom provider builds its calls through these rules rather than its own.
 A realtime provider hands `on_tool_call` the result of `readable_arguments`:
 the mapping, or the model's text for a call whose arguments do not read, which
-the channel refuses (RFC §12.4).
+the channel refuses (RFC §12.4). A provider whose wire says whether the
+response cut a call reads it with `realtime_call_arguments` instead, which
+marks a call the cut stopped as `CutArguments` (RFC §6.4).
 
 ::: roomkit.providers.ai.tool_calls.tool_arguments
 
 ::: roomkit.providers.ai.tool_calls.readable_arguments
+
+::: roomkit.providers.ai.tool_calls.realtime_call_arguments
+
+::: roomkit.providers.ai.tool_calls.CutArguments
 
 ::: roomkit.providers.ai.tool_calls.unreadable_arguments
 
