@@ -152,9 +152,12 @@ conversational text, never claim an action completed without a tool result."
 ## Tool calls go through the channel gate
 
 A backend's tool calls are tool calls of the framework. `ReasoningRequest`
-carries the channel's declared catalogue (`tools`) and two callables that run
-one call through the same steps as any realtime tool call — the pre-execution
-gate (declared catalogue, argument schema, skill gating, `BEFORE_TOOL_USE`),
+carries the channel's declared catalogue (`tools`), the session's tools the
+backend's model is not offered with the refusal each reads (`unavailable`: the
+tool policy's, or a skill's worded for a model that cannot activate one), and
+two callables that run one call through the same steps as any realtime tool
+call — the pre-execution gate (declared catalogue, tool policy, skill gating,
+argument schema, `BEFORE_TOOL_USE`),
 the channel's `tool_handler` inside the tool call context, `ON_TOOL_CALL` and
 the bound on the result:
 

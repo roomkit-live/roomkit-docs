@@ -435,9 +435,10 @@ Three arbitrations to know about:
 
 The provider's tool calls go through the same gate as on any other channel
 (RFC §12.10.12). When `ConferenceRealtimeConfig.tools` declares any tool, a
-call must name one of them; it must match that tool's `parameters` schema, and
-`BEFORE_TOOL_USE` may deny it or rewrite its arguments, which are checked
-against the schema again. `ON_TOOL_CALL` sees the result: its sync hooks may
+call must name one of them; `ConferenceRealtimeConfig.tool_policy` then refuses
+a tool it denies, before its arguments are read; the call must match that
+tool's `parameters` schema, and `BEFORE_TOOL_USE` may deny it or rewrite its
+arguments, which are checked against the schema again. `ON_TOOL_CALL` sees the result: its sync hooks may
 rewrite or block it, and its async observers see every call, the refused and
 failed ones included (`is_error`), a refusal once it has been sent to the
 provider. A result is bounded at 16384 characters. A call the provider

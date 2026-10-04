@@ -272,8 +272,11 @@ a conference:
 | Cause | What the model reads |
 |---|---|
 | The tool policy denies it | `Tool 'X' is not permitted by the agent's tool policy.` |
-| A skill keeps it closed | `Tool 'X' is gated by a skill. Activate the skill first using activate_skill.` |
-| Nothing carries the name | `Tool 'X' is not declared.` (under Tool Search: none exists, with a hint to search) |
+| A skill keeps it closed | `Tool 'X' is gated by a skill. Activate the skill first using activate_skill.` (a reasoning backend, which cannot activate one: `… gated by a skill the conversation has not activated.`) |
+| Nothing carries the name | `Tool 'X' is not declared.` (under Tool Search, text or realtime, `call_tool` and `list_tools` included: none exists, with a hint to search) |
+
+A tool the policy denies and a skill gates reads the policy's text: activating
+the skill would not let it through.
 
 A tool of the turn's catalogue that the round did not declare because the
 policy or a skill hides it reads its cause, not "not declared", so a model
