@@ -88,9 +88,12 @@ channel = RealtimeVoiceChannel(
 Every tool call, whatever door it came through (the provider's function call, a
 call recovered from speech, a reasoning backend's call), is served the same way:
 the pre-execution gate, the handler inside the tool call context, `ON_TOOL_CALL`,
-the bound above, then its one result and its one report. A second call under an
-id still in flight is refused and reported, and sends nothing: the id's result
-is the first call's. Ending the session reports each call it interrupted as
+the bound above, then its one result and its one report. An id names its call
+until the call's result goes out: a second call under it before then is
+refused and reported, and sends nothing, since the id's result is the first
+call's; a call under it after then is a new call and gets its own answer, even
+while the first is still finishing its report. Every provider frees the id as
+it sends the result. Ending the session reports each call it interrupted as
 cancelled.
 
 What the provider owes in return is the same everywhere. A refused, failed or
