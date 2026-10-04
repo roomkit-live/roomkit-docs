@@ -717,6 +717,13 @@ it reveals nothing, neither for the next round nor for the next turns, and
 one that replaces its result is what the model reads. A search that finds
 nothing reveals nothing, so what an earlier search revealed stays.
 
+A hidden tool the model calls by its exact name, skipping `find_tools`, is
+recovered for that call, and stays revealed only once the tool answered it
+(served, failed, or its result withheld by an `ON_TOOL_CALL` hook), as the
+sticky re-exposure above keeps any tool used. A call refused before the tool
+ran (a `BEFORE_TOOL_USE` block, the handler's `ToolRefusedError`, the policy)
+reveals nothing, neither for the next round nor for the next turns.
+
 The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the channel's own persisted tool-call events, so a
 conversation that outlives its channel object keeps its tool memory. Another
