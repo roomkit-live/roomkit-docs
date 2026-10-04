@@ -166,13 +166,32 @@ registry.unavailable_skills  # {name: reason}
 ```
 
 The tools an unavailable skill gates (`allowed_tools`) stay closed: nothing can
-activate it any more, so marking it never opens them.
+activate it any more, so marking it never opens them, and a call to one reads
+`Tool 'X' is gated by a skill that is not available here.` The gates close
+when the registry holds the skill as it is marked: mark it in the registry the
+channel uses, or before copying a subset. A pattern an activated skill gates
+is that skill's to open, even when an unavailable skill gates it too.
 
 Every activation checks a skill's `requires` the same way, on a text turn as on
-a realtime session: against the tools the conversation declares once its tool
-policy is applied (skill gating aside, since the skill opens what it gates). A
-required tool that is absent or denied by the policy refuses the activation
-with `Required tools not available: <names>`.
+a realtime session: against the tools the conversation declares, the
+channel's own included, once its tool policy is applied (skill gating aside,
+since the skill opens what it gates). A required tool that is absent, denied
+by the policy, or held only by an unavailable skill's gate refuses the
+activation with `Required tools not available: <names>`.
+
+A `requires` name is an exact tool name by default. A host whose skills name
+something else there (a hub whose actions are its `<hub>_*` tools, say) says
+how a name is served:
+
+```python
+def serves(required: str, offered) -> bool:
+    return any(name == required or name.startswith(f"{required}_") for name in offered)
+
+registry = SkillRegistry(requires_match=serves)  # copies keep it
+```
+
+An activation on a fixed-declaration realtime provider then hands over the
+schemas of every tool that serves the name.
 
 The prompt block then carries both:
 
