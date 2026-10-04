@@ -147,6 +147,7 @@ your own provider.
 `reset()` is keyed by stream, following the same pattern as all other stages. The pipeline calls it:
 
 - for a voice session, at both ends of its life — `on_session_active()` clears any state left under that key before the session starts, and `on_session_ended()` releases it;
+- for a voice session that has ended, again whenever work still reaches the stage for it: a frame that was in flight on an `inbound_dsp_threads` worker when the session ended, or a frame still played to the ended session. What that work rebuilt is released at once, from the thread that ran it (a DSP worker, or the sender's thread), so `reset()` may run off the event loop and concurrently with another `reset()` of the same stream;
 - for a conference lane, at the end only: `release_stream()` when the track goes away. A lane is keyed by track id, which the SFU mints fresh, so there is nothing to clear on the way in;
 - with no argument, from `AudioPipeline.reset()`, which drops every stream at once.
 
