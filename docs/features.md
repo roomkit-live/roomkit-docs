@@ -306,6 +306,13 @@ operations, lifecycle/timer operations, participant resolution,
 tasks/observations and read markers. `check_all_timers(organization_id="acme")`
 sweeps only that tenant's rooms.
 
+The doors that bring a session into a room take it too:
+`kit.join(room_id, channel_id, organization_id="acme")` (voice, video, realtime,
+a SIP call's push model) and `RealtimeVoiceChannel.start_session(...,
+organization_id="acme")` read the room with the scope before any session
+exists, so another organization's room raises `RoomNotFoundError`, no session
+joins it, and none of its recordings is told of the session's tracks.
+
 `organization_id` remains optional for single-tenant compatibility: RoomKit is
 a library and has no request principal from which to infer it. A multi-tenant
 application must derive it from authenticated context and pass it at every

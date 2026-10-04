@@ -268,6 +268,11 @@ Unlike other backends where you call `kit.join()` (pull model) to create a sessi
 await kit.join(room_id, "voice", session=session)
 ```
 
+A host serving several organizations passes the call's tenant as
+`organization_id=`: the room is read with that scope before the session is
+bound, so a room of another organization raises `RoomNotFoundError` and the
+call never enters it nor its recordings (RFC §17.2).
+
 ## Disconnecting
 
 Call `backend.disconnect(session)` to hang up from the server side. This sends a SIP BYE to the remote party and closes the RTP session:
