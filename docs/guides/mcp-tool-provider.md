@@ -125,8 +125,8 @@ through to the next handler. `as_tool_handler(gate_discovery=False)` forwards
 every name to the server instead. That is for a gateway that routes by name
 prefix and authenticates the caller per call: it serves tools its `tools/list`
 never showed this connection, and a host with its own allow-list in front has
-already decided what the model may call. A server refusal raises
-`ToolRefusedError` on either side of the gate. Such a handler produces no
+already decided what the model may call. A result that says `isError` raises
+`ToolFailedError` on either side of the gate. Such a handler produces no
 unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
 
 ### MCP Apps: what the host reads beside the model's tools
@@ -157,7 +157,7 @@ host authorizes that call itself.
 | Multiple text parts | JSON array of strings | JSON array of strings |
 | A PNG, JPEG, GIF or WebP `ImageContent` whose payload decodes | As above, the image as its repr text | `[AITextPart, AIImagePart, ...]` in the server's order |
 | Another image format, a corrupt payload, `AudioContent`, a blob resource | As above, as its repr text | A one-line note, `[audio content (audio/wav) not shown to the model]` |
-| `isError=True` | `{"error": "..."}` | raises `ToolRefusedError` |
+| `isError=True` | `{"error": "..."}` | raises `ToolFailedError` (failed, not refused) |
 
 A bad image would fail the whole request at the vendor, and base64 read as text is noise the model pays for: the handler hands over only what a vision model can take. An `AIChannel` evicts the text of a content-part result like any other large result and keeps its images; with a provider that has no vision it hands the model the text, the images marked `[image]`.
 

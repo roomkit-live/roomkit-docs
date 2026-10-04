@@ -323,9 +323,13 @@ as `{"error": "Tool '<name>' failed (<ExceptionClass>)"}` on every channel:
 its message never reaches the model, since it can hold anything the failing
 code held (a connection string with its password), and goes to the log and to
 `ON_TOOL_CALL` observers as `event.error_detail`. Raising `ToolRefusedError`
-keeps both: the call is marked `is_error`, the observers fire, and the message
-reaches the model verbatim.
-`MCPToolProvider.as_tool_handler()` raises it when the server refuses a call.
+keeps both: the call is marked `is_error`, the observers fire (`refused=True`),
+and the message reaches the model verbatim. A tool that ran and failed, and
+has words for the model, raises `ToolFailedError` instead: the call is marked
+failed, not refused (`refused=False`), the model reads the message verbatim
+and the observers read it as `error_detail`, on every channel.
+`MCPToolProvider.as_tool_handler()` raises `ToolFailedError` for a result that
+says `isError`: the tool ran and failed.
 A tool that is not the handler's own is a different case: raise
 `UnservedToolCallError`, so a composed handler passes the call on (see below)
 and the channel reads the call as served by nothing, on every path (RFC §21.4).

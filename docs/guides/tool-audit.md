@@ -143,7 +143,7 @@ Every tool call produces a `ToolAuditEntry`:
 | `duration_ms` | float | Execution time in milliseconds |
 | `metadata` | dict | Optional extra data |
 
-The handler raising records `error`, a refusal (`ToolRefusedError`) or a declined call
+The handler raising records `error` (a `ToolFailedError`, such as an MCP `isError` result, included), a refusal (`ToolRefusedError`) or a declined call
 (`UnservedToolCallError`) records `failed`, and a cancelled call records `cancelled`; each
 still reaches the channel as raised. A call the channel's per-call bound
 (`tool_timeout_seconds`) cuts short reaches the wrapped handler as a cancellation, so it
