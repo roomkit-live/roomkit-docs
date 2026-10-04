@@ -93,8 +93,12 @@ until the call's result goes out: a second call under it before then is
 refused and reported, and sends nothing, since the id's result is the first
 call's; a call under it after then is a new call and gets its own answer, even
 while the first is still finishing its report. Every provider frees the id as
-it sends the result. Ending the session reports each call it interrupted as
-cancelled.
+it sends the result. A call that came without an id, or under an id in flight,
+takes the path of any call: on an ended session it is reported cancelled, a
+`call_tool` transport is unwrapped so its report names the tool, and it waits
+behind the transcription that precedes it. A call that named no tool reaches
+the channel too, which refuses it before the gate and answers under its id.
+Ending the session reports each call it interrupted as cancelled.
 
 What the provider owes in return is the same everywhere. A refused, failed or
 unserved call goes back through `submit_tool_error`: ElevenLabs marks it as a
@@ -982,7 +986,7 @@ inline.
 
 ## ElevenLabs Conversational AI
 
-Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider sends and receives audio, and bridges the agent's client tool calls into RoomKit's tool path.
+Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD, and turn-taking are all handled server-side — the provider sends and receives audio, and bridges the agent's client tool calls into RoomKit's tool path. A call keeps the service's id: the SDK folds it into the call's parameters, where a parameter the model writes under `tool_call_id` would replace it, so the provider keeps the model's parameters apart and the id stands; a `tool_call_id` the model wrote reaches your handler as an argument, judged against the tool's schema as any.
 
 ```python
 from __future__ import annotations
