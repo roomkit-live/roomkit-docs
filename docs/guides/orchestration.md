@@ -183,10 +183,17 @@ kit = RoomKit(
 )
 ```
 
-> **Sequential only, and only when the supervisor reviews.** Validation applies
-> to synchronous sequential runs (sync `auto_delegate` and strategy-tool mode).
-> `async_delivery` sequential (voice/background) and `parallel` mode run workers
-> without the per-step review loop.
+> **Sequential only.** Validation applies to every sequential run, within the
+> turn (sync `auto_delegate`, strategy-tool mode) or in the background
+> (`async_delivery`, voice included). `parallel` mode runs workers without the
+> per-step review loop.
+
+Every worker delegation, on every door (sequential, parallel, supervised,
+`delegate_to_<id>` waiting or in the background), is bounded by `task_timeout`:
+a worker past it is cut, its task ends `cancelled`, and it reads
+`The task timed out after <n>s.` The worker is posted `PENDING` on the status
+bus, then one terminal entry however its delegation ends, a delegation its
+caller cancelled included (`FAILED`, detail `cancelled`).
 
 #### Voice / real-time mode (`async_delivery=True`)
 
@@ -217,7 +224,11 @@ Flow:
 
 A pipeline that fails before its results (a worker delegation that raised) is handed back the same way: the supervisor is told the work could not be completed, so it can say so instead of leaving "I'll get back to you" unanswered. The error's message goes to the logs and to the status bus (`agent_id="orchestration"`, `FAILED`), never to the model. The room is free again by the time the supervisor hears the outcome, so a `delegate_workers` call it makes in answer (a retry, a follow-up) starts a new run; a supervisor that dispatches again on every outcome stops at `max_chain_depth`.
 
-One run per room at a time, whichever voice channel's session calls `delegate_workers`: a second call while workers run answers `already_running`. With several sessions in the room, only the one that made the call is told. The run's terminal status entry (`agent_id="orchestration"`, `action="pipeline"`) is `COMPLETED` once the results are handed back, and `FAILED` when the workers failed or the outcome reached no one (its detail then says why, `not handed back: ...`).
+One run per room at a time, whichever voice channel's session calls `delegate_workers`: a second call while workers run answers `already_running`. With several sessions in the room, only the one that made the call is told. The run's terminal status entry (`agent_id="orchestration"`, `action="pipeline"`) is `COMPLETED` once the results are handed back, and `FAILED` when the run raised, no worker's task completed (`no worker completed`; the supervisor is then told the work could not be completed), or the outcome reached no one (its detail then says why, `not handed back: ...`).
+
+A per-worker tool in the background (`delegate_to_<id>` with `wait_for_result=False`) is the same run, for that worker in that room: the worker is free again before its outcome is handed back, and its terminal entry is posted under `agent_id="orchestration"`, `action="worker"`.
+
+`kit.close()` ends every background run: the run is cancelled, its worker's task ends `cancelled`, its room is freed, its terminal entry is `FAILED` (`cancelled`), and nothing is handed back.
 
 The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user to stop talking before injecting results.
 
@@ -376,7 +387,7 @@ perf = Agent("perf", system_prompt="You review code for performance.")
 
 #### Voice / real-time mode
 
-For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues. Its outcome is handed back to the voice channel that started it as a background delegation's result is: an instruction to the session, the output bounded and set apart as a worker's, never a participant's message. A loop that raises hands back that the work could not be completed (the error stays in the logs and on the status bus), so the model can tell the user. The room is free for a new loop before the outcome is handed back, one loop runs per room whichever voice channel calls it, and only the session that made the call is told. The loop posts one terminal status entry (`agent_id="orchestration"`, `action="loop"`): `COMPLETED` once handed back, `FAILED` when the loop raised, its producer's task stopped it, or the outcome reached no one.
+For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues. Its outcome is handed back to the voice channel that started it as a background delegation's result is: an instruction to the session, the output bounded and set apart as a worker's, never a participant's message. A loop that raises hands back that the work could not be completed (the error stays in the logs and on the status bus), so the model can tell the user. The room is free for a new loop before the outcome is handed back, one loop runs per room whichever voice channel calls it, and only the session that made the call is told. The loop posts one terminal status entry (`agent_id="orchestration"`, `action="loop"`): `COMPLETED` once handed back, `FAILED` when the loop raised, its producer's task stopped it, or the outcome reached no one. `kit.close()` ends a running loop as it ends a supervisor's background run. The producer and each reviewer are posted `PENDING`, then one terminal entry however their delegation ends; the loop has no per-task bound.
 
 ```python
 kit = RoomKit(
