@@ -108,7 +108,10 @@ like any result, its `{"error": ...}` body saying what happened. Every call the 
 `on_tool_call_cancelled`, whatever the cause: Gemini's cancellation, a
 reconnect (a handoff included), an ElevenLabs `tool_timeout_s`, a connection
 lost or closed. The channel cancels its handler and reports it once,
-cancelled. A provider whose model calls no tool (Anam, PersonaPlex) has
+cancelled, and frees its id at once, as the provider does when it reports
+the abandonment: a call the vendor issues under that id while the handler
+cleans up is a new call, answered, and nothing is sent for the abandoned
+one. A provider whose model calls no tool (Anam, PersonaPlex) has
 `supports_tools` set to `False`: the channel declares it no tool, advertises
 no skill or Tool Search in its prompt, and warns once at construction.
 
