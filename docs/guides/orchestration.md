@@ -215,6 +215,8 @@ Flow:
 4. Workers run in background — conversation continues uninterrupted
 5. Results delivered via `kit.deliver()` when both AI and user are idle
 
+A pipeline that fails before its results (a worker delegation that raised) is handed back the same way: the supervisor is told the work could not be completed, so it can say so instead of leaving "I'll get back to you" unanswered. The error's message goes to the logs and to the status bus (`agent_id="orchestration"`, `FAILED`), never to the model.
+
 The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user to stop talking before injecting results.
 
 #### Parameters
