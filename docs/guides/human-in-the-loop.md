@@ -83,6 +83,7 @@ human.handler.resolve(pending_id, '{"answer": "blue"}')
 For providers that execute tools internally (like Claude Code sandboxes), use `HumanInputHandler` directly inside your `ExternalToolHandler`. The channel decides who serves each call: one the provider already ran is reported — the provider says so on the call (`AIToolCall.served = ServedCall(result=..., is_error=...)`), never in its arguments, so a `_result` key the model writes is just an argument and its call goes through the gate; a pending call to a tool the channel does not serve goes to the `ExternalToolHandler`; every other call is the channel's own, gate first, so a `BEFORE_TOOL_USE` block refuses it even on a channel without a `tool_handler`.
 
 ```python
+from roomkit import HumanInputRejectedError
 from roomkit.tools.human_input import HumanInputHandler
 
 handler = HumanInputHandler()
@@ -97,7 +98,11 @@ async def process_tool_call(self, tool_name, tool_input, *, room_id=None, **kw):
             channel_id=self._channel_id,
         )
         # ON_USER_INPUT_REQUIRED hook fires via _on_input_required callback
-        result = await handler.wait(pending.pending_id, timeout=300)
+        try:
+            result = await handler.wait(pending.pending_id, timeout=300)
+        except HumanInputRejectedError as rejected:
+            # A refusal: the model reads why (RFC §9.3).
+            return ToolDecision(approved=False, reason=f"Rejected: {rejected}")
         return ToolDecision(approved=False, reason=result)
     return ToolDecision(approved=True)
 
@@ -297,12 +302,13 @@ If the user doesn't respond within the timeout:
   ```json
   {"error": "Human input timed out after 300s for tool 'AskUserQuestion'"}
   ```
-- A request that was rejected (by the human, an `ON_USER_INPUT_REQUIRED`
-  hook, or the handler closing) makes `wait()` raise
-  `HumanInputRejectedError`, a `RuntimeError`; the tool refuses the call
-  (`ToolRefusedError`) and the AI reads the reason given
-- Any other error takes the generic failure path: the AI reads that the call
-  failed, never the error's message
+- A request that was rejected (by the human, or an `ON_USER_INPUT_REQUIRED`
+  hook) makes `wait()` raise `HumanInputRejectedError`, a `RuntimeError`; the
+  tool refuses the call (`ToolRefusedError`) and the AI reads why
+- A request the handler gave up on (closed, or released, before an answer)
+  makes `wait()` raise a plain `RuntimeError`, as calling a closed handler
+  does: like any other error, it takes the generic failure path, and the AI
+  reads that the call failed, never the error's message
 - The AI sees the error and can retry, skip, or inform the user
 
 ---

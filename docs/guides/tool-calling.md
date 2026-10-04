@@ -288,8 +288,9 @@ with `metadata={"result": ...}`). If none does, the model reads
 `{"error": "No handler for tool <name>"}` and the call is reported once, as
 failed. The channel's own outcomes are refusals too: a repeat of the same call
 with the same arguments that the channel stops, and a tool outside the turn's
-toolset. `HumanInputToolHandler` refuses a request nobody answered in time, or
-one the human rejected.
+toolset. `HumanInputToolHandler` refuses a request a human or an
+`ON_USER_INPUT_REQUIRED` hook rejected; one nobody answered in time is a
+failure.
 
 A call one of those gates refuses never reaches the handler, and a handler that
 raises never returns — but both are still reported. They fire `ON_TOOL_CALL`
