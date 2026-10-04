@@ -926,9 +926,11 @@ synthesized whole:
   it, not once on the whole text: a hook judges one sentence at a time (a
   `BLOCK` drops that sentence, a `MODIFY` replaces it, a failing hook drops it)
   and sees it after the text filter; `AFTER_TTS` receives the text as spoken;
-- a TTS failure (a 401, a 429, a network error) ends the AI response where it
-  failed: the text streamed so far is stored, the rest is not generated, and
-  `ON_ERROR` fires; the HTTP path stores the whole text and emits `tts_error`;
+- a TTS failure (a 401, a 429, a network error) stops that session as a
+  barge-in does: `tts_error` names the session, and once every session has
+  stopped the text streamed so far is stored with `metadata.cancelled`, the
+  rest is not generated, and nothing is replayed; `ON_ERROR` does not fire,
+  the AI did not fail. The HTTP path emits `tts_error` the same way;
 - it is not stitched to the previous responses (below): neither socket takes a
   request id or a previous text.
 

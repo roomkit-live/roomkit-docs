@@ -4,6 +4,8 @@
 
 ::: roomkit.voice.backends.base.VoiceBackend
 
+::: roomkit.voice.backends.base.PlaybackErrors
+
 ::: roomkit.voice.base.VoiceCapability
 
 ::: roomkit.voice.base.VoiceSession
