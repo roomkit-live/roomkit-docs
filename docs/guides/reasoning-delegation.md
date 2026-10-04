@@ -191,6 +191,11 @@ something. The channel therefore always answers, with one spoken output:
 | The backend's turn did not complete (round cap, deadline, budget, an answer cut or empty) | "The delegated work could not be completed." |
 | The run exceeded `reasoning_timeout_s` | "The delegated work took too long and was abandoned." |
 
+A backend that raised also fires `ON_ERROR` once, as the channel, with
+`error_category="reasoning"`, so the host sees the failure as it sees a room
+turn's; a turn its round cap, deadline or budget cut is an expected end and
+fires none.
+
 A turn that did not complete has no answer: the built-in backends yield what
 the model said before each tool round as progress, never as the answer, and
 raise `ReasoningCutShortError` (its `reason` is the loop's
