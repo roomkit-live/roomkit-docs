@@ -56,7 +56,7 @@ await kit.deliver("room", content="hello", strategy="queued")
 `WaitForIdle` is voice-aware:
 
 - **VoiceChannel**: waits for `wait_playback_done()` (TTS finished) + buffer
-- **RealtimeVoiceChannel**: waits for `wait_idle()` (provider done + user silent) + buffer
+- **A channel hosting a realtime model** (`RealtimeVoiceChannel`, `RealtimeAudioVideoChannel`, a `ConferenceChannel` with a realtime model plugged in): waits for `wait_idle()` (the model's answer ended and reached the transport, nobody heard speaking) + buffer
 - **Text channels**: delivers immediately (no playback to wait for)
 
 ```python
@@ -71,15 +71,28 @@ WaitForIdle(
 `kit.deliver()` auto-detects the best transport channel in the room:
 
 1. **Voice channels** preferred (most latency-sensitive)
-2. **RealtimeVoiceChannel** — injects via `inject_text()`
+2. **A channel hosting a realtime model** — injects via `inject_text()` into the model's session (`system` intent with `instruction=True`)
 3. **VoiceChannel** — synthetic inbound message → TTS
 4. **Other transports** (WebSocket, SMS, etc.) — synthetic inbound message
+
+An intelligence channel attached as a transport is never picked: an instruction
+delivered through it would re-enter the agent it is for.
 
 Override with `channel_id`:
 
 ```python
 await kit.deliver("room", content="hello", channel_id="voice-main")
 ```
+
+Naming a `ConferenceChannel` with a realtime model plugged in injects into the
+model's room session, and is `unavailable` (`voice_session_unavailable`) until
+that session connects. A strategy that waits pins the session first: if the
+model is unplugged during the wait, the delivery is refused
+(`voice_session_replaced`), never published to the room instead.
+
+A channel of your own takes part by inheriting `RealtimeModelHost`
+(`get_room_sessions()`, `inject_text()`, `wait_idle()`); `hosts_realtime_model(channel)`
+is the predicate the delivery paths read.
 
 ## Framework default
 
