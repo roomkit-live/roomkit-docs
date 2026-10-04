@@ -96,11 +96,13 @@ if feed is not None:          # None: the room records nothing
 ```
 
 `await kit.room_recordings(room_id, organization_id=...)` lists the running
-handles (each with its `path`), and `kit.stop_room_recording(room_id)` stops
-them and returns the results, a room whose row is gone included. Every
-recording verb reads the room scoped to the caller's organization: another
-organization's room raises `RoomNotFoundError`, and nothing of its recordings
-is listed, fed or stopped. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
+handles (each with its `path`), and `await kit.stop_room_recording(room_id,
+organization_id=...)` stops them and returns the results, a room whose row is
+gone included. Every recording verb reads the room scoped to the caller's
+organization: another organization's room raises `RoomNotFoundError`, and
+nothing of its recordings is listed, fed or stopped. A gone room's recordings
+are reached by the organization they were started under only, and a missing
+room that records nothing raises `RoomNotFoundError`. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
 `session` `None` and its `room_id` set): an explicit stop, `close_room`,
 `archive_room`, a room closed by its timer and `kit.close()` alike. See
 `examples/room_recording_on_demand.py`.
