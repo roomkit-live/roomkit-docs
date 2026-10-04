@@ -117,6 +117,7 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `tool_meta()` | `dict[str, dict]` | Each discovered tool's `_meta`, from the listing made at connection (an MCP App's `ui`) |
 | `read_resource(uri, timeout=30)` | `ReadResourceResult` | A resource as the server returns it (an MCP App's HTML) |
 | `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `isError` included, for a host relaying it |
+| `connected` | `bool` | Whether the connection is live: entered, not yet exited |
 
 By default the handler raises `UnservedToolCallError` for a name this
 connection did not discover, which is what lets `compose_tool_handlers` fall

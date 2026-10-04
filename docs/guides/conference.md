@@ -169,7 +169,9 @@ A live session is returned as it is; concurrent calls and the triggers are
 serialised, so the room is joined once; a session that was lost is joined
 again; a new join fires `ON_SESSION_STARTED` and `conference_started` before
 it returns. A room the channel is not attached to raises
-`RoomNotAttachedError`, and leaves no record behind.
+`RoomNotAttachedError`, and leaves no record behind. A pure-transport channel
+(nothing to consume or say) raises `ConferenceCapabilityError` rather than
+join: its bot would be the silent observer RoomKit never makes.
 
 ## Hot-plugging intelligence
 

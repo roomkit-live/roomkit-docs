@@ -720,6 +720,8 @@ await kit.attach_channel(
 )
 ```
 
+`acp_event_text(event)` is the text the channel gives the agent for an event (a `RichContent` as its `plain_text`), for a host building an ACP prompt of its own.
+
 The channel maps one ACP session to each Room and supports streamed text,
 thinking, tool-call activity, plans, permission requests, and cancellation.
 Tool permissions are denied by default. The agent's session tunables are
@@ -839,10 +841,11 @@ See `examples/list_models.py`.
 
 `OpenAIAIProvider(config, transport=...)`, every provider built on it, and
 `create_vllm_provider(config, transport=...)` send every request through an
-`httpx.AsyncBaseTransport` placed inside the SDK's own default client (its
-redirects and connection limits kept, each hop through the transport). A host
-that lets users name the endpoint puts there a policy judging the address
-actually dialled. See `examples/openai_outbound_policy.py`.
+`httpx.AsyncBaseTransport` placed inside the SDK's own default client
+(redirects followed, each hop through the transport; per-request timeout kept).
+The transport owns its connection pool and limits, and environment proxies are
+not read. A host that lets users name the endpoint puts there a policy judging
+the address actually dialled. See `examples/openai_outbound_policy.py`.
 
 #### Model Pricing
 
@@ -1150,6 +1153,8 @@ from roomkit.tools import MCPToolProvider
 async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
     handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
     ai = AIChannel("ai", provider=provider, tool_handler=handler)
+
+Beside the model's tools, an MCP App's host reads `mcp.tool_meta()` (each tool's `_meta`, `ui` among it), `await mcp.read_resource(uri)` and `await mcp.call_tool_result(name, args)` (the raw `CallToolResult`, not bound by `tool_filter`: the host authorizes the call); `mcp.connected` says whether the connection is live.
 ```
 
 `compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports streamable HTTP and SSE for servers reached by URL, and stdio for a server started as a command: `MCPToolProvider.from_command("uvx", ["mcp-server-time"])` starts it on entry and stops it on exit. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
@@ -2632,6 +2637,8 @@ transport = FastRTCRealtimeTransport(
 mount_fastrtc_realtime(app, transport, path="/rtc-realtime")
 ```
 
+A peer the host will not serve (no session waits for it, an expired call) is refused with `await transport.reject_connection(webrtc_id, message=...)`: told why, its peer connection (or a websocket client's socket) closed, the stream cleaned, the handler unregistered. A peer the transport's `auth` refuses is closed the same way.
+
 The transport:
 - Uses FastRTC's `Stream` with a passthrough handler (no `ReplyOnPause`)
 - Converts between numpy arrays (FastRTC) and PCM16 LE bytes (transport ABC) automatically
@@ -3043,6 +3050,8 @@ access = await conference.mint_access("standup", "alice")
 ```
 
 The bot joins lazily — on a mint, on an attach that finds the conference already occupied (a restart over a live meeting), on a delivery, on an arrival — and an empty conference is never joined. The triggers answer to a need: a channel with no `stt`, no `tts` and no `recording` never joins at all and skips the occupancy probe — pure transport, where RoomKit stays the meeting's admission gate and roster with no participant of its own in it (RFC §12.10.4; see the [guide](guides/conference.md#pure-transport-mode) for what that trades away). `mint_access()` enforces admission (roster membership, bans) before it mints; eviction is reactive (`remove_participant()`), and the credential TTL (`access_ttl`, 15 min default) bounds the exposure of a token already issued.
+
+A host that must know the bot is in awaits `await channel.ensure_bot(room_id)`: the live `BotSession` returned as is, one join for concurrent calls and the triggers, a lost session joined again; a pure-transport channel refuses it (`ConferenceCapabilityError`) rather than join a silent observer.
 
 A mint's `grants=` decide what the participant may publish. The sound of a screen share is a right of its own, `publish_screen_share_audio`, and the one publish right that is off by default — a mint that never names it carries none; `ConferenceGrants(publish_screen_share_audio=True)` lets a presenter share a tab with its audio (RFC §12.10.2). Without it, a browser share *with* sound fails whole: the SFU refuses the sound and the client stops the picture with it. See the [conference guide](guides/conference.md#sharing-a-screen-with-its-sound).
 
@@ -3498,7 +3507,7 @@ Built-in providers:
 - **NoopTelemetryProvider** -- Zero-overhead default (no-ops)
 - **ConsoleTelemetryProvider** -- Logs span summaries via Python logging
 - **MockTelemetryProvider** -- Records spans/metrics for test assertions
-- **OpenTelemetryProvider** -- Bridges to the OTel SDK (`pip install 'roomkit[opentelemetry]'`)
+- **OpenTelemetryProvider** -- Bridges to the OTel SDK (`pip install 'roomkit[opentelemetry]'`); exports run off the event loop (`flush()` on a thread, `close()` bounded by `shutdown_flush_timeout`, 4.0 s by default)
 - **PyroscopeProfiler** -- Continuous CPU profiling with per-session tagging (`pip install 'roomkit[pyroscope]'`)
 
 14 span kinds cover the full stack: `STT_TRANSCRIBE`, `TTS_SYNTHESIZE`, `LLM_GENERATE`, `LLM_TOOL_CALL`, `HOOK_SYNC`, `HOOK_ASYNC`, `INBOUND_PIPELINE`, `REALTIME_SESSION`, `REALTIME_TURN`, `REALTIME_TOOL_CALL`, and more.

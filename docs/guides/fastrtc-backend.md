@@ -436,8 +436,9 @@ mount_fastrtc_realtime(app, transport, path="/rtc-realtime", auth=authenticate)
 ```
 
 A peer `auth` refuses (it returns `None` or raises) is closed: its peer
-connection closed and the stream cleaned, not left connected with its audio
-ignored.
+connection, or a websocket client's socket, closed and the stream cleaned, not
+left connected with its audio ignored. `FastRTCVoiceBackend` closes a websocket
+client its `auth` refuses the same way.
 
 ### Refusing a peer the app will not serve
 
@@ -449,7 +450,7 @@ await transport.reject_connection(webrtc_id, message='{"type": "error", "message
 ```
 
 `message` is sent as is on the peer's data channel, then the peer connection
-is closed, the stream cleaned and the handler unregistered (the disconnect
+(or a websocket client's socket) is closed, the stream cleaned and the handler unregistered (the disconnect
 callbacks of a session bound to it fire). Each step runs even when an earlier
 one fails; an unknown id does nothing.
 
