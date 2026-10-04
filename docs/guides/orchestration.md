@@ -186,7 +186,11 @@ kit = RoomKit(
 > **Sequential only.** Validation applies to every sequential run, within the
 > turn (sync `auto_delegate`, strategy-tool mode) or in the background
 > (`async_delivery`, voice included). `parallel` mode runs workers without the
-> per-step review loop.
+> per-step review loop, and so does a supervisor without a model (a
+> configuration-only `Agent`, as a voice supervisor often is): it cannot frame
+> nor judge a step. A supervised chain that stops on a step the supervisor left
+> unvalidated did not complete its work: in the background the supervisor is
+> told so and the run posts `FAILED` (`a step was not validated`).
 
 Every worker delegation, on every door (sequential, parallel, supervised,
 `delegate_to_<id>` waiting or in the background), is bounded by `task_timeout`:
@@ -226,7 +230,7 @@ A pipeline that fails before its results (a worker delegation that raised) is ha
 
 One run per room at a time, whichever voice channel's session calls `delegate_workers`: a second call while workers run answers `already_running`. With several sessions in the room, only the one that made the call is told. The run's terminal status entry (`agent_id="orchestration"`, `action="pipeline"`) is `COMPLETED` once the results are handed back, and `FAILED` when the run raised, no worker's task completed (`no worker completed`; the supervisor is then told the work could not be completed), or the outcome reached no one (its detail then says why, `not handed back: ...`).
 
-A per-worker tool in the background (`delegate_to_<id>` with `wait_for_result=False`) is the same run, for that worker in that room: the worker is free again before its outcome is handed back, and its terminal entry is posted under `agent_id="orchestration"`, `action="worker"`.
+A per-worker tool in the background (`delegate_to_<id>` with `wait_for_result=False`) is followed by the same run, for that worker in that room. Its delegation is still a task of the kit's task runner: the dispatch answer carries its `task_id`, and `kit.task_runner.cancel(task_id)` ends it. The run waits for it within `task_timeout`, frees the worker before its outcome is handed back, hands it back alone, and posts its terminal entry under `agent_id="orchestration"`, `action="worker"`.
 
 `kit.close()` ends every background run: the run is cancelled, its worker's task ends `cancelled`, its room is freed, its terminal entry is `FAILED` (`cancelled`), and nothing is handed back.
 
