@@ -927,10 +927,12 @@ synthesized whole:
   `BLOCK` drops that sentence, a `MODIFY` replaces it, a failing hook drops it)
   and sees it after the text filter; `AFTER_TTS` receives the text as spoken;
 - a TTS failure (a 401, a 429, a network error) stops that session as a
-  barge-in does: `tts_error` names the session, and once every session has
-  stopped the text streamed so far is stored with `metadata.cancelled`, the
-  rest is not generated, and nothing is replayed; `ON_ERROR` does not fire,
-  the AI did not fail. The HTTP path emits `tts_error` the same way;
+  barge-in does: `tts_error` names the session once its playback is
+  released, and once every session has stopped the response is stored as it
+  stood (with `metadata.cancelled` when the generation was still running,
+  which then ends) and nothing is replayed; `ON_ERROR` does not fire, the AI
+  did not fail, and `AFTER_TTS` fires only if a session was served. The HTTP
+  path reports a failed session the same way;
 - it is not stitched to the previous responses (below): neither socket takes a
   request id or a previous text.
 
