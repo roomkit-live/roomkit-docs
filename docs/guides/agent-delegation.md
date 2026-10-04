@@ -87,7 +87,8 @@ else:
 ```
 
 A worker whose turn did not complete (its round cap, deadline or budget cut
-it, a stop cancelled it, its answer was cut or never came) has no answer: the
+it, a stop cancelled it, a shared transport stopped reading it, its answer
+was cut or never came) has no answer: the
 task fails, `error` says how the turn ended ("The worker's turn ended
 max_rounds before its answer"), `output` keeps the worker's last narration
 ("Still checking.") for a caller that wants it, and
