@@ -1151,6 +1151,8 @@ async def my_invoices(name: str, arguments: dict) -> str:
 !!! warning
     `current_tool_actor_id()` names the turn; it does not authenticate it. The value is a room `Participant.id`, and the inbound pipeline substitutes the resolved `Identity.id` for it only once identification succeeds — a sender still pending, ambiguous or unknown reads back just as non-`None`, and in a multi-agent room the author may be another agent. Resolve it against the roster before treating it as a principal, and treat `None` as an answer rather than a missing value: a system injection, a webhook or a scheduled run has no author, and falling back to whoever spoke last is how a tool answers one person with another's data.
 
+A test that calls a handler directly describes the turn it runs under with `tool_turn_context(room_id=..., actor_id=..., tools=..., call=...)`, a context manager that installs the same context and restores the previous one on the way out, so no test reaches for the private contextvar (see [Testing a handler on its own](guides/tool-calling.md#testing-a-handler-on-its-own)).
+
 See the [Tool Calling guide](guides/tool-calling.md#what-a-handler-knows-about-the-call) and `examples/tool_call_context.py`.
 
 #### MCP Tool Provider

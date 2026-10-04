@@ -380,7 +380,9 @@ judges each call);
 `current_response_metadata()` returns `None` there (no turn merges a record on
 that path, so the `if record is not None` guard below skips a write nothing
 would carry). Each returns `None` outside a
-tool call (a direct call) — keep your own fallback there.
+tool call (a direct call) — keep your own fallback there. A test that calls a
+handler directly describes the turn with `tool_turn_context`
+(see [Testing a handler on its own](#testing-a-handler-on-its-own)).
 
 ```python
 from roomkit.tools import current_tool_actor_id, current_tool_room, current_tool_room_id
@@ -812,3 +814,42 @@ provider = MockAIProvider(responses=["The weather in Paris is 22C and sunny."])
 
 ai = AIChannel("ai", provider=provider, tools=[GetWeatherTool()])
 ```
+
+### Testing a handler on its own
+
+A handler that reads the turn answers `None` everywhere when a test calls it
+directly. `tool_turn_context` installs the context a tool loop would, from the
+arguments you give it, and restores the previous one when the block exits, an
+exception included:
+
+```python
+from roomkit.providers.ai.base import AITool
+from roomkit.tools import ToolCallContext, current_response_metadata, tool_turn_context
+
+
+async def test_the_handler_answers_the_speaker() -> None:
+    call = ToolCallContext(room_id="r1", tool_call_id="tc1")
+    with tool_turn_context(
+        room_id="r1",
+        actor_id="telegram:tg_user:42",
+        tools=[AITool(name="my_invoices", description="List invoices")],
+        call=call,
+    ):
+        result = await my_invoices("my_invoices", {})
+        cited = current_response_metadata().get("sources")  # what the handler told the turn
+
+    assert "INV-1001" in result
+    assert cited == ["billing-db"]
+```
+
+| Argument | What the handler reads |
+|----------|------------------------|
+| `room_id` | `current_tool_room_id()` |
+| `room` | `current_tool_room()`, and its id as the room id (both given must agree, or `ValueError`) |
+| `actor_id` | `current_tool_actor_id()`; leave it out for a turn with no author |
+| `tools` | `current_tool_allowed_names()`; `None` (the default) for a toolset not resolved, `[]` for an empty one |
+| `chain_depth` | The depth a result delivered later on the turn's behalf inherits |
+| `call` | `current_tool_call()`; a handler writing `structured_content` writes this object |
+
+The block always carries a response-metadata record, as an AI channel's turn
+does; the realtime path, which carries none, is not what it describes.

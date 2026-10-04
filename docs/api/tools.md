@@ -30,6 +30,8 @@ it is running under from a contextvar — see
 
 ::: roomkit.tools.context.current_response_metadata
 
+::: roomkit.tools.context.tool_turn_context
+
 ## Turn Response Metadata
 
 The record every writer of a turn shares — see
