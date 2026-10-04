@@ -313,7 +313,7 @@ transport that stopped reading (a voice barge-in), the turn cancelled in the
 gate, in the handler or while `ON_TOOL_CALL` judged the call. Each is stored
 `cancelled` and reaches the observers once, with `cancelled=True`. A call
 whose outcome the model already read (one the provider ran, one an external
-handler decided, a realtime Tool Search result already sent) keeps that
+handler decided) keeps that
 outcome when a cut interrupts its own report: the observers hear it once,
 with that outcome, never a second time cancelled.
 
@@ -705,6 +705,13 @@ two rounds, withdraws with the same guarantees, and its event names what
 `BEFORE_AI_GENERATION` is shown (`tools`): the whole catalogue the policy and
 skill gating let the turn reach, nothing withdrawn. A tool the hook adds is declared at
 every round of the turn, as a pinned tool is, and `find_tools` does not name it.
+
+A `find_tools` reveal counts once its call is served, as a skill activation
+does (RFC §6.4): `ON_TOOL_CALL` judges the call before the model reads its
+result, on a text turn and a realtime session alike. A SYNC hook that blocks
+it reveals nothing, neither for the next round nor for the next turns, and
+one that replaces its result is what the model reads. A search that finds
+nothing reveals nothing, so what an earlier search revealed stays.
 
 The record is scoped per room and kept in memory; after a process restart it is
 rebuilt once per room from the channel's own persisted tool-call events, so a

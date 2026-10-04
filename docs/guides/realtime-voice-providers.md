@@ -188,8 +188,12 @@ supervisor's `delegate_workers`, a voice loop's `delegate_loop`,
 `handoff_conversation`. The agent is told to call them, not to find them.
 
 Providers that support mid-session reconfiguration receive native declarations
-for the tools matched by `find_tools`. Providers with fixed declarations, such
-as Gemini 3.1 Live, use three stable functions instead:
+for the tools matched by `find_tools`, once the call is served and its result
+went out. `ON_TOOL_CALL`'s SYNC hooks judge `find_tools` and `list_tools`
+before the model reads them, as any other call: a hook that blocks the search
+reveals nothing and reconfigures nothing, and a hook's replacement is what the
+model reads. Providers with fixed declarations, such as Gemini 3.1 Live, use
+three stable functions instead:
 
 | Function | Result |
 | --- | --- |
