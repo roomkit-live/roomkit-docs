@@ -21,6 +21,16 @@ A `BEFORE_AI_GENERATION` hook adds to them; a debug view splits them off.
 
 ::: roomkit.TURN_NOTES_HEADER
 
+## Tool Search
+
+The discovery tools a channel serves itself under Tool Search.
+
+::: roomkit.TOOL_SEARCH_INFRA_TOOL_NAMES
+
+::: roomkit.TOOL_FIND_TOOLS
+
+::: roomkit.TOOL_LIST_TOOLS
+
 ::: roomkit.ACPChannel
 
 ::: roomkit.WebSocketChannel
