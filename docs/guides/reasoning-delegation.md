@@ -226,7 +226,9 @@ class FlightDeskBackend(ReasoningBackend):
 tool call through `request.execute_tool_call` (or `request.execute_tool`). A
 call your own loop refuses before the gate (its arguments did not parse) goes
 to `request.report_refusal(name, arguments, body)`, so the channel's
-`ON_TOOL_CALL` observers see it as they see every refused call. Implement
+`ON_TOOL_CALL` observers see it as they see every refused call; pass
+`cancelled=True` for a call your loop cut, or `refused=False` (and
+`detail=`, what failed) for one that failed. Implement
 `session_ended()` if you keep state per session and `close()` if you hold
 resources.
 
