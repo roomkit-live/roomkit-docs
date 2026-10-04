@@ -370,11 +370,11 @@ perf = Agent("perf", system_prompt="You review code for performance.")
 | `reviewer` | — | Single reviewer (convenience shorthand) |
 | `max_iterations` | `3` | Maximum produce-review cycles |
 | `strategy` | `None` | `"sequential"` / `"parallel"` for multiple reviewers |
-| `async_delivery` | `False` | `True` = background loop, results via `kit.deliver()` |
+| `async_delivery` | `False` | `True` = background loop, its outcome handed back to the voice channel that started it |
 
 #### Voice / real-time mode
 
-For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues:
+For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues. Its outcome is handed back to the voice channel that started it as a background delegation's result is: an instruction to the session, the output bounded and set apart as a worker's, never a participant's message. A loop that raises hands back that the work could not be completed (the error stays in the logs and on the status bus), so the model can tell the user. The room is free for a new loop before the outcome is handed back, and the loop posts one terminal status entry (`agent_id="orchestration"`, `action="loop"`):
 
 ```python
 kit = RoomKit(
