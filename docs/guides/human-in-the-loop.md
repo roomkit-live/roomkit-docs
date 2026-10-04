@@ -309,6 +309,8 @@ If the user doesn't respond within the timeout:
   makes `wait()` raise a plain `RuntimeError`, as calling a closed handler
   does: like any other error, it takes the generic failure path, and the AI
   reads that the call failed, never the error's message
+- A request whose waiting call is cut (the turn cancelled, the session ended)
+  is withdrawn: a late answer is not taken (`resolve()` returns `False`)
 - The AI sees the error and can retry, skip, or inform the user
 
 ---
