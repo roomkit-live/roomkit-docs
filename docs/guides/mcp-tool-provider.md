@@ -42,7 +42,7 @@ compose_tool_handlers(local_handler, mcp_handler)
 AIChannel(tool_handler=composed)
 ```
 
-`MCPToolProvider` connects to an MCP server via streamable HTTP or SSE, discovers available tools, and maps them to RoomKit's `AITool` model. The `as_tool_handler()` method returns a `ToolHandler` callable that routes tool calls to the MCP server.
+`MCPToolProvider` connects to an MCP server via streamable HTTP or SSE, discovers available tools, and maps them to RoomKit's `AITool` model. The `as_tool_handler()` method returns a `ToolHandler` callable that routes tool calls to the MCP server. A call named with the MCP alias `mcp__<server>__<tool>` (how some agents and prompts name MCP tools) runs `<tool>`; every gate judges such a call under both names, so a tool policy or a skill that refuses `<tool>` refuses its alias too (RFC §21.1). The `<server>` part is not checked: write policy patterns against the tool's own name.
 
 When a tool is not a handler's own (it raises `UnservedToolCallError`, or answers the earlier `{"error": "Unknown tool: ..."}` envelope), `compose_tool_handlers` tries the next handler in the chain. The last handler's answer is the composition's, a decline included.
 
