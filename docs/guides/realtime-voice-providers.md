@@ -118,7 +118,13 @@ model wrote when they do not (invalid JSON, an array, a cut fragment). The
 channel, and a conference, refuse a call that arrives as text before the gate:
 no handler runs on a mapping that only passes for arguments, the model reads
 `Tool call arguments unreadable`, and the observers receive the refusal, as in
-the AI channel's tool loop. A provider also checks its endpoint's tool-name
+the AI channel's tool loop. A wire that says whether the response cut a call
+(OpenAI Realtime's and GPT-Live's item `status: "incomplete"`, after the
+output cap or a cancel) is read with `realtime_call_arguments(raw, cut=...)`:
+a cut call runs only when its argument text arrived and reads, and otherwise
+reaches the channel marked cut (`CutArguments`), which the model reads as
+`Tool call cut off`. OpenAI Realtime and xAI hand a call on once its item is
+done (`response.output_item.done`), the first event that carries that status. A provider also checks its endpoint's tool-name
 rule when it declares the session's tools, the way an AI provider checks a
 turn's (see [Tool Calling](tool-calling.md)): an endpoint that accepts the
 declaration can still fail the call later, opaquely, once the model reaches
