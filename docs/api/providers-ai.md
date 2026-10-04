@@ -73,7 +73,9 @@ response carries; and `partial=True` on a call whose arguments do not read as
 an object, which the loop answers without running it, whatever stop reason
 the response gave. The model reads why: `garbled=True` says the model wrote
 the arguments unreadable; a partial call that is not garbled was cut (the
-output cap, a content filter, a stream that stopped without a stop reason).
+output cap or the context window, a content filter or a refusal, a stream that
+stopped without a stop reason). Only a response's last call can be cut: a call
+another followed was closed by it.
 A custom provider builds its calls through these rules rather than its own.
 A realtime provider hands `on_tool_call` the result of `readable_arguments`:
 the mapping, or the model's text for a call whose arguments do not read, which
