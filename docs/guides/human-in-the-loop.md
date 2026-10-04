@@ -15,7 +15,7 @@ AI agents often need to ask clarifying questions, request approval, or collect d
 RoomKit's `HumanInputHandler` solves this as a first-class feature with two layers:
 
 - **`HumanInputHandler`** — core async primitive for create / wait / resolve / reject
-- **`HumanInputToolHandler`** — ToolHandler wrapper that composes into AIChannel's tool chain
+- **`HumanInputToolHandler`** — the tools that ask a person, served by an `AIChannel`, a `RealtimeVoiceChannel` or a conference given it as `human_input_handler=`
 
 ---
 
@@ -77,6 +77,41 @@ async def notify_user(event, ctx):
 # When the user answers (from your REST endpoint, WebSocket handler, etc.)
 human.handler.resolve(pending_id, '{"answer": "blue"}')
 ```
+
+### Voice channels
+
+A `RealtimeVoiceChannel` and a conference's realtime configuration take the
+same option, with the same rules:
+
+```python
+from roomkit import ConferenceChannel, ConferenceRealtimeConfig, RealtimeVoiceChannel
+
+voice = RealtimeVoiceChannel(
+    "voice",
+    provider=provider,
+    transport=transport,
+    human_input_handler=human,   # declared in every session, served first
+)
+
+conference = ConferenceChannel(
+    "conf",
+    backend=backend,
+    realtime=ConferenceRealtimeConfig(provider=provider, human_input_handler=human),
+)
+```
+
+On every door of the channel (the provider's function call, a call recovered
+from speech, a reasoning backend's call, a conference's call) the tool is
+served by the channel before `tool_handler`, under the handler's own
+`timeout` rather than the channel's default call bound (10 s on a voice
+channel), and each request fires `ON_USER_INPUT_REQUIRED` with
+`channel_type` naming the door (`realtime_voice`, `conference`). The requests
+still open are settled when the channel closes, and on a conference when its
+realtime provider is unplugged.
+
+A `HumanInputToolHandler` passed as `tool_handler=` is served as any host
+handler, without those rules; a `RealtimeVoiceChannel` logs a warning
+pointing to `human_input_handler=`.
 
 ### External Provider (Claude Code)
 
@@ -210,14 +245,15 @@ The core primitive that manages pending requests:
 | `pending` | `property → dict[str, PendingInput]` | Snapshot of active pending requests |
 
 `HumanInputHandler(retention=128)` sets how many consumed outcomes stay replayable; `retention=0` switches the retention off.
-One handler may be shared by several `AIChannel` instances: framework callbacks
+One handler may be shared by several channels: framework callbacks
 are routed by `channel_id`, and closing one channel leaves the other owners
 available. A create for the closed scope raises `RuntimeError` rather than
 arming work that can outlive its channel.
 
 ### HumanInputToolHandler
 
-ToolHandler wrapper for the native AIChannel path:
+The tools that ask a person, for `AIChannel`, `RealtimeVoiceChannel` and
+`ConferenceRealtimeConfig`:
 
 ```python
 human = HumanInputToolHandler(
@@ -228,8 +264,12 @@ human = HumanInputToolHandler(
 )
 ```
 
-- Pass to `AIChannel(human_input_handler=human)` — auto-composes with the tool chain
+- Pass as `human_input_handler=human`: the channel declares `tool_definitions`
+  and serves `tool_names` itself, before its `tool_handler`; replacing
+  `channel.tool_handler` later leaves them served
 - Access the inner handler via `human.handler` for `resolve()` / `reject()`
+- `await human.ask(name, arguments, channel_type=...)` asks on a door of that
+  channel type; called as a `ToolHandler`, it asks on an AI channel's door
 - Falls through for non-matching tools (works with `compose_tool_handlers`)
 
 !!! warning "`tool_names` gates dispatch; it does not offer the tool"
