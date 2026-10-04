@@ -293,10 +293,13 @@ one the human rejected.
 
 A call one of those gates refuses never reaches the handler, and a handler that
 raises never returns — but both are still reported. They fire `ON_TOOL_CALL`
-with `is_error=True`, on the async observers only: an audit hook sees the
-refusal, while a hook that could have served the call does not, so a denial
-prevents the side effect instead of hiding it. Read the outcome from `is_error`
-rather than from the result text, which is written for the model.
+with `is_error=True`, on the async observers only, on every door (an AI
+channel's, an external handler's, ACP, realtime, a conference): an audit hook
+sees the refusal, while a hook that could have served the call does not, so a
+denial prevents the side effect instead of hiding it. A refusal is also marked
+`refused=True`, a cancellation `cancelled=True`, and a failure neither. Read the
+outcome from these markers rather than from the result text, which is written
+for the model.
 
 On a realtime channel the model can also abandon a call it issued: Gemini Live
 sends `tool_call_cancellation` when the caller interrupts while the tool runs.

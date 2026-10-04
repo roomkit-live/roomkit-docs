@@ -279,7 +279,13 @@ async def tool_auditor(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
         event.name,
         event.arguments,
         ctx.room.id,
-        "cancelled" if event.cancelled else "refused" if event.is_error else "ok",
+        "cancelled"
+        if event.cancelled
+        else "refused"
+        if event.refused
+        else "failed"
+        if event.is_error
+        else "ok",
     )
     if event.error_detail:
         # A call that raised: the exception's class and message, which the
