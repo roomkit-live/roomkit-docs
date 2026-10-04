@@ -262,8 +262,7 @@ the model reads `null`, on every channel. A `modify` whose payload is not the
 a sync hook's `dict` replacement arrives as the JSON the model read. A blocked
 call fires it too, with `is_error=True` and the block's reason. A report on a
 call whose outcome the model already read (an ACP or Claude Agent SDK agent's,
-one the provider ran itself, a realtime Tool Search call) reaches it as it was
-read: no hook can change what the model already read. It also wants the calls a sync hook never sees. A tool
+one the provider ran itself) reaches it as it was read: no hook can change what the model already read. It also wants the calls a sync hook never sees. A tool
 denied by the policy, a name the agent does not have, a handler that raised, a
 call nothing served: none of them run, so none of them reach a hook that could
 serve one. They fire the async observers instead, with `is_error=True`:
