@@ -83,10 +83,11 @@ does not wire itself declares its track and hands its media through the
 framework:
 
 ```python
-feed = kit.add_room_recording_track(
+feed = await kit.add_room_recording_track(
     "meeting",
     RecordingTrack(id="audio:s1", kind="audio", channel_id="capture",
                    codec="pcm_s16le", sample_rate=48000),
+    organization_id="acme",
 )
 if feed is not None:          # None: the room records nothing
     feed.feed(pcm_bytes, timestamp_ms)
@@ -94,9 +95,12 @@ if feed is not None:          # None: the room records nothing
     feed.close()              # the track ended: each recording flushes it
 ```
 
-`kit.room_recordings(room_id)` lists the running handles (each with its
-`path`), and `kit.stop_room_recording(room_id)` stops them and returns the
-results, a room whose row is gone included. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
+`await kit.room_recordings(room_id, organization_id=...)` lists the running
+handles (each with its `path`), and `kit.stop_room_recording(room_id)` stops
+them and returns the results, a room whose row is gone included. Every
+recording verb reads the room scoped to the caller's organization: another
+organization's room raises `RoomNotFoundError`, and nothing of its recordings
+is listed, fed or stopped. Every end is announced with its result (`ON_RECORDING_STOPPED`, its
 `session` `None` and its `room_id` set): an explicit stop, `close_room`,
 `archive_room`, a room closed by its timer and `kit.close()` alike. See
 `examples/room_recording_on_demand.py`.
