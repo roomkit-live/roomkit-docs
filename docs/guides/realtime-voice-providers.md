@@ -93,7 +93,10 @@ until the call's result goes out: a second call under it before then is
 refused and reported, and sends nothing, since the id's result is the first
 call's; a call under it after then is a new call and gets its own answer, even
 while the first is still finishing its report. Every provider frees the id as
-it sends the result. A call that came without an id, or under an id in flight,
+it sends the result, or as it reports the call abandoned, and the channel frees
+it at the same step: nothing is sent for an abandoned call, its observers told
+or not, and a call issued under its id is a new one. So does a call a reconnect
+its own handler caused, which runs on: the new connection never issued its id. A call that came without an id, or under an id in flight,
 takes the path of any call: on an ended session it is reported cancelled, a
 `call_tool` transport is unwrapped so its report names the tool, and it waits
 behind the transcription that precedes it. A call that named no tool reaches
