@@ -975,7 +975,10 @@ string `""` is a value, and clears the prompt). To turn a channel default off
 for one room, set an explicit value (`"thinking_budget": 0`,
 `"enable_thinking": False`, `"reasoning_effort": "none"`); an
 `"enable_thinking": False` also turns off a `thinking_budget` set on the
-channel. `temperature`, `max_tokens`, `response_schema` and the turn budgets
+channel. A model that cannot stop reasoning is sent its lowest level instead,
+as its provider's catalogue declares it: `minimal` on OpenAI's GPT-5 and
+Meta's Muse, `low` on o3, o4-mini and Cerebras's GPT OSS; GPT-5.1 and later
+take `none`. `temperature`, `max_tokens`, `response_schema` and the turn budgets
 have no value that states off: a room can replace the channel's, never lift it.
 
 `AIChannelTurnConfig` carries `system_prompt`, `tools`, `temperature`,
