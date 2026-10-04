@@ -213,9 +213,11 @@ Flow:
 2. User asks for analysis → AI calls `delegate_workers` tool
 3. AI says "I'm dispatching my analysts" (natural response)
 4. Workers run in background — conversation continues uninterrupted
-5. Results delivered via `kit.deliver()` when both AI and user are idle
+5. Results handed back to the session that called `delegate_workers`, as an instruction, when both AI and user are idle
 
 A pipeline that fails before its results (a worker delegation that raised) is handed back the same way: the supervisor is told the work could not be completed, so it can say so instead of leaving "I'll get back to you" unanswered. The error's message goes to the logs and to the status bus (`agent_id="orchestration"`, `FAILED`), never to the model. The room is free again by the time the supervisor hears the outcome, so a `delegate_workers` call it makes in answer (a retry, a follow-up) starts a new run; a supervisor that dispatches again on every outcome stops at `max_chain_depth`.
+
+One run per room at a time, whichever voice channel's session calls `delegate_workers`: a second call while workers run answers `already_running`. With several sessions in the room, only the one that made the call is told. The run's terminal status entry (`agent_id="orchestration"`, `action="pipeline"`) is `COMPLETED` once the results are handed back, and `FAILED` when the workers failed or the outcome reached no one (its detail then says why, `not handed back: ...`).
 
 The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user to stop talking before injecting results.
 
@@ -225,7 +227,7 @@ The `WaitForIdle` strategy waits for both the AI to finish speaking AND the user
 |-----------|---------|-------------|
 | `strategy` | `None` | `"sequential"` / `"parallel"` / `None` — how workers execute |
 | `auto_delegate` | `False` | `True` = framework triggers workers automatically |
-| `async_delivery` | `False` | `True` = workers run in background, results delivered via `kit.deliver()` |
+| `async_delivery` | `False` | `True` = workers run in background, results handed back to the calling session |
 | `refine_task` | `True` | Supervisor extracts topic before sending to workers (sync mode) |
 | `refine_instruction` | `None` | Custom topic extraction instruction |
 | `delegation_message` | `"I'm dispatching..."` | Message injected when workers start (async mode) |
@@ -374,7 +376,7 @@ perf = Agent("perf", system_prompt="You review code for performance.")
 
 #### Voice / real-time mode
 
-For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues. Its outcome is handed back to the voice channel that started it as a background delegation's result is: an instruction to the session, the output bounded and set apart as a worker's, never a participant's message. A loop that raises hands back that the work could not be completed (the error stays in the logs and on the status bus), so the model can tell the user. The room is free for a new loop before the outcome is handed back, and the loop posts one terminal status entry (`agent_id="orchestration"`, `action="loop"`):
+For voice channels, `async_delivery=True` injects a `delegate_loop` tool into the RealtimeVoiceChannel. The loop runs in the background while the conversation continues. Its outcome is handed back to the voice channel that started it as a background delegation's result is: an instruction to the session, the output bounded and set apart as a worker's, never a participant's message. A loop that raises hands back that the work could not be completed (the error stays in the logs and on the status bus), so the model can tell the user. The room is free for a new loop before the outcome is handed back, one loop runs per room whichever voice channel calls it, and only the session that made the call is told. The loop posts one terminal status entry (`agent_id="orchestration"`, `action="loop"`): `COMPLETED` once handed back, `FAILED` when the loop raised, its producer's task stopped it, or the outcome reached no one.
 
 ```python
 kit = RoomKit(
@@ -390,7 +392,7 @@ kit = RoomKit(
 
 #### Result metadata
 
-The result event carries loop status in `event.metadata`:
+In the synchronous mode, the result event carries loop status in `event.metadata` (an asynchronous loop's hand-back says how it ended in its text instead):
 
 - `approved` — `True` if all reviewers approved, `False` otherwise
 - `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer). On `producer_failed` the caller reads the producer's failure on `InboundResult.error`, and `ON_ERROR` fires, whether an output went out or not
