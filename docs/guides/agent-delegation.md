@@ -351,7 +351,7 @@ async def quiet_hours(event, ctx):
 `notify` names who is told:
 
 - an intelligence channel receives an instruction addressed to it, and answers through the room's transport;
-- a `RealtimeVoiceChannel` receives an injection with the `system` intent;
+- a channel that hosts a realtime model (`RealtimeVoiceChannel`, `RealtimeAudioVideoChannel`, a `ConferenceChannel` with a realtime model plugged in) receives an injection with the `system` intent into its model's session, and nothing is published to the room's other channels;
 - any other transport receives a message through it.
 
 A `notify` channel not attached to the parent room is told nothing, which is

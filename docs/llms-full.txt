@@ -420,7 +420,7 @@ kit.register_channel(ai)
 
 # Room wires them together
 await kit.create_room(room_id="chat")
-await kit.attach_channel("chat", "ws-user")  # TRANSPORT (default)
+await kit.attach_channel("chat", "ws-user")  # the channel's own category (TRANSPORT)
 await kit.attach_channel("chat", "ai", category=ChannelCategory.INTELLIGENCE)
 
 # User sends message → AI responds → response delivered to WebSocket
