@@ -138,6 +138,17 @@ declaration can still fail the call later, opaquely, once the model reaches
 for it. A tool given to the channel or a conference under a name no vendor
 accepts is refused at construction, as an `AITool` is.
 
+A provider keeps the calls it issued on the book `RealtimeVoiceProvider`
+holds per session: `_book_tool_call(session, call_id, payload)` when the call
+arrives (`False` for a call without an id or under an id in flight, which is
+handed on all the same for the channel to refuse), `_answerable_tool_call`
+first in `submit_tool_result` and `submit_tool_error` (it returns the payload,
+a name or a pending future, and drops with a log a result for an id
+abandoned, never issued, or issued by a connection that is gone), and
+`_abandon_open_tool_calls(session)` when a connection ends, which reports
+each abandoned call once. A session connected again under the same id
+abandons its previous connection's calls first.
+
 ```python
 from roomkit.providers.ai import readable_arguments, realtime_call_arguments
 
@@ -152,15 +163,28 @@ class MyProvider(RealtimeVoiceProvider):
         arguments = readable_arguments(event["arguments"])
         # A wire that tells a cut reads the call through the cut rule instead:
         # realtime_call_arguments(event["arguments"], cut=event["status"] == "incomplete")
+        # Booked with what answering it takes (here its name); a call that
+        # cannot be booked is handed on all the same: the channel refuses it.
+        self._book_tool_call(session, event["id"], event["name"])
         await self._fire(
             self._tool_call_callbacks, session, event["id"], event["name"], arguments,
             label="tool_call",
         )
 
+    async def submit_tool_result(self, session, call_id, result) -> None:
+        held, name = self._answerable_tool_call(session, call_id)
+        if not held:
+            return  # abandoned or never issued: logged, nothing sent
+        await self._send(session, {"call_id": call_id, "name": name, "output": result})
+
     async def submit_tool_error(self, session, call_id, result) -> None:
         # Only when the protocol has an error marker; the default sends
         # the result through submit_tool_result.
-        await self._send(session, {"call_id": call_id, "output": result, "is_error": True})
+        held, name = self._answerable_tool_call(session, call_id)
+        if held:
+            await self._send(
+                session, {"call_id": call_id, "name": name, "output": result, "is_error": True}
+            )
 
     async def _start(self, session) -> None:
         # A session's own tasks run in a fresh context, not the caller's
@@ -168,8 +192,8 @@ class MyProvider(RealtimeVoiceProvider):
         self._receiver = self._session_task(self._receive(session), name="receive")
 
     async def _on_connection_lost(self, session) -> None:
-        # The calls still open die with the connection: report them.
-        await self._abandon_tool_calls(session, self._open_calls.pop(session.id, ()))
+        # The calls still open die with the connection: report them, once.
+        await self._abandon_open_tool_calls(session)
 ```
 
 The transport is accepted before the AI provider finishes its handshake, so a
