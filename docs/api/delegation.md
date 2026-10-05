@@ -26,6 +26,12 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ::: roomkit.tasks.delegate.setup_realtime_delegation
 
+## Following Tasks
+
+::: roomkit.tasks.status.TaskStatusTool
+
+::: roomkit.tasks.status.room_tasks
+
 ## Delegation State Tracking
 
 ::: roomkit.tasks.cache.CompletedTaskCache

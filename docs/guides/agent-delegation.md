@@ -264,6 +264,45 @@ async def on_completed(event, ctx):
     logger.info("Task %s: %s in %.0fms", task_id, status, duration)
 ```
 
+## Following tasks
+
+Every delegation is posted on `kit.status_bus` ([Status Bus guide](status-bus.md)):
+`pending` once its child room is ready, then `completed` with its result, or
+`failed` for a task that failed or was cancelled (never the error's text). Each
+entry names the worker (`agent_id`), carries `action="task"`, and in its metadata
+`room_id` (the parent room), `task_id` and `child_room_id`; the terminal entry
+adds `task_status` and `duration_ms`.
+
+Give an agent the `task_status` tool and it can check on its room's tasks while
+it keeps talking — what is running, what ended, and the result:
+
+```python
+from roomkit.tasks import TaskStatusTool
+
+assistant = AIChannel(
+    "assistant",
+    provider=provider,
+    system_prompt="Delegate long work, keep talking, check on it with task_status.",
+    tools=[TaskStatusTool(kit)],
+)
+```
+
+```json
+{"tasks": [{"task_id": "task-75944d21fdd2", "agent": "pr-reviewer",
+            "task": "Review the latest PR...", "status": "running",
+            "since": "2026-10-05T19:27:56+00:00"}]}
+```
+
+The tool answers for the room of the call only: one room's tasks never show in
+another. A `task_id` argument narrows the answer to one task. It is a tool of
+its own, given to whichever agent should see the tasks, independently of
+`setup_delegation` and of the orchestration strategies (whose background
+dispatch mentions `task_status` only to an agent that has it).
+
+A caller that follows its tasks on the bus itself delegates with
+`post_status=False`, so no task shows twice: the orchestration strategies do,
+for their workers, and post entries of their own.
+
 ## Callbacks
 
 For programmatic handling beyond hooks:
@@ -327,7 +366,10 @@ when that voice channel has ended.
 A background task's result is handed back with
 `kit.deliver(..., instruction=True)` ([Delivery guide](delivery.md#delivering-an-instruction)),
 so the kit's delivery strategy decides when it arrives, and the delivery hooks
-see it and can refuse it:
+see it and can refuse it. The hand-back names its task: its metadata carries
+`task_id`, `agent_id` (the worker) and `task_status`, on the delivery hooks'
+event and on the instruction a `BEFORE_BROADCAST` hook sees, so a hook tells a
+task's result from any other instruction without reading its text:
 
 ```python
 from roomkit import EventType, HookResult, HookTrigger, RoomKit, WaitForIdle
@@ -339,6 +381,12 @@ kit = RoomKit(delivery_strategy=WaitForIdle())
 async def quiet_hours(event, ctx):
     if event.type == EventType.INSTRUCTION and is_night():
         return HookResult.block("quiet hours")
+    return HookResult.allow()
+
+@kit.hook(HookTrigger.BEFORE_BROADCAST, event_types={EventType.INSTRUCTION})
+async def task_results(event, ctx):
+    if "task_id" in event.metadata:
+        logger.info("Result of %s (%s)", event.metadata["task_id"], event.metadata["task_status"])
     return HookResult.allow()
 ```
 

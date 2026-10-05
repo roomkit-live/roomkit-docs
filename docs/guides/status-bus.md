@@ -132,6 +132,23 @@ For another transport (NATS, ...), implement the `StatusBackend` ABC:
 `publish()`, `recent()`, `subscribe()`, `unsubscribe()`, and optionally
 `close()`. See `examples/realtime_redis.py` for a cross-process demo.
 
+## Delegated tasks
+
+`kit.delegate()` posts each task on the framework's bus: `pending` once its
+child room is ready, then `completed` (the result, bounded) or `failed` (failed
+or cancelled, never the error's text), under the worker's `agent_id` with
+`action="task"` and `room_id`, `task_id`, `child_room_id` in the metadata. An
+agent reads its room's tasks with the `task_status` tool:
+
+```python
+from roomkit.tasks import TaskStatusTool
+
+agent = AIChannel("assistant", provider=provider, tools=[TaskStatusTool(kit)])
+```
+
+It reads the bus for the room of the call only. See
+[Agent Delegation](agent-delegation.md#following-tasks).
+
 ## Integration with voice agents
 
 Auto-inject status updates into a `RealtimeVoiceChannel` so the voice agent knows what the execution agent is doing:
