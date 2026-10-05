@@ -73,9 +73,12 @@ policy = RetryPolicy(
 Used by `AIChannel` for provider calls (see [AI Steering guide](ai-steering.md) for fallback chains) and the delivery layer for transport providers.
 
 !!! tip
-    Only retryable errors trigger retries: a 429 or 5xx, and a connection
-    refused, reset or timed out before any status, on every text provider.
-    Non-retryable errors (other 4xx) fail immediately.
+    Only retryable errors trigger retries: a 429, 500, 502 or 503 (and 529
+    on Anthropic), and a transport failure (a connection refused, reset or
+    timed out, before the status or while a stream that has emitted nothing
+    is read), on every text provider. Any other status fails immediately.
+    The channel retries a turn's stream; a direct `generate()` call reads
+    the same `retryable` flag and retries nothing itself.
 
 ## Connect vs Read Timeout
 
