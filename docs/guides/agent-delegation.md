@@ -125,9 +125,8 @@ the runner's `close()`, even right after `delegate()` returned. The result is
 `status="cancelled"`, `error="cancelled"`, no output; `ON_TASK_COMPLETED` and
 the `on_complete` callback still run, once, a notified agent is told
 `[Background task from <worker> cancelled. ...]` (not while `kit.close()`
-runs: a closing framework starts no turn, and a result being handed back when
-it closes is cut, the notified agent's turn cancelled, while the task still
-ends), and a Supervisor's worker can be delegated to again. A task whose work already ran when the cancel arrives
+runs: a closing framework starts no turn), and a Supervisor's worker can be
+delegated to again. A task whose work already ran when the cancel arrives
 ends as it stands, completed or failed. The delegation span ends `ok` for a
 completed task, `error` for a failed one (with its error), `cancelled` for a
 cancelled one. `task.cancel()` on the handle only unblocks its waiters; to
@@ -359,7 +358,10 @@ A `notify` channel not attached to the parent room is told nothing, which is
 the case of `delegate()`'s default (the worker itself). The result is bounded
 to 4,000 characters and delimited as the worker's output. An instruction is not
 stored: later turns see the agent's answer, not the raw result, which
-`ON_TASK_COMPLETED` still carries in full.
+`ON_TASK_COMPLETED` still carries in full. A result still being handed back
+when `kit.close()` runs is cut with it, whatever the task's status: the
+notified agent's turn is cancelled, what it had said is kept as a cancelled
+response, and the task's `on_complete` callback and waiters still run.
 
 ## Structured results
 
