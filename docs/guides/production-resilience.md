@@ -73,7 +73,9 @@ policy = RetryPolicy(
 Used by `AIChannel` for provider calls (see [AI Steering guide](ai-steering.md) for fallback chains) and the delivery layer for transport providers.
 
 !!! tip
-    Only retryable errors (5xx, timeouts) trigger retries. Non-retryable errors (4xx) fail immediately.
+    Only retryable errors trigger retries: a 429 or 5xx, and a connection
+    refused, reset or timed out before any status, on every text provider.
+    Non-retryable errors (other 4xx) fail immediately.
 
 ## Connect vs Read Timeout
 
