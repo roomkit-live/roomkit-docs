@@ -68,12 +68,19 @@ WaitForIdle(
 
 ## Channel-aware delivery
 
-`kit.deliver()` auto-detects the best transport channel in the room:
+`kit.deliver()` auto-detects the best transport channel in the room. It
+picks, among the transports bound to the room:
 
-1. **Voice channels** preferred (most latency-sensitive): a voice channel type, or any channel hosting a realtime model now (a conference with its model plugged in included), whatever the order it was attached in
-2. **A channel hosting a realtime model** — injects via `inject_text()` into the model's session (`system` intent with `instruction=True`)
-3. **VoiceChannel** — synthetic inbound message → TTS
-4. **Other transports** (WebSocket, SMS, etc.) — synthetic inbound message
+1. **A voice channel** first (most latency-sensitive): a voice channel type,
+   or any channel whose realtime model is plugged in at delivery time (a
+   conference with one included), whatever order it was attached in;
+2. otherwise **the first other transport** bound (WebSocket, SMS, etc.).
+
+Each kind then receives the content its own way:
+
+- **A channel hosting a realtime model** — injected via `inject_text()` into the model's session (`system` intent with `instruction=True`)
+- **VoiceChannel** — synthetic inbound message → TTS
+- **Other transports** — synthetic inbound message
 
 An intelligence channel attached as a transport is never picked: an instruction
 delivered through it would re-enter the agent it is for.
