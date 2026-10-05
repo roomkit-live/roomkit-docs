@@ -2367,7 +2367,8 @@ class TerminalPermissionHandler(ExternalToolHandler):
         return ToolDecision(approved=answer.strip().casefold() in {"y", "yes"})
 
     async def on_tool_result(self, tool_name, tool_input, result, **kwargs) -> None:
-        await self._fire_on_tool_hook(tool_name, tool_input, result)  # ON_TOOL_CALL hooks
+        # ON_TOOL_CALL hooks; the keywords (is_error, tool_call_id, ...) are its own
+        await self._fire_on_tool_hook(tool_name, tool_input, result, **kwargs)
 
 kit = RoomKit()
 cli = CLIChannel("you", show_thinking=True, markdown=True,
