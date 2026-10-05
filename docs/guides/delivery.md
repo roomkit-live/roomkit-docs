@@ -70,7 +70,7 @@ WaitForIdle(
 
 `kit.deliver()` auto-detects the best transport channel in the room:
 
-1. **Voice channels** preferred (most latency-sensitive)
+1. **Voice channels** preferred (most latency-sensitive): a voice channel type, or any channel hosting a realtime model now (a conference with its model plugged in included), whatever the order it was attached in
 2. **A channel hosting a realtime model** — injects via `inject_text()` into the model's session (`system` intent with `instruction=True`)
 3. **VoiceChannel** — synthetic inbound message → TTS
 4. **Other transports** (WebSocket, SMS, etc.) — synthetic inbound message
