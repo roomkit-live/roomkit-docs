@@ -78,7 +78,9 @@ Used by `AIChannel` for provider calls (see [AI Steering guide](ai-steering.md) 
     timed out, before the status or while a stream that has emitted nothing
     is read), on every text provider. Any other status fails immediately.
     The channel retries a turn's stream; a direct `generate()` call reads
-    the same `retryable` flag and retries nothing itself.
+    the same `retryable` flag and retries nothing itself. The provider SDKs
+    retry nothing either (`max_retries=0` on the OpenAI, Anthropic, Ollama
+    and PolarGrid configs), so one try is one HTTP attempt.
 
 ## Connect vs Read Timeout
 
