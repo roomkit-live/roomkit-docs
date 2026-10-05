@@ -125,8 +125,9 @@ the runner's `close()`, even right after `delegate()` returned. The result is
 `status="cancelled"`, `error="cancelled"`, no output; `ON_TASK_COMPLETED` and
 the `on_complete` callback still run, once, a notified agent is told
 `[Background task from <worker> cancelled. ...]` (not while `kit.close()`
-runs: a closing framework starts no turn), and a Supervisor's worker can be
-delegated to again. A task whose work already ran when the cancel arrives
+runs: a closing framework starts no turn, and a result being handed back when
+it closes is cut, the notified agent's turn cancelled, while the task still
+ends), and a Supervisor's worker can be delegated to again. A task whose work already ran when the cancel arrives
 ends as it stands, completed or failed. The delegation span ends `ok` for a
 completed task, `error` for a failed one (with its error), `cancelled` for a
 cancelled one. `task.cancel()` on the handle only unblocks its waiters; to
