@@ -787,14 +787,18 @@ same body with a handler as without one.
 A refusal that came from a failure (a `BEFORE_TOOL_USE` hook that failed
 closed) carries what failed: `ToolDecision.detail` reaches
 `on_tool_refused(..., detail=...)` and the report's `error_detail`. An agent
-that runs a call RoomKit refused anyway, and closes it completed, is reported
-as it ended, served, with `refused_but_ran=True` on the report, its end row
-and its `tool_call` framework event; the handler hears it through
-`on_tool_result(..., refused_but_ran=True)`. Both keywords are passed only
-when they apply, and only to an override that takes them: write overrides
-with `**kwargs` and hand them to `super()`. An override that cannot take
+that runs a call RoomKit rejected anyway (refused, or rejected because the
+handler raised deciding it), and closes it completed, is reported as it
+ended, served, with `refused_but_ran=True` on the report, its end row and its
+`tool_call` framework event; the handler hears it through
+`on_tool_result(..., refused_but_ran=True, detail=...)`, `detail` being what
+failed in the rejection, which the report carries as `error_detail` whether
+the handler or the channel makes it. These keywords are passed only when they
+apply, and only to an override that takes them: write overrides with
+`**kwargs` and hand them to `super()`. An override that cannot take
 `refused_but_ran` leaves that call's report to the channel, so the marker is
-never lost.
+never lost; one that takes it without `detail` reports the call without what
+failed, and the log says so.
 
 A handler serves **one** channel — that is what makes the injected hooks
 attributable — and it can say which, so a prompt can name who is asking:
