@@ -562,18 +562,45 @@ pipeline.on_processed_frame(lambda session, frame: print(frame.metadata))
 
 ## Pipeline Debug Taps
 
-Insert recording/analysis taps at specific pipeline points:
+Record the audio at each stage boundary to WAV files, to compare the signal
+before and after each step:
 
 ```python
 from roomkit.voice.pipeline import AudioPipelineConfig, PipelineDebugTaps
 
-taps = PipelineDebugTaps(
-    inbound_tap=my_recorder,    # Tap after inbound processing
-    outbound_tap=my_recorder,   # Tap after outbound processing
-)
-
+taps = PipelineDebugTaps(output_dir="./debug_audio/", stages=["all"])
 pipeline = AudioPipelineConfig(debug_taps=taps)
 ```
+
+```
+debug_audio/
+  {session}_00_transport_raw.wav   the mic as captured (a transport with its own AEC)
+  {session}_01_raw.wav             what the pipeline receives
+  {session}_02_post_aec.wav
+  {session}_03_post_agc.wav
+  {session}_04_post_denoiser.wav
+  {session}_05_post_vad_speech_001.wav
+  {session}_06_outbound_raw.wav
+  {session}_07_outbound_final.wav
+  {session}_08_aec_reference.wav   the reference that AEC received (same transport)
+```
+
+**A transport that cancels echo itself.** `LocalAudioBackend(aec=...)` runs its
+AEC before the pipeline (`NATIVE_AEC`): `raw` is then already echo-cancelled
+and `post_aec` equals it. The backend taps its AEC instead: `transport_raw` is
+the mic as captured and `aec_reference` the reference its AEC received while
+that frame was captured (silence when nothing played). Both are aligned with
+`raw` sample for sample, so you can measure the cancellation, or replay the two
+inputs through another AEC offline:
+
+```python
+taps = PipelineDebugTaps(
+    output_dir="./debug_audio/",
+    stages=["transport_raw", "aec_reference", "raw"],
+)
+```
+
+The frames are written on the event loop, never on the audio threads.
 
 ---
 
