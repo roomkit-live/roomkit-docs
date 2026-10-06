@@ -140,6 +140,7 @@ nav:
           - Content Transcoding: guides/content-transcoding.md
           - Response Visibility: guides/response-visibility.md
           - Message Threading: guides/message-threading.md
+          - Response Tracking: guides/response-tracking.md
       - Data & Infrastructure:
           - Activity Persistence: guides/activity-persistence.md
           - Advanced Memory Providers: guides/advanced-memory.md

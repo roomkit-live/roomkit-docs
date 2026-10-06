@@ -106,6 +106,13 @@ The PostgreSQL store keeps a partial index on `events(parent_event_id)` for
 efficient thread reads. Because a thread is fixed at creation, `parent_event_id`
 is set on insert and never mutated.
 
+## Relationship to `responds_to`
+
+`parent_event_id` says which thread an event belongs to. `responds_to` says which
+request an agent's answer answers ([Response Tracking](response-tracking.md)).
+An answer in a thread carries both: the thread's root and the message it
+answers, which can be a reply in that thread.
+
 ## Relationship to `ChannelData.thread_id`
 
 `parent_event_id` is RoomKit's **in-app** threading key. `ChannelData.thread_id`

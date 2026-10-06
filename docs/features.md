@@ -457,6 +457,20 @@ summaries = await kit.store.get_thread_summaries("r1", [root_id])
 Distinct from `ChannelData.thread_id` (the provider-native reference). See the
 [Message Threading guide](guides/message-threading.md).
 
+### Response Tracking
+
+Every event an agent produces for a turn names the event it answers in
+`RoomEvent.responds_to`: its messages, streamed segments and tool rows, a
+blocked stand-in, and the `ON_ERROR` event of a failed turn. The trigger can be
+a participant's message, an instruction (a background task's hand-back) or
+another agent's message. `BEFORE_AI_GENERATION` receives the trigger as
+`event.trigger`, so a host can tell each turn what it answers while other
+answers are under way in the room. `EventFilter(responds_to=...)` lists a
+request's answers. SQLite (schema v4) and Postgres store the field in an
+indexed column. The field is unrelated to the thread (`parent_event_id`).
+Speech-to-speech channels are not covered yet. See the
+[Response Tracking guide](guides/response-tracking.md).
+
 ### Hook System
 
 Hooks intercept events at specific points in the pipeline for business logic injection.
