@@ -582,8 +582,8 @@ keeps OpenAI's conversation context aligned with what the user heard even when
 ### Tool results and the caller's turn
 
 The model is asked to go on (`response.create`) once per response, when every
-call it made has its result. That request waits while the caller holds the
-floor: between the pipeline VAD's speech start and end in manual mode, between
+call it made has its result. That request waits while the caller is
+speaking: between the pipeline VAD's speech start and end in manual mode, between
 the server VAD's `speech_started` and `speech_stopped` otherwise. Results that
 land during a barge-in are then answered together with what the caller said,
 by the request that closes the caller's turn (the server's own, under server

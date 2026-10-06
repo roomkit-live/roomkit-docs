@@ -413,7 +413,7 @@ additive, headroom-scaled, in 20 ms windows, with silence-only windows never
 forwarded — and fed to **one provider session per conference**, established
 lazily on the first mixed window and torn down with the bot's own session.
 The provider's voice publishes on the bot track under the ordinary utterance
-contract: floor, terminal `is_final`, one utterance at a time. To the SFU and
+contract: one utterance at a time, each closed by a terminal `is_final`. To the SFU and
 to a barge-in, a realtime response and a TTS answer are indistinguishable.
 
 Three arbitrations to know about:
