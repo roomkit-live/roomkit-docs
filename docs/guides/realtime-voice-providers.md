@@ -1497,7 +1497,8 @@ transport = LocalAudioBackend(
 
 **Audio pacing**: `rt_prebuffer_ms` (default 120ms) primes the speaker buffer
 before playback starts and re-primes after an underrun — the local-speaker
-analogue of the SIP pacer's pre-buffer. Set it to `0` to play from the first
+analogue of the SIP pacer's pre-buffer. It paces streamed TTS the same way:
+every response plays through the backend's one speaker stream. Set it to `0` to play from the first
 byte. The `rt_underruns` property counts mid-response starvations.
 
 When `aec` is supplied, the local backend uses the blocks actually written to

@@ -243,6 +243,17 @@ an underrun remains part of the reference timeline so capture and render do not
 drift apart. RoomKit prevents the pipeline from feeding that same reference a
 second time.
 
+`LocalAudioBackend` plays every response through one output stream, opened at
+the first playback and kept open. A stream opened per response starts at a new
+render-to-capture delay, which the audio server then takes seconds to settle,
+and AEC3 cannot follow a delay that moves under it: on a PipeWire desktop, a
+quarter of the echo was left above -50 dBFS, against one twentieth with the
+delay held still. After a response drains or is cut, the speaker and the room
+still sound, so the backend's AEC keeps cancelling for 0.5 s on the silent
+reference before it is bypassed. Given an `aec`, the backend also keeps the
+microphone open while it plays (the `mute_mic_during_playback` default), so the
+user can talk over the agent.
+
 `WebRTCAECProvider` processes 10 ms blocks internally and accepts arbitrary
 input chunk sizes. Leave `stream_delay_ms=0` initially so WebRTC can estimate
 alignment. Set a non-zero value only when you have measured a stable
