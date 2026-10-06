@@ -303,6 +303,41 @@ A caller that follows its tasks on the bus itself delegates with
 `post_status=False`, so no task shows twice: the orchestration strategies do,
 for their workers, and post entries of their own.
 
+## Cancelling a task
+
+A person changes their mind while a task runs: "the weather in Québec… ah no,
+Montréal." Give the agent the `cancel_task` tool and it stops the task that is
+no longer wanted:
+
+```python
+from roomkit.tasks import CancelTaskTool, TaskStatusTool
+
+assistant = AIChannel(
+    "assistant",
+    provider=provider,
+    tools=[TaskStatusTool(kit), CancelTaskTool(kit)],
+)
+```
+
+```json
+{"task_id": "task-17222e126ced", "status": "cancelled",
+ "message": "Cancelled: its result will not come back."}
+```
+
+The task ends `cancelled`, as any task cancelled from outside:
+`ON_TASK_COMPLETED` fires and the status bus posts its end. The agent that
+cancelled it is **not** handed the cancellation back: the tool's answer told it,
+and a second word of it would have it say so twice. Like `task_status`, the tool
+reaches only the tasks of the room of the call; it answers `unknown` for another
+room's task, and the task's own status when it had already ended.
+
+A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
+say). That cancellation is the host's, so the agent the result was going to is
+told the task was cancelled.
+
+Without `cancel_task`, the task the person dropped runs to its end and its
+result is handed back and said anyway. Runnable: `examples/cancel_background_task.py`.
+
 ## Callbacks
 
 For programmatic handling beyond hooks:

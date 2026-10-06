@@ -30,6 +30,8 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ::: roomkit.tasks.status.TaskStatusTool
 
+::: roomkit.tasks.status.CancelTaskTool
+
 ::: roomkit.tasks.status.room_tasks
 
 ## Delegation State Tracking
