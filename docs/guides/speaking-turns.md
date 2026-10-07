@@ -37,7 +37,9 @@ A runnable version, with two people and the three modes, is
 
 - `event` — the event the turn would answer;
 - `recent` — the room's messages before it, oldest first, the agent's own answers
-  included (tool records left out);
+  included (tool records left out): only those the channel may know, as its
+  context has them, so an event whose visibility withholds it from the channel
+  never reaches the policy, nor a classifier the policy calls;
 - `people` — who takes part besides the agent, by name: one name is a
   conversation between the agent and one person. These are the room's active
   participants that are neither agents nor bots, or the distinct speakers of the
