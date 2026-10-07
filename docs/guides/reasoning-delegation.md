@@ -119,6 +119,16 @@ construction: those would run outside the gate. So is an agent registered with
 a kit, whose hooks would judge each call a second time: build one for the
 backend and keep it out of rooms.
 
+The names the agent serves itself stay its own: `read_stored_result`, and
+`find_tools` / `list_tools` unless the agent has `tool_search=False`. A voice
+channel tool under one of them raises `ValueError` at construction (a
+human-input tool's too) and at `configure(tools=)`; one that arrives later (a
+session's or a room's tools, `reconfigure_session`) is not declared, with a
+warning. The agent's own `tool_policy` composes with the voice channel's: it
+is resolved for the session participant's role, so its `role_overrides`
+apply as in a room, and a call it denies is refused before the channel's gate.
+A custom `ReasoningBackend` reads that role in `request.participant_role`.
+
 A session's delegations run one at a time, each reading what the one before it
 worked out. A call a delegation left unanswered (its run timed out mid-call) is
 answered before the next generation, as an interrupted room turn's is.
