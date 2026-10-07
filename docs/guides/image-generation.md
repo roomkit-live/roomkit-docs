@@ -255,7 +255,11 @@ reconcile the known outcomes before explicitly generating again.
 RoomKit never retries a paid generation. A vendor's failed status is marked
 `retryable` only where the vendor did not run the generation: 408, 409, 429 and
 503. A 500, 502 or 504 may follow a generation the vendor ran and billed, so it
-is final; whether to generate again is the host's call.
+is final; whether to generate again is the host's call. A transport failure is
+`retryable` only when the request never left (the client could not connect): a
+timeout or a connection lost once the request went out is final, and so is an
+image the vendor delivered in a form RoomKit cannot return (Gemini's link),
+which was generated and billed.
 
 `ImageAttempt.usage` measures a complete vendor call. OpenAI reports batch usage
 once; the first result carries it for compatibility. Do not add attempt usage
