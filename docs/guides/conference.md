@@ -463,6 +463,16 @@ disconnects the session. A provider error fires `ON_ERROR` with
 its calls are cut and reported, the provider is told to disconnect, and the
 next need reconnects after the connect cooldown (5 s).
 
+A full-duplex model's delegation fires `ON_REALTIME_DELEGATION`, as on a
+realtime voice channel. A conference serves no reasoning backend, so a
+delegation to the integrator is answered at once with the spoken fallback a
+realtime voice channel without a backend gives, and one issued while the
+session connects is answered once it is up. A delivery waiting for idle
+(`WaitForIdle`, `Queued`) also waits while a tool call runs, and until the
+model's answer to a result or a fallback has started: a response start, or
+on a full-duplex model its audible audio or a partial transcript of its
+words. An output that could not be sent is not waited for.
+
 The slot hot-plugs like every other need — `plug_realtime(config)` /
 `unplug_realtime()`, with the occupancy probe re-run at the plug and the bot
 retiring on the last unplug — and the lanes it shares with a recognizer
