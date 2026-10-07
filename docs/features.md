@@ -4,7 +4,7 @@
 
 RoomKit is designed around architectural patterns that solve real problems in multi-channel conversation systems. Here's what makes it valuable for production use:
 
-### Hook System with 78 Triggers
+### Hook System with 79 Triggers
 
 Instead of a single "webhook" callback, RoomKit provides **78 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
 
@@ -663,6 +663,7 @@ Filter options:
 | `ON_TOOL_CALL` | Sync | Tool call from any channel (AI or realtime voice) — observe, override, or block; on an AI channel, a realtime session and a conference alike, a blocked call is failed and its structured copy (MCP `structuredContent`) is dropped, and `metadata={"structured_content": ...}` rewrites that copy. Sync hooks chain on one result, each seeing it as the previous one left it (`modify` or `metadata={"result": ...}`). Registered **async** it sees the final result, a blocked call too (`is_error=True`), an external tool's report as its provider told it, and the calls that never ran: a tool denied by policy, an unknown tool, a handler that raised, a call nothing served. Those fire with `is_error=True` and reach async observers only, so a refusal can be audited without a hook being able to serve it |
 | `ON_REALTIME_DELEGATION` | Async | Voice: a full-duplex model handed reasoning or tool use to a backend, hosted or integrator-side (`RealtimeDelegationEvent`) |
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
+| `ON_SPEAK_DECISION` | Async | An AI channel's speak policy decided whether the agent speaks, offers or stays silent on an event. Carries a `SpeakDecisionEvent` (room, channel, event, decision with its reason and judgments) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
 | `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. `loop_end_reason` names which of the tool loop's rules ended the turn — `completed`, or `max_rounds` / `timeout` / `budget_exceeded` / `cancelled` / `force_stopped` / `truncated` / `empty_response` / `unfinished` / `error` for a turn that was cut (`error`: the provider interrupted it after a tool round; its rounds are kept, no message is added to say so, the report carries their usage and `ON_ERROR` fires after it; a stored `[Response interrupted]` message, marked `interruption_marker`, is no answer: no agent answers it and no strategy or delegation takes it for one); infer that from `tool_calls_count` and a healthy multi-round answer reads as a cut-off. `thinking` is the turn's reasoning, each round's. The loop also records `loop_end_reason` and `ai_usage` on the turn's last message, a turn without tools included, whatever the provider streams. A turn whose loop did not reach its end (a barge-in, a stream the transport stopped reading, a task cancelled from outside, an error raised before any round ended) fires nothing; its `llm.generate` span carries what its rounds used. `declared_tools` is the union, over every round of the turn, of the tools the provider received (name, description, `parameters` as declared), each with the reason Tool Search let it through (`always`, `pinned`, `sticky`, `revealed`; a tool Tool Search never gates, such as one orchestration injected or one of the channel's own like `plan_tasks`, is `always`, after its first use too); `BEFORE_AI_GENERATION` sees the turn's catalogue, not the rounds' declarations, so a tool `find_tools` revealed shows up here and nowhere else. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included (whose `declared_tools` stays empty: the toolset is the agent's) |
@@ -1574,6 +1575,21 @@ Key features:
 - **RoomKit takes the decision, never the syntax** — `@codex`, a `/agent` command, a picker or a Slack payload all live in your application, which passes channel ids
 
 See the [Orchestration guide](guides/orchestration.md#addressing-naming-who-is-asked) for the full semantics.
+
+### Speaking Turns: Whether the Agent Speaks
+
+An agent among several people, or listening to one who thinks aloud, does not answer every turn. A speak policy on its `AIChannel` decides, once per event, whether it speaks, offers or stays silent:
+
+```python
+nova = AIChannel("nova", provider=provider, speak_policy=SpeaksWhenNamed())
+```
+
+- **Three modes** — `speak` (the decision's notes join the turn's notes), `offer` (one short sentence of what the agent could add), `silent` (no turn, no generation; the event is stored and the memory provider learns it all the same)
+- **Measurable** — every decision fires `ON_SPEAK_DECISION` with its reason and the judgments it weighed; `AlwaysSpeak` is the baseline
+- **Never silenced by a failure** — a policy that raises or misses its bound (`speak_timeout`, 2 s) lets the agent speak, reason `fallback`
+- **Out of its reach** — instructions (a task's hand-back), a strategy's turns, the channel's own events
+
+See the [Speaking Turns guide](guides/speaking-turns.md) and `examples/speaking_turns.py`.
 
 ### Agent Delegation
 
