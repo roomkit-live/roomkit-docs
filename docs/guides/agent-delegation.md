@@ -130,7 +130,10 @@ A task cancelled from outside ends the same way inline or in the background:
 a caller's timeout (`asyncio.wait_for` around `kit.delegate(..., wait=True)`,
 as a Supervisor's `task_timeout` does), `kit.task_runner.cancel(task_id)` or
 the runner's `close()`, even right after `delegate()` returned. The result is
-`status="cancelled"`, `error="cancelled"`, no output; `ON_TASK_COMPLETED` and
+`status="cancelled"`, `error="cancelled"`, no output, and once the worker's turn
+had begun, `metadata["turns"]` names it `{"<worker>": {"loop_end_reason":
+"cancelled"}}`, as a room turn's caller reads a cancelled read (a turn cut
+mid-way records no usage); `ON_TASK_COMPLETED` and
 the `on_complete` callback still run, once, a notified agent is told
 `[Background task from <worker> cancelled. ...]` (not while `kit.close()`
 runs: a closing framework starts no turn), and a Supervisor's worker can be
