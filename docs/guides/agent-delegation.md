@@ -271,7 +271,10 @@ Every delegation is posted on `kit.status_bus` ([Status Bus guide](status-bus.md
 `failed` for a task that failed or was cancelled (never the error's text). Each
 entry names the worker (`agent_id`), carries `action="task"`, and in its metadata
 `room_id` (the parent room), `task_id` and `child_room_id`; the terminal entry
-adds `task_status` and `duration_ms`.
+adds `task_status` and `duration_ms`. Its `detail` is a summary for whoever
+follows the bus, bounded at 200 characters and cut at a word (the cut ends in
+"…"); a longer result stays whole in `metadata["result"]` (up to 4,000
+characters), and that is what `task_status` gives back.
 
 Give an agent the `task_status` tool and it can check on its room's tasks while
 it keeps talking — what is running, what ended, and the result:

@@ -81,7 +81,7 @@ Each entry has:
 | `agent_id` | str | Who posted (e.g. "exec", "voice") |
 | `action` | str | What happened (e.g. "search_google", "click_result") |
 | `status` | str | Outcome: `ok`, `failed`, `pending`, `info`, `completed` |
-| `detail` | str | Human-readable description |
+| `detail` | str | Human-readable description. The framework's own posts (tasks, orchestration) bound it at 200 characters, cut at a word and marked "…"; a `completed` entry so cut keeps its whole outcome in `metadata["result"]` |
 | `metadata` | dict | Optional structured data |
 
 ### Sync and async posting
