@@ -223,8 +223,10 @@ RoomKit ships one that reads the words: an utterance made only of known
 acknowledgements is a backchannel. "Okay", "mm-hmm", "yeah, right",
 "d'accord" or "c'est ça" let the assistant keep talking; "okay, and what about
 Calgary?" does not, and since each partial transcript is classified as it
-grows, the words after the "okay" still cut in. Punctuation, case and held
-letters ("hmmm", "ouiii") do not matter.
+grows, the words after the "okay" still cut in. Thanks and reactions count as
+acknowledgements too: "merci", "thank you" or "beurk" said over the assistant
+answer what it just said, while "merci, mais attends" or "non merci" cut in.
+Punctuation, case and held letters ("hmmm", "ouiii") do not matter.
 
 ```python
 from __future__ import annotations
