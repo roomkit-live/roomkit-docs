@@ -192,7 +192,128 @@ done.
 
 A runnable version is `examples/speaking_judgments.py`.
 
-## What comes next
+## Thinking while listening
 
-An agent that thinks while it listens, and offers what it wants to say when
-nobody asked, builds on this policy.
+Give the channel a **thinker** too, and the agent keeps a thought while it
+listens: its answer, when it is silent, to "what are you thinking about?"
+(RFC §6.4). Not memory, not a summary: what it makes of what is said, what it
+would say if given the turn, and whether that cannot wait.
+
+```python
+from roomkit import AIChannel, ClassifierSpeakPolicy, JevClassifier, LLMThinker
+
+nova = AIChannel(
+    "nova",
+    provider=provider,
+    system_prompt="You are Nova, the team's assistant. A licence costs 1,200 $ a year.",
+    speak_policy=ClassifierSpeakPolicy(JevClassifier(), agent_name="Nova"),
+    thinker=LLMThinker(small_fast_provider),
+    think_wait=1.5,
+)
+```
+
+`Thought(text, want_to_say, urgent)`: what the agent thinks, in the first
+person; what it would say if given the turn, most important first, three at
+most; and whether that cannot wait.
+
+How the channel runs it:
+
+1. **Only while listening.** On an event the policy leaves silent, the channel
+   builds the event's context as for an answer (the agent's prompt, the
+   conversation it may know), passes it through `BEFORE_AI_GENERATION` with
+   `event.purpose == "thought"`, and hands what the hooks left to the thinker
+   with the previous thought. A turn the agent answers waits for no thought.
+2. **One call at a time per room.** Events that arrive during a call are thought
+   about in the next one, from the latest context.
+3. **Raising its hand.** The channel waits for the thought up to `think_wait`
+   seconds (1.5). Back in time with something to say, the policy decides again
+   on the same event, with the thought: the agent may offer on a turn it first
+   listened to. Each decision fires `ON_SPEAK_DECISION`.
+4. **Speaking empties it.** When the agent speaks or offers on a decided event,
+   the turn's notes carry its thought, and what it wanted to say is emptied. An
+   instruction (a task's hand-back) carries no thought and empties nothing. The
+   thought is a model's reading of what people said, so whatever they said can
+   reach it: the notes quote it, bound it (600 characters for the text, 300 per
+   item) and name it as information to weigh, not instructions to follow.
+5. **Failures keep it.** A thinker that fails, or runs out of its `timeout`,
+   keeps the previous thought, logged.
+6. **Ephemeral.** The thought is the channel's, per room, in memory; a restart
+   starts empty, and so does a room the channel is attached to or detached
+   from: a room that reuses an id never inherits another conversation's thought.
+
+A thinker needs a speak policy: it thinks on the events the agent listens to.
+
+### The thought in the policy
+
+The policy reads the thought in `SpeakTurn.thought`. `ClassifierSpeakPolicy`
+puts it in the classifier's state (`assistant_thought`) and, when the agent has
+something to say, also asks:
+
+| Name | Asks |
+|------|------|
+| `answers` | whether what the agent wants to say answers what the turn asks |
+| `corrects` | whether it corrects, or warns about, what the turn says |
+
+Then `compose()`: only wondered about and knowing the answer, the agent speaks
+(`knows the answer`) rather than offers; not addressed, it offers (`has
+something to add`) when that judgment reaches `proactivity` (0.5, lower is more
+eager), half of it when the thought is urgent (`urgent`), never on urgency
+alone.
+
+### LLMThinker
+
+`LLMThinker(provider, *, instructions=None, max_tokens=600,
+reasoning_effort=None, timeout=10.0)` asks a model for the thought under a JSON
+schema; the provider must support response schemas. It reads who the agent is
+from the context's system prompt, the previous thought first, then the
+conversation (the agent's own lines as `You:`, tool traffic and turn notes left
+out). A small, fast model fits. Its default instructions are English and ask for
+the conversation's language; replace them with `instructions=` (`{max}` is
+replaced by three). The provider stays yours.
+
+The thought is only as good as the model's discipline: a model that puts a
+question or an offer of help in `want_to_say`, though told not to, makes the
+agent offer where it should listen. Measure it on your own conversations.
+
+### The generation hooks see the thinker
+
+Every model call on the room's context passes `BEFORE_AI_GENERATION`, the
+thinker's too: what a hook keeps from a model (a room without consent, a
+redaction, a budget) holds for the thought. `AIGenerationEvent.purpose` tells
+them apart, `"answer"` for the agent's turn and `"thought"` for its thinker. A
+hook that blocks a thought keeps the previous one; what a hook changes in the
+context is what the thinker reads. A hook meant for answers only returns
+early on `purpose == "thought"`:
+
+```python
+from roomkit import HookResult, HookTrigger
+
+
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+async def no_ai_without_consent(event, ctx) -> HookResult:
+    if not consented(event.room_id):
+        return HookResult.block("no consent")  # no answer, no thought
+    return HookResult.allow()
+```
+
+### Following the thought
+
+Every new thought fires `ON_THOUGHT` (async), with the room, the channel, the
+thought and the one it replaces:
+
+```python
+from roomkit import HookExecution, HookTrigger, ThoughtEvent
+
+
+@kit.hook(HookTrigger.ON_THOUGHT, execution=HookExecution.ASYNC)
+async def on_thought(event: ThoughtEvent, ctx) -> None:
+    logger.info("%s thinks: %s %s", event.channel_id, event.thought.text, event.thought.want_to_say)
+```
+
+`ON_THOUGHT` is the agent's thought while it listens; `ON_AI_THINKING` is a
+model's reasoning during a turn.
+
+For tests, `MockThinker([Thought(...), ...], delay=0.0, error=None)` returns
+scripted thoughts in order (the last one repeats) and records each call.
+
+A runnable version is `examples/thinking_while_listening.py`.
