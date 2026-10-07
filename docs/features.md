@@ -1591,6 +1591,27 @@ nova = AIChannel("nova", provider=provider, speak_policy=SpeaksWhenNamed())
 
 See the [Speaking Turns guide](guides/speaking-turns.md) and `examples/speaking_turns.py`.
 
+### Classifiers: Judgments Composed in Code
+
+Where code needs understanding (was the agent addressed, did the person finish, which language), a classifier answers narrow, typed questions about a state with probabilities, all in one call; your code composes the answers:
+
+```python
+answers = await classifier.classify(state, {
+    "addressee": ChoiceQuestion("Whom is the last message addressed to?",
+                                {"nova": "...", "person": "...", "nobody": "..."}),
+    "asks": YesNoQuestion("Does the last message ask for something?"),
+})
+if answers.choice("addressee") == "nova" or answers.yes("asks") >= 0.5:
+    ...
+```
+
+- **Three question kinds** — `YesNoQuestion` (probability of yes), `ChoiceQuestion` (one option, every option's probability), `ScoreQuestion` (the expected level on an ordered scale)
+- **Jev** — `JevClassifier`, TypeSafe's System One model: calibrated probabilities, ~150 ms for the whole call, behind the `typesafe` extra
+- **Any AI provider** — `LLMClassifier` asks for one JSON answer under a response schema; probabilities 0 or 1, not calibrated
+- **One failure mode** — every question answered, or `ClassifierError` (refusal, unreadable answer, bounded wait); `MockClassifier` for tests
+
+See the [Classifiers guide](guides/classifiers.md) and `examples/classifier_judgments.py`.
+
 ### Agent Delegation
 
 Delegate tasks to background agents while conversations continue. A voice agent can hand off a PR review to a specialist while still chatting with the user:

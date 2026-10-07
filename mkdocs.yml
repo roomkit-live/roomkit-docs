@@ -119,6 +119,7 @@ nav:
           - Multi-Agent Orchestration: guides/orchestration.md
           - Delivery Service: guides/delivery.md
           - Speaking Turns: guides/speaking-turns.md
+          - Classifiers: guides/classifiers.md
           - Agent Delegation: guides/agent-delegation.md
           - Status Bus: guides/status-bus.md
           - Auditing (Session & Tool): guides/tool-audit.md
@@ -172,6 +173,7 @@ nav:
           - Event Sources: api/sources.md
           - Delegation: api/delegation.md
           - Speaking Turns: api/speaking.md
+          - Classifiers: api/classifiers.md
           - Orchestration: api/orchestration.md
           - Telemetry: api/telemetry.md
           - Skills: api/skills.md
