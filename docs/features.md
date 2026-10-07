@@ -1446,11 +1446,21 @@ is stored `BLOCKED`, it counts against the reentry budget, and the answers the
 call committed come back in `InboundResult.response_events`, streamed or not.
 The trigger's own hooks are not re-run.
 
+The re-broadcast runs as an inbound event's does, in the room's delivery lane,
+off the room lock and unbounded (RFC §13.5, §13.6): a strategy that works in
+`on_event` (a synchronous Loop, a Supervisor's delegation) goes to its end, the
+room takes messages while the agent regenerates, and the call waits behind the
+deliveries already in the lane. `process_timeout` bounds only the wait for the
+room lock and the choice of the trigger; past it the call returns
+`InboundResult(blocked=True, reason="process_timeout")`. A caller cancelled
+cuts the regenerated turn.
+
 Runnable: `examples/regenerate_answer.py`.
 
 Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
 `regenerate_response()` returns `InboundResult(blocked=True, reason="room_closed")`
-before the agent runs (`room_closed` wins over `trigger_moved`), and
+before the agent runs (`room_closed` wins over `trigger_moved`), including a
+room closed while the regeneration waited in the lane, and
 `regenerate_target()` raises `RoomClosedError`.
 
 ### Image Generation

@@ -711,6 +711,12 @@ Two boundaries are deliberate:
 Expiry returns `InboundResult(blocked=True, reason="process_timeout")` and
 emits the `process_timeout` framework event. Nothing durable has been written.
 
+A regeneration (`regenerate_response()`) has no commit of its own: its event
+is already in the timeline. `process_timeout` bounds its wait for the room
+lock and its choice of the event to replay, never the re-broadcast, which runs
+in the lane like any delivery. Expiry returns the same blocked result, and the
+framework event carries `operation="regenerate"`.
+
 !!! note "Custom lock managers"
     Because the wait for the room lock is inside the budget, a
     `RoomLockManager` must release cleanly when acquisition is cancelled.
