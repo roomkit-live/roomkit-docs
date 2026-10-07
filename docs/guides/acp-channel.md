@@ -402,8 +402,8 @@ prefixes what it missed to the prompt:
 
 ```text
 [Room context — 2 messages you did not receive. Context only; the request follows.]
-[1] Marie · sms: on part sur quoi ?
-[2] claude-code: I wrote hello.py
+[1] Marie · sms: “on part sur quoi ?”
+[2] claude-code: “I wrote hello.py”
 [End of room context]
 
 what did claude just do?
@@ -414,6 +414,10 @@ what did claude just do?
 - **Only what it may see.** The block is filtered per reader (RFC §7.5 rule 8),
   so a message scoped away from the agents stays out of every session. Catching
   up is not a second door into the room.
+- **Quoted, one line each.** Each message is quoted on its line, bounded at
+  4000 characters, every double quote mark inside it made a single one, and a
+  person's name keeps to a name's characters: no message can end the block or
+  pose as another (RFC §6.4).
 - **Honest about its bound.** `room_history` (default 20) caps the block, and
   the header says so when it bites: *"the 20 most recent of 47 messages you did
   not receive"* when the loaded tail holds more than it shows, or *"the 20 most
@@ -494,7 +498,7 @@ sits further from the question than what the agent missed of the conversation:
 [Host context] The client's contract renews 2026-09-01.
 
 [Room context — 1 message you did not receive. Context only; the request follows.]
-[1] Marie · sms: chase the renewal
+[1] Marie · sms: “chase the renewal”
 [End of room context]
 
 draft the renewal email

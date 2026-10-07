@@ -356,8 +356,9 @@ So "how far is the counter?" is answered at once, without calling `task_status`,
 and a task still running is not answered from memory. Without the sentence on
 the progress, Claude Haiku 5.5 called `task_status` anyway with the progress in
 its notes; with it, 16 runs of 16 answered from the note. What a worker wrote (the task, its progress) is
-quoted on one line and bounded at 200 characters, a quote mark inside it made
-plain, so it cannot close its quote and go on as if the runtime wrote it. Nothing is stored: the block
+quoted on one line and bounded at 200 characters, every double quote mark inside it
+made a single one, so it cannot close its quote and go on as if the runtime wrote it
+(RFC §6.4). Nothing is stored: the block
 is read from the bus each turn, so a task the bus no longer lists drops out of
 it. The scope is the room, as for `task_status`: in a room with two agents,
 both see its tasks. A standalone instruction reads none, and a realtime
