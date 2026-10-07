@@ -252,6 +252,11 @@ completed outcomes and mark in-flight calls unknown. Local cancellation does not
 promise vendor cancellation or a refund. These errors have `retryable=False`;
 reconcile the known outcomes before explicitly generating again.
 
+RoomKit never retries a paid generation. A vendor's failed status is marked
+`retryable` only where the vendor did not run the generation: 408, 409, 429 and
+503. A 500, 502 or 504 may follow a generation the vendor ran and billed, so it
+is final; whether to generate again is the host's call.
+
 `ImageAttempt.usage` measures a complete vendor call. OpenAI reports batch usage
 once; the first result carries it for compatibility. Do not add attempt usage
 and result usage together. `raw_usage` retains the provider's original report,
