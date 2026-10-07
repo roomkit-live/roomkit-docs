@@ -119,7 +119,7 @@ policy = ClassifierSpeakPolicy(
     JevClassifier(),  # or LLMClassifier(provider), MockClassifier(...)
     agent_name="Nova",
     agent_role="the team's assistant",
-    languages={"French": "Réponds en français uniquement.", "English": "Answer in English only."},
+    languages={"English": "Answer in English only."},
 )
 nova = AIChannel("nova", provider=provider, speak_policy=policy)
 ```
@@ -154,7 +154,9 @@ Every answer is reported in the decision's `judgments` (a choice as
 
 With `languages`, the policy also asks which language the speaker speaks, over
 their recent turns: one misheard word does not switch it. The decision's notes
-then carry that language's line, best written in the language itself.
+then carry that language's line. Give one entry per language the agent answers
+in, each line written in its own language: a note in English around a request
+in another language pulls the model into English.
 
 The thresholds were measured with Jev's calibrated probabilities. On
 `LLMClassifier` every probability is 0 or 1 and directness a whole level, which

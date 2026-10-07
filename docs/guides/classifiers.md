@@ -30,7 +30,7 @@ questions = {
 
 classifier = JevClassifier()  # reads TYPESAFE_API_KEY
 state = {"agent": "Nova", "people": ["Sylvain", "Paul"],
-         "last": {"from": "Paul", "text": "Nova, tu peux résumer ?"}}
+         "last": {"from": "Paul", "text": "Nova, can you sum up?"}}
 answers = await classifier.classify(state, questions)
 
 if answers.choice("addressee") == "nova":
