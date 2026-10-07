@@ -410,7 +410,7 @@ kit = RoomKit(
 In the synchronous mode, the result event carries loop status in `event.metadata` (an asynchronous loop's hand-back says how it ended in its text instead):
 
 - `approved` — `True` if all reviewers approved, `False` otherwise
-- `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer). On `producer_failed` the caller reads the producer's failure on `InboundResult.error`, whether an output went out or not; `ON_ERROR` fires once, from the producer's own turn in its task's room, and a cut (the producer's round cap, a stop) fires none, as a room turn's does
+- `stopped` — why the loop stopped: `approved`, `max_iterations`, or `producer_failed` (the producer's task failed after an earlier output, which is the one that went out; with no output at all the turn has no answer). Whatever stopped the loop, the caller reads how the producer's last turn ended under `InboundResult.response_metadata["turns"]["<producer>"]` (its `loop_end_reason` and `ai_usage`), as a room turn's caller does. On `producer_failed`, a cut (the producer's round cap, deadline, budget, a stop) is read there and is no error, firing no `ON_ERROR`, as a room turn's cut does; a turn that failed reaches the caller on `InboundResult.error` as the error it raised, its type unchanged (a `ProviderError` stays one), whether an output went out or not, and `ON_ERROR` fires once, from the producer's own turn in its task's room
 - `iteration` — number of iterations completed: the one whose output went out
 
 ```python

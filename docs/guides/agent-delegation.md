@@ -118,6 +118,14 @@ logged as its error is: a provider error at its own level (an ERROR for a
 5xx), without a traceback. `roomkit.tasks.models.task_cut_reason(result)`
 tells a cut from such a failure.
 
+Whatever ended the turn, `metadata["turns"]` carries the worker's turn record
+as a room turn's caller reads it under `turns`: how it ended and its
+`ai_usage`, keyed by the worker (the last turn's when a result tool
+re-prompted it). A failed task also keeps the failure itself in
+`result.exception`, its type unchanged (the provider's `ProviderError`, not
+the `TaskTurnFailedError` that carries its end), for a caller that hands it
+on; it is held in memory only and never serialized.
+
 A task cancelled from outside ends the same way inline or in the background:
 a caller's timeout (`asyncio.wait_for` around `kit.delegate(..., wait=True)`,
 as a Supervisor's `task_timeout` does), `kit.task_runner.cancel(task_id)` or
