@@ -292,9 +292,14 @@ session = await channel.start_session(
 # Transcriptions are emitted as RoomEvents —
 # other channels in the room see the conversation.
 
-# Text from other channels is injected into the AI session:
-# supervisor types "Offer 20% discount" via WebSocket →
-# AI incorporates it into its next spoken response.
+# Text from other channels enters the AI session as its author's
+# quoted words, never as an instruction: a supervisor typing
+# "Offer 20% discount" via WebSocket reaches the model as
+#   supervisor-ws: “Offer 20% discount”
+# To direct the model, the application delivers an instruction:
+await kit.deliver(
+    "voice-room", "Offer 20% discount", channel_id="realtime-voice", instruction=True
+)
 ```
 
 ### With Tool Calling
