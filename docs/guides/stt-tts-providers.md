@@ -759,6 +759,14 @@ turn.
   and `retryable`: true for a server fault (1011), a rate limit (1013, HTTP
   429), a 5xx and a dropped connection, false for a refused request (1008,
   HTTP 4xx).
+- **Backlog**: the service refuses a stream sent 7 s or more ahead of real
+  time at once (`Audio processing backlog too large`; 6 s passes, measured
+  2026-10-07). That happens after a reconnect: a handshake the service does
+  not answer holds the stream for `handshake_timeout_s`, and the microphone
+  audio queues up meanwhile. The provider paces what it sends (at most 3 s at
+  once, then twice real time until it has caught up), and a continuous
+  `VoiceChannel` carries at most the last 5 s of audio into the next stream,
+  logging a warning with the seconds it dropped (RFC §12.2).
 - **REST** (`transcribe()`): one WAV of at most 10 minutes and 32 MB, sent in
   `PUSH_TO_TALK` mode; the provider wraps the PCM in the WAV itself. An
   `AudioContent` carrying a WAV `data:` URI is decoded locally; an http(s)
