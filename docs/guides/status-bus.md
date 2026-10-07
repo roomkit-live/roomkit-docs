@@ -146,7 +146,10 @@ from roomkit.tasks import TaskStatusTool
 agent = AIChannel("assistant", provider=provider, tools=[TaskStatusTool(kit)])
 ```
 
-It reads the bus for the room of the call only. See
+It reads the bus for the room of the call only. A worker's tool says how far
+its task got with `post_task_progress(kit, detail)`: an `info` entry under
+`action="task"`, which never ends the task. Every AI channel's turn also carries
+the room's tasks in its notes, read from the bus as the turn is built. See
 [Agent Delegation](agent-delegation.md#following-tasks).
 
 ## Integration with voice agents
