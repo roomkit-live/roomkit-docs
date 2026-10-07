@@ -319,3 +319,43 @@ For tests, `MockThinker([Thought(...), ...], delay=0.0, error=None)` returns
 scripted thoughts in order (the last one repeats) and records each call.
 
 A runnable version is `examples/thinking_while_listening.py`.
+
+## A cut answer
+
+When someone speaks over the agent's voice and cuts it off (a barge-in, RFC
+§12.3.13), the voice channel records the cut: the text handed to speech, how
+long it played, and the answer it cut (`metadata.answer_channel_id`,
+`metadata.answer_responds_to`). The AI channel uses that record twice.
+
+Only a record a voice channel of the room wrote counts: an `internal` event with
+no participant, from a channel bound to the room as voice. Metadata is anyone's
+to write; a message that claims to be a cut record is ignored.
+
+**The context marks the answer.** In the context the agent's next turn reads,
+the cut answer ends with:
+
+```
+[You were interrupted while saying this: the person may not have heard the end of it.]
+```
+
+so the model does not take for heard what was cut, and does not refer to it as
+said. This holds for every AI channel, with or without a speak policy.
+
+**The policy reads the cut.** When the event came after the cut and the agent
+has not answered since, `SpeakTurn.cut` is a `CutReply(text, played_ms, at)`.
+`ClassifierSpeakPolicy` then asks one more question, in the same call:
+
+| Name | Asks |
+|------|------|
+| `resume` | whether the turn spoken over the agent leaves it free to go on: an acknowledgement, a thanks, a short reaction, talking over it by accident; or wants the turn: a question, a request, a correction, asking it to stop |
+
+At 0.4 or above, unless the turn asks for quiet, the speaker is not done, or a
+request for quiet still stands, the agent speaks with the reason `resume after
+cut`, and its notes ask it to go on from where it was cut, with a short link
+back, without repeating what was heard. Otherwise the turn decides as without a
+cut: "Wait, and for Montreal?" over a forecast is answered as a question.
+
+Which part of the answer was heard is not guessed: the record keeps the text
+handed to speech and how long it played, and the model judges from those.
+
+A runnable version, without audio, is `examples/resume_after_cut.py`.

@@ -7,6 +7,8 @@ Whether an AI channel's agent speaks, offers or stays silent on an event. See th
 
 ::: roomkit.speaking.base.SpeakTurn
 
+::: roomkit.speaking.base.CutReply
+
 ::: roomkit.speaking.base.SpeakDecision
 
 ::: roomkit.speaking.base.SpeakDecisionEvent

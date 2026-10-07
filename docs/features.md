@@ -1601,8 +1601,9 @@ nova = AIChannel("nova", provider=provider, speak_policy=SpeaksWhenNamed())
 - **Out of its reach** — instructions (a task's hand-back), a strategy's turns, the channel's own events
 - **On judgments** — `ClassifierSpeakPolicy` asks a classifier narrow questions (directness, unfinished, hush, a standing request for quiet, an answer to the agent's question...) in one call and composes them in readable code; questions replaceable by name, composition by a subclass; optionally judges the reply's language
 - **Thinking while listening** — `AIChannel(thinker=LLMThinker(provider))` keeps the agent's thought per room (what it thinks, what it would say, whether it cannot wait), rewritten on the turns it listens to, one call at a time; back within `think_wait` with something to say, the policy decides again and the agent may offer; speaking puts the thought in the turn's notes and empties what it wanted to say; `ON_THOUGHT` follows it
+- **A cut answer** — when a barge-in cuts the agent off, its context marks that answer as interrupted, and the speak policy reads the cut (`SpeakTurn.cut`): `ClassifierSpeakPolicy` judges whether the turn spoken over it leaves it free to go on, and resumes it with a note to go on from where it was cut
 
-See the [Speaking Turns guide](guides/speaking-turns.md), `examples/speaking_turns.py`, `examples/speaking_judgments.py` and `examples/thinking_while_listening.py`.
+See the [Speaking Turns guide](guides/speaking-turns.md), `examples/speaking_turns.py`, `examples/speaking_judgments.py`, `examples/thinking_while_listening.py` and `examples/resume_after_cut.py`.
 
 ### Classifiers: Judgments Composed in Code
 
