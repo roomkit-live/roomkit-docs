@@ -189,7 +189,7 @@ ai = AIChannel("ai", provider=provider, thinking_budget=8192)
 Models served via Ollama or vLLM (DeepSeek-R1, QwQ, etc.) emit reasoning inside `<think>...</think>` tags. The `OpenAIAIProvider` parses these automatically:
 
 - **Streaming**: `ThinkTagParser` handles tags split across chunk boundaries
-- **Non-streaming**: Regex extraction from the complete response
+- **Non-streaming**: the same parser over the complete response, so `generate()` hands back the same reasoning and answer as the stream, spaces included
 - **History**: `AIThinkingPart` is re-wrapped as `<think>` tags when sent back to the model
 
 ```python

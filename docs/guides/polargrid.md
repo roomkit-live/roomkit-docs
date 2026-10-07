@@ -136,7 +136,7 @@ async for event in provider.generate_structured_stream(context):
 
 qwen surfaces its reasoning **inline** as `<think>...</think>` tags in the message content (the same convention vLLM / Ollama reasoning models use; PolarGrid has no separate `reasoning_content` field). The provider parses those tags out so:
 
-- non-streaming `generate()` returns the reasoning on `AIResponse.thinking` and a clean `AIResponse.content`;
+- non-streaming `generate()` returns the reasoning on `AIResponse.thinking` and the answer without its tags on `AIResponse.content`, exactly as the stream splits them (spaces kept);
 - streaming `generate_structured_stream()` emits the reasoning as `StreamThinkingDelta` (handling tags split across chunks) and the answer as `StreamTextDelta`.
 
 `generate_stream()` (plain text) filters thinking out entirely.
