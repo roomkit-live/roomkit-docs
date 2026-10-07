@@ -451,6 +451,18 @@ abandons interrupts `tool_handler`, sends nothing back, and reaches the
 observers with `cancelled`. A handler that raises is logged, and the model
 reads only that the tool failed.
 
+The conference keeps the other contracts a realtime voice channel keeps with
+the same provider. Under a `muted` or `output_muted` binding, a text event is
+injected silently: the model hears it and does not answer. Under
+`output_muted`, the provider's audio does not reach the bot track. A call the
+provider issues while its session is still connecting waits for it and is
+served once the session is up; a start that fails or is cancelled reports such
+a call cancelled, as it does a call the provider abandons meanwhile, and
+disconnects the session. A provider error fires `ON_ERROR` with
+`error_category="realtime_provider"`. A session the provider ended is let go:
+its calls are cut and reported, the provider is told to disconnect, and the
+next need reconnects after the connect cooldown (5 s).
+
 The slot hot-plugs like every other need — `plug_realtime(config)` /
 `unplug_realtime()`, with the occupancy probe re-run at the plug and the bot
 retiring on the last unplug — and the lanes it shares with a recognizer
