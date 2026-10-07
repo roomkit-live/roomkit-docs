@@ -101,7 +101,8 @@ open: it is yours, and often shared with an AI channel.
 **`MockClassifier`** answers from a script by question name: a float for a
 yes/no question, an option for a choice, a level for a score, or an answer
 object. A question the script does not name gets no, the first option, or the
-lowest level. `calls` records every state and question set; `error=` makes every
+lowest level. Given a list of scripts, the calls take them in order and the last
+one repeats. `calls` records every state and question set; `error=` makes every
 call raise.
 
 ```python

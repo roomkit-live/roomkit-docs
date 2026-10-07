@@ -38,8 +38,16 @@ A runnable version, with two people and the three modes, is
 - `event` — the event the turn would answer;
 - `recent` — the room's messages before it, oldest first, the agent's own answers
   included (tool records left out);
-- `people` — who takes part besides the agent, by display name (or id): one name
-  is a conversation between the agent and one person.
+- `people` — who takes part besides the agent, by name: one name is a
+  conversation between the agent and one person. These are the room's active
+  participants that are neither agents nor bots, or the distinct speakers of the
+  recent events when there are more (one microphone may carry several diarized
+  voices);
+- `speakers` — who said `event` and each of `recent`, by event id, where the room
+  names them (the name the sender's transport stamped, else the participant's
+  display name);
+- `channel_id` — the agent's channel: `turn.by_agent(e)` tells the agent's own
+  answers in `recent`.
 
 The agent's own identity is the policy's: a policy that judges whether the agent
 was addressed takes its name in its constructor.
@@ -97,9 +105,92 @@ from roomkit import MockSpeakPolicy, SpeakDecision
 policy = MockSpeakPolicy(["silent", SpeakDecision("speak", notes=("Answer briefly.",))])
 ```
 
+## A policy on judgments
+
+`ClassifierSpeakPolicy` asks a [classifier](classifiers.md) narrow questions
+about the turn, in one call, and composes the answers in code:
+
+```python
+from roomkit import AIChannel, ClassifierSpeakPolicy, JevClassifier
+
+policy = ClassifierSpeakPolicy(
+    JevClassifier(),  # or LLMClassifier(provider), MockClassifier(...)
+    agent_name="Nova",
+    agent_role="the team's assistant",
+    languages={"French": "Réponds en français uniquement.", "English": "Answer in English only."},
+)
+nova = AIChannel("nova", provider=provider, speak_policy=policy)
+```
+
+The classifier reads the agent (name, role), the people, the last `history`
+turns (6) and the turn judged, each with its speaker, the agent's own under its
+name. It answers these questions (`roomkit.speaking.classifier.QUESTIONS`):
+
+| Name | Asks |
+|------|------|
+| `directness` | how directly the turn brings the agent in: not mentioned (0), tentatively (1), indirectly (2), directly (3) |
+| `deferred` | whether the speaker postpones or declines asking |
+| `unfinished` | whether the speaker stopped before saying what they want |
+| `hush` | whether the turn asks the agent not to answer, or only to listen |
+| `quiet_rule` | whether an earlier request to keep quiet still stands |
+| `request` | whether the turn asks the agent to answer or do something now |
+| `answered` | whether the turn answers a question the agent just asked |
+
+`compose()` reads them in order:
+
+1. **silent** when the speaker has not finished, postpones, or asks for quiet;
+   silent too when a request for quiet still stands and the turn asks nothing;
+2. **speak** when the turn answers the agent's question;
+3. **speak** when the agent is addressed: directness 1.5 or more, or a request
+   with directness 0.75 or more, or any request when one person talks with it;
+4. **offer** when the speaker only wonders about it (directness 0.75 or more);
+5. **silent** otherwise.
+
+Every answer is reported in the decision's `judgments` (a choice as
+`name=option`), and the decision's `reason` names the rule that decided
+(`not finished`, `addressed`, `wondered about`, ...).
+
+With `languages`, the policy also asks which language the speaker speaks, over
+their recent turns: one misheard word does not switch it. The decision's notes
+then carry that language's line, best written in the language itself.
+
+The thresholds were measured with Jev's calibrated probabilities. On
+`LLMClassifier` every probability is 0 or 1 and directness a whole level, which
+the same rules read without change, at the cost of a generation per turn.
+
+### Changing the questions or the rules
+
+Replace a question by name, or add one, with `questions=`; override
+`decision()` to change the composition, calling `compose()` for the rules above:
+
+```python
+from roomkit import ClassifierSpeakPolicy, ScoreQuestion, SpeakDecision
+
+
+class SpeaksWhenUrgent(ClassifierSpeakPolicy):
+    def decision(self, turn, answers):
+        decision = super().decision(turn, answers)
+        if decision.mode == "silent" and answers.score("urgency") >= 1.5:
+            return SpeakDecision("speak", "urgent", decision.judgments, decision.notes)
+        return decision
+
+
+policy = SpeaksWhenUrgent(
+    classifier,
+    agent_name="Nova",
+    questions={"urgency": ScoreQuestion("How urgent is `last_turn`?", ("not", "soon", "now"))},
+)
+```
+
+`state()` and `questions()` are overridable too, to give the classifier more to
+read. A turn without text (an image alone) is not judged: the agent speaks,
+reason `nothing to judge`. A classifier that fails lets the agent speak, reason
+`fallback`, as any policy. The classifier stays yours: close it when you are
+done.
+
+A runnable version is `examples/speaking_judgments.py`.
+
 ## What comes next
 
-The policy above reads keywords. Policies built on narrow judgments (was the
-agent addressed, did the person finish, did they ask the agent to stay quiet),
-answered by a classifier and composed in code, and an agent that thinks while
-it listens, build on this seam.
+An agent that thinks while it listens, and offers what it wants to say when
+nobody asked, builds on this policy.

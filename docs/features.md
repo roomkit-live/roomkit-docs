@@ -1588,8 +1588,9 @@ nova = AIChannel("nova", provider=provider, speak_policy=SpeaksWhenNamed())
 - **Measurable** — every decision fires `ON_SPEAK_DECISION` with its reason and the judgments it weighed; `AlwaysSpeak` is the baseline
 - **Never silenced by a failure** — a policy that raises or misses its bound (`speak_timeout`, 2 s) lets the agent speak, reason `fallback`
 - **Out of its reach** — instructions (a task's hand-back), a strategy's turns, the channel's own events
+- **On judgments** — `ClassifierSpeakPolicy` asks a classifier narrow questions (directness, unfinished, hush, a standing request for quiet, an answer to the agent's question...) in one call and composes them in readable code; questions replaceable by name, composition by a subclass; optionally judges the reply's language
 
-See the [Speaking Turns guide](guides/speaking-turns.md) and `examples/speaking_turns.py`.
+See the [Speaking Turns guide](guides/speaking-turns.md), `examples/speaking_turns.py` and `examples/speaking_judgments.py`.
 
 ### Classifiers: Judgments Composed in Code
 
