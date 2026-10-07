@@ -207,10 +207,11 @@ The provider maps the PolarGrid SDK's exception hierarchy onto RoomKit's `Provid
 | `ValidationError` | `False` | `400` |
 | `NotFoundError` | `False` | `404` |
 | `RateLimitError` | `True` | `429` |
-| `NetworkError` | `True` | none |
+| `NetworkError` with a transport error under it | `True` | none |
+| `NetworkError` for an error written into a stream | `False` (the SDK drops its status) | none |
 | `TimeoutError` | `True` | none |
 | `ServerError` | `True` | its own (5xx) |
-| _unknown_ | `True` (let `RetryPolicy` decide) | none |
+| _unknown_ (a 408 or 409 among them: the SDK drops the status) | `False`, unless its message names a retried status, a rate limit or an overload | none |
 
 ## Roadmap
 

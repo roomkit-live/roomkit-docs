@@ -193,12 +193,12 @@ ai = AIChannel(
 ```
 Primary provider
   ├─ Success → return response
-  ├─ Retryable error (5xx, timeout) → retry with backoff
+  ├─ Retryable error (408, 409, 429, 5xx, lost connection) → retry with backoff
   │     ├─ Retry succeeds → return response
   │     └─ All retries exhausted → try fallback
   │           ├─ Fallback succeeds → return response
   │           └─ Fallback fails → raise original error
-  └─ Non-retryable error (4xx) → fail immediately (skip fallback)
+  └─ Non-retryable error (other 4xx, unreadable body) → fail immediately (skip fallback)
 ```
 
 Works for both streaming and non-streaming generation.
