@@ -459,7 +459,9 @@ provider issues while its session is still connecting waits for it and is
 served once the session is up; a start that fails or is cancelled reports such
 a call cancelled, as it does a call the provider abandons meanwhile, and
 disconnects the session. A provider error fires `ON_ERROR` with
-`error_category="realtime_provider"`. A session the provider ended is let go:
+`error_category="realtime_provider"`, and so does each connect the provider
+refuses (`error_type` the error's type name): the connect is lazy, so no
+caller waits to be raised to. A session the provider ended is let go:
 its calls are cut and reported, the provider is told to disconnect, and the
 next need reconnects after the connect cooldown (5 s).
 
