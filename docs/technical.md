@@ -710,6 +710,9 @@ Two boundaries are deliberate:
 
 Expiry returns `InboundResult(blocked=True, reason="process_timeout")` and
 emits the `process_timeout` framework event. Nothing durable has been written.
+`send_event()`, whose result is the committed event, has no blocked result to
+return: the same expiry, the wait for the room lock included, emits the event
+and raises `ProcessTimeoutError`.
 
 A regeneration (`regenerate_response()`) has no commit of its own: its event
 is already in the timeline. `process_timeout` bounds its wait for the room
