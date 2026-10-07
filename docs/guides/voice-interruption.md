@@ -248,11 +248,25 @@ english_only = PhraseBackchannelDetector(ENGLISH_BACKCHANNELS + ("cheers",), max
 |--------|---------|-------------|
 | `phrases` | `ENGLISH_BACKCHANNELS + FRENCH_BACKCHANNELS` | The acknowledgements, multi-word ones included ("i see", "tout à fait") |
 | `max_words` | `4` | A longer utterance is never a backchannel, whatever its words |
+| `cut_without_words` | `True` | Whether an utterance without words may cut the assistant (on its duration) |
 
 It needs words: with no transcript it judges no utterance a backchannel, and
 SEMANTIC falls back on duration as CONFIRMED does. Pair it with a streaming
 STT. A short sound that ends before it can be confirmed (a breath, a remnant
 of echo) is dropped by the channel anyway, without cutting the assistant.
+
+With `cut_without_words=False` only words interrupt: sound the STT made nothing
+of (echo an AEC left, a cough, a door) never cuts the assistant, however long it
+lasts, and neither does a wordless interruption. On a laptop's speakers, three
+of six cuts once came from such sound, with no word in the transcript. The
+examples' `INTERRUPTION=words` sets it.
+
+```python
+words_only = InterruptionConfig(
+    strategy=InterruptionStrategy.SEMANTIC,
+    backchannel_detector=PhraseBackchannelDetector(cut_without_words=False),
+)
+```
 
 ### A detector of your own
 
