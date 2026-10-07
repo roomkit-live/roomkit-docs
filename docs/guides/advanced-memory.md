@@ -144,7 +144,7 @@ from roomkit.memory import CompactingMemory, SlidingWindowMemory
 from roomkit.providers.ai.anthropic import AnthropicAIProvider
 
 # Use a fast, cheap model for summarization
-summarizer = AnthropicAIProvider(model="claude-haiku-4-5-20251001", api_key="...")
+summarizer = AnthropicAIProvider(model="claude-haiku-5-5", api_key="...")
 
 memory = CompactingMemory(
     inner=SlidingWindowMemory(max_events=200),
@@ -199,7 +199,7 @@ from roomkit.providers.anthropic.config import AnthropicConfig
 
 # Lightweight model for summaries
 summarizer = AnthropicAIProvider(AnthropicConfig(
-    api_key="...", model="claude-haiku-4-5-20251001",
+    api_key="...", model="claude-haiku-5-5",
 ))
 
 memory = SummarizingMemory(

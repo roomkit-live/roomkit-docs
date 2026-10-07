@@ -83,7 +83,7 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 | Classifier | Probabilities | Latency | Needs |
 |------------|---------------|---------|-------|
 | `JevClassifier(api_key=None, *, model=None, timeout=3.0, client=None)` | calibrated: threshold on them, read a spread as doubt | ~150 ms for the whole call | `pip install roomkit[typesafe]`, `TYPESAFE_API_KEY` |
-| `LLMClassifier(provider, *, timeout=10.0, max_tokens=1000)` | 0 or 1: the model picks one answer per question | a generation (about 1 s on Claude Haiku 4.5) | an AI provider whose `supports_response_schema` is true |
+| `LLMClassifier(provider, *, timeout=10.0, max_tokens=1000)` | 0 or 1: the model picks one answer per question | a generation (about 1 s on Claude Haiku 5.5) | an AI provider whose `supports_response_schema` is true |
 | `MockClassifier(answers=None, *, error=None)` | as scripted | none | — |
 
 **Jev** is TypeSafe's System One model, trained to answer typed questions with
