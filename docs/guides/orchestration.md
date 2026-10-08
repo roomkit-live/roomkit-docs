@@ -224,7 +224,7 @@ Flow:
 2. User asks for analysis → AI calls `delegate_workers` tool
 3. AI says "I'm dispatching my analysts" (natural response)
 4. Workers run in background — conversation continues uninterrupted
-5. Results handed back to the session that called `delegate_workers`, as an instruction, when both AI and user are idle
+5. Results handed back to the session that called `delegate_workers`, as an instruction, when both AI and user are idle; like a delegation's, it closes on the line that the turn it opens gives that result only, in the conversation's language
 
 A pipeline that fails before its results (a worker delegation that raised) is handed back the same way: the supervisor is told the work could not be completed, so it can say so instead of leaving "I'll get back to you" unanswered. The error's message goes to the logs and to the status bus (`agent_id="orchestration"`, `FAILED`), never to the model. The room is free again by the time the supervisor hears the outcome, so a `delegate_workers` call it makes in answer (a retry, a follow-up) starts a new run; a supervisor that dispatches again on every outcome stops at `max_chain_depth`.
 
