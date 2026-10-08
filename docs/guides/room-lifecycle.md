@@ -142,9 +142,12 @@ Alongside the hooks, the transition emits a system event into the room — `room
 ```python
 from roomkit.models.enums import RoomStatus
 
-room = await kit.get_room("support-123")
-room = room.model_copy(update={"status": RoomStatus.ACTIVE})
-await kit.store.update_room(room)
+# Under the room's lock: a whole-room write from a room read earlier would
+# undo what a message committed meanwhile wrote (its counters, the room's
+# register of authors).
+async with kit.lock_manager.locked("support-123"):
+    room = await kit.get_room("support-123")
+    await kit.store.update_room(room.model_copy(update={"status": RoomStatus.ACTIVE}))
 ```
 
 Once active again, inbound traffic resumes and each new message refreshes `last_activity_at`. To restart the idle clock immediately without waiting for a message, call `set_room_timers()` with a fresh `last_activity_at`.
