@@ -2469,6 +2469,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `DeepgramSTTProvider` | Streaming STT, interim results, VAD, punctuation, speaker segments per word with `diarize_model` (reliable in batch; streaming learns the voices over ~30 s), language detection (Nova-3 `multi`) and a per-call language | `roomkit[deepgram]` |
 | `SherpaOnnxSTTProvider` | Local transducer/Whisper, streaming, batch | `roomkit[sherpa-onnx]` |
 | `MetaSTTProvider` | Meta Muse Voice Transcribe: streaming with interim results and model endpointing (`ENDPOINTING`) or one final per VAD utterance (`PUSH_TO_TALK`), REST batch, speaker labels per turn (`DIARIZATION`, carried to the room by a continuous `VoiceChannel`), keyword and language bias, 25 languages including French; 16/24 kHz native, other rates resampled | `roomkit[meta-stt]` |
+| `AzureMAISTTProvider` | Microsoft MAI-Transcribe-2-Streaming on a Foundry resource: streaming with partials, one final per VAD utterance (the provider commits when the utterance ends; a pipeline VAD is required), 60 languages including French with detection or a per-call language; 16/24 kHz native, other rates resampled; public preview | `roomkit[azure-speech]` |
 | `GeminiSTTProvider` | Batch only — one pass over a whole recording returns transcript, speaker turns and timestamps together (as shared `SpeakerSegment`s on `transcribe()` with `speaker_segments=True`). A multimodal model by default; `model="gemini-3.5-transcribe"` for Google's dedicated recogniser, about twice as fast with every word timed to 100 ms. For meetings, voicemail and audio files, not live turn-taking | `roomkit[gemini]` |
 | `MockSTTProvider` | Configurable responses, cycling transcripts | None |
 
@@ -2482,6 +2483,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `SherpaOnnxTTSProvider` | Local VITS/Piper, streaming, multi-speaker | `roomkit[sherpa-onnx]` |
 | `VuiTTSProvider` | Vui Nano on a local CUDA GPU: replies generated inside the dialogue (`TTSContextLevel.AUDIO`), the user's voice included, cut to what was heard after a barge-in; preset or cloned voices; English | `roomkit[vui]` (Python 3.12) |
 | `FluxionsTTSProvider` | Vui hosted by fluxions.ai: no GPU, streamed 24 kHz PCM, the hosted voices and the account's cloned ones; each text on its own (no context); English | `roomkit[fluxions]` |
+| `AzureSpeechTTSProvider` | Azure Speech over REST: Microsoft's MAI-Voice-2.1 and MAI-Voice-2.1-Flash voices (23 languages, French as `fr-FR`, emotion styles) and Azure's neural voices (`fr-CA` included) through one provider; SSML built and escaped by the provider, PCM at 8–48 kHz; MAI-Voice in public preview | `roomkit[azure-speech]` |
 | `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 

@@ -121,6 +121,30 @@ for the mode choice and the limits.
 
 Install with: `pip install roomkit[meta-stt]`
 
+### Microsoft MAI-Transcribe STT (streaming)
+
+::: roomkit.voice.stt.azure_mai.AzureMAISTTProvider
+
+::: roomkit.voice.stt.azure_mai.AzureMAISTTConfig
+
+::: roomkit.voice.stt.azure_mai.AzureMAISTTError
+
+#### Usage
+
+```python
+from roomkit.voice.stt.azure_mai import AzureMAISTTConfig, AzureMAISTTProvider
+
+# Behind a pipeline VAD: one final per utterance
+stt = AzureMAISTTProvider(
+    AzureMAISTTConfig(endpoint="https://<resource>.services.ai.azure.com", api_key="...")
+)
+```
+
+See the [STT & TTS Providers guide](../guides/stt-tts-providers.md#microsoft-mai-transcribe-cloud-api-streaming)
+for why it needs a pipeline VAD and the limits.
+
+Install with: `pip install roomkit[azure-speech]`
+
 ## TTS (Text-to-Speech)
 
 ::: roomkit.voice.tts.base.TTSProvider
@@ -170,6 +194,16 @@ Install with: `pip install roomkit[vui]` (Python 3.12, CUDA GPU).
 ::: roomkit.voice.tts.fluxions.FluxionsTTSConfig
 
 Install with: `pip install roomkit[fluxions]`.
+
+### Azure Speech TTS (MAI-Voice)
+
+::: roomkit.voice.tts.azure_speech.AzureSpeechTTSProvider
+
+::: roomkit.voice.tts.azure_speech.AzureSpeechTTSConfig
+
+::: roomkit.voice.tts.azure_speech.AzureSpeechTTSError
+
+Install with: `pip install roomkit[azure-speech]`.
 
 ### Pocket TTS
 

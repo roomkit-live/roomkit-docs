@@ -794,6 +794,86 @@ machine with no audio device.
 
 ---
 
+## Microsoft MAI-Transcribe (Cloud API, streaming)
+
+`MAI-Transcribe-2-Streaming` is Microsoft's realtime recogniser, served by a
+Microsoft Foundry resource over a WebSocket modelled on the OpenAI Realtime
+transcription protocol. It returns a transcript that firms up while the
+speaker talks, in 60 languages including French, and detects the language by
+itself unless told one.
+
+```python
+from __future__ import annotations
+
+import os
+
+from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline.vad.energy import EnergyVADProvider
+from roomkit.voice.stt.azure_mai import AzureMAISTTConfig, AzureMAISTTProvider
+
+stt = AzureMAISTTProvider(
+    AzureMAISTTConfig(
+        endpoint="https://<resource>.services.ai.azure.com",
+        api_key=os.environ["AZURE_SPEECH_KEY"],
+        language="fr-CA",  # sent as "fr"; None detects
+    )
+)
+pipeline = AudioPipelineConfig(vad=EnergyVADProvider())  # required, see below
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `endpoint` | *(required)* | The Foundry resource URL, as the portal shows it |
+| `api_key` | *(required)* | The resource's key |
+| `deployment` | `MAI-Transcribe-2-Streaming` | The model's deployment name on the resource |
+| `language` | `None` | BCP-47 tag or service code; `None` lets the service detect it |
+| `handshake_timeout_s` | `10.0` | How long a stream waits for the session to open and accept its settings |
+| `final_timeout_s` | `10.0` | How long a stream waits for the final once its audio is committed |
+
+Install with `pip install roomkit[azure-speech]` (`websockets`, no Azure SDK).
+
+### A pipeline VAD is required
+
+The service detects no turns: it finalises the audio it has received when the
+client commits it. Behind a pipeline VAD, a `VoiceChannel` opens one stream
+per utterance and the provider commits when the utterance ends, so the final
+follows the end of speech. Without a VAD the channel runs continuous STT, the
+stream never ends, and no final comes. This also keeps silence off the wire:
+the service bills per hour of audio sent.
+
+### Limits worth knowing
+
+- **Preview**: the model is in public preview (October 2026), without an SLA.
+  Nothing on this page has been measured against the live service yet:
+  latency, French accuracy and the behaviour of a backlog are Microsoft's
+  documentation, not RoomKit's measurements.
+- **Regions**: Microsoft serves the model from Sweden Central, Central US,
+  East US 2 and Southeast Asia, and routes requests to them; there is no
+  Canadian region.
+- **Audio**: mono 16-bit PCM at 16 or 24 kHz goes through as it is; any other
+  rate is resampled to 16 kHz by the provider. Audio leaves in appends of at
+  most 100 ms.
+- **Language**: the service takes language codes, not regions, so `fr-CA` is
+  sent as `fr`; the provider reports `supports_language_override = True`. A
+  code outside the 60 listed (`SUPPORTED_LANGUAGES`) is refused at
+  construction or before the stream opens: the service would take it silently
+  as no language and detect instead. The service reports no detected language,
+  no confidence and no speaker.
+- **Sessions**: one stream is one session, and the service caps a session at
+  one hour; a stream per utterance never comes near it. Every failure raises
+  `AzureMAISTTError`, with the service's `code` and `error_type` and
+  `retryable`: true for a server error, a rate limit, a 5xx or a 429 at the
+  upgrade, a timeout and a dropped connection.
+- **Batch** (`transcribe()`): there is no batch endpoint for this model, so a
+  clip goes through one session, committed once. It takes an `AudioChunk` or
+  an `AudioFrame`; an `AudioContent` is refused.
+
+`examples/voice_azure_mai.py` has MAI-Voice speak a sentence and plays it to
+MAI-Transcribe in real time, logging the TTS's first audio and the STT's final
+after the end of speech.
+
+---
+
 ## TTS Provider ABC
 
 ```python
@@ -1584,6 +1664,73 @@ streams a sentence, renders another whole and writes both to a WAV file.
 
 ---
 
+## Azure Speech (Cloud API, MAI-Voice)
+
+Azure Speech renders SSML over REST. The voice name picks the model:
+`fr-FR-Soleil:MAI-Voice-2.1-Flash` is Microsoft's MAI voice Soleil on
+MAI-Voice-2.1-Flash, the low-latency model, and `fr-CA-SylvieNeural` one of
+Azure's neural voices, so one provider serves both.
+
+```python
+from __future__ import annotations
+
+import os
+
+from roomkit.voice.tts.azure_speech import AzureSpeechTTSConfig, AzureSpeechTTSProvider
+
+tts = AzureSpeechTTSProvider(
+    AzureSpeechTTSConfig(
+        api_key=os.environ["AZURE_SPEECH_KEY"],
+        region="swedencentral",
+        voice="en-US-Harper:MAI-Voice-2.1-Flash",
+        style="customer_call_center",  # optional, one the voice supports
+    )
+)
+
+async for chunk in tts.synthesize_stream("Hello from MAI Voice."):
+    ...
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `api_key` | *(required)* | The Speech or Foundry resource's key |
+| `region` | `None` | The resource's region (`swedencentral`, `canadacentral`…) |
+| `endpoint` | `None` | The full synthesis URL, for a custom domain or a proxy; exactly one of `region` and `endpoint` |
+| `voice` | `en-US-Harper:MAI-Voice-2.1-Flash` | Voice name as Azure spells it |
+| `language` | `None` | The SSML `xml:lang`; `None` takes the voice name's locale |
+| `style` | `None` | A speaking style wrapped around every text with `mstts:express-as` |
+| `sample_rate` | `24000` | 8, 16, 22.05, 24, 44.1 or 48 kHz |
+| `timeout` / `connect_timeout` | `30.0` / `5.0` | Read and connect budgets, in seconds |
+
+Install with `pip install roomkit[azure-speech]` (`httpx`, no Azure SDK).
+
+**Text is spoken, never read as markup**: the provider builds the SSML
+itself and escapes everything in it, so a `<break/>` or a `</voice>` in an
+AI reply is spoken as text, not obeyed; characters XML cannot carry are
+dropped.
+
+**Constraints**:
+
+- The MAI-Voice models are in public preview (October 2026), without an SLA.
+  Nothing here has been measured against the live service yet: whether the
+  service streams a render or answers it whole decides the first-audio
+  latency, and the provider reads the response as it arrives either way.
+- MAI-Voice's French voices are `fr-FR` (Grant, Harper, Marc, Soleil); there
+  is no `fr-CA` MAI voice. Azure's neural `fr-CA` voices go through the same
+  provider.
+- Microsoft serves MAI-Voice from 14 regions, Canada Central and France
+  Central among them.
+- Cloning a voice from a clip is gated by Microsoft (Limited Access review)
+  and not exposed by the provider.
+- No conversation context: each text is rendered on its own.
+- A refused render raises `AzureSpeechTTSError`, with `status_code` and
+  `retryable` (true for 429 and 5xx).
+
+**Output**: mono 16-bit PCM at `sample_rate`. `examples/voice_azure_mai.py`
+streams a sentence and plays it back to MAI-Transcribe.
+
+---
+
 ## TTS Filters
 
 Filters clean AI-generated text before it reaches the TTS provider. Essential for removing reasoning markers, annotations, or bracketed instructions.
@@ -1712,6 +1859,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Gradium** | Cloud STT | Yes | Low | Per-minute | Real-time with server-side VAD |
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
+| **MAI-Transcribe** | Cloud STT | Yes (behind a VAD) | Low (not measured) | Per-hour | 60 languages, preview |
 | **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
 | **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
@@ -1720,6 +1868,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **NeuTTS** | Local TTS | GGUF only | Medium | Free | Voice cloning, GGUF quantized |
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
 | **Fluxions** | Cloud TTS | Yes | Low | Per-character | Vui without a GPU, English |
+| **Azure Speech** | Cloud TTS | Yes | Low (not measured) | Per-character | MAI-Voice and Azure's neural voices, preview |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Six languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
