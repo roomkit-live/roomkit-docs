@@ -80,7 +80,11 @@ agent speaks: the decision reported is `speak` with the reason `fallback`.
 ## Following the decisions
 
 Every decision fires `ON_SPEAK_DECISION` (async), with the room, the channel, the
-event and the decision:
+event and the decision, how long the policy took to decide (`duration_ms`: the
+channel's bound when it did not decide in time) and whether the policy was asked
+again once the agent thought (`asked_again`, see [thinking while
+listening](#thinking-while-listening)). A policy is measured from the hook, without
+wrapping it:
 
 ```python
 from roomkit import HookExecution, HookTrigger, SpeakDecisionEvent
@@ -88,7 +92,15 @@ from roomkit import HookExecution, HookTrigger, SpeakDecisionEvent
 
 @kit.hook(HookTrigger.ON_SPEAK_DECISION, execution=HookExecution.ASYNC)
 async def on_decision(event: SpeakDecisionEvent, ctx) -> None:
-    logger.info("%s %s %s", event.decision.mode, event.decision.reason, event.decision.judgments)
+    again = " (asked again)" if event.asked_again else ""
+    logger.info(
+        "%s %s in %d ms%s %s",
+        event.decision.mode,
+        event.decision.reason,
+        event.duration_ms,
+        again,
+        event.decision.judgments,
+    )
 ```
 
 A channel without a policy answers every event, as before, and decides nothing.
@@ -301,7 +313,10 @@ async def no_ai_without_consent(event, ctx) -> HookResult:
 ### Following the thought
 
 Every new thought fires `ON_THOUGHT` (async), with the room, the channel, the
-thought and the one it replaces:
+thought, the one it replaces, and how long the thinker call that brought it took
+(`duration_ms`). A thought emptied because the agent spoke came from no call: its
+`duration_ms` is `None`. A call that fails, or brings back the same thought, fires
+nothing.
 
 ```python
 from roomkit import HookExecution, HookTrigger, ThoughtEvent
@@ -309,7 +324,8 @@ from roomkit import HookExecution, HookTrigger, ThoughtEvent
 
 @kit.hook(HookTrigger.ON_THOUGHT, execution=HookExecution.ASYNC)
 async def on_thought(event: ThoughtEvent, ctx) -> None:
-    logger.info("%s thinks: %s %s", event.channel_id, event.thought.text, event.thought.want_to_say)
+    took = f"{event.duration_ms} ms" if event.duration_ms is not None else "no call"
+    logger.info("%s thinks (%s): %s", event.channel_id, took, event.thought.text)
 ```
 
 `ON_THOUGHT` is the agent's thought while it listens; `ON_AI_THINKING` is a
