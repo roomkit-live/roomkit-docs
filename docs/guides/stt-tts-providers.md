@@ -1942,6 +1942,37 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 
 ---
 
+## Sentence Budget
+
+Asked to "explain", a language model may talk for a minute however short its
+prompt asks it to be. `max_sentences` caps what a voice channel speaks of each
+reply:
+
+```python
+from __future__ import annotations
+
+from roomkit import VoiceChannel
+
+voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, max_sentences=4)
+```
+
+- **A streamed reply** that goes on past the budget ends at the first sentence
+  over it, as a barge-in ends it: that sentence is not spoken, the model stops
+  generating, no tool call starts after that point, and the room keeps the text
+  produced up to there, marked `cancelled`. The agent's next turn does not take
+  for said what nobody heard. The final transcript and `AFTER_TTS` carry the
+  sentences spoken. A reply of exactly the budget runs to its end.
+- **A reply delivered whole** (a TTS without streamed input) has its first
+  sentences spoken; it was stored whole before it reached the channel.
+- A sentence is counted as the TTS reads it: after the text filter and
+  `BEFORE_TTS`, so a sentence a hook drops does not count, and very short
+  sentences gather into one, as the channel always hands them to the TTS.
+- A reply cut this way fires no `ON_AI_RESPONSE`, like any turn its reader
+  stopped. `say()`, the application's own text, has no budget.
+
+`examples/voice_sentence_budget.py` shows a twelve-sentence explanation cut at
+four, and what the room keeps of it.
+
 ## Choosing a Provider
 
 | Provider | Type | Streaming | Latency | Cost | Best For |
