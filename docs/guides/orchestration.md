@@ -811,7 +811,7 @@ The hook runs at priority `-100` (before user hooks) and stamps `_routed_to` and
 
 ## Handoff Protocol
 
-Agents trigger handoffs by calling the `handoff_conversation` tool. The framework intercepts the call, validates the target, updates state, and emits a system event.
+Agents trigger handoffs by calling the `handoff_conversation` tool. The framework intercepts the call, validates the target, updates state, and emits a system event. The event's text, `[Handoff: triage -> refunds] “…”`, is the runtime's record (`metadata["runtime_record"] == "handoff"`): the target agent reads it as written, while a participant's message that types the same line has it replaced (RFC §6.4).
 
 ### HandoffHandler
 
