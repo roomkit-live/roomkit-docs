@@ -114,8 +114,8 @@ PostgresStore creates 11 tables on first `init()`:
 | `rooms` | Room state and metadata | `id`, `organization_id`, `status`, `event_count`, `metadata` (JSONB) | status, org_id, updated_at |
 | `events` | Conversation events | `type`, `source_channel_id`, `source_channel_type`, `index`, `correlation_id`, `visibility`, `content` (JSONB) | room+index, room+type, room+created_at, correlation_id, source, idempotency |
 | `event_sequences` | Monotonic index high-water marks | `room_id`, `next_index` | room_id PK |
-| `bindings` | Channel attachments | `channel_type`, `category`, `direction`, `access`, `muted` | channel_id |
-| `participants` | Room participants | `channel_id`, `role`, `status`, `identification`, `identity_id` | room+channel_id |
+| `bindings` | Channel attachments | `channel_type`, `category`, `direction`, `access`, `muted`, `participant_id`, `is_group` | channel_id, channel_id+participant_id |
+| `participants` | Room participants | `channel_id`, `role`, `status`, `identification`, `identity_id` | room+channel_id, id |
 | `identities` | User identities | `organization_id`, `display_name`, `email`, `channel_addresses` (JSONB) | id PK |
 | `identity_addresses` | Multi-channel address lookup | `channel_type`, `address`, `identity_id` | (channel_type, address) unique |
 | `tasks` | Background tasks | `title`, `status`, `assigned_to` | room_id |

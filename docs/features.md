@@ -375,10 +375,11 @@ assert bob_room != alice_room  # bob's agent reads nothing of alice's conversati
 assert await room_of(ALICE) == alice_room
 ```
 
-A binding speaks for its own channel: a customer of one number writing to
-another number of the same kit lands in that number's conversation. A room the
-host opened with a member on the channel (`add_member`) is that member's
-before they write. A group chat on a channel dedicated to its room is declared
+A binding speaks for its own channel: a customer one number recorded,
+writing to another number of the same kit, lands in that number's
+conversation. A member the host added (`add_member`) is found by their
+participant record whatever number they write to. A room the host opened with
+a member on the channel is that member's before they write. A group chat on a channel dedicated to its room is declared
 on the binding, so every sender shares the room:
 
 ```python
@@ -390,8 +391,8 @@ two first messages arriving together land apart, and a message a hook refuses
 has been routed all the same. A sender is known by their address and by the
 identity the store resolves it to (`link_address`); what the host sends with
 `deliver()` does not close a room to its customer's reply, and a message routed
-under the framework's own sender (`system`) is never let into an existing
-room. A message whose room lock stays taken past `process_timeout` while it is
+under the framework's own sender (`system`) is never recorded on a binding
+nor let into an existing room that is not a group. A message whose room lock stays taken past `process_timeout` while it is
 being recorded is refused as a process timeout. A member added
 under an id that is neither closes the room to routing: route their messages
 with `room_id`, or link the address. A provider's delivery status follows the
