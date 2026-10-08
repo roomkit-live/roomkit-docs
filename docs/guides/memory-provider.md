@@ -37,7 +37,7 @@ Event arrives → memory.retrieve() → MemoryResult
                                               AIContext → Provider
 ```
 
-A provider can return any of the fields. A provider that wraps another and rebuilds its result must carry the inner `notes`: build it with `dataclasses.replace(inner_result, ...)` rather than a new `MemoryResult(messages=..., events=...)`, which drops them. A provider that keeps the turn to a token budget counts them (`roomkit.memory.estimate_notes_tokens`): nothing trims them. `SlidingWindowMemory` returns only `events`. A summarization provider might return only `messages`. A hybrid could return both.
+A provider whose `messages` name participants (a summary's lines, say) lists the labels it named them by in `speakers`, as `CompactingMemory` and `SummarizingMemory` do: the channel counts them toward labelling the turns that follow, so a summary that names several people is followed by labelled turns (RFC §6.4). A provider can return any of the fields. A provider that wraps another and rebuilds its result must carry the inner `notes`: build it with `dataclasses.replace(inner_result, ...)` rather than a new `MemoryResult(messages=..., events=...)`, which drops them. A provider that keeps the turn to a token budget counts them (`roomkit.memory.estimate_notes_tokens`): nothing trims them. `SlidingWindowMemory` returns only `events`. A summarization provider might return only `messages`. A hybrid could return both.
 
 `context.recent_events` is the room's **tail**, in ascending order: its last
 element is the most recent event. That is why providers slice `[-N:]` rather

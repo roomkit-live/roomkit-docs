@@ -175,7 +175,7 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 2. If total tokens fit in budget → return as-is (no compacting)
 3. If over budget:
     - Split events into **trimmed** (old) and **kept** (recent)
-    - Summarize trimmed events via the AI provider, each quoted on one line after who said it: `[user]` and `[assistant]` in a one-to-one conversation, the runtime's label (`Alice: “…”`, `@sms1: “…”`) when several people speak, `[assistant]` naming only the agent the summary is for
+    - Summarize trimmed events via the AI provider, each quoted on one line after who said it: `[user]` and `[assistant]` in a one-to-one conversation, the runtime's label (`Alice: “…”`, `@sms1: “…”`) when the turns retrieved, summarized or kept, hold several speakers, `[assistant]` naming only the agent the summary is for; the result's `speakers` lists the labels named, which the conversation counts
     - Inject summary as a pre-built message at the context start
     - Return: `[summary_message] + [kept_events]`
 4. Summaries are cached per-room with TTL to avoid regenerating on every call
