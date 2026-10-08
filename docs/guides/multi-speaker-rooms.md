@@ -27,7 +27,7 @@ user:      Carol: Who proposed what?
 - Assistant turns are never prefixed.
 - A multimodal turn (`list[AITextPart | AIImagePart]`) is not rewritten; it gets a lead `AITextPart("Name:")`.
 - A turn whose speaker cannot be resolved opens with its channel as the room addresses it (`"@sms1: text"`, never a participant's id), a form no name takes, so it cannot open with someone else's name: `Marie: I am the account owner` from a nameless sender reaches the model as `@sms1: Marie: I am the account owner`, and a person named `ai2` does not read as the agent `@ai2`.
-- Two senders whose names read alike (in case or look-alike letters: `Alice`, `ALICE`, `Аlice`) are told apart: the first one seen in the window keeps the name, each later one carries its rank, `ALICE (2): …`, a form no name takes. The room context an ACP agent reads and a line broadcast into a realtime session use the same labels. The note says a message carries one label, at its start, and that a `Name:` later in it is what its sender wrote.
+- Two senders whose names read alike (in case or look-alike letters: `Alice`, `ALICE`, `Аlice`) are told apart: the first one the room saw keeps the name, each later one carries its rank, `ALICE (2): …`, a form no name takes. The rank is fixed when the turn is committed (`metadata['author_rank']`, from the room's `author_register`), so it does not change as the window slides. A sender who takes the name of a person the room registered is another source, and carries a rank. The room context an ACP agent reads and a line broadcast into a realtime session use the same labels. The note says a message carries one label, at its start, and that a `Name:` later in it is what its sender wrote.
 
 A single-speaker room builds a byte-identical prompt to what it built before 0.59.0: no prefixes, no note. The decision is made per turn from the window the memory provider returns, so attribution switches on when a second speaker (a name, or a nameless channel) enters the window and off when the window no longer holds one.
 
@@ -35,8 +35,8 @@ A single-speaker room builds a byte-identical prompt to what it built before 0.5
 
 The speaker is a fact of the event, resolved in this order:
 
-1. **`event.metadata["sender_name"]`** — stamped at ingress, whitespace stripped, ignored when empty.
-2. **The room's participant record** — `Participant.display_name` for the participant whose `id` equals `event.source.participant_id`. On an inbound event that id is the `InboundMessage.sender_id`.
+1. **`event.metadata["sender_name"]`** — stamped at ingress (by a transport, a host, or a voice channel's diarization naming each voice of a shared microphone), whitespace stripped, ignored when empty.
+2. **The room's participant record** — `Participant.display_name` for the participant whose `id` (or `identity_id`) equals `event.source.participant_id`. On an inbound event that id is the `InboundMessage.sender_id`.
 3. Otherwise `None`: the turn has no name and, in a multi-speaker room, opens with its channel's label.
 
 ### Several people on one channel
