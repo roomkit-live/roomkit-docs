@@ -878,7 +878,11 @@ the service bills per hour of audio sent.
 Two examples. `examples/voice_azure_mai_agent.py` is the one to run first: a
 voice agent through your microphone, MAI-Transcribe hearing you behind a VAD,
 Claude Haiku 5.5 answering in the language you spoke, MAI-Voice speaking
-(`VOICE=fr-FR-Soleil:MAI-Voice-2.1-Flash` for French). `examples/voice_azure_mai.py`
+(`VOICE=fr-FR-Soleil:MAI-Voice-2.1-Flash` for French) at `+15%`. Its VAD
+waits 800 ms of silence instead of 500: at 500, a pause in the middle of a
+sentence ended the turn, and a word cut by it came back as two halves
+transcribed out of context. Its barge-in is semantic, so an "okay" does not
+stop the agent. `examples/voice_azure_mai.py`
 needs no audio device: MAI-Voice speaks a sentence and plays it to
 MAI-Transcribe in real time, logging the TTS's first audio and the STT's final
 after the end of speech.
@@ -1729,6 +1733,7 @@ async for chunk in tts.synthesize_stream("Hello from MAI Voice."):
 | `voice` | `en-US-Harper:MAI-Voice-2.1-Flash` | Voice name as Azure spells it |
 | `language` | `None` | The SSML `xml:lang`; `None` takes the voice name's locale |
 | `style` | `None` | A speaking style wrapped around every text with `mstts:express-as` |
+| `rate` | `None` | Speaking rate as SSML `prosody` takes it: `"+15%"`, `"1.2"`, `"fast"` |
 | `sample_rate` | `24000` | 8, 16, 22.05, 24, 44.1 or 48 kHz |
 | `timeout` / `connect_timeout` | `30.0` / `5.0` | Read and connect budgets, in seconds |
 
@@ -1748,6 +1753,10 @@ dropped.
   neural `fr-CA-SylvieNeural`. Microsoft's ~45 ms for Flash is its inference
   alone.
 - A style the voice does not support is refused with a 400 and no message.
+- MAI-Voice-2.1-Flash speaks slowly for a conversation, and follows `rate`
+  closely: the same sentence took 4.72 s at its own pace, 3.84 s at `+20%`
+  and 2.84 s at `+40%`. MAI-Voice-2.1 follows it unevenly (measured
+  2026-10-08).
 - MAI-Voice's French voices are `fr-FR` (Grant, Harper, Marc, Soleil); there
   is no `fr-CA` MAI voice. Azure's neural `fr-CA` voices go through the same
   provider.
