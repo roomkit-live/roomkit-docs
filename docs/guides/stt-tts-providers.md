@@ -799,7 +799,7 @@ machine with no audio device.
 `MAI-Transcribe-2-Streaming` is Microsoft's realtime recogniser, served by a
 Microsoft Foundry resource over a WebSocket modelled on the OpenAI Realtime
 transcription protocol. It returns a transcript that firms up while the
-speaker talks, in 60 languages including French, and detects the language by
+speaker talks, in 57 languages including French, and detects the language by
 itself unless told one.
 
 ```python
@@ -844,9 +844,13 @@ the service bills per hour of audio sent.
 ### Limits worth knowing
 
 - **Preview**: the model is in public preview (October 2026), without an SLA.
-  Nothing on this page has been measured against the live service yet:
-  latency, French accuracy and the behaviour of a backlog are Microsoft's
-  documentation, not RoomKit's measurements.
+- **Measured** (2026-10-08, from Québec to Sweden Central): an English and a
+  French sentence, rendered by MAI-Voice and played back in real time, came
+  back word for word, the French one with its language detected; the final
+  arrived 125 to 146 ms after the end of speech, and partials every 250 ms or
+  so while it spoke. The service writes numbers as figures ("quatorze heures
+  trente" comes back as "14h30"). French accuracy on real speech is not
+  measured yet.
 - **Regions**: Microsoft serves the model from Sweden Central, Central US,
   East US 2 and Southeast Asia, and routes requests to them; there is no
   Canadian region.
@@ -854,11 +858,14 @@ the service bills per hour of audio sent.
   rate is resampled to 16 kHz by the provider. Audio leaves in appends of at
   most 100 ms.
 - **Language**: the service takes language codes, not regions, so `fr-CA` is
-  sent as `fr`; the provider reports `supports_language_override = True`. A
-  code outside the 60 listed (`SUPPORTED_LANGUAGES`) is refused at
-  construction or before the stream opens: the service would take it silently
-  as no language and detect instead. The service reports no detected language,
-  no confidence and no speaker.
+  sent as `fr`; the provider reports `supports_language_override = True`. The
+  provider takes the 57 codes in `SUPPORTED_LANGUAGES`: Microsoft lists 60,
+  and the endpoint refuses three of them (`as`, `or`, `pa`). A code outside
+  the list is refused at construction or before the stream opens, because the
+  endpoint takes some the model does not know (`no`, `tl`, `cy`) and the model
+  then detects instead. Detection is asked by leaving the language out: the
+  endpoint refuses an explicit `null`. The service reports no detected
+  language, no confidence and no speaker.
 - **Sessions**: one stream is one session, and the service caps a session at
   one hour; a stream per utterance never comes near it. Every failure raises
   `AzureMAISTTError`, with the service's `code` and `error_type` and
@@ -1722,9 +1729,12 @@ dropped.
 **Constraints**:
 
 - The MAI-Voice models are in public preview (October 2026), without an SLA.
-  Nothing here has been measured against the live service yet: whether the
-  service streams a render or answers it whole decides the first-audio
-  latency, and the provider reads the response as it arrives either way.
+- A render streams: 23 s of audio arrived between 0.67 and 1.39 s after the
+  request. First audio, measured 2026-10-08 from Québec to Sweden Central:
+  about 0.65 s on MAI-Voice-2.1-Flash, 1.2 s on MAI-Voice-2.1, 0.4 s on the
+  neural `fr-CA-SylvieNeural`. Microsoft's ~45 ms for Flash is its inference
+  alone.
+- A style the voice does not support is refused with a 400 and no message.
 - MAI-Voice's French voices are `fr-FR` (Grant, Harper, Marc, Soleil); there
   is no `fr-CA` MAI voice. Azure's neural `fr-CA` voices go through the same
   provider.
@@ -1869,7 +1879,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **Gradium** | Cloud STT | Yes | Low | Per-minute | Real-time with server-side VAD |
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
-| **MAI-Transcribe** | Cloud STT | Yes (behind a VAD) | Low (not measured) | Per-hour | 60 languages, preview |
+| **MAI-Transcribe** | Cloud STT | Yes (behind a VAD) | Low (final ~0.13 s after speech) | Per-hour | 57 languages, preview |
 | **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
 | **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
@@ -1878,7 +1888,7 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 | **NeuTTS** | Local TTS | GGUF only | Medium | Free | Voice cloning, GGUF quantized |
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
 | **Fluxions** | Cloud TTS | Yes | Low | Per-character | Vui without a GPU, English |
-| **Azure Speech** | Cloud TTS | Yes | Low (not measured) | Per-character | MAI-Voice and Azure's neural voices, preview |
+| **Azure Speech** | Cloud TTS | Yes | Medium (MAI Flash ~0.65 s to first audio) | Per-character | MAI-Voice and Azure's neural voices, preview |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Six languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
