@@ -1382,6 +1382,7 @@ Thinking support varies by provider:
 - **Ollama / vLLM** — `<think>...</think>` tag parsing with streaming support (handles tags split across chunk boundaries); vLLM also takes `enable_thinking` / `reasoning_effort` through its server-side chat template
 - **Gemini** — Thought summaries via `thinking_level` or `thinking_budget`, with thought signatures replayed across tool rounds
 - **DeepSeek** — Reasoning replayed in `reasoning_content`, on every tool round (empty when the round did not reason) and on an answer, which DeepSeek requires in thinking mode
+- **OpenAI-compatible servers, Azure, LiteLLM** — the provider cannot know the model behind a `base_url`, a deployment name or an alias, so a turn with tools leaves the reasoning out (one warning per provider) unless `supports_reasoning_effort_with_tools=True` on the config says the server takes it there
 
 During streaming, thinking arrives as `StreamThinkingDelta` events before text. The `ON_AI_THINKING` hook fires when reasoning is produced, and `THINKING_START` / `THINKING_END` ephemeral events enable real-time UI indicators.
 
