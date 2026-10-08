@@ -875,7 +875,11 @@ the service bills per hour of audio sent.
   clip goes through one session, committed once. It takes an `AudioChunk` or
   an `AudioFrame`; an `AudioContent` is refused.
 
-`examples/voice_azure_mai.py` has MAI-Voice speak a sentence and plays it to
+Two examples. `examples/voice_azure_mai_agent.py` is the one to run first: a
+voice agent through your microphone, MAI-Transcribe hearing you behind a VAD,
+Claude Haiku 5.5 answering in the language you spoke, MAI-Voice speaking
+(`VOICE=fr-FR-Soleil:MAI-Voice-2.1-Flash` for French). `examples/voice_azure_mai.py`
+needs no audio device: MAI-Voice speaks a sentence and plays it to
 MAI-Transcribe in real time, logging the TTS's first audio and the STT's final
 after the end of speech.
 
@@ -1755,8 +1759,9 @@ dropped.
 - A refused render raises `AzureSpeechTTSError`, with `status_code` and
   `retryable` (true for 429 and 5xx).
 
-**Output**: mono 16-bit PCM at `sample_rate`. `examples/voice_azure_mai.py`
-streams a sentence and plays it back to MAI-Transcribe.
+**Output**: mono 16-bit PCM at `sample_rate`. `examples/voice_azure_mai_agent.py`
+is a voice agent speaking with it; `examples/voice_azure_mai.py` streams a
+sentence and plays it back to MAI-Transcribe.
 
 ---
 
