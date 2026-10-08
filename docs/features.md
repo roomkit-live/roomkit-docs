@@ -2517,6 +2517,8 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 6. **AI response** delivered back via `deliver()` → TTS synthesizes audio
 7. **Audio streamed** back to client via `send_audio()` (PCM → mu-law encoding)
 
+**Text filters** — `VoiceChannel(tts_filter=...)` keeps out of the voice what was never meant to be heard, on a whole reply and a streamed one alike: `StripInternalTags`, `StripBrackets` (with `keep=` for a TTS's own tags), `StripEmoji`, and `StripTechnicalText` (a tool call written as JSON, a `(Note: ...)` to itself, a `---` separator, each removal logged); `TTSFilterChain` runs several. The response stored in the conversation keeps the model's text.
+
 **Voice backends:**
 
 | Backend | Transport | VAD | Dependency |

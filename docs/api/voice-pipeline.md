@@ -74,6 +74,8 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ::: roomkit.voice.tts.filters.StripInternalTags
 
+::: roomkit.voice.tts.filters.StripTechnicalText
+
 ## Events & Callbacks
 
 ::: roomkit.voice.events.SpeakerChangeEvent

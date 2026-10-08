@@ -1842,6 +1842,41 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=Stri
 # "C'est rapide et super bon ! 😊" is spoken as "C'est rapide et super bon !"
 ```
 
+### StripTechnicalText
+
+Removes the technical text a model may write into a spoken reply: a JSON object
+(recognised by its quoted first key, `{"`), such as a tool call or a tool
+result written as words instead of calling the tool; a note to itself,
+`(Note: ...)` or `(NB: ...)`; a separator of three dashes or more. Whatever
+model the application picks, a reply sometimes carries them, and removing them
+from the voice does not make a call happen.
+
+```python
+from __future__ import annotations
+
+from roomkit import VoiceChannel
+from roomkit.voice.tts.filters import StripTechnicalText
+
+voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=StripTechnicalText())
+# 'I'll check. {"name": "delegate", "arguments": {"task": "Weather. Today"}} Done.'
+# is spoken as "I'll check. Done."
+```
+
+- A nested object goes whole, and a brace inside one of its strings does not
+  end it. On a streamed reply the filter works on the tokens, before the reply
+  is cut into sentences: an object holding a full stop is removed whole, which
+  a `BEFORE_TTS` hook, judging one sentence at a time, cannot do.
+- Ordinary text passes: `(about ten minutes)`, `{x}`, `well-known`, `--`. An
+  object or a note still open when the stream ends is removed.
+- Each object or note removed is logged as a warning with its length; its text
+  only at DEBUG, through `redact()`. The response stored in the conversation
+  keeps the model's text: the slip stays visible, it is just not heard.
+- Reasoning written in plain words ("Need no tool.") is not recognised: no rule
+  tells it from an answer.
+
+`examples/voice_strip_technical_text.py` runs it on a whole reply and a
+streamed one.
+
 ### TTSFilterChain
 
 `tts_filter` takes one filter; `TTSFilterChain` runs several in order, on a
@@ -1850,9 +1885,14 @@ whole text and on a streamed reply alike:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import StripBrackets, StripEmoji, TTSFilterChain
+from roomkit.voice.tts.filters import (
+    StripBrackets,
+    StripEmoji,
+    StripTechnicalText,
+    TTSFilterChain,
+)
 
-tts_filter = TTSFilterChain(StripEmoji(), StripBrackets(keep=("laugh",)))
+tts_filter = TTSFilterChain(StripTechnicalText(), StripEmoji(), StripBrackets(keep=("laugh",)))
 ```
 
 ### Using Filters with Streaming TTS
