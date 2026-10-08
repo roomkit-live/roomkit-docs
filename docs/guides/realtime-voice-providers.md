@@ -664,7 +664,10 @@ Install with `pip install roomkit[realtime-openai]` (the `websockets` extra).
   session started, so an instruction — the opening greeting included — is
   `role="system"`, which is how OpenAI documents having the model speak first
   (see [What `inject_text`'s role means](#what-inject_texts-role-means)). Long
-  texts are split at the API's 500-token per-append bound. `inject_image()` is
+  texts are split at the API's 500-token per-append bound, and a text RoomKit
+  set apart in a frame keeps it in each append: a `<worker_output>` block is
+  closed and opened again around every piece, a quote such as
+  `Marie · sms: “…”` too, after its author (RFC §12.4.1). `inject_image()` is
   not available.
 - **One audio format for both directions**, chosen from the channel's
   `output_sample_rate`: PCM at 16 or 24 kHz, or G.711 at 8 kHz with
