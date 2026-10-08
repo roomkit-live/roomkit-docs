@@ -1956,19 +1956,22 @@ from roomkit import VoiceChannel
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, max_sentences=4)
 ```
 
-- **A streamed reply** that goes on past the budget ends at the first sentence
-  over it, as a barge-in ends it: that sentence is not spoken, the model stops
-  generating, no tool call starts after that point, and the room keeps the text
-  produced up to there, marked `cancelled`. The agent's next turn does not take
-  for said what nobody heard. The final transcript and `AFTER_TTS` carry the
-  sentences spoken. A reply of exactly the budget runs to its end.
-- **A reply delivered whole** (a TTS without streamed input) has its first
-  sentences spoken; it was stored whole before it reached the channel.
+- **A streamed reply**: once the budget is said, a reply that goes on stops at
+  its first word past it, as a barge-in stops it. The model generates nothing
+  more, a tool call the next sentence announced ("Let me book that table") is
+  never made, and the room keeps the text produced up to there (the sentences
+  spoken and the start of the next), marked `cancelled`, rather than the whole
+  answer nobody heard. The final transcript and `AFTER_TTS` carry the sentences
+  spoken. A reply of exactly the budget runs to its end.
+- **A text delivered whole** (a reply on a TTS without streamed input, an
+  orchestration farewell, any message the channel speaks) has its first
+  sentences spoken; a reply was stored whole before it reached the channel.
 - A sentence is counted as the TTS reads it: after the text filter and
   `BEFORE_TTS`, so a sentence a hook drops does not count, and very short
   sentences gather into one, as the channel always hands them to the TTS.
 - A reply cut this way fires no `ON_AI_RESPONSE`, like any turn its reader
-  stopped. `say()`, the application's own text, has no budget.
+  stopped. `say()`, the application's own text, has no budget, and a
+  `ConferenceChannel` has none.
 
 `examples/voice_sentence_budget.py` shows a twelve-sentence explanation cut at
 four, and what the room keeps of it.

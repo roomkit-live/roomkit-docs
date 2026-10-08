@@ -2517,7 +2517,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 6. **AI response** delivered back via `deliver()` → TTS synthesizes audio
 7. **Audio streamed** back to client via `send_audio()` (PCM → mu-law encoding)
 
-**Sentence budget** — `VoiceChannel(max_sentences=4)` speaks at most four sentences of a reply: a streamed reply going on past it ends at the first sentence over it, as a barge-in ends it (generation stopped, the text produced so far stored and marked `cancelled`, so the next turn does not take for said what nobody heard); a reply delivered whole is spoken to the budget. A sentence `BEFORE_TTS` drops does not count; `say()` has no budget.
+**Sentence budget** — `VoiceChannel(max_sentences=4)` speaks at most four sentences of a reply: once they are said, a streamed reply that goes on stops at its first word past them, as a barge-in stops it (nothing more generated, no tool call it would make next started, the text produced so far stored and marked `cancelled`, no `ON_AI_RESPONSE`); a text delivered whole is spoken to the budget. A sentence `BEFORE_TTS` drops does not count; `say()` has no budget.
 
 **Text filters** — `VoiceChannel(tts_filter=...)` keeps out of the voice what was never meant to be heard, on a whole reply and a streamed one alike: `StripInternalTags`, `StripBrackets` (with `keep=` for a TTS's own tags), `StripEmoji`, and `StripTechnicalText` (a tool call written as JSON, a `(Note: ...)` to itself, a `---` separator, each removal logged); `TTSFilterChain` runs several. The response stored in the conversation keeps the model's text.
 
