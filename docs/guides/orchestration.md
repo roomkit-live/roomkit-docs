@@ -896,7 +896,19 @@ ai = AIChannel("agent-handler", provider=provider, memory=memory)
 
 After a handoff, the receiving agent sees a prepended message like:
 
-> [Context from previous agent (agent-triage)]: User needs help with billing. Account #12345, premium plan, last payment was 30 days ago.
+```text
+[Context from previous agent (agent-triage)]
+<conversation_summary>
+User needs help with billing. Account #12345, premium plan, last payment was 30 days ago.
+</conversation_summary>
+```
+
+The summary is the previous agent's output, set apart in a block it cannot
+close (RFC §6.4). The same holds for everything a strategy hands a model from
+another model: each worker's output, a reviewer's feedback and the content a
+reviewer judges are a `<worker_output>` block of their own under their label,
+and the user's goal copied into such an input is a `<task>` block. The task a
+supervisor frames for a worker stays that worker's own input.
 
 ## ConversationPipeline
 
