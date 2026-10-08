@@ -39,6 +39,19 @@ The speaker is a fact of the event, resolved in this order:
 2. **The room's participant record** — `Participant.display_name` for the participant whose `id` equals `event.source.participant_id`. On an inbound event that id is the `InboundMessage.sender_id`.
 3. Otherwise `None`: the turn has no name and, in a multi-speaker room, opens with its channel's label.
 
+### Several people on one channel
+
+The default router gives each new sender on a channel a room of their own
+unless the channel's binding is declared a group (RFC §10.4): on a number
+shared by many customers, the one room bound to it is the first customer's
+conversation. A channel that carries one conversation of several people
+declares it when it is attached, or the host routes each message with its
+`room_id`:
+
+```python
+await kit.attach_channel("planning", "teams-main", group=True)
+```
+
 ### Stamping `sender_name`
 
 Two built-in ingress paths already write it: the Teams webhook parser (`parse_teams_webhook`, `parse_teams_activity` and `parse_teams_reactions`) and the WhatsApp Personal (neonize) source. A host feeding `process_inbound` itself passes the name on the message:

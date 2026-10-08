@@ -385,6 +385,16 @@ on the binding, so every sender shares the room:
 await kit.attach_channel("team", "sms-team", group=True)
 ```
 
+The sender is recorded when the message is routed, under the room lock, so
+two first messages arriving together land apart, and a message a hook refuses
+has been routed all the same. A sender is known by their address and by the
+identity the store resolves it to (`link_address`); what the host sends with
+`deliver()` does not close a room to its customer's reply. A member added
+under an id that is neither closes the room to routing: route their messages
+with `room_id`, or link the address. A provider's delivery status follows the
+same rule: the room whose binding names its recipient, never the oldest of
+several.
+
 Pass `room_id` to `process_inbound()` to route explicitly, or install a custom
 `InboundRoomRouter`. Example: `examples/shared_sms_number.py`.
 

@@ -61,13 +61,15 @@ kit = RoomKit()
 kit.register_channel(BuzzChannel("buzz-main", provider=provider))
 await kit.create_room(room_id="buzz-room")
 await kit.attach_channel(
-    "buzz-room", "buzz-main", metadata={"buzz_channel_id": "<channel-uuid>"}
+    "buzz-room", "buzz-main", group=True, metadata={"buzz_channel_id": "<channel-uuid>"}
 )
 await kit.attach_source("buzz-main", source)    # connects + subscribes
 ```
 
 Register one channel per Buzz channel you want to bridge, and bind each to its
-room. The recipient key `buzz_channel_id` resolves the target Buzz channel UUID
+room. A Buzz channel is a group conversation, so its binding is declared
+`group=True`: without it the default router gives each new member a room of
+their own (RFC §10.4). The recipient key `buzz_channel_id` resolves the target Buzz channel UUID
 at delivery time.
 
 ## Inbound messages
