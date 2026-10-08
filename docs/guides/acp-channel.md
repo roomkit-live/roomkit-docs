@@ -409,6 +409,12 @@ prefixes what it missed to the prompt:
 what did claude just do?
 ```
 
+- **The request names its sender.** When the agent's visible window and the
+  request hold several speakers, the request opens with its sender's label
+  after a note that says how labels read (`@sms1: Alice: approve it` for an
+  unnamed sender who wrote `Alice:`), so it does not read as the person the
+  room context named (RFC §6.4). A one-to-one room's request is sent as it is,
+  and an instruction from the application keeps its mark.
 - **Only the gap.** What arrived since this agent's last prompt, never what its
   session already holds — an ordinary back-and-forth carries no block at all.
 - **Only what it may see.** The block is filtered per reader (RFC §7.5 rule 8),
