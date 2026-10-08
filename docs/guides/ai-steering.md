@@ -115,13 +115,15 @@ from __future__ import annotations
 
 from roomkit import HookTrigger, ChannelType
 from roomkit.models.steering import InjectMessage
+from roomkit.tools.fence import fence
 
 @kit.hook(HookTrigger.BEFORE_BROADCAST, channel_types={ChannelType.SMS})
 async def inject_sms_context(event, ctx):
     ai = kit.get_channel("ai-assistant")
     ai.steer(
         InjectMessage(
-            content=f"SMS received from {event.source.participant_id}: {event.content.body}",
+            # The sender's words in a block they cannot close (RFC §6.4).
+            content="An SMS was received:\n" + fence("message", event.content.body),
             role="user",
         ),
         room_id=event.room_id,

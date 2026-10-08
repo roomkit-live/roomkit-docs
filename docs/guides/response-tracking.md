@@ -50,14 +50,21 @@ thread and always names the thread's root (see
 
 ```python
 from roomkit import HookResult, HookTrigger, add_turn_note
+from roomkit.tools.fence import fence
 
 @kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def scope_the_turn(event, ctx) -> HookResult:
     trigger = event.trigger
-    note = f"This turn answers: {trigger.content.body!r}. Answer that only."
+    note = "This turn answers the message below. Answer that only.\n" + fence(
+        "message", trigger.content.body
+    )
     event.ai_context.messages = add_turn_note(event.ai_context.messages, note)
     return HookResult.allow()
 ```
+
+The person's words are fenced: a note is read as the runtime's, and text set
+apart in a block it cannot close cannot pass itself off as part of the note
+(RFC §6.4). A `repr()` is no such frame.
 
 An orchestration strategy can hand a turn a stand-in in place of the event it
 answers, such as a supervisor's workers' results. The stand-in names the event
