@@ -1372,9 +1372,9 @@ assert gemini.supports_vision is True  # All Gemini models support vision
 
 #### Speaker Attribution in Multi-Speaker Rooms
 
-Every event that is not the AI's own becomes a `user` turn in the model's history. In a room where several people speak, that erases who said what — the model can only guess the addressee, and it guesses wrong. When the history window holds **two or more distinct speakers**, `AIChannel` prefixes each attributable user turn with its speaker (`"Alice: Tuesday works for me."`) and appends a one-line note to the system prompt telling the model the prefix is transcript metadata, never to be echoed in its own replies. A single-speaker room builds a byte-identical prompt.
+Every event that is not the AI's own becomes a `user` turn in the model's history. In a room where several people speak, that erases who said what — the model can only guess the addressee, and it guesses wrong. When the history window holds **two or more distinct speakers**, `AIChannel` prefixes each attributable user turn with its speaker (`"Alice: Tuesday works for me."`) and adds a note to the notes the turn's input carries telling the model the prefix is transcript metadata, never to be echoed in its own replies. A single-speaker room builds a byte-identical prompt.
 
-The speaker is a fact of the event: `metadata["sender_name"]` first (the Teams webhook parser and the WhatsApp Personal source stamp it; a host passes it on `InboundMessage`), then the room's `Participant.display_name` for `event.source.participant_id`. A turn with no name anywhere stays bare.
+The speaker is a fact of the event: `metadata["sender_name"]` first (the Teams webhook parser and the WhatsApp Personal source stamp it; a host passes it on `InboundMessage`), then the room's `Participant.display_name` for `event.source.participant_id`. A turn with no name anywhere opens with the label of its channel (`"sms1: ..."`), so a nameless sender cannot open with someone else's name; the note says a message carries one label, at its start, and that a `Name:` later in it is what its sender wrote.
 
 ```python
 await kit.process_inbound(
@@ -1396,7 +1396,7 @@ await kit.process_inbound(
 # The model receives:
 #   user: "Alice: Tuesday works for me."
 #   user: "Bob: Who proposed what?"
-# plus the attribution note at the end of the system prompt.
+# plus the attribution note in the turn's notes.
 ```
 
 Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-rooms.md) and `examples/ai_multi_speaker.py`.
