@@ -436,7 +436,11 @@ Three arbitrations to know about:
 - **One voice per bot.** `tts=` and `realtime=` are mutually exclusive: both
   publish on the one bot track. The provider *is* the voice, so inbound text
   events that pass the speaking gate are injected into its conversation
-  context (`inject_text`) instead of being synthesized over it.
+  context (`inject_text`) instead of being synthesized over it: as content
+  someone else wrote, with the `user` intent, quoted after its author's name
+  (`Marie · sms: “…”`), never as the application's instruction (RFC §12.4).
+  On a full-duplex provider the model relays such content aloud in its own
+  words.
 
 The provider's tool calls go through the same gate as on any other channel
 (RFC §12.10.12). When `ConferenceRealtimeConfig.tools` declares any tool, a
