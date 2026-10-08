@@ -389,7 +389,10 @@ The sender is recorded when the message is routed, under the room lock, so
 two first messages arriving together land apart, and a message a hook refuses
 has been routed all the same. A sender is known by their address and by the
 identity the store resolves it to (`link_address`); what the host sends with
-`deliver()` does not close a room to its customer's reply. A member added
+`deliver()` does not close a room to its customer's reply, and a message routed
+under the framework's own sender (`system`) is never let into an existing
+room. A message whose room lock stays taken past `process_timeout` while it is
+being recorded is refused as a process timeout. A member added
 under an id that is neither closes the room to routing: route their messages
 with `room_id`, or link the address. A provider's delivery status follows the
 same rule: the room whose binding names its recipient, never the oldest of
