@@ -229,8 +229,9 @@ nova = AIChannel(
   asked (no classifier call). The turn is stored, and a thinker thinks about it:
   the agent hears it. Asked again once it thought, it stays silent.
 - A turn from one of the people is the wrapped policy's, with only those people
-  in `SpeakTurn.people`: Sylvain alone in front of the television is a
-  conversation with one person, not a group.
+  in `SpeakTurn.people`, the speaker among them even when the room's
+  participant record names the microphone otherwise: Sylvain alone in front of
+  the television is a conversation with one person, not a group.
 - A speaker is matched by the name the room gives them (the name the sender's
   transport stamped, else the participant's display name), ignoring case and
   spacing. It chooses whom the agent answers; it is **not an access control**: a
