@@ -1845,7 +1845,8 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=Stri
 ### StripTechnicalText
 
 Removes the technical text a model may write into a spoken reply: a JSON object
-(recognised by its quoted first key, `{"`), such as a tool call or a tool
+(recognised by its first key, quoted, `{"`, or a bare name and a colon,
+`{agent:`), such as a tool call or a tool
 result written as words instead of calling the tool; a note to itself,
 `(Note: ...)` or `(NB: ...)`; a separator of three dashes or more. Whatever
 model the application picks, a reply sometimes carries them, and removing them
@@ -1867,7 +1868,9 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=Stri
   is cut into sentences: an object holding a full stop is removed whole, which
   a `BEFORE_TTS` hook, judging one sentence at a time, cannot do.
 - Ordinary text passes: `(about ten minutes)`, `{x}`, `well-known`, `--`. An
-  object or a note still open when the stream ends is removed.
+  object or a note still open when the stream ends is removed, and a removal
+  leaves one space between the words around it (`Searching.{…}Back soon.` is
+  spoken `Searching. Back soon.`).
 - Each object or note removed is logged as a warning with its length; its text
   only at DEBUG, through `redact()`. The response stored in the conversation
   keeps the model's text: the slip stays visible, it is just not heard.
