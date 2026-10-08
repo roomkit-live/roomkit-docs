@@ -45,9 +45,10 @@ A runnable version, with two people and the three modes, is
   participants that are neither agents nor bots, or the distinct speakers of the
   recent events when there are more (one microphone may carry several diarized
   voices);
-- `speakers` — who said `event` and each of `recent`, by event id, where the room
-  names them (the name the sender's transport stamped, else the participant's
-  display name);
+- `speakers` — who said `event` and each of `recent`, by event id, by the label
+  the AI context gives them: the sender's name, the channel for a sender with
+  none (`@sms1`), and the rank of a sender whose name reads like an earlier
+  one's (`ALICE (2)`, a different person from Alice);
 - `channel_id` — the agent's channel: `turn.by_agent(e)` tells the agent's own
   answers in `recent`.
 
@@ -232,10 +233,10 @@ nova = AIChannel(
   in `SpeakTurn.people`, the speaker among them even when the room's
   participant record names the microphone otherwise: Sylvain alone in front of
   the television is a conversation with one person, not a group.
-- A speaker is matched by the name the room gives them (the name the sender's
-  transport stamped, else the participant's display name), ignoring case and
-  spacing. It chooses whom the agent answers; it is **not an access control**: a
-  participant may take any display name.
+- A speaker is matched by the label the room gives them, ignoring case and
+  spacing: a sender who writes `ALICE` after Alice reads `ALICE (2)` and is not
+  answered as Alice. It chooses whom the agent answers; it is **not an access
+  control**: a participant may take any display name.
 - An instruction, a task's hand-back among them, never reaches a policy, so it
   is answered whoever it came from.
 - `close()` closes the policy it wraps.
