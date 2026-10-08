@@ -36,6 +36,8 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ::: roomkit.orchestration.set_conversation_state
 
+::: roomkit.orchestration.save_conversation_state
+
 ## Pipeline
 
 ::: roomkit.orchestration.ConversationPipeline

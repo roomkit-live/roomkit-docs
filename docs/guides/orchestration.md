@@ -688,7 +688,7 @@ Inbound event
 Tracks conversation progress within a room. Stored in `Room.metadata["_conversation_state"]` and round-trips through JSON cleanly.
 
 ```python
-from roomkit.orchestration import ConversationState, get_conversation_state, set_conversation_state
+from roomkit.orchestration import ConversationState, get_conversation_state, save_conversation_state
 
 # Read state from a room
 state = get_conversation_state(room)
@@ -703,9 +703,9 @@ new_state = state.transition(
     reason="User request classified as billing issue",
 )
 
-# Persist (caller must save via store)
-updated_room = set_conversation_state(room, new_state)
-await kit.store.update_room(updated_room)
+# Persist its metadata key alone: a full room write from the room read
+# above would undo what was written since
+await save_conversation_state(kit.store, room.id, new_state)
 ```
 
 ### ConversationPhase
