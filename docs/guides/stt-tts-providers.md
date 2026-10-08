@@ -1871,11 +1871,19 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=Stri
 - Each object or note removed is logged as a warning with its length; its text
   only at DEBUG, through `redact()`. The response stored in the conversation
   keeps the model's text: the slip stays visible, it is just not heard.
-- Reasoning written in plain words ("Need no tool.") is not recognised: no rule
-  tells it from an answer.
+- The rules do not know who a note is for: `(Note: holidays may delay it)`
+  written for the listener goes too. Reasoning written in plain words ("Need no
+  tool.") is not recognised: no rule tells it from an answer. The fence or the
+  brackets around a removed object stay (a Markdown code block, a JSON array):
+  chain `StripBrackets` for the brackets.
 
 `examples/voice_strip_technical_text.py` runs it on a whole reply and a
 streamed one.
+
+A voice channel streams each response through its own copy of its filter, so
+replies streamed at once in several rooms never share what a filter holds open;
+a filter of your own holding something that cannot be copied defines
+`__deepcopy__`.
 
 ### TTSFilterChain
 
