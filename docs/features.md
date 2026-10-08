@@ -2893,7 +2893,6 @@ Real-time video capture and AI-powered frame analysis:
 ```python
 from roomkit import VideoChannel
 from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
-from roomkit.video.ai_integration import setup_video_vision
 from roomkit.video.backends.local import LocalVideoBackend
 
 # Webcam backend
@@ -2906,8 +2905,8 @@ vision = GeminiVisionProvider(GeminiVisionConfig(api_key="..."))
 video = VideoChannel("video", backend=backend, vision=vision, vision_interval_ms=3000)
 kit.register_channel(video)
 
-# Wire vision results into AI conversation context
-setup_video_vision(kit, room_id="room", ai_channel_id="ai")
+# The room's AI channels read what the camera last showed in their turn's
+# notes, as a <vision> block (RFC §12.8.7): nothing to wire
 
 # Connect and start capture (previously connect_video(), now unified as join())
 session = await kit.join("room", "video")
@@ -2963,7 +2962,6 @@ Capture your screen (or a region of it) for AI-powered analysis and recording:
 
 ```python
 from roomkit import VideoChannel
-from roomkit.video.ai_integration import setup_video_vision
 from roomkit.video.backends.screen import ScreenCaptureBackend
 
 # Capture primary monitor at 2 FPS, half resolution, skip static frames

@@ -11,7 +11,7 @@ Screen (mss)
     → optional downscaling
   → VideoChannel (session lifecycle, hooks, throttled vision sampling)
   → VisionProvider (frame → JPEG → AI API → VisionResult with OCR)
-  → setup_video_vision() → AIChannel system prompt
+  → the room's AIChannels: a <vision> block in each turn's notes
   → AI responds with awareness of what's on screen
 ```
 
@@ -33,7 +33,6 @@ import asyncio
 from roomkit import RoomKit, VideoChannel, AIChannel, ChannelCategory
 from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
 from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.video.ai_integration import setup_video_vision
 from roomkit.video.backends.screen import ScreenCaptureBackend
 
 async def main():
@@ -57,7 +56,7 @@ async def main():
     await kit.create_room(room_id="screen-demo")
     await kit.attach_channel("screen-demo", "video")
     await kit.attach_channel("screen-demo", "ai", category=ChannelCategory.INTELLIGENCE)
-    setup_video_vision(kit, room_id="screen-demo", ai_channel_id="ai")
+    # Nothing else to wire: the AI's turns read what the screen last showed.
 
     # Start capturing (previously connect_video(), now unified as join())
     session = await kit.join("screen-demo", "video", participant_id="user-1")

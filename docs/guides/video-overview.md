@@ -61,12 +61,9 @@ Vision providers analyze video frames and return text descriptions, OCR results,
 | `OpenAIVisionProvider` | OpenAI / Ollama / vLLM | `roomkit[openai]` |
 | `MockVisionProvider` | Testing | Built-in |
 
-Vision results are delivered through the `ON_VISION_RESULT` hook and can be automatically injected into AI conversation context:
+Vision results are delivered through the `ON_VISION_RESULT` hook, and every AI channel of the room reads the latest one in its turn's notes, as a `<vision>` block (RFC §12.8.7), with no wiring:
 
 ```python
-# Continuous: wire vision results into an AI channel
-setup_video_vision(kit, room_id="room", ai_channel_id="ai")
-
 # Continuous: wire vision results into a realtime voice session
 setup_realtime_vision(kit, room_id="room", voice_channel_id="voice")
 ```
