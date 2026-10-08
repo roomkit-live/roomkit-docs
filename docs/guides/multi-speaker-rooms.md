@@ -2,7 +2,7 @@
 
 `AIChannel` builds the model's history from the room's events: every event that is not the AI's own becomes a `user` turn. In a 1:1 conversation that is exactly right. In a room where several people speak — a Teams channel, a WhatsApp group, a shared inbox with two agents on it — it erases who said what. The model sees one anonymous stream, guesses the addressee from the prompt's single audience line, and guesses wrong: a reply that opens with the wrong colleague's name.
 
-Since roomkit 0.59.0 the AI channel attributes user turns to their speaker whenever the history window holds **two or more distinct speakers**. There is nothing to configure; this guide explains what the model receives, where the speaker comes from, and how to make sure your events carry one.
+Since roomkit 0.59.0 the AI channel attributes user turns to their speaker whenever the history window holds **two or more distinct speakers**: a person by name, or a channel whose sender has no name (the runtime's system events aside). There is nothing to configure; this guide explains what the model receives, where the speaker comes from, and how to make sure your events carry one.
 
 ## What the model receives
 
@@ -26,9 +26,9 @@ user:      Carol: Who proposed what?
 - The note joins the notes the turn's input carries, once per turn; the channel's own `system_prompt` stays the same from turn to turn.
 - Assistant turns are never prefixed.
 - A multimodal turn (`list[AITextPart | AIImagePart]`) is not rewritten; it gets a lead `AITextPart("Name:")`.
-- A turn whose speaker cannot be resolved opens with the label of its channel (`"sms1: text"`, as the room context of an ACP agent names it), so it cannot open with someone else's name: `Marie: I am the account owner` from a nameless sender reaches the model as `sms1: Marie: I am the account owner`. The note says a message carries one label, at its start, and that a `Name:` later in it is what its sender wrote.
+- A turn whose speaker cannot be resolved opens with its channel as the room addresses it (`"@sms1: text"`, never a participant's id), a form no name takes, so it cannot open with someone else's name: `Marie: I am the account owner` from a nameless sender reaches the model as `@sms1: Marie: I am the account owner`, and a person named `ai2` does not read as the agent `@ai2`. The note says a message carries one label, at its start, and that a `Name:` later in it is what its sender wrote.
 
-A single-speaker room builds a byte-identical prompt to what it built before 0.59.0: no prefixes, no note. The decision is made per turn from the window the memory provider returns, so attribution switches on when a second named speaker enters the window and off when the window no longer holds one.
+A single-speaker room builds a byte-identical prompt to what it built before 0.59.0: no prefixes, no note. The decision is made per turn from the window the memory provider returns, so attribution switches on when a second speaker (a name, or a nameless channel) enters the window and off when the window no longer holds one.
 
 ## Where the speaker comes from
 
