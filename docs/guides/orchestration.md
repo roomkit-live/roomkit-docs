@@ -909,11 +909,12 @@ another model: each worker's output, a reviewer's feedback and the content a
 reviewer judges are a `<worker_output>` block of their own under their label,
 and the user's goal copied into such an input is a `<task>` block. The task a
 supervisor frames for a worker stays that worker's own input. When several
-people speak in the room, a delegated task names who asked for it, out of its
-block: `Alice asked:` before a participant's own words, `Requested by Alice (2),
-in the delegating agent's words:` before a task an agent wrote (a tool reads the
-asker with `roomkit.tools.current_tool_requester()`); a one-to-one conversation
-names no one.
+people speak in the room, a `<task>` block is headed by who asked for it:
+`Alice asked:` before a participant's own words, `Requested by Alice (2), in
+the delegating agent's words:` before a task an agent wrote (a tool reads the
+asker with `roomkit.tools.current_tool_requester()`). Only the block's heading
+names the asker: the runtime's own prompts and a worker's own input carry
+none, and a one-to-one conversation names no one.
 
 ## ConversationPipeline
 
