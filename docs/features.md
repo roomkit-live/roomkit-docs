@@ -326,7 +326,7 @@ boundary; never accept the scope itself from untrusted request data.
 
 Every message passes through a deterministic processing pipeline:
 
-1. **Inbound routing** -- Resolve which room the message belongs to (by channel binding or participant)
+1. **Inbound routing** -- Resolve which room the message belongs to (by the sender's own room, then by a channel bound to a single conversation; see [Inbound Routing](#inbound-routing-one-conversation-per-correspondent))
 2. **Auto-create** -- If no room found, create a new room and attach the channel
 3. **Channel conversion** -- `handle_inbound()` converts the raw message to a `RoomEvent`
 4. **Identity resolution** -- Identify the sender (optional, with timeout and channel filtering)
@@ -341,6 +341,52 @@ Every message passes through a deterministic processing pipeline:
 13. **Side effects** -- Persist tasks and observations
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
+
+### Inbound Routing: One Conversation per Correspondent
+
+A message that arrives without a `room_id` is routed by the default
+`DefaultInboundRoomRouter` (RFC §10.4), which never guesses:
+
+1. **The sender's own room.** The room whose binding of the channel the
+   message came on names the sender, then the room where the sender is a
+   participant.
+2. **A channel dedicated to one conversation.** When the channel is bound to
+   exactly one ACTIVE room, that room is returned only if it is open to the
+   sender: its binding is declared `group`, or it names no one else, no other
+   participant joined the room through the channel, and the room received
+   nothing on the channel from another sender.
+3. Otherwise **a new room**, whose binding names the sender.
+
+The first sender routed through a binding that names no one is recorded on it
+(`ChannelBinding.participant_id`), so their next message finds their room and
+no one else is let in. On one SMS number shared by many customers, each
+customer gets a room of their own:
+
+```python
+async def room_of(sender: str) -> str:
+    result = await kit.process_inbound(
+        InboundMessage(channel_id="sms", sender_id=sender, content=TextContent(body="hi"))
+    )
+    return result.event.room_id
+
+alice_room = await room_of(ALICE)
+bob_room = await room_of(BOB)
+assert bob_room != alice_room  # bob's agent reads nothing of alice's conversation
+assert await room_of(ALICE) == alice_room
+```
+
+A binding speaks for its own channel: a customer of one number writing to
+another number of the same kit lands in that number's conversation. A room the
+host opened with a member on the channel (`add_member`) is that member's
+before they write. A group chat on a channel dedicated to its room is declared
+on the binding, so every sender shares the room:
+
+```python
+await kit.attach_channel("team", "sms-team", group=True)
+```
+
+Pass `room_id` to `process_inbound()` to route explicitly, or install a custom
+`InboundRoomRouter`. Example: `examples/shared_sms_number.py`.
 
 ### Deferred Delivery
 

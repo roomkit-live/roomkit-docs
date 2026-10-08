@@ -132,7 +132,7 @@ Supporting core modules:
 |---|---|---|
 | **HookEngine** | `core/hooks.py` | Manages global and per-room hooks. Executes sync pipelines (block/allow/modify) and async side effects. Priority-based ordering with timeout enforcement. Supports channel-type/ID/direction filtering. |
 | **EventRouter** | `core/event_router.py` | Broadcasts events to eligible channels. Enforces access control, transcodes content, applies circuit breakers and rate limiting. Collects reentry events and side effects. |
-| **InboundRoomRouter** | `core/inbound_router.py` | Resolves which room an inbound message belongs to. Default implementation queries the store by channel binding, then by participant + channel type. |
+| **InboundRoomRouter** | `core/inbound_router.py` | Resolves which room an inbound message belongs to. Default implementation finds the sender's own room (the binding of this channel naming them, then a participant of the same channel type), then a channel bound to a single conversation that is open to the sender, else returns null for a new room (RFC §10.4). |
 | **ContentTranscoder** | `core/transcoder.py` | Converts content between channel capabilities (e.g., rich text to plain text for SMS, media to caption text). |
 | **CircuitBreaker** | `core/circuit_breaker.py` | Fault isolation via closed/open/half-open state machine. Per-channel instances isolate failing providers. |
 | **TokenBucketRateLimiter** | `core/rate_limiter.py` | Per-channel token bucket rate limiter. Supports per-second, per-minute, and per-hour limits. |
