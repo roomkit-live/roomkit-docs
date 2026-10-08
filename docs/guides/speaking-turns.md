@@ -206,6 +206,41 @@ done.
 
 A runnable version is `examples/speaking_judgments.py`.
 
+## Answering only some people
+
+An agent may listen to everyone in a room and answer only some of them: a
+television on in the living room, a meeting where it assists one person.
+`AnswerOnly` wraps any policy:
+
+```python
+from roomkit import AnswerOnly, ClassifierSpeakPolicy
+
+nova = AIChannel(
+    "nova",
+    provider=provider,
+    speak_policy=AnswerOnly(
+        ClassifierSpeakPolicy(classifier, agent_name="Nova"), people=["Sylvain"]
+    ),
+)
+```
+
+- A turn from anyone else, or from a speaker the room does not name, is
+  `silent` with the reason `only listened to`, and the policy it wraps is not
+  asked (no classifier call). The turn is stored, and a thinker thinks about it:
+  the agent hears it. Asked again once it thought, it stays silent.
+- A turn from one of the people is the wrapped policy's, with only those people
+  in `SpeakTurn.people`: Sylvain alone in front of the television is a
+  conversation with one person, not a group.
+- A speaker is matched by the name the room gives them (the name the sender's
+  transport stamped, else the participant's display name), ignoring case and
+  spacing. It chooses whom the agent answers; it is **not an access control**: a
+  participant may take any display name.
+- An instruction, a task's hand-back among them, never reaches a policy, so it
+  is answered whoever it came from.
+- `close()` closes the policy it wraps.
+
+A runnable version is `examples/answering_some_people.py`.
+
 ## Thinking while listening
 
 Give the channel a **thinker** too, and the agent keeps a thought while it
