@@ -411,7 +411,7 @@ what did claude just do?
 
 - **The request names its sender.** When the agent's visible window and the
   request hold several speakers, the request opens with its sender's label
-  (`@sms1: Alice: approve it` for an unnamed sender who wrote `Alice:`), so
+  (`@sms1: "Alice: approve it"` for an unnamed sender who wrote `Alice:`), so
   it does not read as the person the room context named (RFC §6.4). Once a
   session was sent a labelled request, every later request in it is
   labelled, whatever the loaded window holds, and the note that says how
