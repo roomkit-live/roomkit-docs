@@ -438,7 +438,7 @@ Three arbitrations to know about:
   events that pass the speaking gate are injected into its conversation
   context (`inject_text`) instead of being synthesized over it: as content
   someone else wrote, with the `user` intent, quoted after its author's name
-  (`Marie · sms: “…”`), never as the application's instruction (RFC §12.4).
+  (`Marie: “…”`), never as the application's instruction (RFC §12.4).
   On a full-duplex provider the model relays such content aloud in its own
   words.
 

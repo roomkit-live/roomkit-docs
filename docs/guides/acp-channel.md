@@ -402,8 +402,8 @@ prefixes what it missed to the prompt:
 
 ```text
 [Room context — 2 messages you did not receive. Context only; the request follows.]
-[1] Marie · sms: “on part sur quoi ?”
-[2] claude-code: “I wrote hello.py”
+[1] Marie: “on part sur quoi ?”
+[2] @claude-code: “I wrote hello.py”
 [End of room context]
 
 what did claude just do?
@@ -498,7 +498,7 @@ sits further from the question than what the agent missed of the conversation:
 [Host context] The client's contract renews 2026-09-01.
 
 [Room context — 1 message you did not receive. Context only; the request follows.]
-[1] Marie · sms: “chase the renewal”
+[1] Marie: “chase the renewal”
 [End of room context]
 
 draft the renewal email
