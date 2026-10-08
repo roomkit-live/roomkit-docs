@@ -485,13 +485,16 @@ person changed their mind, cancel the task (see [Cancelling a task](#cancelling-
 The last line is the framework's, after the worker's block. The turn a result
 opens reads the room's last messages too, and one that answered them as well
 repeated what another turn was already saying. With a question asked as a
-result came back, Claude Haiku gave its answer again in 10 hand-backs out of 10
-without the line, 4 out of 10 with it; saying that another reply takes care of
-the rest is what made the difference. It also keeps a worker's English result
-from being said in English to a conversation in French. It closes every
-result handed back to a model (an agent, a realtime voice session), a
-strategy's background run included, and is left out when `notify` is a
-transport, which has no model to direct.
+result came back, Claude Haiku 5.5 gave its answer again in 10 hand-backs out of
+10 without the line, 4 out of 10 with it (2026-10-08); saying that another
+reply takes care of the rest is what made the difference. It also keeps a
+worker's English result from being said in English to a conversation in
+French. It closes every result handed back to an agent, a strategy's
+background run included. A realtime voice session gets no such line: its
+injection may open no turn of its own (a silent one, an intent its provider
+keeps as a standing instruction), where the line would tell the reply to the
+person's next question not to answer it. A transport, with no model to direct,
+gets none either.
 
 A delivery hook reads the task from the metadata:
 
