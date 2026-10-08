@@ -158,7 +158,8 @@ alongside tools and leaving it out answers 400 on the models that default
 higher. A model the catalogue does not tag, a custom `base_url` and Azure send
 none on such a turn, and log one warning per provider when an effort is left
 out, unless `supports_reasoning_effort_with_tools` on the config says whether
-the server takes it there; a stated value outranks the catalogue. Tool-free turns use the turn's effort, else
+the server takes it there; a model the catalogue tags follows its tag whatever
+the field says. Tool-free turns use the turn's effort, else
 `OpenAIConfig.reasoning_effort`, else the model default. See
 [Reasoning settings on a turn with tools](../guides/ai-thinking.md#reasoning-settings-on-a-turn-with-tools).
 

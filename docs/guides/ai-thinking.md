@@ -486,7 +486,8 @@ the value accepted, read from its model catalogue:
 | Anthropic, Gemini, Ollama, vLLM, Cerebras, Meta, Qwen, PolarGrid, xAI, Mistral, DeepSeek, OpenRouter | As on any turn |
 | OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3`, `o4-mini` | The turn's `reasoning_effort` |
 | OpenAI: `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna` | `none`, the only value Chat Completions takes with function tools |
-| OpenAI: any other model (not in the catalogue, `gpt-6-astra`, `gpt-6.1-sol`, the `-pro` models), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out, with one warning per provider: the model is not known, or does not take function tools on Chat Completions. `supports_reasoning_effort_with_tools=True` sends it |
+| OpenAI: a model not in the catalogue, or not tagged (`gpt-4.1`), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out, with one warning per provider: the model is not known. `supports_reasoning_effort_with_tools=True` sends it |
+| OpenAI: `gpt-6-astra`, `gpt-6.1-sol`, the `-pro` models | The turn is refused before the request (`ProviderError`): Chat Completions takes no function tools for them, or does not serve them |
 
 Behind a `base_url`, on an Azure deployment or a LiteLLM alias, the provider
 cannot know which model answers, nor so whether it takes `reasoning_effort`
@@ -510,12 +511,19 @@ provider = OpenAIAIProvider(
 
 `True` sends the turn's reasoning on a turn with tools as on any other (on
 LiteLLM, the `thinking` budget too); `False` leaves it out without the warning;
-unset leaves it out and warns once. A stated value outranks OpenAI's catalogue
-on its own endpoint. A server that does not take the pair answers the turn
-with an error, so check it first: `examples/openai_compatible_tool_effort.py`
-sends the same tool turn both ways and prints the reasoning tokens of each.
-On Inception's Mercury 2.5 at `low` (2026-10-08), it measured 393 to 851
-reasoning tokens with the effort left out and 247 to 256 with it sent.
+unset leaves it out and warns once. On OpenAI's own endpoint a model the
+catalogue tags follows its tag whatever the field says, since the catalogue
+records what Chat Completions measurably takes. The configs of the providers
+that apply their vendor's own rule (xAI, OpenRouter, Meta, Cerebras, DeepSeek,
+Qwen) refuse the field with a `ValidationError` rather than ignore it.
+
+A server that does not take the pair answers the turn with an error, and one
+that cannot read its model's reasoning back fails on the next round, so check
+both first: `examples/openai_compatible_tool_effort.py` runs the same
+two-round tool loop (a call, then an answer from the tool's result) both ways
+and prints each round's reasoning tokens. On Inception's Mercury 2.5 at `low`
+(2026-10-08), the first round measured 393 to 851 reasoning tokens with the
+effort left out and 247 to 256 with it sent.
 
 ## Data model
 
