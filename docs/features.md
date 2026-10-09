@@ -1598,7 +1598,7 @@ Vision is the input direction. `ImageProvider` is the output one — an agent th
 from roomkit.providers.gemini import GeminiImageConfig, GeminiImageProvider
 
 images = GeminiImageProvider(GeminiImageConfig(api_key="...", model="gemini-nano-banana-2.1"))
-[result] = await images.generate("un renard en origami", size="1024x1024")
+[result] = await images.generate("an origami fox", size="1024x1024")
 
 result.data          # "data:image/jpeg;base64,…" — always a data URI
 result.decoded()     # raw JPEG bytes (Nano Banana 2.1 returns JPEG only)
