@@ -394,10 +394,55 @@ identity the store resolves it to (`link_address`); what the host sends with
 under the framework's own sender (`system`) is never recorded on a binding
 nor let into an existing room that is not a group. A message whose room lock stays taken past `process_timeout` while it is
 being recorded is refused as a process timeout. A member added
-under an id that is neither closes the room to routing: route their messages
-with `room_id`, or link the address. A provider's delivery status follows the
-same rule: the room whose binding names its recipient, never the oldest of
-several.
+under an id that is neither closes the room to routing, unless the binding's
+recipient names them (below): route their messages with `room_id`, or link the
+address. A provider's delivery status follows the same rule: the room whose
+binding names its recipient, never the oldest of several.
+
+#### A room prepared for a correspondent
+
+On a channel whose replies go to the address the correspondent writes from
+(SMS, RCS, WhatsApp, WhatsApp Personal, email, Messenger), a binding's
+recipient names its correspondent. A room the host opens for a customer's
+number is that customer's from the start: a stranger writing first gets a room
+of their own, and the customer is found at their first message, whatever the
+number of rooms on the channel.
+
+```python
+await kit.create_room(room_id="alice-appointment")
+await kit.attach_channel("alice-appointment", "sms", metadata={"phone_number": ALICE})
+# the binding now names ALICE (participant_id): bob is not let in
+
+assert await room_of(BOB) != "alice-appointment"
+assert await room_of(ALICE) == "alice-appointment"
+```
+
+On the other transports (HTTP webhooks, Telegram, Teams, Discord, Buzz) the
+recipient is a URL, a chat or a conversation: it names no one, and the
+framework does not write an inbound sender there either. A transport channel
+of your own declares which kind it is with
+`TransportChannel(..., replies_to_sender=True)`.
+
+#### Phone numbers in E.164
+
+The phone channels compare and store numbers in one form, E.164: the inbound
+sender, a binding's correspondent and recipient, and a member's id given on
+the channel. `whatsapp:+15550000001`, `+1 (555) 000-0001` and, with a country
+code configured, `(555) 000-0001` are one person:
+
+```python
+sms = SMSChannel("sms", provider=provider, default_country_code="1")
+await kit.attach_channel("r1", "sms", metadata={"phone_number": "(555) 000-0001"})
+# stored as "+15550000001"; an inbound "+15550000001" is the same correspondent
+```
+
+Digits without `+` and with no country code configured are kept as they are,
+never given a country (`13800138000` is a national number in China, and
+`+13800138000` one in North America). The Sinch and WhatsApp Personal parsers
+add the `+` their providers leave out. A channel's own form is
+`channel.normalize_address(address)`; the message's `raw_payload` keeps the
+provider's spelling. An identity address linked under another spelling
+(`link_address`) no longer matches: link it in E.164.
 
 Pass `room_id` to `process_inbound()` to route explicitly, or install a custom
 `InboundRoomRouter`. Example: `examples/shared_sms_number.py`.

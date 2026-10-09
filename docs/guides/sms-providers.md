@@ -390,6 +390,12 @@ elif meta.is_status:
 
 ## Phone Number Utilities
 
+The SMS, RCS and WhatsApp channels already compare and store numbers in E.164
+for routing (set `default_country_code` on the channel for numbers your
+provider or your users write without it; see
+[Phone numbers in E.164](../features.md#phone-numbers-in-e164)). The helpers
+below validate a number a person typed, with the `phonenumbers` metadata:
+
 ```python
 from __future__ import annotations
 
