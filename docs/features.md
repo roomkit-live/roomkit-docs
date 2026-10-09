@@ -2354,7 +2354,12 @@ provider = TelegramBotProvider(TelegramConfig(bot_token="YOUR_BOT_TOKEN"))
 kit.register_channel(TelegramChannel("telegram-main", provider=provider))
 ```
 
-Recipient read from `binding.metadata["telegram_chat_id"]`. Outbound Markdown is
+`TelegramConfig(api_base_url=...)` points the provider at a self-hosted Bot API
+server or a local fake (HTTPS, or plain HTTP to this machine only); the bot
+token rides every request, so no other URL is accepted.
+
+Recipient read from `binding.metadata["telegram_chat_id"]`; a room RoomKit
+opens for a message replies to the chat it came from. Outbound Markdown is
 rendered into native Telegram entities (bold, code, links); set
 `rich_messages=True` to opt in to Bot API 10.1 Rich Messages (native tables and
 headings), with automatic fallback to entity formatting. Supports text, rich

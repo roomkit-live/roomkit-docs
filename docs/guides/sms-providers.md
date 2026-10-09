@@ -57,6 +57,7 @@ provider = TwilioSMSProvider(
 | `from_number` | required | Default sender number (E.164) |
 | `messaging_service_sid` | `None` | Messaging Service ID (better rate limits, A/B testing) |
 | `timeout` | `10.0` | HTTP timeout in seconds |
+| `api_base_url` | `https://api.twilio.com` | Another Twilio API host (a sandbox, a local fake under test); HTTPS, or plain HTTP to this machine only |
 
 ### Webhook Handling
 
