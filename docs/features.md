@@ -419,7 +419,8 @@ assert await room_of(ALICE) == "alice-appointment"
 ```
 
 On Telegram, Teams, Discord and Buzz the conversation is the chat, not the
-sender: a message is routed by the chat it was posted in, and a room opened for
+sender (WhatsApp Personal carries both: a group message's conversation is the
+group, a private one's the sender's number): a message is routed by the chat it was posted in, and a room opened for
 it replies there. A user writing to the bot privately and in a group holds two
 rooms, and a group's members share one:
 
@@ -454,7 +455,9 @@ await kit.attach_channel("r1", "sms", metadata={"phone_number": "(555) 000-0001"
 Digits without `+` and with no country code configured are kept as they are,
 never given a country (`13800138000` is a national number in China, and
 `+13800138000` one in North America). The Sinch and WhatsApp Personal parsers
-add the `+` their providers leave out. A channel's own form is
+add the `+` their providers leave out. A WhatsApp Personal sender hidden behind
+an `@lid` id is named by the phone WhatsApp sends with it, or by the whole
+`<id>@lid`, never by digits a normalizer would read as a number. A channel's own form is
 `channel.normalize_address(address)`; the message's `raw_payload` keeps the
 provider's spelling. An identity address linked under another spelling
 (`link_address`) no longer matches: link it in E.164.
