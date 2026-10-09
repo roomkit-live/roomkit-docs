@@ -417,11 +417,12 @@ assert await room_of(BOB) != "alice-appointment"
 assert await room_of(ALICE) == "alice-appointment"
 ```
 
-On the other transports (HTTP webhooks, Telegram, Teams, Discord, Buzz) the
-recipient is a URL, a chat or a conversation: it names no one, and the
-framework does not write an inbound sender there either. A transport channel
-of your own declares which kind it is with
-`TransportChannel(..., replies_to_sender=True)`.
+On Telegram, Teams, Discord and Buzz the recipient is a chat or a
+conversation: it names no one, and a room opened for a message replies to the
+chat the message came from, never privately to its sender. On an HTTP webhook
+the recipient is a URL the host sets. A transport channel of your own declares
+its kind with `TransportChannel(..., replies_to_sender=True)`, or with
+`reply_metadata_key="..."` naming the inbound metadata that holds its chat.
 
 #### Phone numbers in E.164
 
