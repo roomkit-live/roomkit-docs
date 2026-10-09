@@ -7,9 +7,9 @@
 | **Language** | Python | >= 3.12 |
 | **Data Validation** | Pydantic | >= 2.9 |
 | **HTTP Client** | httpx | >= 0.27 (optional) |
-| **AI - Anthropic** | anthropic SDK | >= 0.30 (optional) |
-| **AI - OpenAI** | openai SDK | >= 1.30 (optional) |
-| **AI - Gemini** | google-genai | >= 1.0.0 (optional) |
+| **AI - Anthropic** | anthropic SDK | >= 1.8, < 2 (optional) |
+| **AI - OpenAI** | openai SDK | >= 2.28, < 3 (optional) |
+| **AI - Gemini** | google-genai | >= 2.25.0 (optional) |
 | **AI - Mistral** | mistralai | >= 2.0, < 4 (optional) |
 | **SMS - Twilio** | twilio | >= 9.0 (optional) |
 | **Phone Validation** | phonenumbers | >= 8.13 (optional) |
