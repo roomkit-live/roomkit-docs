@@ -39,7 +39,7 @@ The "who is this sender?" problem gets a dedicated pipeline with:
 - Pluggable resolvers for any user directory
 - Multiple resolution statuses: identified, pending, ambiguous, unknown, rejected
 - Hook triggers for each status (`ON_IDENTITY_AMBIGUOUS`, `ON_IDENTITY_UNKNOWN`)
-- Challenge/response flows for verification
+- Challenge/response flows to identify an unknown sender
 - Channel type filtering (e.g., only resolve SMS, skip WebSocket)
 
 ### Ephemeral Events Without Persistence Overhead
@@ -2079,16 +2079,16 @@ Identity statuses and their hooks:
 | Status | Hook Trigger | Use Case |
 |---|---|---|
 | `IDENTIFIED` | `ON_PARTICIPANT_IDENTIFIED` | User found, proceed normally |
-| `PENDING` | `ON_IDENTITY_AMBIGUOUS` | Awaiting asynchronous verification |
+| `PENDING` | `ON_IDENTITY_AMBIGUOUS` | Awaiting resolution (an advisor or a later message settles it) |
 | `AMBIGUOUS` | `ON_IDENTITY_AMBIGUOUS` | Multiple candidates; prompt for clarification |
 | `UNKNOWN` | `ON_IDENTITY_UNKNOWN` | No match found; request identification |
-| `CHALLENGE_SENT` | -- | Identity hook sent verification challenge; message blocked |
-| `REJECTED` | -- | Identity verification failed; message blocked |
+| `CHALLENGE_SENT` | -- | Identity hook asked the sender who they are; message blocked |
+| `REJECTED` | -- | Identification refused or failed; message blocked |
 
 Identity hooks can return `IdentityHookResult` with:
 - `resolved()` -- Provide the resolved identity
 - `pending()` -- Keep the participant in pending state
-- `challenge()` -- Send a verification message and block the original
+- `challenge()` -- Ask the sender who they are and block the original
 - `reject()` -- Block the message with a reason
 
 Identity hooks also support filtering:

@@ -47,7 +47,7 @@ The resolver returns one of 6 statuses:
 | `PENDING` | Awaiting resolution | Depends on hook | Depends on hook |
 | `AMBIGUOUS` | Multiple candidates | Depends on hook | Depends on hook |
 | `UNKNOWN` | No match found | Depends on hook | Depends on hook |
-| `CHALLENGE_SENT` | Verification sent | No | Yes |
+| `CHALLENGE_SENT` | Identification challenge sent | No | Yes |
 | `REJECTED` | Access denied | No | Yes |
 
 ## Identity Model
@@ -134,12 +134,14 @@ async def on_identified(event, ctx):
 |--------|-----------|--------|
 | `IdentityHookResult.resolved(identity)` | `IDENTIFIED` | Create identified participant |
 | `IdentityHookResult.pending(display_name)` | `PENDING` | Create pending participant |
-| `IdentityHookResult.challenge(inject, message)` | `CHALLENGE_SENT` | Block message, send verification |
+| `IdentityHookResult.challenge(inject, message)` | `CHALLENGE_SENT` | Block message, ask the sender who they are |
 | `IdentityHookResult.reject(reason)` | `REJECTED` | Block message entirely |
 
 ## Challenge/Response Flow
 
-Send a verification challenge and block the original message until the user identifies themselves:
+Ask an unknown or ambiguous sender who they are, and block the original
+message until they do. This is **identification** (whose is this address?),
+not verification of a sender already identified (RFC §11.7).
 
 ```python
 from __future__ import annotations
@@ -151,14 +153,14 @@ from roomkit.models.events import InjectedEvent, TextContent
 
 @kit.identity_hook(HookTrigger.ON_IDENTITY_UNKNOWN)
 async def challenge_unknown(event, context, id_result):
-    # Inject a verification request
+    # Ask the sender to identify themselves
     challenge = InjectedEvent(
         content=TextContent(body="Please reply with your account number to continue."),
         channel_id=event.source.channel_id,
     )
     return IdentityHookResult.challenge(
         inject=challenge,
-        message="Verification challenge sent",
+        message="Identification challenge sent",
     )
 ```
 
@@ -167,6 +169,12 @@ When `CHALLENGE_SENT` is returned:
 1. The original inbound message is **blocked** (not broadcast)
 2. The injected event is delivered to the sender's channel
 3. The sender's next message goes through identity resolution again
+
+Nothing is kept between the two: the challenge has no state or expiry, and
+the reply is an ordinary message. Recognising it (reading the account
+number, linking the address with `link_address`) is your resolver's or
+hook's, and once the sender is identified the reply is stored and broadcast
+like any message, sensitive content included.
 
 ## Configuration
 
