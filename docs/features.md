@@ -396,7 +396,8 @@ nor let into an existing room that is not a group. A message whose room lock sta
 being recorded is refused as a process timeout. A member added
 under an id that is neither closes the room to routing, unless the binding's
 recipient names them (below): route their messages with `room_id`, or link the
-address. A provider's delivery status follows the same rule: the room whose
+address (`link_address`), after which they are found by it whatever the number
+of rooms on the channel. A provider's delivery status follows the same rule: the room whose
 binding names its recipient, never the oldest of several.
 
 #### A room prepared for a correspondent
@@ -457,6 +458,10 @@ add the `+` their providers leave out. A channel's own form is
 `channel.normalize_address(address)`; the message's `raw_payload` keeps the
 provider's spelling. An identity address linked under another spelling
 (`link_address`) no longer matches: link it in E.164.
+
+The email channel does the same for addresses: lower-case, without a display
+name (`Alice Martin <Alice@Example.com>` is `alice@example.com`), so one
+mailbox written two ways is one room.
 
 Pass `room_id` to `process_inbound()` to route explicitly, or install a custom
 `InboundRoomRouter`. Example: `examples/shared_sms_number.py`.
