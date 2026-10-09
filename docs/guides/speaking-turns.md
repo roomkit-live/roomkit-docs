@@ -58,13 +58,16 @@ was addressed takes its name in its constructor.
 
 ## What a policy returns
 
-`SpeakDecision(mode, reason="", judgments={}, notes=())`:
+`SpeakDecision(mode, reason="", judgments={}, notes=(), final=False)`:
 
 - `reason` — why, in a few words, for logs and the hook;
 - `judgments` — what the policy weighed, by name: what makes a decision
   measurable, turn by turn;
 - `notes` — blocks for the turn's notes when the agent speaks or offers, such as
-  "Answer in French" or what the agent was thinking.
+  "Answer in French" or what the agent was thinking;
+- `final` — a silence the agent's thought will not change (a room that
+  listens, a voice only listened to): with a [thinker](#thinking-while-listening),
+  the channel neither waits for the thought nor asks again.
 
 ## What is never submitted to it
 
@@ -148,14 +151,13 @@ name. It answers these questions (`roomkit.speaking.classifier.QUESTIONS`):
 | `deferred` | whether the speaker postpones or declines asking |
 | `unfinished` | whether the speaker stopped before saying what they want |
 | `hush` | whether the turn asks the agent not to answer, or only to listen |
-| `quiet_rule` | whether an earlier request to keep quiet still stands |
 | `request` | whether the turn asks the agent to answer or do something now |
 | `answered` | whether the turn answers a question the agent just asked |
 
 `compose()` reads them in order:
 
-1. **silent** when the speaker has not finished, postpones, or asks for quiet;
-   silent too when a request for quiet still stands and the turn asks nothing;
+1. **silent** when the speaker has not finished, postpones, or asks for quiet
+   on this turn;
 2. **speak** when the turn answers the agent's question;
 3. **speak** when the agent is addressed: directness 1.5 or more, or a request
    with directness 0.75 or more, or any request when one person talks with it;
@@ -175,6 +177,34 @@ in another language pulls the model into English.
 The thresholds were measured with Jev's calibrated probabilities. On
 `LLMClassifier` every probability is 0 or 1 and directness a whole level, which
 the same rules read without change, at the cost of a generation per turn.
+
+### Staying quiet when asked
+
+"Just listen for now" is a state of the room, not a judgment remade on every
+turn: re-judged from the recent turns, such a request faded as they passed and
+was lost once it left them. The policy keeps it, per room, in memory (a restart
+starts every room open):
+
+- In an open room it also asks `listen_request`: does the turn ask the agent to
+  stay quiet or only listen from now on? At 0.5 or above the room listens, and
+  the turn is silent (`asked to listen`).
+- While the room listens, the classifier reads the request in
+  `agent.listening_only.asked`, and is asked instead `asked_me` (is the turn a
+  question or a request put to the agent itself?) and `lift` (does it let the
+  agent talk again?).
+- `lift` at 0.5 or above opens the room, and the turn is decided as without it.
+- `asked_me` at 0.5 or above with a directness of 2 or more (the agent named,
+  or "you") is answered (`asked while listening`), with the language's note,
+  and the room goes on listening: answering one question does not lift the
+  request.
+- Anything else is silent (`listening`). One person talking with the agent does
+  not make every request its own here: "what is the base URL?" said aside and
+  put to the agent read alike without the address.
+
+Every silence of a listening room is final, and every decision made while it
+listens carries `listening` (1.0) among its judgments. A cut answer is not
+resumed. The three questions are replaceable by name with `questions=`, as the
+others are (`roomkit.speaking.listening`).
 
 ### Changing the questions or the rules
 
@@ -229,7 +259,8 @@ nova = AIChannel(
 - A turn from anyone else, or from a speaker the room does not name, is
   `silent` with the reason `only listened to`, and the policy it wraps is not
   asked (no classifier call). The turn is stored, and a thinker thinks about it:
-  the agent hears it. Asked again once it thought, it stays silent.
+  the agent hears it. The silence is final: the channel does not wait for that
+  thought, and does not ask again with it.
 - A turn from one of the people is the wrapped policy's, with only those people
   in `SpeakTurn.people`, the speaker among them even when the room's
   participant record names the microphone otherwise: Sylvain alone in front of
@@ -275,19 +306,25 @@ How the channel runs it:
    builds the event's context as for an answer (the agent's prompt, the
    conversation it may know), passes it through `BEFORE_AI_GENERATION` with
    `event.purpose == "thought"`, and hands what the hooks left to the thinker
-   with the previous thought. A turn the agent answers waits for no thought.
+   with the previous thought. Every speaker is named in it, the one person of a
+   one-to-one conversation too (an answer's context leaves that conversation
+   unlabelled), so the thought says who asks. A turn the agent answers waits
+   for no thought.
 2. **One call at a time per room.** Events that arrive during a call are thought
    about in the next one, from the latest context.
 3. **Raising its hand.** The channel waits for the thought up to `think_wait`
    seconds (1.5). Back in time with something to say, the policy decides again
    on the same event, with the thought: the agent may offer on a turn it first
-   listened to. Each decision fires `ON_SPEAK_DECISION`.
+   listened to. Each decision fires `ON_SPEAK_DECISION`. A final decision (a
+   room that listens, a voice only listened to) waits for nothing: the thinker
+   thinks, and the next turn is not held back.
 4. **Speaking empties it.** When the agent speaks or offers on a decided event,
    the turn's notes carry its thought, and what it wanted to say is emptied. An
    instruction (a task's hand-back) carries no thought and empties nothing. The
    thought is a model's reading of what people said, so whatever they said can
    reach it: the notes quote it, bound it (600 characters for the text, 300 per
    item) and name it as information to weigh, not instructions to follow.
+   Asked what it is thinking, the agent answers with it.
 5. **Failures keep it.** A thinker that fails, or runs out of its `timeout`,
    keeps the previous thought, logged.
 6. **Ephemeral.** The thought is the channel's, per room, in memory; a restart
@@ -323,6 +360,15 @@ conversation (the agent's own lines as `You:`, tool traffic and turn notes left
 out). A small, fast model fits. Its default instructions are English and ask for
 the conversation's language; replace them with `instructions=` (`{max}` is
 replaced by three). The provider stays yours.
+
+The default instructions keep the thought on what the agent hears: what is
+being talked about, what the speaker is doing (asking, telling, thinking aloud,
+talking to someone else, reading something) and what the agent makes of it,
+the people named. It starts again from a new topic, keeping of the previous
+one only what still concerns it, and is never about the agent itself (what it
+said, whether to speak, how it is seen): rewritten from itself on every call,
+a thought about the agent drifts into its own concerns. `want_to_say` holds
+only sentences for the people, about the topic.
 
 The thought is only as good as the model's discipline: a model that puts a
 question or an offer of help in `want_to_say`, though told not to, makes the
@@ -404,8 +450,8 @@ has not answered since, `SpeakTurn.cut` is a `CutReply(text, played_ms, at)`.
 |------|------|
 | `resume` | whether the turn spoken over the agent leaves it free to go on: an acknowledgement, a thanks, a short reaction, talking over it by accident; or wants the turn: a question, a request, a correction, asking it to stop |
 
-At 0.4 or above, unless the turn asks for quiet, the speaker is not done, or a
-request for quiet still stands, the agent speaks with the reason `resume after
+At 0.4 or above, unless the turn asks for quiet, the speaker is not done, or the
+room [listens](#staying-quiet-when-asked), the agent speaks with the reason `resume after
 cut`, and its notes ask it to go on from where it was cut, with a short link
 back, without repeating what was heard. Otherwise the turn decides as without a
 cut: "Wait, and for Montreal?" over a forecast is answered as a question.
