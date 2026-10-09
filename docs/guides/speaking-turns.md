@@ -67,7 +67,12 @@ was addressed takes its name in its constructor.
   "Answer in French" or what the agent was thinking;
 - `final` — a silence the agent's thought will not change (a room that
   listens, a voice only listened to): with a [thinker](#thinking-while-listening),
-  the channel neither waits for the thought nor asks again.
+  the channel neither waits for the thought nor asks again. Only a `silent`
+  decision can be final.
+
+A policy that keeps something per room overrides `forget_room(room_id)`: the
+channel calls it when it joins or leaves a room, so a room that reuses an id
+inherits nothing.
 
 ## What is never submitted to it
 
@@ -182,24 +187,30 @@ the same rules read without change, at the cost of a generation per turn.
 
 "Just listen for now" is a state of the room, not a judgment remade on every
 turn: re-judged from the recent turns, such a request faded as they passed and
-was lost once it left them. The policy keeps it, per room, in memory (a restart
-starts every room open):
+was lost once it left them. The policy keeps it, per room, in memory: a restart
+starts every room open, and so does a room the channel joins or leaves (the
+channel calls the policy's `forget_room`), so a room that reuses an id inherits
+no request.
 
 - In an open room it also asks `listen_request`: does the turn ask the agent to
   stay quiet or only listen from now on? At 0.5 or above the room listens, and
   the turn is silent (`asked to listen`).
-- While the room listens, the classifier reads the request in
-  `agent.listening_only.asked`, and is asked instead `asked_me` (is the turn a
-  question or a request put to the agent itself?) and `lift` (does it let the
-  agent talk again?).
+- While the room listens, the classifier reads the request and who made it
+  in `agent.listening_only` (`speaker`, `text`, bounded to 200 characters), and
+  is asked instead `asked_me` (is the turn a question or a request put to the
+  agent itself?) and `lift` (does it let the agent talk again?).
 - `lift` at 0.5 or above opens the room, and the turn is decided as without it.
 - `asked_me` at 0.5 or above with a directness of 2 or more (the agent named,
   or "you") is answered (`asked while listening`), with the language's note,
   and the room goes on listening: answering one question does not lift the
-  request.
+  request. A speaker who has not finished, postpones it or asks for quiet is
+  not answered: a listening room is never more eager than an open one.
 - Anything else is silent (`listening`). One person talking with the agent does
   not make every request its own here: "what is the base URL?" said aside and
   put to the agent read alike without the address.
+- A turn the policy cannot judge, without text or on a classifier that fails,
+  is silent too, where an open room would let the agent speak. The channel's
+  own bound (`speak_timeout`) still falls back to speaking.
 
 Every silence of a listening room is final, and every decision made while it
 listens carries `listening` (1.0) among its judgments. A cut answer is not
@@ -272,7 +283,7 @@ nova = AIChannel(
   control**: a participant may take any display name.
 - An instruction, a task's hand-back among them, never reaches a policy, so it
   is answered whoever it came from.
-- `close()` closes the policy it wraps.
+- `close()` closes the policy it wraps, and `forget_room()` reaches it too.
 
 A runnable version is `examples/answering_some_people.py`.
 
