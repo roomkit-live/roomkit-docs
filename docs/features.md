@@ -429,8 +429,10 @@ rooms = {room_of(1001, chat=1001), room_of(1001, chat=-100500),
 assert len(rooms) == 3  # alice's chat, the group, bob's chat
 ```
 
-The message's author stays its sender (`event.source.participant_id`). On an
-HTTP webhook the recipient is a URL the host sets. A transport channel of your
+The message's author stays its sender (`event.source.participant_id`). A room
+the host opens for a chat (`metadata={"telegram_chat_id": "1001"}`) is that
+chat's, as a room opened for a number is that number's: no one else is let in.
+On an HTTP webhook the recipient is a URL the host sets. A transport channel of your
 own declares its kind with `TransportChannel(..., replies_to_sender=True)`, or
 with `reply_metadata_key="..."` naming the inbound metadata that holds its chat
 (`channel.conversation_address(message)` is what the framework routes by).
