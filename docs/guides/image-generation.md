@@ -6,7 +6,7 @@ An agent that can describe a picture cannot draw one. `ImageProvider` (RFC §25)
 from roomkit.providers.image import MockImageProvider
 
 images = MockImageProvider()
-results = await images.generate("un renard en origami", size="1024x1024")
+results = await images.generate("an origami fox", size="1024x1024")
 
 results[0].data        # "data:image/png;base64,iVBORw0KGgo…"
 results[0].mime_type   # "image/png"
@@ -96,7 +96,7 @@ A size a provider cannot produce **raises** rather than becoming a different one
 Editing is `generate()` with references, not a second method:
 
 ```python
-[original] = await images.generate("un renard en origami")
+[original] = await images.generate("an origami fox")
 
 [edited] = await images.generate(
     "make the paper blue",
@@ -191,8 +191,9 @@ results = await images.generate_with_options(
 For Gemini, use `ImageOptions(aspect_ratio="16:9", image_size="2K")` to request
 native geometry. A tier is not an exact pixel count. Do not combine this with
 `size`. Flash supports 512, 1K, 2K and 4K; Nano Banana 2.1, the default
-model, supports 1K, 2K and 4K and returns JPEG only; Lite supports 1K; Pro supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite
-expose `thinking_level="minimal"` or `"high"` through the Interactions
+model, supports 1K, 2K and 4K and returns JPEG only; Lite supports 1K; Pro
+supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite expose
+`thinking_level="minimal"` or `"high"` through the Interactions
 `generation_config` (Nano Banana 2.1's own default, `medium`, is not offered);
 Pro has no advertised thinking control.
 OpenAI 2.5 adds `xhigh` and `max` quality. Gemini 2.5 Flash Image is marked
