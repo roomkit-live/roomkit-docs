@@ -1597,11 +1597,11 @@ Vision is the input direction. `ImageProvider` is the output one — an agent th
 ```python
 from roomkit.providers.gemini import GeminiImageConfig, GeminiImageProvider
 
-images = GeminiImageProvider(GeminiImageConfig(api_key="...", model="gemini-3.1-flash-image"))
+images = GeminiImageProvider(GeminiImageConfig(api_key="...", model="gemini-nano-banana-2.1"))
 [result] = await images.generate("un renard en origami", size="1024x1024")
 
-result.data          # "data:image/png;base64,…" — always a data URI
-result.decoded()     # raw PNG bytes
+result.data          # "data:image/jpeg;base64,…" — always a data URI
+result.decoded()     # raw JPEG bytes (Nano Banana 2.1 returns JPEG only)
 ```
 
 The separation is the point: the agent holding the conversation is rarely one that draws, so an Anthropic agent draws with a Gemini or OpenAI key exactly as it transcribes with a Deepgram one. Nothing about `AIResponse` changes.

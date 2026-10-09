@@ -45,7 +45,7 @@ images = OpenAIImageProvider(
 from roomkit.providers.gemini import GeminiImageConfig, GeminiImageProvider
 
 images = GeminiImageProvider(
-    GeminiImageConfig(api_key=..., model="gemini-3.1-flash-image")
+    GeminiImageConfig(api_key=..., model="gemini-nano-banana-2.1")  # the default
 )
 ```
 
@@ -164,7 +164,7 @@ assert images.calls == [("anything", None, 1, [])]
 
 ## End to end
 
-`examples/image_generation.py` runs the whole path: an `AIChannel` calls a `generate_image` tool, the tool draws through the `ImageProvider`, and the picture lands in the room as `MediaContent` and on disk as a PNG. It runs with no key at all (mock), and with `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, or `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` it draws for real.
+`examples/image_generation.py` runs the whole path: an `AIChannel` calls a `generate_image` tool, the tool draws through the `ImageProvider`, and the picture lands in the room as `MediaContent` and on disk as an image file named for its type. It runs with no key at all (mock), and with `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, or `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` it draws for real.
 
 ## What this is not
 
@@ -190,8 +190,8 @@ results = await images.generate_with_options(
 
 For Gemini, use `ImageOptions(aspect_ratio="16:9", image_size="2K")` to request
 native geometry. A tier is not an exact pixel count. Do not combine this with
-`size`. Flash supports 512, 1K, 2K and 4K; Nano Banana 2.1 supports 1K, 2K and
-4K; Lite supports 1K; Pro supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite
+`size`. Flash supports 512, 1K, 2K and 4K; Nano Banana 2.1, the default
+model, supports 1K, 2K and 4K and returns JPEG only; Lite supports 1K; Pro supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite
 expose `thinking_level="minimal"` or `"high"` through the Interactions
 `generation_config` (Nano Banana 2.1's own default, `medium`, is not offered);
 Pro has no advertised thinking control.
