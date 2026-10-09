@@ -211,6 +211,10 @@ Retention depends on the provider account and configuration; see the
 Keep the same credential identity and check access to prior inputs before reuse.
 `GeminiImageProvider.resolve_size(size)` exposes the adapter’s portable-size
 conversion for applications that need matching preflight and execution geometry.
+A size whose ratio or tier the selected model does not offer is refused before
+the call, by its own name (`size '512x512' needs Gemini's 512 tier, which
+gemini-3-pro-image does not offer (its tiers: 1K, 2K, 4K)`), never replaced by
+another size.
 
 Gemini Flash and Nano Banana 2.1 support `search_types=["web_search",
 "image_search"]`; Pro supports web search; Lite supports neither. Result metadata retains response
