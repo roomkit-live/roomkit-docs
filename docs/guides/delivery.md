@@ -1,6 +1,9 @@
 # Delivery Service
 
-`kit.deliver()` sends content to a room's transport channel with awareness of channel state — voice playback, user speech, idle detection. It's the framework-level API for proactive content delivery.
+`kit.deliver()` brings content into a room from outside it — a background
+task's result, an external event, a scheduled nudge, something another room
+produced — at a moment the room's channels allow: voice playback, user speech,
+idle detection. The room's agents read it and act on it.
 
 ## Quick start
 
@@ -9,9 +12,19 @@ from roomkit import RoomKit, WaitForIdle
 
 kit = RoomKit(delivery_strategy=WaitForIdle(buffer=3.0))
 
-# Deliver content to a room
-await kit.deliver("room-id", content="Your payment was confirmed.")
+# A background search finished: the room's agent reads it and tells the user
+await kit.deliver("room-id", content="Flight search finished: 3 options found.")
 ```
+
+!!! warning "Not a way to text the room's correspondent"
+    On a text transport (SMS, email, WhatsApp, WebSocket...), the content
+    enters the room as a message received on that channel, from the
+    framework's own sender (`system`). It is stored, the room's agents read it
+    and answer it, and the correspondent receives their answer, never the
+    content itself; with no agent in the room, nothing is sent. A
+    `deliver("room", "Your payment was confirmed.")` on an SMS room reports
+    `sent` and texts nothing. To send the correspondent a message, see
+    [Sending a message to the correspondent](#sending-a-message-to-the-correspondent).
 
 ## Use cases
 
@@ -100,6 +113,29 @@ model is unplugged during the wait, the delivery is refused
 A channel of your own takes part by inheriting `RealtimeModelHost`
 (`get_room_sessions()`, `inject_text()`, `wait_idle()`); `hosts_realtime_model(channel)`
 is the predicate the delivery paths read.
+
+## Sending a message to the correspondent
+
+A message the host itself sends to the room's customer (a confirmation, a
+verification link) is published from a channel of the host's own with
+`send_event`. The room's transports deliver it like any other message:
+
+```python
+from roomkit import TextContent
+from roomkit.channels import WebSocketChannel
+
+kit.register_channel(WebSocketChannel("bank"))   # the host's own channel
+await kit.attach_channel(room_id, "bank")
+
+await kit.send_event(
+    room_id, "bank", TextContent(body="Your payment was confirmed."),
+    addressed_to=[],   # no agent is asked to answer it
+)
+```
+
+The message stays in the room's history, where the agents read it on their
+next turn; restrict its `visibility` to the transports that should carry it to
+keep it from them.
 
 ## Framework default
 
