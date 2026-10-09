@@ -192,10 +192,10 @@ For Gemini, use `ImageOptions(aspect_ratio="16:9", image_size="2K")` to request
 native geometry. A tier is not an exact pixel count. Do not combine this with
 `size`. Flash supports 512, 1K, 2K and 4K; Nano Banana 2.1, the default
 model, supports 1K, 2K and 4K and returns JPEG only; Lite supports 1K; Pro
-supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite expose
-`thinking_level="minimal"` or `"high"` through the Interactions
-`generation_config` (Nano Banana 2.1's own default, `medium`, is not offered);
-Pro has no advertised thinking control.
+supports 1K, 2K and 4K. Flash and Lite expose `thinking_level="minimal"` or
+`"high"` through the Interactions `generation_config`; Nano Banana 2.1 also
+takes `"medium"`, its own default when none is sent. Pro has no advertised
+thinking control, and Meta's Muse Image takes `minimal` or `high` only.
 OpenAI 2.5 adds `xhigh` and `max` quality. Gemini 2.5 Flash Image is marked
 deprecated, with its shutdown moved to 2027-03-15 (Google's earliest date).
 
