@@ -83,7 +83,7 @@ async with MCPToolProvider.from_url(url, headers=headers, discover=False) as mcp
     html = await mcp.read_resource("ui://board/view")
 ```
 
-`get_tools()` and `tool_meta()` are then empty, a gated `as_tool_handler()` refuses every name, and no call is checked against an output schema; `call_tool()` and `call_tool_result()` still work. A runnable version: [`examples/mcp_read_resource.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_read_resource.py).
+`get_tools()` and `tool_meta()` are then empty, a gated `as_tool_handler()` serves no name (every call raises `UnservedToolCallError`), and no call is checked against an output schema; `call_tool()` and `call_tool_result()` still work. A runnable version: [`examples/mcp_read_resource.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_read_resource.py).
 
 #### Output schemas
 
@@ -274,12 +274,12 @@ from roomkit.tools import MCPToolProvider
 
 provider = MCPToolProvider("http://fake:8000/mcp")
 provider._connected = True
-provider._session = your_mock_session
+provider._session = your_mock_session  # answers send_request(request, result_type)
 # Populate provider._tools and provider._tool_set manually
 # Then test get_tools(), call_tool(), as_tool_handler() as usual
 ```
 
-See [`tests/test_mcp_tool_provider.py`](https://github.com/roomkit-live/roomkit/blob/main/tests/test_mcp_tool_provider.py) for complete mock patterns.
+The provider sends `tools/call` through the session's `send_request(request, result_type)`, never through `ClientSession.call_tool`: a mock answers `send_request`, reading the tool's name and arguments from `request.params`. See [`tests/test_mcp_tool_provider.py`](https://github.com/roomkit-live/roomkit/blob/main/tests/test_mcp_tool_provider.py) for complete mock patterns.
 
 ## Example
 

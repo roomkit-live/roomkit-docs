@@ -334,44 +334,24 @@ channel = RealtimeVoiceChannel(
 
 ### With MCP (Advanced)
 
-For MCP integration, use `tool_handler` to route calls to the MCP server:
+For MCP integration, `MCPToolProvider` lists the server's tools on entry and routes calls to it through `tool_handler`:
 
 ```python
-import json
+from roomkit.tools import MCPToolProvider
 
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
-
-# Connect to MCP server
-read, write, _ = await streamablehttp_client("http://localhost:9998/mcp")
-mcp = ClientSession(read, write)
-await mcp.initialize()
-
-# Discover tools
-tools_result = await mcp.list_tools()
-tools = [
-    {
-        "name": t.name,
-        "description": t.description or t.name,
-        "parameters": t.inputSchema or {"type": "object", "properties": {}},
-    }
-    for t in tools_result.tools
-]
-
-# Tool handler routes calls to MCP
-async def handle_tool(name, arguments):
-    result = await mcp.call_tool(name, arguments)
-    return json.dumps({"result": "\n".join(b.text for b in result.content if hasattr(b, "text"))})
-
-channel = RealtimeVoiceChannel(
-    "realtime-voice",
-    provider=provider,
-    transport=transport,
-    system_prompt="You are a helpful assistant with access to tools.",
-    tools=tools,
-    tool_handler=handle_tool,
-)
+async with MCPToolProvider.from_url("http://localhost:9998/mcp") as mcp:
+    channel = RealtimeVoiceChannel(
+        "realtime-voice",
+        provider=provider,
+        transport=transport,
+        system_prompt="You are a helpful assistant with access to tools.",
+        tools=mcp.get_tools_as_dicts(),
+        tool_handler=mcp.as_tool_handler(),
+    )
+    ...  # run the room; leaving the block closes the connection
 ```
+
+The provider reads every page of the listing and never lists again on a call; see the [MCP Tool Provider guide](../guides/mcp-tool-provider.md).
 
 ### With Delegation
 
