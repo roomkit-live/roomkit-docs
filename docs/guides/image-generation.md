@@ -139,7 +139,7 @@ cost = entry.pricing.cost_for(result.usage)   # USD
 
 `result.usage` carries `input_tokens`, `input_image_tokens`, `output_tokens` and `output_image_tokens`; each token is counted exactly once, so summing them bills the call once. Where a vendor reports image tokens nested inside a total, the provider subtracts them before reporting.
 
-The catalogs read the vendors' own price lists (verified 2026-08-07). Google's advertised per-image figures are that same token rate restated — a 1K image is 1120 output-image tokens, which at `$120`/M is the `$0.134` Nano Banana Pro advertises.
+The catalogs read the vendors' own price lists (verified 2026-08-07; Nano Banana 2.1 on 2026-10-09). Google's advertised per-image figures are that same token rate restated — a 1K image is 1120 output-image tokens, which at `$120`/M is the `$0.134` Nano Banana Pro advertises.
 
 The per-image-billed catalogs — xAI's and OpenRouter's — deliberately carry **no** `pricing`: a flat per-image charge restated per token would be a wrong number rather than a missing one. OpenRouter closes the gap itself by reporting the amount it billed on every response, which the provider surfaces as `result.usage["cost"]` (USD) alongside the token counters; for xAI, read the current per-image amounts from the vendor's pricing page.
 
@@ -190,11 +190,13 @@ results = await images.generate_with_options(
 
 For Gemini, use `ImageOptions(aspect_ratio="16:9", image_size="2K")` to request
 native geometry. A tier is not an exact pixel count. Do not combine this with
-`size`. Flash supports 512, 1K, 2K and 4K; Lite supports 1K; Pro supports 1K, 2K
-and 4K. Flash and Lite expose `thinking_level="minimal"` or `"high"` through the
-Interactions `generation_config`; Pro has no advertised thinking control.
+`size`. Flash supports 512, 1K, 2K and 4K; Nano Banana 2.1 supports 1K, 2K and
+4K; Lite supports 1K; Pro supports 1K, 2K and 4K. Flash, Nano Banana 2.1 and Lite
+expose `thinking_level="minimal"` or `"high"` through the Interactions
+`generation_config` (Nano Banana 2.1's own default, `medium`, is not offered);
+Pro has no advertised thinking control.
 OpenAI 2.5 adds `xhigh` and `max` quality. Gemini 2.5 Flash Image is marked
-deprecated with retirement scheduled for 2026-10-02.
+deprecated, with its shutdown moved to 2027-03-15 (Google's earliest date).
 
 An OpenAI edit can supply `mask=AIImagePart(...)` alongside ordered
 `reference_images`. Masks must be PNG and match the first reference's geometry
@@ -209,8 +211,8 @@ Keep the same credential identity and check access to prior inputs before reuse.
 `GeminiImageProvider.resolve_size(size)` exposes the adapter’s portable-size
 conversion for applications that need matching preflight and execution geometry.
 
-Gemini Flash supports `search_types=["web_search", "image_search"]`; Pro
-supports web search; Lite supports neither. Result metadata retains response
+Gemini Flash and Nano Banana 2.1 support `search_types=["web_search",
+"image_search"]`; Pro supports web search; Lite supports neither. Result metadata retains response
 steps, citations and `search_suggestions`. Applications enabling search must
 display the required attribution and suggestions. Search can carry charges
 beyond the token counters; preserve the original usage rather than treating an

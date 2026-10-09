@@ -46,7 +46,7 @@ audio = await tts.synthesize("Au revoir.")   # a WAV data URL
 
 | Field | Default | Meaning |
 |-------|---------|---------|
-| `language` | `"english"` | Model to load: `english`, `french`, `german`, `portuguese`, `italian`, `spanish`, `dutch` (pocket-tts 3.3+), each also as a larger `_24l` variant (`french_24l`) |
+| `language` | `"english"` | Model to load: `english`, `french`, `german`, `portuguese`, `italian`, `spanish`, `dutch` (pocket-tts 3.3+), each but `english` also as a larger `_24l` variant (`french_24l`) |
 | `voices` | `{"alba": "alba"}` | Named voices, the first is the default. A value is a pre-made voice name, a local clip to clone, an `hf://` path, or a `.safetensors` voice state |
 | `device` | `"cpu"` | `"cpu"` or a CUDA device (`"cuda"`, `"cuda:1"`) |
 | `quantize` | `False` | int8 dynamic quantization, CPU only |
