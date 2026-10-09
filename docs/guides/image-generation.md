@@ -26,7 +26,7 @@ The second reason is narrower and just as decisive: `AIResponse.content` is a `s
 | Provider | Endpoint | Models | Extra |
 |----------|----------|--------|-------|
 | `OpenAIImageProvider` | `/v1/images` (`images.generate`, `images.edit`) | `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1`, `gpt-image-1-mini`, `chatgpt-image-latest` | `roomkit[openai]` |
-| `GeminiImageProvider` | Interactions API (`interactions.create`) | `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | `roomkit[gemini]` |
+| `GeminiImageProvider` | Interactions API (`interactions.create`) | `gemini-nano-banana-2.1`, `gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-3.1-flash-lite-image`, `gemini-2.5-flash-image` | `roomkit[gemini]` |
 | `XAIImageProvider` | `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `grok-imagine-image-2.0`, `grok-imagine-image-quality`, `grok-imagine-image` | `roomkit[xai]` |
 | `MetaImageProvider` | Meta Model API `/v1/images/generations`, edits as JSON on `/v1/images/edits` | `muse-image-1.0` | `roomkit[meta]` |
 | `OpenRouterImageProvider` | OpenRouter Image API (`POST /api/v1/images`) | 40+ aggregated slugs — `google/gemini-3.1-flash-image`, `x-ai/grok-imagine-image-2.0`, `bytedance-seed/seedream-5-0-pro`, `black-forest-labs/flux.2-pro`, … | `roomkit[openrouter]` |

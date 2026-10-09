@@ -1,9 +1,10 @@
 # Pocket TTS Provider
 
-[Pocket TTS](https://github.com/kyutai-labs/pocket-tts) is Kyutai's 100M-parameter
-text-to-speech model. It streams 24 kHz speech in 80 ms chunks, faster than real
-time on two CPU cores, and speaks **English, French, German, Portuguese, Italian
-and Spanish**. It clones a voice from a short clip. `PocketTTSProvider` runs it in
+[Pocket TTS](https://github.com/kyutai-labs/pocket-tts) is Kyutai and Gradium's
+100M-parameter text-to-speech model. It streams 24 kHz speech in 80 ms chunks,
+faster than real time on two CPU cores, and speaks **English, French, German,
+Portuguese, Italian, Spanish and Dutch** (Dutch since pocket-tts 3.3). It clones a
+voice from a short clip. `PocketTTSProvider` runs it in
 your process, on the CPU or on a CUDA GPU.
 
 ```bash
@@ -45,7 +46,7 @@ audio = await tts.synthesize("Au revoir.")   # a WAV data URL
 
 | Field | Default | Meaning |
 |-------|---------|---------|
-| `language` | `"english"` | Model to load: `english`, `french`, `german`, `portuguese`, `italian`, `spanish`, each also as a larger `_24l` variant (`french_24l`) |
+| `language` | `"english"` | Model to load: `english`, `french`, `german`, `portuguese`, `italian`, `spanish`, `dutch` (pocket-tts 3.3+), each also as a larger `_24l` variant (`french_24l`) |
 | `voices` | `{"alba": "alba"}` | Named voices, the first is the default. A value is a pre-made voice name, a local clip to clone, an `hf://` path, or a `.safetensors` voice state |
 | `device` | `"cpu"` | `"cpu"` or a CUDA device (`"cuda"`, `"cuda:1"`) |
 | `quantize` | `False` | int8 dynamic quantization, CPU only |

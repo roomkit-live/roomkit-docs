@@ -2632,7 +2632,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `VuiTTSProvider` | Vui Nano on a local CUDA GPU: replies generated inside the dialogue (`TTSContextLevel.AUDIO`), the user's voice included, cut to what was heard after a barge-in; preset or cloned voices; English | `roomkit[vui]` (Python 3.12) |
 | `FluxionsTTSProvider` | Vui hosted by fluxions.ai: no GPU, streamed 24 kHz PCM, the hosted voices and the account's cloned ones; each text on its own (no context); English | `roomkit[fluxions]` |
 | `AzureSpeechTTSProvider` | Azure Speech over REST: Microsoft's MAI-Voice-2.1 and MAI-Voice-2.1-Flash voices (23 languages, French as `fr-FR`, emotion styles) and Azure's neural voices (`fr-CA` included) through one provider, with a speaking style and rate; SSML built and escaped by the provider, PCM at 8–48 kHz; MAI-Voice in public preview | `roomkit[azure-speech]` |
-| `PocketTTSProvider` | Kyutai Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish. See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
+| `PocketTTSProvider` | Kyutai / Gradium Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish, Dutch (pocket-tts 3.3+). See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
 **PCM only.** A Voice Channel plays decoded 16-bit PCM (RFC §12.2): the

@@ -1514,9 +1514,9 @@ tts = NeuTTSProvider(
 
 ## Pocket TTS (Local/CPU or GPU, Multilingual)
 
-Kyutai's 100M-parameter model: 24 kHz streaming in 80 ms chunks, faster than
-real time on two CPU cores, English, French, German, Portuguese, Italian and
-Spanish, voice cloning from a clip. Install with `pip install roomkit[pocket-tts]`.
+Kyutai and Gradium's 100M-parameter model: 24 kHz streaming in 80 ms chunks,
+faster than real time on two CPU cores, English, French, German, Portuguese,
+Italian, Spanish and Dutch (pocket-tts 3.3+), voice cloning from a clip. Install with `pip install roomkit[pocket-tts]`.
 
 ```python
 from roomkit.voice.tts.pocket import PocketTTSConfig, PocketTTSProvider
@@ -1997,7 +1997,7 @@ four, and what the room keeps of it.
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
 | **Fluxions** | Cloud TTS | Yes | Low | Per-character | Vui without a GPU, English |
 | **Azure Speech** | Cloud TTS | Yes | Medium (MAI Flash ~0.65 s to first audio) | Per-character | MAI-Voice and Azure's neural voices, preview |
-| **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Six languages incl. French, no GPU needed |
+| **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Seven languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
 
