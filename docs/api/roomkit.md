@@ -48,6 +48,13 @@
         - regenerate_target
         - ensure_participant
         - resolve_participant
+        - request_verification
+        - complete_verification
+        - record_failed_attempt
+        - revoke_verification
+        - verification_of
+        - sender_verification
+        - check_verifications
         - connect_websocket
         - disconnect_websocket
         - mark_read

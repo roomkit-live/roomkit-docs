@@ -2109,6 +2109,47 @@ async def challenge_unknown_sms(event, ctx, id_result):
 
 After-the-fact resolution is also supported via `resolve_participant()`.
 
+### Identity Verification
+
+Identification says whose an address is; verification says the person writing
+has proven it (RFC §11.7). With a `verification_policy`, RoomKit labels every
+message of an identified sender (`event.source.verification`), holds an
+unverified one from the agents (the room's transports still see it), and
+releases it once the person proves who they are — the method (a page behind a
+link, a login, a code replied in the conversation) stays the integrator's.
+
+```python
+kit = RoomKit(identity_resolver=MyResolver(), verification_policy=VerificationPolicy())
+
+
+@kit.hook(HookTrigger.ON_VERIFICATION_REQUIRED)
+async def ask_to_verify(event, ctx) -> HookResult:
+    state = await kit.sender_verification(event, ctx)
+    if state is not None and state.request_id is None:
+        request, secret = await kit.request_verification(
+            state.identity_id, room_id=event.room_id,
+            channel_id=event.source.channel_id, window_start=event.created_at,
+        )
+        ...  # send the link, after the hook returns
+    return HookResult.allow()  # held; allow_unverified() passes it, block() refuses it
+
+# On the integrator's page, once its own check passed:
+await kit.complete_verification(request_id, secret)  # or record_failed_attempt(request_id)
+```
+
+- A secret is returned once and stored only as its scrypt hash; a request
+  allows `max_attempts` (wrong secrets and the integrator's failed checks).
+- A code request's reply is consumed: never stored nor broadcast.
+- On completion, what the sender wrote while the request was open is released
+  to the agents as their own turns, within the request's window.
+- `ON_VERIFICATION_COMPLETED` and `ON_VERIFICATION_ENDED` fire when it happens:
+  a timer ends a verification at its expiry; `revoke_verification()` ends it
+  before; `async with RoomKit(...)` re-arms the timers from the store.
+- Verification is per identity and organization: proven to one organization,
+  it never verifies the person in another's conversation.
+
+See the [identity verification guide](guides/identity-verification.md).
+
 ### One participant record, several channels
 
 A participant is one record per `(room_id, id)` (RFC §5.5). `channel_id` is
@@ -3848,7 +3889,7 @@ sequenceDiagram
     Room->>SMS: Text summary (max 1600 chars, fallback)
 ```
 
-### Identity Verification Flow
+### Identity Challenge Flow
 
 ```mermaid
 sequenceDiagram
@@ -3872,6 +3913,34 @@ sequenceDiagram
     Room->>IR: resolve(message, context)
     IR-->>Room: IDENTIFIED (identity resolved)
     Note over Room: Message proceeds through pipeline
+```
+
+### Identity Verification Flow
+
+```mermaid
+sequenceDiagram
+    participant User as Alice (SMS, identified)
+    participant Room as RoomKit Room
+    participant Hook as Verification Hook
+    participant Page as Integrator's Page
+    participant AI as AI Assistant
+
+    User->>Room: "Did my transfer go through?"
+    Note over Room: source.verification = UNVERIFIED
+    Room->>Hook: ON_VERIFICATION_REQUIRED
+    Hook->>Room: request_verification() → link
+    Note over Room: Message held: stored, no agent reads it
+    Room->>User: "Confirm it's you: https://…/verify/…"
+
+    User->>Page: Opens the link, enters her PIN
+    Page->>Room: complete_verification(request_id, secret)
+    Room->>Hook: ON_VERIFICATION_COMPLETED
+    Note over Room: Held question released
+    Room->>AI: Answer it, as Alice's own turn
+    AI->>User: "Your transfer went through."
+
+    Note over Room: ttl later: timer fires
+    Room->>Hook: ON_VERIFICATION_ENDED (expired)
 ```
 
 ### Voice Conversation Flow

@@ -12,6 +12,16 @@
 
 ::: roomkit.identity.mock.MockIdentityResolver
 
+## Verification
+
+::: roomkit.Verification
+
+::: roomkit.VerificationRequest
+
+::: roomkit.VerificationPolicy
+
+::: roomkit.VerificationRefusedError
+
 ## Identity Hooks
 
 Identity hooks (`ON_IDENTITY_AMBIGUOUS`, `ON_IDENTITY_UNKNOWN`) allow custom handling when the identity resolver returns ambiguous or unknown results.

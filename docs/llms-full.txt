@@ -4551,6 +4551,42 @@ await kit.resolve_participant(
 )
 ```
 
+### Identity Verification
+
+Identification says whose an address is; verification says the person writing
+has proven it (RFC §11.7). With `verification_policy=VerificationPolicy()`,
+every message of an identified sender carries `event.source.verification`, and
+an unverified one fires `ON_VERIFICATION_REQUIRED` (SYNC): `HookResult.allow()`
+holds it from the agents (the room's transports still see it),
+`HookResult.allow_unverified()` passes it, `block()` refuses it. The method
+(a page behind a link, a code replied in the conversation) is the integrator's.
+
+```python
+kit = RoomKit(identity_resolver=resolver, verification_policy=VerificationPolicy())
+
+@kit.hook(HookTrigger.ON_VERIFICATION_REQUIRED)
+async def ask_to_verify(event, ctx) -> HookResult:
+    state = await kit.sender_verification(event, ctx)  # identity_id, request_id
+    if state is not None and state.request_id is None:
+        request, secret = await kit.request_verification(
+            state.identity_id, room_id=event.room_id,
+            channel_id=event.source.channel_id, window_start=event.created_at,
+        )
+        ...  # send the link after the hook returns (the room is locked)
+    return HookResult.allow()
+
+# The integrator's page, after its own check:
+await kit.complete_verification(request_id, secret)  # or record_failed_attempt(request_id)
+await kit.revoke_verification(identity_id, reason="advisor")
+```
+
+On completion the held messages of the request's window are released to the
+agents as the author's own turns. `ON_VERIFICATION_COMPLETED` and
+`ON_VERIFICATION_ENDED` (ASYNC; `ended` is `"verification"` or `"request"`)
+fire when it happens; a timer ends a verification at its expiry, and
+`async with RoomKit(...)` re-arms timers from the store. A code reply
+(`method="code"`) is consumed, never stored.
+
 ## Realtime Ephemeral Events
 
 Ephemeral events (typing, presence, reactions) are not stored in conversation history. They're delivered in real-time to subscribers.

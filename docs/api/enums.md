@@ -22,6 +22,10 @@
 
 ::: roomkit.models.enums.IdentificationStatus
 
+::: roomkit.VerificationStatus
+
+::: roomkit.VerificationRequestStatus
+
 ::: roomkit.models.enums.ParticipantRole
 
 ::: roomkit.models.enums.ParticipantStatus
