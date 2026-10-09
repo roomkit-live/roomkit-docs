@@ -2482,15 +2482,26 @@ Requires `pip install roomkit[buzz]` (buzzkit>=0.3.0). See the
 
 ### WhatsApp Channel
 
-WhatsApp Business integration:
+WhatsApp Business integration, through Twilio's Messages API:
 
 ```python
 from roomkit import WhatsAppChannel
+from roomkit.providers.twilio import TwilioConfig, TwilioWhatsAppProvider
 
-wa = WhatsAppChannel("wa-channel", provider=whatsapp_provider)
+config = TwilioConfig(account_sid="AC...", auth_token="...", from_number="+15145551234")
+wa = WhatsAppChannel("wa-channel", provider=TwilioWhatsAppProvider(config))
 ```
 
-Recipient phone read from `binding.metadata["phone_number"]`. Supports text, rich text, media, location, templates, buttons (max 3), and quick replies. Max message length: 4096 characters. Currently mock-only; no production provider.
+Recipient phone read from `binding.metadata["phone_number"]`, in E.164; the
+provider sends to `whatsapp:+1...` from `whatsapp:` + `from_number` (or the
+`messaging_service_sid`). Twilio posts WhatsApp to the same webhook as SMS:
+`parse_twilio_whatsapp_webhook` reads it, and the `whatsapp:` prefix of `From`
+tells a WhatsApp message from an SMS. A message outside WhatsApp's 24-hour
+customer service window needs an approved template; Twilio refuses a free-form
+one, and the refusal comes back as a failed result. Max message length: 4096
+characters. A WhatsApp Cloud API (Meta) provider is not available yet;
+`WhatsAppPersonalChannel` covers a personal account. Example:
+`examples/twilio_whatsapp.py`.
 
 ### HTTP Webhook Channel
 
