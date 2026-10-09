@@ -3,10 +3,12 @@
 ::: roomkit.RoomKit
     options:
       show_bases: false
+      inherited_members: true
       members:
         - store
         - hook_engine
         - realtime
+        - status_bus
         - create_room
         - get_room
         - close_room
@@ -29,12 +31,15 @@
         - list_bindings
         - get_timeline
         - list_tasks
+        - delegate
+        - cancel_task
         - list_observations
         - join
         - leave
         - process_inbound
         - send_event
         - commit_event
+        - deliver
         - start_room_recording
         - room_recordings
         - add_room_recording_track

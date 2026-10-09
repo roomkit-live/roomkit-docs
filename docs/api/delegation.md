@@ -34,6 +34,11 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ::: roomkit.tasks.status.room_tasks
 
+::: roomkit.tasks.status.post_task_progress
+
+The tools' names, as a model calls them: `TASK_STATUS_TOOL` (`"task_status"`) and
+`CANCEL_TASK_TOOL` (`"cancel_task"`), from `roomkit.tasks`.
+
 ## Delegation State Tracking
 
 ::: roomkit.tasks.cache.CompletedTaskCache
