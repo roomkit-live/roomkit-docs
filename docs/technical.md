@@ -15,14 +15,14 @@
 | **Phone Validation** | phonenumbers | >= 8.13 (optional) |
 | **Crypto (Telnyx)** | pynacl | >= 1.5 (optional) |
 | **Voice - FastRTC** | fastrtc + numpy | latest (optional) |
-| **Voice - STT** | Deepgram (via httpx + websockets) | >= 0.27 / >= 13.0 (optional) |
-| **Voice - TTS** | ElevenLabs (via httpx + websockets) | >= 0.27 / >= 13.0 (optional) |
+| **Voice - STT** | Deepgram (deepgram-sdk) | >= 6.0.0 (optional) |
+| **Voice - TTS** | ElevenLabs (elevenlabs SDK + websockets) | >= 2.40, < 2.72 / >= 14.2 (optional) |
 | **Build System** | Hatchling | latest |
 | **Package Manager** | uv | latest |
 | **Test Framework** | pytest | >= 8.0 |
 | **Async Testing** | pytest-asyncio | >= 0.24 |
 | **Coverage** | pytest-cov | >= 5.0 |
-| **Type Checker** | mypy | >= 1.11 (strict mode) |
+| **Type Checker** | ty | >= 0.0.26 |
 | **Linter/Formatter** | Ruff | >= 0.6 |
 | **Git Hooks** | pre-commit | >= 3.8 |
 | **Documentation** | MkDocs + Material | >= 1.6 / >= 9.5 |

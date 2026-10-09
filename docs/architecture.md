@@ -462,8 +462,8 @@ All AI providers support:
 
 | Provider | SDK | Purpose |
 |---|---|---|
-| Deepgram | `httpx>=0.27`, `websockets>=13.0` | Streaming speech-to-text via `DeepgramSTTProvider` |
-| ElevenLabs | `httpx>=0.27`, `websockets>=13.0` | Text-to-speech synthesis via `ElevenLabsTTSProvider` |
+| Deepgram | `deepgram-sdk>=6.0.0` | Streaming speech-to-text via `DeepgramSTTProvider` |
+| ElevenLabs | `elevenlabs>=2.40,<2.72`, `websockets>=14.2` | Text-to-speech synthesis via `ElevenLabsTTSProvider` |
 | FastRTC | `fastrtc`, `numpy` | WebSocket audio transport with VAD via `FastRTCVoiceBackend`; WebRTC passthrough via `FastRTCRealtimeTransport` |
 | Gemini Live | `google-genai>=2.25.0` | Speech-to-speech AI via `GeminiLiveProvider` |
 | OpenAI Realtime | `openai>=2.28`, `websockets>=14.2`, `tiktoken>=0.7` | Speech-to-speech AI via `OpenAIRealtimeProvider` |
