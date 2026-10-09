@@ -121,6 +121,7 @@ provider = TelnyxSMSProvider(
 | `from_number` | required | Default sender (E.164) |
 | `messaging_profile_id` | `None` | Messaging profile for webhook routing |
 | `public_key` | `None` | ED25519 public key for webhook verification |
+| `api_base_url` | `https://api.telnyx.com` | Another Telnyx API host (a local fake under test); HTTPS, or plain HTTP to this machine only |
 
 ### Webhook Handling
 
@@ -181,6 +182,7 @@ provider = SinchSMSProvider(
 | `from_number` | required | Default sender (E.164) |
 | `region` | `"us"` | API region: `us`, `eu`, `au`, `br`, `ca` |
 | `webhook_secret` | `None` | HMAC-SHA1 webhook verification secret |
+| `api_base_url` | the region's | Another XMS API host (a local fake under test); HTTPS, or plain HTTP to this machine only |
 
 ### Webhook Handling
 
@@ -237,6 +239,7 @@ provider = VoiceMeUpSMSProvider(
 | `auth_token` | required | Auth token |
 | `from_number` | required | Default sender (E.164) |
 | `environment` | `"production"` | `"production"` or `"sandbox"` for testing |
+| `api_base_url` | the environment's | Another API host (a local fake under test); HTTPS, or plain HTTP to this machine only |
 
 ### MMS Aggregation
 
@@ -335,6 +338,8 @@ provider = TelnyxRCSProvider(
     ),
     public_key="your-public-key",
 )
+
+# TelnyxRCSConfig(api_base_url=...) points it at another host, as for SMS
 
 # Check if a number supports RCS before sending
 can_rcs = await provider.check_capability("+15559999999")

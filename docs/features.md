@@ -2316,7 +2316,7 @@ provider = ElasticEmailProvider(ElasticEmailConfig(
 email = EmailChannel("email-channel", provider=provider)
 ```
 
-The recipient email is read from `binding.metadata["email_address"]`. Available providers: ElasticEmail (implemented), SendGrid (scaffolded).
+The recipient email is read from `binding.metadata["email_address"]`. Available providers: ElasticEmail (implemented), SendGrid (scaffolded). Their `base_url` may point at another endpoint (a local fake under test) under the rule every messaging provider's API host follows: HTTPS, or plain HTTP to this machine only, since the API key rides every request.
 
 ### Messenger Channel
 
@@ -2334,7 +2334,7 @@ provider = FacebookMessengerProvider(MessengerConfig(
 messenger = MessengerChannel("fb-channel", provider=provider)
 ```
 
-Recipient ID read from `binding.metadata["facebook_user_id"]`. Supports buttons (max 3), quick replies, and templates. Includes `parse_messenger_webhook()` for inbound webhook parsing.
+Recipient ID read from `binding.metadata["facebook_user_id"]`. Supports buttons (max 3), quick replies, and templates. Includes `parse_messenger_webhook()` for inbound webhook parsing. `MessengerConfig(api_base_url=...)` points it at another Graph API host (a local fake under test): HTTPS, or plain HTTP to this machine only.
 
 ### Teams Channel
 
