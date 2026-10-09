@@ -1318,7 +1318,7 @@ async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
     handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
     ai = AIChannel("ai", provider=provider, tool_handler=handler)
 
-Beside the model's tools, an MCP App's host reads `mcp.tool_meta()` (each tool's `_meta`, `ui` among it), `await mcp.read_resource(uri)` and `await mcp.call_tool_result(name, args)` (the raw `CallToolResult`, not bound by `tool_filter`: the host authorizes the call); `mcp.connected` says whether the connection is live.
+Beside the model's tools, an MCP App's host reads `mcp.tool_meta()` (each tool's `_meta`, `ui` among it), `await mcp.read_resource(uri)` and `await mcp.call_tool_result(name, args)` (the raw `CallToolResult`, not bound by `tool_filter`: the host authorizes the call); `mcp.connected` says whether the connection is live. The tools are listed once, on entry, every page of the listing; no call lists them again, and a result is checked against the output schema its tool was listed with. `discover=False` connects without listing, for a host that only reads a resource.
 ```
 
 `compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports streamable HTTP and SSE for servers reached by URL, and stdio for a server started as a command: `MCPToolProvider.from_command("uvx", ["mcp-server-time"])` starts it on entry and stops it on exit. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.

@@ -72,6 +72,23 @@ async with provider as mcp:
 
 Enter and exit the provider in the same task, with `async with`: the MCP SDK's transports hold anyio cancel scopes that must close where they were opened. If connecting fails half-way (the server exits, `initialize` errors), everything already opened is closed before the error reaches you.
 
+The tools are listed **once**, on entry, following the listing's cursor across every page. No call lists them again: not a call of a listed tool, and not a call of a tool the listing never named (a gateway's per-caller tool through `as_tool_handler(gate_discovery=False)`), which the MCP SDK's own `ClientSession.call_tool` would answer with a whole `tools/list` each time (RFC §21.2).
+
+#### Connecting without listing
+
+A host that only reads a resource (an MCP App's HTML, a document) has no use for the tool catalogue. `discover=False` connects without sending `tools/list`:
+
+```python
+async with MCPToolProvider.from_url(url, headers=headers, discover=False) as mcp:
+    html = await mcp.read_resource("ui://board/view")
+```
+
+`get_tools()` and `tool_meta()` are then empty, a gated `as_tool_handler()` refuses every name, and no call is checked against an output schema; `call_tool()` and `call_tool_result()` still work. A runnable version: [`examples/mcp_read_resource.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_read_resource.py).
+
+#### Output schemas
+
+A tool listed with an `outputSchema` has a successful result's `structuredContent` checked against it, as the MCP SDK does: a result that breaks the schema, or that carries none, raises `RuntimeError` (the tool loop then reports the call failed). A `$ref` resolves within the schema only, never over the network. The schemas come from the whole listing, `tool_filter` aside, so a tool the model never saw (an app-only tool an MCP App's frame calls) is checked too. A tool the listing did not name is called as it is.
+
 ### Local servers over stdio
 
 Most MCP servers are programs you start, speaking MCP on their stdin and stdout. `from_command()` starts one when the provider is entered and stops it on exit:
@@ -104,6 +121,7 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `args` | `()` | Its arguments, as a list |
 | `env` | `None` | Extra environment variables for the server, added to the SDK's minimal one |
 | `cwd` | `None` | Working directory of the server |
+| `discover` | `True` | List the server's tools on entry; `False` connects without listing |
 
 ### Methods
 
