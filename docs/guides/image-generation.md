@@ -210,7 +210,8 @@ Retention depends on the provider account and configuration; see the
 [Interactions storage contract](https://ai.google.dev/gemini-api/docs/interactions-overview).
 Keep the same credential identity and check access to prior inputs before reuse.
 `GeminiImageProvider.resolve_size(size)` exposes the adapter’s portable-size
-conversion for applications that need matching preflight and execution geometry.
+conversion for applications that need matching preflight and execution geometry;
+it checks the size against Gemini's whole lineup, not the selected model.
 A size whose ratio or tier the selected model does not offer is refused before
 the call, by its own name (`size '512x512' needs Gemini's 512 tier, which
 gemini-3-pro-image does not offer (its tiers: 1K, 2K, 4K)`), never replaced by
