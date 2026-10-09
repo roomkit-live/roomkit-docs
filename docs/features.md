@@ -417,12 +417,23 @@ assert await room_of(BOB) != "alice-appointment"
 assert await room_of(ALICE) == "alice-appointment"
 ```
 
-On Telegram, Teams, Discord and Buzz the recipient is a chat or a
-conversation: it names no one, and a room opened for a message replies to the
-chat the message came from, never privately to its sender. On an HTTP webhook
-the recipient is a URL the host sets. A transport channel of your own declares
-its kind with `TransportChannel(..., replies_to_sender=True)`, or with
-`reply_metadata_key="..."` naming the inbound metadata that holds its chat.
+On Telegram, Teams, Discord and Buzz the conversation is the chat, not the
+sender: a message is routed by the chat it was posted in, and a room opened for
+it replies there. A user writing to the bot privately and in a group holds two
+rooms, and a group's members share one:
+
+```python
+# alice in private, then alice and bob in a group, then bob in private
+rooms = {room_of(1001, chat=1001), room_of(1001, chat=-100500),
+         room_of(1002, chat=-100500), room_of(1002, chat=1002)}
+assert len(rooms) == 3  # alice's chat, the group, bob's chat
+```
+
+The message's author stays its sender (`event.source.participant_id`). On an
+HTTP webhook the recipient is a URL the host sets. A transport channel of your
+own declares its kind with `TransportChannel(..., replies_to_sender=True)`, or
+with `reply_metadata_key="..."` naming the inbound metadata that holds its chat
+(`channel.conversation_address(message)` is what the framework routes by).
 
 #### Phone numbers in E.164
 
