@@ -451,7 +451,7 @@ sequenceDiagram
 | Anthropic Claude | `anthropic>=1.8,<2` | Conversational AI responses via `AnthropicAIProvider` |
 | OpenAI | `openai>=2.28,<3` | Conversational AI responses via `OpenAIAIProvider` |
 | Google Gemini | `google-genai>=2.25.0` | Conversational AI responses via `GeminiAIProvider` with native vision and function calling |
-| Mistral AI | `mistralai>=2.0,<3` | Conversational AI responses via `MistralAIProvider` with streaming, vision (Pixtral), and function calling |
+| Mistral AI | `mistralai>=2.0,<4` | Conversational AI responses via `MistralAIProvider` with streaming, vision, and function calling |
 
 All AI providers support:
 - **Per-room configuration** via binding metadata (system_prompt, temperature, max_tokens)

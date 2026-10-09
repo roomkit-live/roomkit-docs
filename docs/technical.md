@@ -10,7 +10,7 @@
 | **AI - Anthropic** | anthropic SDK | >= 0.30 (optional) |
 | **AI - OpenAI** | openai SDK | >= 1.30 (optional) |
 | **AI - Gemini** | google-genai | >= 1.0.0 (optional) |
-| **AI - Mistral** | mistralai | >= 1.0 (optional) |
+| **AI - Mistral** | mistralai | >= 2.0, < 4 (optional) |
 | **SMS - Twilio** | twilio | >= 9.0 (optional) |
 | **Phone Validation** | phonenumbers | >= 8.13 (optional) |
 | **Crypto (Telnyx)** | pynacl | >= 1.5 (optional) |
@@ -750,7 +750,7 @@ httpx = ["httpx>=0.27"]
 anthropic = ["anthropic>=1.8,<2"]
 openai = ["openai>=2.28,<3"]
 gemini = ["google-genai>=2.25.0"]
-mistral = ["mistralai>=2.0,<3"]
+mistral = ["mistralai>=2.0,<4"]
 websocket = ["websockets>=14.2"]
 sse = ["httpx>=0.27", "httpx-sse>=0.4"]
 ```
