@@ -1595,14 +1595,14 @@ What the provider does with the context:
   speaking it: a poem written one line per verse came out with 15 % of its
   words wrong, 4 % once joined. The hosted Vui (Fluxions) reads line breaks
   cleanly on its own.
-- `vui-tts>=1.2.0,<1.3`, through its public API only: `Row.truncate` for the
-  cut after a barge-in, `load_official_prompt` and `Row.prefill(cond_bias=...)`
+- `vui-tts>=1.2.3,<1.3`, through its public API only: `Row.truncate` for the
+  cut after a barge-in, which takes the unheard frames out of the codec as
+  well as the cache, `load_official_prompt` and `Row.prefill(cond_bias=...)`
   for a preset's speaker token and conditioning bias, as Vui's own server
   applies them.
-- After a barge-in cut, `Row.truncate` leaves the codec's count on every
-  frame generated: until the conversation restarts from the voice prompt,
-  the decoder's 10 s restarts run ahead of the cache by the frames nobody
-  heard (open upstream, fluxions-ai/vui#42).
+- `vui-tts` keeps 40 s of codec tail. A cut that drops more than 30 s of
+  unheard audio (a long reply cut early) leaves the next reply without its
+  decoder context until the next 10 s boundary, in step again after it.
 - `vui-tts` logs the first 40 characters of every user turn at DEBUG on the
   `vui.engine` logger. Keep that logger above DEBUG in production if
   transcripts must not reach the logs.
