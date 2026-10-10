@@ -3,7 +3,9 @@
 Several agents and one or more people hold one conversation in a room. Any
 agent may address any other with `@channel_id`, a person may address any
 agent, and nobody fixes the order in advance: who speaks next follows from who
-was addressed. One agent speaks at a time (RFC §19.7.5).
+was addressed. One agent speaks at a time (RFC §19.7.5); long work runs as
+tasks, apart from the conversation. An agent is an AI channel or an external
+agent over ACP, such as Claude Code.
 
 ```python
 from roomkit import Agent, Discussion, RoomKit
@@ -172,8 +174,8 @@ the room's delivery lane. Its context is built when the turn starts, so what
 was said while the agent waited is in it, and the event it answers keeps its
 place in the history instead of being read as the last message. The turn's
 notes tell the agent who else is in the room (their channel ids, with the
-`name`, `role` and `description` of Agents), whom it may address, who asked
-for this turn, and how the room works.
+`name`, `role` and `description` of Agents and of external agents given one),
+whom it may address, who asked for this turn, and how the room works.
 
 A speak policy is consulted on a turn as on any event the agent would answer.
 Without one, the model may stay silent itself by answering the silence token
@@ -256,6 +258,86 @@ instruction's turn is dropped and reported, a regenerated answer's recorded
 and dropped. Once the discussion is over, both are refused with
 `discussion_over`.
 
+## Talking and working: tasks
+
+A turn talks; long work runs as a task, off the floor. An agent asked to go
+through every support ticket used to hold the floor for the whole of it, and a
+quick question to another agent waited behind. With background work set up,
+it starts the work as a task, says in a sentence that it is on it, and its
+turn ends: the room goes on, and the result comes back when the work is done.
+
+```python
+kit.setup_background(comms)                         # comms does its own work
+kit.setup_background(dev, worker="dev-code")        # Claude Code over ACP does dev's
+kit.setup_background(sre, hand_back="post")         # sre's results posted as they are
+```
+
+`setup_background` gives the agent the `work_in_background` tool. A task runs
+on the agent's worker (the agent itself, or any intelligence channel the kit
+holds: another agent, an external agent over ACP), in a child room, handed the
+room's last 12 messages, as any delegation
+([Agent Delegation](agent-delegation.md)). Tasks run in parallel with the
+turns and with one another; a question asked while a task runs is answered in
+its turn, not after the task.
+
+The result comes back as the host set it up:
+
+| `hand_back` | What happens |
+|-------------|--------------|
+| `"relay"` (default) | The agent is told the result and says it in a turn of its own, in the conversation's words, at the front of the queue. |
+| `"post"` | The result is posted as it is, as the agent's message, with no generation: at once, and as the worker wrote it. It waits at the front of the queue for the turn under way to end, and the names it carries ask no one. |
+
+Relay a result that needs putting in context; post one that is long or exact
+(an analysis, a list, a diff), or that a slow model would hold for the length
+of a turn.
+
+A model may still do long work in its own turn whatever its tool says (in our
+runs, Mistral Large 4 never used it). The host, or a person through it, starts
+the task itself:
+
+```python
+task = await kit.start_task(room_id, "dev", "Read the tax engine's source: why do "
+                            "Canadian checkouts fail?", hand_back="post")
+await kit.cancel_task(task.id)                      # the agent says it was cancelled
+```
+
+`start_task` works for any agent of the room, an external agent included,
+which takes no tool from RoomKit. Each turn's notes list the room's tasks, so
+an agent asked how a task goes answers from them; `task_status` and
+`cancel_task` are tools you may give it as well. A worker never starts a task
+of its own: the tool is refused in a task's child room. A task outlives the
+discussion: a result that comes back once it is over or uninstalled is posted
+at once, or relayed as any instruction (refused once the discussion is over).
+
+## External agents (ACP)
+
+An external agent over ACP takes the discussion's turns as an AI channel does:
+
+```python
+from roomkit import ACPChannel
+
+dev = ACPChannel(
+    "dev",
+    command=["npx", "--no-install", "@agentclientprotocol/claude-agent-acp@0.61.0"],
+    cwd="/srv/checkout",
+    name="Developer",
+    description="reads the source code and the support tickets",
+    instructions="You are @dev, a developer in an incident room. Answer briefly.",
+)
+room = await kit.create_room(orchestration=Discussion(agents=[investigator, dev, sre]))
+```
+
+Its prompt carries the turn's notes, under the runtime's header (a copy of
+that header in what participants wrote is replaced); its `name`, `role` and
+`description` present it to the others, to the dispatch policy and to the
+console; `instructions` are sent once per session, since its system prompt is
+not RoomKit's to set. Its session keeps its own history: a turn sends what the
+agent has not read yet, then the message it answers. `listen_only` on it while
+its turn runs cancels its prompt. Its tools are its own (its workspace, what
+its agent accepts): the room's tools are not wired into it. A turn of a coding
+agent can take tens of seconds; long work is better started with
+`start_task`, which runs it in a session of its own while the room goes on.
+
 ## Following the queue
 
 ```python
@@ -313,6 +395,14 @@ present the agents your way (`AgentCard`: name, role, description, model,
 tools). A runnable version, with three Claude agents, is
 `examples/discussion_console.py`.
 
+With a WebSocket channel as yours, the answer an agent is writing shows as it
+streams, under "writing…", until it is said. When an agent of the room has
+background work set up (or with `tasks=True`), `/task @dev <what to do>`
+starts a task for it, `/tasks` lists the room's tasks and `/cancel <task>`
+stops one (six hex digits of its id are enough); each agent's card shows its
+running tasks, and a result posted as an agent's message names the worker
+that wrote it (`@dev · a task's result, by dev-code`).
+
 ## The room is the discussion's
 
 One rule decides who speaks, never two. Installing a discussion refuses a room
@@ -363,9 +453,11 @@ runnable version with two simulated workers is
 
 ## Limits of this version
 
-- Text only: voice and realtime channels, agents that think while they listen
-  and external agents (ACP) are refused.
-- One turn at a time, even for agents whose work does not depend on each other.
+- Text only: voice and realtime channels and agents that think while they
+  listen are refused.
+- One turn at a time: work that does not need the floor runs as tasks, but
+  turns never run in parallel.
+- An external agent's tools are its own: the room's tools are not wired into it.
 - Text an agent writes between tool rounds reaches the room as it is written;
   only the names it carries wait for the turn's end.
 - One queue per room: threads (`parent_event_id`) are not yet conversations of

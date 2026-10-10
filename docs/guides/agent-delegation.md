@@ -63,6 +63,68 @@ The flow:
    notified agent's system prompt is never touched.
 7. **Hooks fired**: `ON_TASK_DELEGATED` (immediately) and `ON_TASK_COMPLETED` (on finish)
 
+## What the worker reads: brief and conversation
+
+`task` is what was asked: the label the hand-back, the StatusBus and a turn's
+notes name the task by. `brief` is what the worker is told instead, when it
+says more (how to work, what to report); it never reaches the parent room.
+The child room starts empty, so `conversation` hands the worker the parent
+room's last messages, those the notified channel may read, each under its
+author's label and quoted as data:
+
+```python
+task = await kit.delegate(
+    "incident-room",
+    "dev-code",
+    "Why do Canadian checkouts fail?",                 # the label
+    brief="Read the tax engine's source and the support tickets, then answer "
+          "in a few lines: the cause, the customers hit, the fix.",
+    conversation=12,                                   # the room's last 12 messages
+    notify="dev",
+)
+```
+
+## How the result comes back: relayed or posted
+
+`hand_back="relay"` (the default) is the hand-back above: the notified agent is
+told the result, and says it in a turn of its own. `hand_back="post"` publishes
+it instead as a message of the notified agent, with no turn of its model, at
+once and as the worker wrote it:
+
+```python
+await kit.delegate("incident-room", "dev-code", "Why do Canadian checkouts fail?",
+                   notify="dev", hand_back="post")
+# The room then reads, from @dev:
+# Result of the task “Why do Canadian checkouts fail?”:
+#
+# <the worker's findings>
+```
+
+The posted message goes through the room's pipeline as the agent's response
+would (`BEFORE_BROADCAST`, the agent's right to write, storage), carries the
+task in its metadata (`task_id`, `agent_id`, `task_status`, `task`), and asks no
+one. A task that failed or was cancelled posts that it did, without its error;
+a completed task with nothing to say posts nothing. `post` needs `notify` to
+name an intelligence channel attached to the room, and a background task. In a
+room a [discussion](discussion.md#talking-and-working-tasks) holds, the posted
+result waits at the front of the speak queue for the turn under way to end.
+
+## Long work from an agent: `work_in_background`
+
+```python
+kit.setup_background(dev, worker="dev-code", hand_back="post")
+task = await kit.start_task("incident-room", "dev", "Go through every support ticket.")
+```
+
+`kit.setup_background(agent, worker=None, hand_back="relay")` gives an AI
+channel the `work_in_background` tool: it starts long work as a task, handed
+the room's last 12 messages, on the agent's worker (the agent itself by
+default), says in a sentence that the work is under way, and ends its turn.
+`kit.start_task(room_id, agent_id, task, hand_back=None)` starts the same task
+from the host, for any agent of the room, an external agent included. A call
+from a task's child room is refused: a worker does its work and starts no task
+of its own.
+
 ## Fire and forget
 
 ```python
@@ -612,6 +674,9 @@ the top-level parent.
 | `context` | `dict` | Optional context passed to the agent |
 | `share_channels` | `list[str]` | Channel IDs to share from parent |
 | `notify` | `str` | Channel ID to update with result (default: `agent_id`) |
+| `brief` | `str` | What the agent is told instead of `task` (default: the task) |
+| `conversation` | `int` | The parent room's last messages handed to the agent, quoted as data (default `0`) |
+| `hand_back` | `str` | `"relay"` (default): the notified channel is told the result; `"post"`: posted as the notified agent's message |
 | `on_complete` | `callable` | Async callback `(DelegatedTaskResult) -> None` |
 | `wait` | `bool` | Run inline and return a pre-completed task (default `False` = background) |
 | `require_structured_result` | `bool` | Force the agent to hand back via a result tool, `submit_result` by default (default `False`); inline runs only — see [Structured results](#structured-results) |

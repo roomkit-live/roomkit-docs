@@ -26,6 +26,18 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ::: roomkit.tasks.delegate.setup_realtime_delegation
 
+## Background Work
+
+`RoomKit.setup_background(agent, worker=None, hand_back="relay")` gives an
+agent the `work_in_background` tool (`BACKGROUND_TOOL`, from `roomkit.tasks`),
+and `RoomKit.start_task(room_id, agent_id, task, hand_back=None)` starts the
+same task from the host. See [Long work from an
+agent](../guides/agent-delegation.md#long-work-from-an-agent-work_in_background).
+
+::: roomkit.tasks.background.BackgroundSetup
+
+::: roomkit.core.mixins.background.BackgroundMixin
+
 ## Following Tasks
 
 ::: roomkit.tasks.status.TaskStatusTool

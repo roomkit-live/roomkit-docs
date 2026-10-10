@@ -482,6 +482,46 @@ do). An agent that does not keeps every standalone turn's session until the
 connection closes; the channel never prompts it again, and logs a warning per
 turn.
 
+## Standing instructions and identity
+
+An ACP agent's system prompt is its own (Claude Code's, Codex's), not
+RoomKit's to set. `instructions` give it the integrator's standing direction
+instead (a persona, how the room works), and `name`, `role` and `description`
+the identity an `Agent` has:
+
+```python
+dev = ACPChannel(
+    "dev",
+    command=["npx", "--no-install", "@agentclientprotocol/claude-agent-acp@0.61.0"],
+    cwd=Path("/srv/checkout"),
+    name="Developer",
+    description="reads the source code and the support tickets",
+    instructions="You are @dev, a developer in an incident room. Answer briefly, "
+                 "and change nothing in the workspace.",
+)
+```
+
+The instructions open the first prompt of each session the channel opens for a
+room (a session opened again after the agent restarted included), marked as
+the application's, and are not sent again while the session keeps them; a
+standalone turn's session gets them too. They are not an `INSTRUCTION` (above),
+which directs one turn. What changes from turn to turn belongs to a context
+contributor (below). The identity presents the agent in a
+[discussion](discussion.md#external-agents-acp): the other agents' notes, the
+dispatch policy, the console's cards.
+
+## In a discussion
+
+An ACP agent takes a [discussion](discussion.md#external-agents-acp)'s turns as
+an AI channel does: `Discussion(agents=[investigator, dev, sre])` with `dev` an
+`ACPChannel`. Each turn's prompt ends with the discussion's notes (who is in
+the room, which message the turn answers, how the room works) under the
+runtime's header, and a copy of that header in what participants wrote is
+replaced. Holding the agent (`listen_only`) while its turn runs cancels its
+prompt. Its long work is better started with `kit.start_task(room_id, "dev",
+...)`: the task runs in a session of its own, in a child room, while the
+discussion goes on.
+
 ## Contributing context the agent cannot fetch
 
 The catch-up carries the room. It does not carry what only the *host* holds —
