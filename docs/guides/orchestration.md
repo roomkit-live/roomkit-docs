@@ -443,6 +443,30 @@ room = await kit.create_room(orchestration=Discussion(
 See [Discussion: Agents in a Group Chat](discussion.md) for who speaks next,
 waiting for a person, listening only and following the queue.
 
+### Installing a strategy while the room lives
+
+A room holds one strategy at a time and can change it while it lives:
+
+```python
+await kit.install_strategy(room_id, Discussion([assistant, dev]))   # on a live room
+await kit.uninstall_strategy(room_id)                               # back to its policy
+await kit.install_strategy(room_id, Swarm(agents=[assistant, billing], entry="assistant"))
+kit.room_strategy(room_id)                                          # the installed one
+```
+
+- `install_strategy` registers and attaches the strategy's agents, as
+  `create_room(orchestration=...)` does (which takes the same path), and keeps
+  the timeline: the agents' turns read the conversation so far.
+- `uninstall_strategy` runs the strategy's `uninstall()` step, then takes back
+  what its install added for the room: room hooks, tools and turn runners on
+  the agents, agents it attached, room metadata it wrote. If something cannot
+  be taken back, the room stays claimed and a retry finishes it.
+- A second strategy is refused while one is installed. A host's own strategy
+  gets the same treatment through `install_strategy`; installed by calling its
+  `install()` directly, it calls `kit.claim_room_strategy(room_id, self)` first.
+
+Runnable: `examples/strategy_on_the_fly.py`.
+
 ### Per-room override
 
 The kit-level default can be overridden (or disabled) per room:

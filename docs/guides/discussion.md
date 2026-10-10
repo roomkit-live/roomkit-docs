@@ -94,6 +94,11 @@ live transport never sees it.
 `process_inbound()` returns once the message is committed and broadcast, with
 no agent's answer in its result: the answers come in the turns that follow.
 
+Each agent's memory provider is still handed every message the agent may see
+(not its own), as it commits, as in a room with no discussion: a memory that
+learns as messages arrive (a retrieval index, a summary) learns the whole
+conversation, not only the messages that asked for the agent.
+
 ## Waiting for a person
 
 When an agent names a person (`@oncall may I roll back?`), the discussion
@@ -227,20 +232,42 @@ The room's `agent_response_policy` plays no part while the discussion is
 installed:
 
 ```python
-strategy = Discussion(agents=[investigator, dev, sre])
-await strategy.install(kit, room_id)      # on an existing room
-await strategy.uninstall(kit, room_id)    # the room's policy answers again
+await kit.install_strategy(room_id, Discussion(agents=[investigator, dev, sre]))
+await kit.uninstall_strategy(room_id)     # the room's policy answers again
 ```
+
+A room holds one strategy at a time; it can start as a plain chat, take a
+discussion when a team joins, and become a swarm later (see
+[Installing a strategy while the room lives](orchestration.md#installing-a-strategy-while-the-room-lives)).
 
 ## State and processes
 
-The queue, who only listens, who asked whom and the count of turns given are
-stored in the room's metadata (`_speak_queue`) and outlive a restart: call
-`strategy.install(kit, room_id)` again in the new process. Uninstalling
-forgets all of it, so a discussion installed later starts fresh. Two things do not
-outlive it: the turn running then (it has ended), and the text of a queued
-instruction, which is never stored and is reported through `ON_SPEAK_QUEUE` as
-`instruction_dropped`. One process at a time gives a room's turns.
+The discussion's configuration (`_discussion`) and speak queue (`_speak_queue`)
+are stored in the room's metadata and outlive a restart: call
+`strategy.install(kit, room_id)` again in the new process.
+
+Several processes may serve one room, behind a load balancer, on one store
+(`PostgresStore` with `PostgresAdvisoryLockManager`):
+
+- every process follows the stored discussion, even one whose host did not
+  install it there: it asks no agent at broadcast, reads names and queues
+  turns, each change of the queue read and written under the room lock;
+- one process that installed the discussion gives the turns, under a lease
+  stored with the queue (15 s, renewed while held); another such process
+  takes over once it expires, so a crash stalls the room 15 s at most;
+- the holder reads the queue again every second, which carries another
+  process's queued turn, or its `listen_only`, to it;
+- an instruction's turn moves the lease to the process holding its text.
+
+| Situation | What happens |
+|-----------|--------------|
+| A message reaches a worker that did not install the discussion | It is queued; the lease holder gives the turns, one at a time |
+| Two messages reach two workers at once | One queue, one holder: one agent after the other |
+| The worker giving the turns crashes | Its lease expires; another worker that installed the discussion takes over |
+
+Uninstalling, in any process, forgets the discussion in all of them. A
+runnable version with two simulated workers is
+`examples/discussion_two_workers.py`.
 
 ## Limits of this version
 
