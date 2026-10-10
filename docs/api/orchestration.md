@@ -24,6 +24,22 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ::: roomkit.orchestration.SpeakQueueEvent
 
+## Discussion's dispatch policy
+
+::: roomkit.orchestration.DispatchPolicy
+
+::: roomkit.orchestration.DispatchTurn
+
+::: roomkit.orchestration.DispatchCandidate
+
+::: roomkit.orchestration.DispatchDecision
+
+::: roomkit.orchestration.DispatchDecisionEvent
+
+::: roomkit.orchestration.ClassifierDispatchPolicy
+
+::: roomkit.orchestration.MockDispatchPolicy
+
 ## Agents
 
 ::: roomkit.Agent

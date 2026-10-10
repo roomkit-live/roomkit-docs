@@ -49,7 +49,7 @@ ended.
 | Message | Asks |
 |---------|------|
 | A person's message naming agents (`@dev @sre ...`) | Those agents, at the front of the queue, in the order named |
-| A person's message naming nobody | The agents that asked that person, else `everyone`, in its order |
+| A person's message naming nobody | The agents that asked that person, else `everyone`, in its order, or those of them a [dispatch policy](#who-takes-a-message-that-names-nobody) picks |
 | A person's message naming only people | Nobody |
 | An agent's answer naming agents | Those agents, at the back, once the turn has ended |
 | Any other sender's message (a bot, a webhook, `kit.deliver()`) | The agents its address names, at the back |
@@ -71,7 +71,86 @@ ended.
 With `addressed_only=True`, a person's message asks only the agents it names:
 people who talk together in the room are never cut into by an agent. To let
 agents judge for themselves whether an unaddressed message is for them, leave
-`addressed_only` off and give them a [speak policy](speaking-turns.md).
+`addressed_only` off and give them a [speak policy](speaking-turns.md), or give
+the discussion a dispatch policy, which judges once for the room (below).
+
+## Who takes a message that names nobody
+
+A person's message that names no agent, and answers none that asked them,
+goes to `everyone`, one turn each. In a room of specialists most of those
+turns end in `(silent)`, the agent that should answer may come third, and a
+"thanks" wakes the whole team. A **dispatch policy** decides instead which
+agents take it, in which order, or that none does (RFC §19.7.5 rule 18):
+
+```python
+from roomkit import Agent, ClassifierDispatchPolicy, Discussion, JevClassifier
+
+team = [
+    Agent("investigator", provider=..., name="Investigator",
+          description="reads checkout-api's logs and request traces"),
+    Agent("sre", provider=..., name="SRE",
+          description="reads production metrics and the deploy history, can roll back"),
+    Agent("dev", provider=..., name="Developer",
+          description="reads the feature-flag history and the source code"),
+    Agent("comms", provider=..., name="Comms",
+          description="reads the support tickets, owns the public status page"),
+]
+await kit.create_room(orchestration=Discussion(
+    team,
+    dispatch=ClassifierDispatchPolicy(JevClassifier(), threshold=0.5, max_agents=2),
+))
+```
+
+`ClassifierDispatchPolicy` asks a [classifier](classifiers.md), in one call,
+whether each agent should take the message, from each agent's name and
+description, the recent conversation and the message. The agents whose
+probability reaches `threshold` take it, likeliest first, at most
+`max_agents`; none reaching it, no agent does.
+
+On eight unaddressed messages to these four agents
+(`examples/discussion_dispatch.py`), the same six answers came from:
+
+| | Turns | Silent turns | Time per decision |
+|---|---|---|---|
+| No policy (`everyone`) | 32 | 26 | — |
+| Jev (TypeSafe) | 8 | 2 | 107–280 ms |
+| Claude Haiku (`LLMClassifier`) | 7 | 1 | 1.2–2.9 s |
+
+What a policy decides, and what it cannot:
+
+- **Only a message that names nobody.** A name is the person's word and is
+  never decided; neither is an answer to an agent that asked the person.
+  `addressed_only` and a dispatch policy are exclusive (the constructor
+  refuses both).
+- **Among the candidates.** They are `everyone`, in its order, less the agents
+  the message does not reach (visibility, access) and those that only listen.
+  A decision naming anyone else is cut down to them.
+- **Once, at the message's place.** The process holding the lease decides off
+  the room lock, before it gives another turn. The agents picked go to the
+  front in the order decided, still before the agents a later message asks
+  for. Each still answers through its own speak policy, if it has one.
+- **Never silencing the room.** A policy that raises or takes longer than
+  `dispatch_timeout` (5 s) asks every candidate, reported with the reason
+  `fallback`.
+- **Not stored with the message.** Its `addressed_to` stays null, and a
+  regenerated answer with none left asks `everyone`.
+
+Every decision fires `ON_DISPATCH_DECISION` with a `DispatchDecisionEvent`:
+the message, the candidates, the `DispatchDecision` (`agents`, `reason`,
+`judgments`) and `duration_ms`.
+
+```python
+@kit.hook(HookTrigger.ON_DISPATCH_DECISION, execution=HookExecution.ASYNC)
+async def log_dispatch(event: DispatchDecisionEvent, ctx) -> None:
+    logger.info("%s -> %s (%s, %d ms)", event.event.id, event.decision.agents,
+                event.decision.reason, event.duration_ms)
+```
+
+A policy of your own implements `DispatchPolicy.decide(turn)`: a
+`DispatchTurn` carries the message, the conversation before it that a
+candidate may read, who said what (`speakers`) and the candidates with their
+identity (`DispatchCandidate`). `MockDispatchPolicy` scripts decisions for
+tests.
 
 ## What a turn reads
 
@@ -285,4 +364,5 @@ runnable version with two simulated workers is
 |-------|-------------|
 | [Multi-Agent Orchestration](orchestration.md) | The other strategies, addressing and agent response policies |
 | [Speaking Turns](speaking-turns.md) | Speak policies: an agent that decides whether to answer |
+| [Classifiers](classifiers.md) | Jev and LLM classifiers, the judgments a dispatch policy rests on |
 | [AI Steering Directives](ai-steering.md) | `Cancel` and the other directives |
