@@ -25,6 +25,8 @@ Narrow, typed questions answered with probabilities. See the
 
 ::: roomkit.classifiers.jev.JevClassifier
 
+::: roomkit.classifiers.openai.OpenAIClassifier
+
 ::: roomkit.classifiers.llm.LLMClassifier
 
 ::: roomkit.classifiers.mock.MockClassifier

@@ -83,6 +83,7 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 | Classifier | Probabilities | Latency | Needs |
 |------------|---------------|---------|-------|
 | `JevClassifier(api_key=None, *, model=None, timeout=3.0, client=None)` | calibrated: threshold on them, read a spread as doubt | ~150 ms for the whole call | `pip install roomkit[typesafe]`, `TYPESAFE_API_KEY` |
+| `OpenAIClassifier(api_key=None, *, model="gpt-6-luna", timeout=3.0, client=None)` | probabilities from OpenAI's Decisions API, often near 0 or 1; OpenAI advises calibrating thresholds on labelled data | ~150–450 ms for the whole call | `pip install roomkit[openai]`, `OPENAI_API_KEY` |
 | `LLMClassifier(provider, *, timeout=10.0, max_tokens=1000)` | 0 or 1: the model picks one answer per question | a generation (about 1 s on Claude Haiku 5.5) | an AI provider whose `supports_response_schema` is true |
 | `MockClassifier(answers=None, *, error=None)` | as scripted | none | — |
 
@@ -90,6 +91,22 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 calibrated probabilities. Every question of a call is answered in parallel, so a
 dozen questions cost about what one does. Without a `client`, it makes an
 `AsyncTypeSafeClient` and closes it on `close()`; a client you pass stays yours.
+
+**`OpenAIClassifier`** answers on OpenAI's Decisions API (`POST /v1/decisions`,
+public beta, `gpt-6-luna`), which takes the same three kinds of question: a
+yes/no question goes as a `predicate` (what a yes and a no cover join its
+instructions, the API taking instructions alone), a choice as a `choice`, a
+score as a `score` over labelled levels. The API reads a text, so a structured
+state is sent as its JSON. A question the API declines to answer (a `refusal`)
+fails the whole call with `ClassifierError`. The OpenAI SDK 2.x has no
+`decisions` resource yet: the call goes through the client's generic `post`,
+with its key, retries and errors. Without a `client`, it makes an `AsyncOpenAI`
+and closes it on `close()`.
+
+On the questions of a discussion's dispatch policy (eighteen messages to a team
+of four), it picked right 17 times and Jev 18; its probabilities sit nearer 0
+and 1. A policy whose thresholds were measured on Jev (the speak policy) may
+read them differently: measure it on your own turns before relying on it.
 
 **`LLMClassifier`** asks any AI provider for one JSON document under a response
 schema (RFC §6.7): a boolean per yes/no question, an option per choice, a level

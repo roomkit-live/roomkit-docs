@@ -138,7 +138,7 @@ about the turn, in one call, and composes the answers in code:
 from roomkit import AIChannel, ClassifierSpeakPolicy, JevClassifier
 
 policy = ClassifierSpeakPolicy(
-    JevClassifier(),  # or LLMClassifier(provider), MockClassifier(...)
+    JevClassifier(),  # or OpenAIClassifier(), LLMClassifier(provider), MockClassifier(...)
     agent_name="Nova",
     agent_role="the team's assistant",
     languages={"English": "Answer in English only."},
@@ -181,7 +181,11 @@ in another language pulls the model into English.
 
 The thresholds were measured with Jev's calibrated probabilities. On
 `LLMClassifier` every probability is 0 or 1 and directness a whole level, which
-the same rules read without change, at the cost of a generation per turn.
+the same rules read without change, at the cost of a generation per turn. On
+`OpenAIClassifier` the judgments differ from Jev's: in
+`examples/speaking_judgments.py`, "Paul, do you have the September numbers?"
+read directness 0.57 and Nova spoke where she should have kept quiet; measure
+the policy on your own turns first.
 
 ### Staying quiet when asked
 
