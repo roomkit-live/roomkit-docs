@@ -49,7 +49,7 @@ ended.
 | Message | Asks |
 |---------|------|
 | A person's message naming agents (`@dev @sre ...`) | Those agents, at the front of the queue, in the order named |
-| A person's message naming nobody | The agents that asked that person, else `everyone`, in its order, or those of them a [dispatch policy](#who-takes-a-message-that-names-nobody) picks |
+| A person's message naming nobody | The agents that asked that person, else `everyone`, in its order; with a [dispatch policy](#who-takes-a-message-that-names-nobody), the agents it picks |
 | A person's message naming only people | Nobody |
 | An agent's answer naming agents | Those agents, at the back, once the turn has ended |
 | Any other sender's message (a bot, a webhook, `kit.deliver()`) | The agents its address names, at the back |
@@ -76,11 +76,14 @@ the discussion a dispatch policy, which judges once for the room (below).
 
 ## Who takes a message that names nobody
 
-A person's message that names no agent, and answers none that asked them,
-goes to `everyone`, one turn each. In a room of specialists most of those
-turns end in `(silent)`, the agent that should answer may come third, and a
-"thanks" wakes the whole team. A **dispatch policy** decides instead which
-agents take it, in which order, or that none does (RFC §19.7.5 rule 18):
+A person's message that names no agent goes to the agents that asked that
+person a question, else to `everyone`, one turn each. In a room of
+specialists most of those turns end in `(silent)`, the agent that should
+answer may come third, a "thanks" wakes the whole team, and an agent that
+just asked "@ops did anyone change a flag?" takes your next message even when
+it is "Customers are writing to support, what are they saying?". A
+**dispatch policy** decides instead which agents take it, in which order, or
+that none does (RFC §19.7.5 rule 18):
 
 ```python
 from roomkit import Agent, ClassifierDispatchPolicy, Discussion, JevClassifier
@@ -119,21 +122,28 @@ On eight unaddressed messages to these four agents
 What a policy decides, and what it cannot:
 
 - **Only a message that names nobody.** A name is the person's word and is
-  never decided; neither is an answer to an agent that asked the person.
-  `addressed_only` and a dispatch policy are exclusive (the constructor
-  refuses both).
-- **Among the candidates.** They are `everyone`, in its order, less the agents
-  the message does not reach (visibility, access) and those that only listen.
-  A decision naming anyone else is cut down to them.
+  never decided. `addressed_only` and a dispatch policy are exclusive (the
+  constructor refuses both).
+- **Knowing who waits for an answer.** The agents that asked the person come
+  first among the candidates and are listed in `DispatchTurn.asked`;
+  `ClassifierDispatchPolicy` marks them, so "eu-west" goes to the agent that
+  asked which region, and a new request goes to whoever it is for (10 right
+  out of 10 on Jev with the mark, 9 without).
+- **Among the candidates.** They are the agents that asked the person, then
+  `everyone`, in its order, less the agents the message does not reach
+  (visibility, access) and those that only listen. A decision naming anyone
+  else is cut down to them.
 - **Once, at the message's place.** The process holding the lease decides off
   the room lock, before it gives another turn. The agents picked go to the
   front in the order decided, still before the agents a later message asks
   for. Each still answers through its own speak policy, if it has one.
 - **Never silencing the room.** A policy that raises, takes longer than
-  `dispatch_timeout` (5 s) or returns no readable decision asks every
-  candidate, reported with the reason `fallback`. At most 16 messages wait
-  for a decision (none is decided while no process that installed the
-  discussion is alive); past them, the oldest asks every candidate.
+  `dispatch_timeout` (5 s) or returns no readable decision leaves the
+  message to the rule without a policy (the agents that asked the person,
+  else every candidate), reported with the reason `fallback`. At most 16
+  messages wait for a decision (none is decided while no process that
+  installed the discussion is alive); past them, the oldest goes the same
+  way.
 - **Not stored with the message.** Its `addressed_to` stays null, and a
   regenerated answer with none left asks `everyone`.
 
@@ -152,8 +162,8 @@ async def log_dispatch(event: DispatchDecisionEvent, ctx) -> None:
 A policy of your own implements `DispatchPolicy.decide(turn)`: a
 `DispatchTurn` carries the message, the conversation before it that a
 candidate may read, who said what (`speakers`) and the candidates with their
-identity (`DispatchCandidate`). `MockDispatchPolicy` scripts decisions for
-tests.
+identity (`DispatchCandidate`), and which of them wait for the person's
+answer (`asked`). `MockDispatchPolicy` scripts decisions for tests.
 
 ## What a turn reads
 
