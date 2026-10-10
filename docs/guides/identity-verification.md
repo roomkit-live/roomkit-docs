@@ -217,6 +217,15 @@ the rest from the store; `kit.close()` stops them.
 | `release_max_messages` | 20 | At most this many are released, the latest |
 | `release_max_age` | 3600 | Older held messages are not released |
 
+## Realtime Voice
+
+Labelling and holding act on messages. In a speech-to-speech session
+(`RealtimeVoiceChannel`) the model hears the person before any message
+exists, and the transcript is recorded afterwards: nothing is labelled or
+held there. Gate the session yourself: start it, or give it the instructions
+and tools that reach an account, only once `verification_of(...)` reads
+`VERIFIED`, and end or reconfigure it on `ON_VERIFICATION_ENDED`.
+
 ## Organizations
 
 Verification state is scoped to the organization, as identities are. A message
