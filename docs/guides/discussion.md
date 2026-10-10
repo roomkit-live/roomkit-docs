@@ -129,13 +129,16 @@ What a policy decides, and what it cannot:
   the room lock, before it gives another turn. The agents picked go to the
   front in the order decided, still before the agents a later message asks
   for. Each still answers through its own speak policy, if it has one.
-- **Never silencing the room.** A policy that raises or takes longer than
-  `dispatch_timeout` (5 s) asks every candidate, reported with the reason
-  `fallback`.
+- **Never silencing the room.** A policy that raises, takes longer than
+  `dispatch_timeout` (5 s) or returns no readable decision asks every
+  candidate, reported with the reason `fallback`. At most 16 messages wait
+  for a decision (none is decided while no process that installed the
+  discussion is alive); past them, the oldest asks every candidate.
 - **Not stored with the message.** Its `addressed_to` stays null, and a
   regenerated answer with none left asks `everyone`.
 
-Every decision fires `ON_DISPATCH_DECISION` with a `DispatchDecisionEvent`:
+Every decision applied fires `ON_DISPATCH_DECISION`, once per message, with a
+`DispatchDecisionEvent`:
 the message, the candidates, the `DispatchDecision` (`agents`, `reason`,
 `judgments`) and `duration_ms`.
 
