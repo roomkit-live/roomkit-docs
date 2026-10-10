@@ -46,8 +46,7 @@ roomkit/
 │   ├── features.md                # Feature documentation
 │   ├── ai-integration.md          # AI integration guide
 │   ├── mcp.md                     # MCP integration
-│   ├── roomkit-rfc.md             # RFC v11 (design specification)
-│   └── cpaas-comparison.md        # CPaaS comparison (Twilio vs RoomKit)
+│   └── roomkit-rfc.md             # RFC v11 (design specification)
 ├── examples/                      # Executable example scripts
 │   ├── quickstart.py              # WebSocket + AI quickstart
 │   ├── anthropic_ai.py            # Anthropic Claude integration

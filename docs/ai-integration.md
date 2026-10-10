@@ -1,102 +1,46 @@
 # AI Assistant Integration
 
-RoomKit provides documentation optimized for AI coding assistants, helping developers get accurate, working code when using tools like Claude Code, Cursor, GitHub Copilot, and others.
+RoomKit publishes its documentation in forms a coding assistant (Claude Code,
+Cursor, Copilot…) can read, so the code it writes uses RoomKit's actual API
+rather than a guess from its training data.
 
-## llms.txt
+## The files
 
-The `/llms.txt` file provides a structured index of RoomKit documentation following the [llms.txt specification](https://llmstxt.org/).
+| File | What it holds | Where |
+|---|---|---|
+| `llms.txt` | Index of the documentation, one line per page, in the [llms.txt format](https://llmstxt.org/) | [www.roomkit.live/docs/llms.txt](https://www.roomkit.live/docs/llms.txt), and inside the installed package |
+| `llms-full.txt` | The topic pages (architecture, channels, hooks, voice, orchestration, API) in one file | [www.roomkit.live/docs/llms-full.txt](https://www.roomkit.live/docs/llms-full.txt), and inside the installed package |
+| `AGENTS.md` | Conventions for working on RoomKit itself: commands, project layout, patterns, code style, what to ask first | [repository root](https://github.com/roomkit-live/roomkit/blob/main/AGENTS.md), and inside the installed package |
 
-**Location:** `https://your-docs-site/llms.txt`
+Give the assistant `llms.txt` or `llms-full.txt` to build an application with
+RoomKit; `AGENTS.md` is for contributing to RoomKit.
 
-AI assistants can use this file to:
+## From Python
 
-- Quickly find relevant documentation
-- Understand the project structure
-- Navigate to specific API references
+The package ships the copies that match the installed version:
 
-### Format
+```python
+from roomkit import get_agents_md, get_ai_context, get_llms_full_txt, get_llms_txt
 
-```markdown
-# RoomKit
-
-> RoomKit is a pure async Python library for building multi-channel conversation systems...
-
-## Getting Started
-
-- [Features Overview](docs/features.md): Core features, channels, hooks...
-
-## Core API
-
-- [RoomKit](docs/api/roomkit.md): Central orchestrator class...
+index = get_llms_txt()          # llms.txt
+full = get_llms_full_txt()      # llms-full.txt
+guidelines = get_agents_md()    # AGENTS.md
+context = get_ai_context()      # AGENTS.md and llms.txt in one string
 ```
 
-## AGENTS.md
+## Agent Skills
 
-The `AGENTS.md` file in the repository root provides project-specific guidance for AI coding assistants.
+[roomkit-skills](https://github.com/roomkit-live/roomkit-skills) holds skills
+that walk an assistant through common tasks: setting up a project, creating a
+room, an AI channel, a voice agent, an SMS or WhatsApp channel, hooks,
+orchestration, PostgreSQL and telemetry. For Claude Code:
 
-**Location:** Repository root (`/AGENTS.md`)
-
-### What It Contains
-
-| Section | Purpose |
-|---------|---------|
-| **Quick Reference** | Dev commands (uv sync, pytest, ruff) |
-| **Project Structure** | Directory tree with descriptions |
-| **Architecture Patterns** | ABC + Default, Channel, Provider, Hook patterns |
-| **Code Style** | Required patterns, type hints, imports |
-| **Testing Patterns** | Test class structure, fixtures |
-| **Common Tasks** | Adding providers, channels, hooks |
-| **Boundaries** | Always do / Ask first / Never do rules |
-| **Key Concepts** | Room lifecycle, event flow, identity resolution |
-
-### Why It Matters
-
-Without `AGENTS.md`:
-
-- AI assistants guess patterns from training data
-- Code may not follow RoomKit's async-first architecture
-- Missing exports, wrong patterns, inconsistent style
-
-With `AGENTS.md`:
-
-- AI follows RoomKit's actual patterns
-- Correct ABC + default implementation pattern
-- Proper hook usage (BEFORE_BROADCAST vs AFTER_BROADCAST)
-- Knows to export public classes from `__init__.py`
-
-## Usage with AI Assistants
-
-### Claude Code / Cursor
-
-These tools automatically read `AGENTS.md` from the repository root when working on your project.
-
-### Explicit Reference
-
-You can also explicitly instruct AI assistants:
-
-```
-Read AGENTS.md and implement a new RCS channel for RoomKit following the existing patterns.
+```bash
+claude plugin marketplace add https://github.com/roomkit-live/roomkit-skills
+claude plugin install roomkit-dev
 ```
 
-### MCP Server (Future)
+## MCP
 
-A Model Context Protocol server for live documentation search is planned. This will allow AI assistants to:
-
-- Search RoomKit documentation in real-time
-- Get up-to-date API signatures
-- Find code examples across the repository
-
-## Best Practices for Contributors
-
-When contributing to RoomKit:
-
-1. **Follow AGENTS.md patterns** - AI assistants will expect these patterns
-2. **Update documentation** - Keep llms.txt and API docs in sync
-3. **Export public classes** - Add to `roomkit/__init__.py`
-4. **Add tests** - Follow the testing patterns in AGENTS.md
-
-## Resources
-
-- [llms.txt Specification](https://llmstxt.org/)
-- [AGENTS.md Format](https://agents.md/)
-- [GitHub: How to write a great agents.md](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/)
+RoomKit's AI channels can call tools from MCP servers; see
+[MCP Integration](mcp.md).

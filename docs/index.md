@@ -2,49 +2,105 @@
 
 Pure async Python library for multi-channel conversations.
 
-RoomKit provides the primitives for building multi-channel AI conversation systems: rooms, channels, hooks, identity resolution, and event routing.
+A **room** holds one conversation. **Channels** connect it to the outside
+world: SMS, MMS, RCS, email, WhatsApp, Messenger, Teams, Telegram, Discord,
+WebSocket, HTTP webhooks, voice, video and AI. A message that enters on one
+channel is stored in the room, then delivered to every other channel attached
+to it, adapted to what each one can display. **Hooks** sit in that path to
+block, modify or observe it.
 
-## Quick install
+## Install
 
 ```bash
 pip install roomkit
 ```
 
-## Key concepts
-
-- **Room** — A conversation container that holds events, participants, and channel bindings
-- **Channel** — A communication endpoint (SMS, Email, WebSocket, AI, etc.)
-- **Hook** — Middleware that intercepts events before/after broadcast
-- **Event Router** — Distributes events to target channels with access control and transcoding
-- **Identity Pipeline** — Resolves unknown senders to known identities
-- **Realtime** — Ephemeral events (typing indicators, presence, read receipts)
+Providers with third-party SDKs come as extras, for example
+`pip install "roomkit[anthropic]"`, `"roomkit[postgres]"` or `"roomkit[mcp]"`.
+The library needs Python 3.12 or later.
 
 ## Minimal example
 
+A browser socket and an AI assistant in one room:
+
 ```python
-from roomkit import RoomKit, TextContent
+import asyncio
 
-kit = RoomKit()
+from roomkit import (
+    AIChannel,
+    InboundMessage,
+    RoomEvent,
+    RoomKit,
+    TextContent,
+    WebSocketChannel,
+)
+from roomkit.providers.ai.mock import MockAIProvider
 
-# Register a channel, create a room, attach the channel
-kit.register_channel(my_channel)
-room = await kit.create_room()
-await kit.attach_channel(room.id, my_channel.channel_id)
 
-# Process inbound messages
-result = await kit.process_inbound(message)
+async def main() -> None:
+    kit = RoomKit()
+
+    # A browser connection, and an AI assistant (a mock here, a real provider in production)
+    browser = WebSocketChannel("ws-browser")
+    assistant = AIChannel("ai-assistant", provider=MockAIProvider(responses=["Hi! How can I help?"]))
+    kit.register_channel(browser)
+    kit.register_channel(assistant)
+
+    # One room, both channels attached
+    room = await kit.create_room()
+    await kit.attach_channel(room.id, "ws-browser")
+    await kit.attach_channel(room.id, "ai-assistant")
+
+    # What the room delivers to the browser socket
+    async def send_to_browser(connection_id: str, event: RoomEvent) -> None:
+        print(f"browser <- {event.content.body}")
+
+    browser.register_connection("conn-1", send_to_browser, room_id=room.id)
+
+    # A message from the browser enters the room; the assistant's answer comes back
+    await kit.process_inbound(
+        InboundMessage(channel_id="ws-browser", sender_id="alice", content=TextContent(body="Hello"))
+    )
+
+    await kit.close()
+
+
+asyncio.run(main())
 ```
 
-## Documentation
+It prints `browser <- Hi! How can I help?`. Replace the mock with
+`AnthropicAIProvider`, `OpenAIAIProvider` or another provider, and the socket
+with `SMSChannel` or any other channel: the room code does not change.
 
-- **[Why RoomKit](features.md#why-roomkit)** — Architectural decisions that make RoomKit valuable
-- **[Features](features.md)** — Comprehensive guide to all RoomKit features
-- **[API Reference](api/index.md)** — Full API documentation
-- **[AI Assistant Integration](ai-integration.md)** — llms.txt and AGENTS.md for AI coding tools
+## Key concepts
 
-## For AI Assistants
+| Concept | What it does |
+|---|---|
+| **Room** | Holds a conversation's events, participants and channel bindings. Events are numbered in order within a room. |
+| **Channel** | Connects a room to one medium. A transport channel wraps a **provider** (Twilio, Telnyx, SendGrid…), so the vendor can change without touching the room. |
+| **Binding** | Attaches a channel to a room, with its access, mute and visibility settings. |
+| **Hook** | Runs at a point of the pipeline: before broadcast (can block or modify) or after it (side effects). |
+| **Store** | Keeps rooms and events: in memory by default, SQLite or PostgreSQL for persistence. |
+| **Identity** | Resolves an address (a phone number, an email) to a known person, and can verify them. |
+| **Realtime** | Ephemeral events that are not stored: typing, presence, read receipts, tool progress. |
 
-RoomKit provides AI-friendly documentation:
+Beyond text, RoomKit covers voice (STT, TTS and an audio pipeline, or
+speech-to-speech models), video, conferences, and several AI agents working in
+one room.
 
-- **[llms.txt](llms.txt)** — Structured documentation index for LLMs
-- **[AGENTS.md](https://github.com/roomkit-live/roomkit/blob/main/AGENTS.md)** — Project guidance for coding assistants
+## Where to go next
+
+- **[Features](features.md)**: every feature, starting with [why RoomKit](features.md#why-roomkit)
+- **[Architecture](architecture.md)** and **[Technical](technical.md)**: how the pieces fit
+- **Guides** by topic: [tool calling](guides/tool-calling.md),
+  [voice interruption](guides/voice-interruption.md),
+  [realtime voice](guides/realtime-voice-providers.md),
+  [video](guides/video-overview.md),
+  [multi-agent orchestration](guides/orchestration.md),
+  [identity](guides/identity-resolution.md),
+  [PostgreSQL store](guides/postgres-store.md),
+  [testing](guides/testing-patterns.md)
+- **[API Reference](api/index.md)**: generated from the docstrings
+- **[FAQ](faq.md)**: scope and integration questions
+- **[AI Assistant Integration](ai-integration.md)**: `llms.txt`, `AGENTS.md` and
+  Agent Skills for coding assistants

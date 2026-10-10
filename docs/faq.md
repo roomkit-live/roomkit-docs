@@ -24,9 +24,9 @@ RoomKit solves the complexity of building applications where conversations span 
 RoomKit is **not** a complete chat backend. It doesn't handle:
 
 - User authentication or session management
-- WebSocket connection pooling at the user level
+- Deciding which rooms a user may open
 - Push notification infrastructure
-- Read receipts / unread count persistence
+- Unread badges, and what counts as "read"
 - User presence across your application
 
 These are intentionally left to integrators because they vary significantly between applications.
@@ -35,80 +35,72 @@ These are intentionally left to integrators because they vary significantly betw
 
 ## Architecture Questions
 
-### Should RoomKit manage user-level WebSocket connections?
+### Can one WebSocket carry several rooms?
 
-**No.** RoomKit is room-centric, not user-centric.
+**Yes.** `WebSocketChannel` delivers a room's events to the connections
+registered for that room, and one connection can follow several rooms:
 
-A common pattern is wanting a single WebSocket per user that subscribes to multiple rooms:
+```python
+from roomkit import RoomEvent, WebSocketChannel
 
+ws = WebSocketChannel("ws-app")
+kit.register_channel(ws)
+await kit.attach_channel("room-1", "ws-app")
+await kit.attach_channel("room-2", "ws-app")
+
+async def send(connection_id: str, event: RoomEvent) -> None:
+    # event.room_id tells the client which conversation the event belongs to
+    await sockets[connection_id].send_json(event.model_dump(mode="json"))
+
+ws.register_connection("conn-alice", send, room_id="room-1")
+ws.subscribe("conn-alice", "room-2")    # the client opens a second conversation
+ws.unsubscribe("conn-alice", "room-1")  # ...and closes the first one
 ```
-/ws (one connection per user)
-Client → Server: { "action": "subscribe", "room_id": "xxx" }
-Server → Client: { "type": "event", "room_id": "xxx", ... }
-```
 
-This is **integrator-side responsibility**. Your WebSocket layer sits above RoomKit:
+`ws.rooms_for(connection_id)` lists the rooms a connection follows, and
+`ws.unregister_connection(connection_id)` drops it when the socket closes.
+
+What stays in your application, above RoomKit:
 
 ```
 ┌─────────────────────────────────────────┐
-│  Your App's User Session Layer          │
-│  - User auth & connection management    │
-│  - Room subscription tracking           │
-│  - Unread counts & notifications        │
-│  - Fan-out logic                        │
+│  Your application                       │
+│  - Who the user behind a socket is      │
+│  - Which rooms that user may open       │
+│  - Unread badges & notifications        │
+│  - Presence across the application      │
 └─────────────────────────────────────────┘
                     │
                     ▼
 ┌─────────────────────────────────────────┐
 │  RoomKit                                │
-│  - Room/event management                │
-│  - Channel abstraction                  │
+│  - Rooms, events, read positions        │
+│  - Channels and delivery                │
 │  - Hooks & routing                      │
 └─────────────────────────────────────────┘
 ```
 
-**Building blocks RoomKit provides:**
-- `kit.subscribe_room(room_id, callback)` — receive events for any room
-- `kit.get_timeline(room_id)` — fetch history
-- `AFTER_BROADCAST` hooks — trigger your fan-out logic
-- Ephemeral events — typing indicators, presence, custom events
+**Other building blocks:**
 
-### Why doesn't RoomKit handle unread counts?
+- `kit.get_timeline(room_id)` — a room's history
+- `AFTER_BROADCAST` hooks — react to every stored event, for notifications or
+  your own fan-out
+- `kit.subscribe_room(room_id, callback)` — the room's ephemeral events only
+  (typing, presence, read receipts), not its messages
 
-Unread counts are **application-specific business logic**:
+### Does RoomKit track unread messages?
 
-- What counts as "read"? Viewing the room? Scrolling past the message?
-- Do you count all messages or just @mentions?
-- Are system messages counted?
-- Per-user or per-device tracking?
+It keeps a **read position per channel** in each room:
+`kit.mark_read(room_id, channel_id, event_id)`,
+`kit.mark_all_read(room_id, channel_id)`, `kit.list_read_markers(room_id)`,
+and `kit.store.get_unread_count(room_id, channel_id)`.
 
-RoomKit provides the events; you decide what "unread" means for your app.
+What that position means is your application's decision:
 
-### Should I use RoomKit's WebSocketChannel for my chat UI?
-
-**It depends on your architecture.**
-
-`WebSocketChannel` is designed for:
-- Browser connections to specific rooms
-- Real-time event delivery within a room context
-- Typing indicators and presence within a room
-
-If you need user-level connections (one socket per user, multiple rooms), build your own WebSocket handler that uses RoomKit's primitives:
-
-```python
-@app.websocket("/ws")
-async def user_ws(ws, user_id):
-    subscriptions = {}
-
-    async def on_event(room_id, event):
-        await ws.send_json({"room_id": room_id, "event": serialize(event)})
-
-    async for msg in ws:
-        if msg["action"] == "subscribe":
-            sub_id = await kit.subscribe_room(msg["room_id"],
-                lambda e: on_event(msg["room_id"], e))
-            subscriptions[msg["room_id"]] = sub_id
-```
+- What counts as "read"? Opening the room? Scrolling past the message?
+- Do you count every message, or only @mentions? System messages?
+- One position per user, or per device? RoomKit keeps one per channel
+  binding.
 
 ---
 
@@ -137,43 +129,38 @@ Yes! This is a core feature. You might have:
 ```python
 kit.register_channel(SMSChannel("sms-twilio", provider=twilio_provider))
 kit.register_channel(SMSChannel("sms-telnyx", provider=telnyx_provider))
-kit.register_channel(SMSChannel("sms-vonage", provider=vonage_provider))
+kit.register_channel(SMSChannel("sms-sinch", provider=sinch_provider))
 ```
 
 Each channel has a unique ID and can be attached to rooms independently.
 
 ### What's a SourceProvider vs a regular Provider?
 
-- **Provider** (outbound): Sends messages from RoomKit to external systems
-- **SourceProvider** (inbound): Receives messages from external systems into RoomKit
+- **Provider** (outbound): RoomKit calls it to send a message out, when the
+  channel it backs delivers an event.
+- **SourceProvider** (inbound): holds a connection open (a WebSocket, a
+  Server-Sent Events stream, a WhatsApp session…) and pushes what arrives into
+  RoomKit. Attach it with `kit.attach_source(channel_id, source)`.
 
-Example: `WebSocketSource` connects to an external WebSocket server and routes incoming messages to RoomKit rooms.
-
-For **bidirectional** communication, pair a Source with a Provider that share the same connection:
+For **bidirectional** traffic over one connection, the channel's provider sends
+through the source. WhatsApp Personal works this way:
 
 ```python
-from roomkit import Provider, ProviderCapability
-from roomkit.sources import WebSocketSource
+from roomkit import RoomKit, WhatsAppPersonalChannel
+from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.sources import WhatsAppPersonalSourceProvider
 
-# Source handles inbound messages
-source = WebSocketSource(url="wss://external.example.com/events", channel_id="ws-ext")
+kit = RoomKit()
 
-# Provider wraps source.send() for outbound messages
-class WebSocketProvider(Provider):
-    def __init__(self, source: WebSocketSource):
-        self._source = source
+source = WhatsAppPersonalSourceProvider(db="wa-session.db", channel_id="wa-personal")
+provider = WhatsAppPersonalProvider(source)  # outbound goes through the source's session
 
-    async def send(self, message) -> DeliveryResult:
-        await self._source.send(serialize(message))
-        return DeliveryResult(success=True)
-
-# Register both
-provider = WebSocketProvider(source)
-kit.register_provider("ws-ext", provider)
-await kit.attach_source("ws-ext", source)
+kit.register_channel(WhatsAppPersonalChannel("wa-personal", provider=provider))
+await kit.attach_source("wa-personal", source, auto_restart=True)
 ```
 
-See the [Bidirectional Channel Pattern](api/sources.md#bidirectional-channel-pattern) documentation for a complete example.
+See [Sources](api/sources.md#bidirectional-pattern-source-provider) for the
+other sources and their options.
 
 ---
 
@@ -203,10 +190,10 @@ async def redact_sensitive(event, ctx):
         return HookResult.block("PII detected")
     return HookResult.allow()
 
-@kit.hook(HookTrigger.AFTER_BROADCAST)
+@kit.hook(HookTrigger.AFTER_BROADCAST, execution=HookExecution.ASYNC)
 async def notify_external(event, ctx):
+    # Runs after delivery; its return value is ignored
     await send_to_analytics(event)
-    return HookResult.allow()
 ```
 
 ---
@@ -225,21 +212,23 @@ A single user might be multiple participants across different rooms. A participa
 Identity resolution runs when:
 1. An inbound message arrives from a channel with identity resolution enabled
 2. The sender's address (phone, email) is looked up against known identities
-3. Based on the result (identified, ambiguous, unknown), hooks can intervene
+3. Based on the result (identified, ambiguous, unknown), identity hooks can
+   intervene
 
 ```python
+from roomkit import ChannelType, HookTrigger, RoomKit
+from roomkit.models import IdentityHookResult
+
 kit = RoomKit(
     identity_resolver=your_resolver,
     identity_channel_types={ChannelType.SMS, ChannelType.EMAIL},
 )
 
-@kit.hook(HookTrigger.ON_IDENTITY_AMBIGUOUS)
-async def handle_ambiguous(event, ctx):
-    # Multiple identities match this phone number
-    # Access candidates from context, decide how to handle
-    candidates = ctx.identity_result.candidates
-    # Block for manual resolution, or auto-select first match
-    return HookResult.block("Ambiguous identity - manual resolution required")
+@kit.identity_hook(HookTrigger.ON_IDENTITY_AMBIGUOUS)
+async def handle_ambiguous(event, ctx, id_result):
+    # Several identities match this phone number: keep the sender pending
+    # until someone picks one with kit.resolve_participant()
+    return IdentityHookResult.pending(candidates=id_result.candidates)
 ```
 
 ---
@@ -275,9 +264,10 @@ and [Store API](api/store.md).
 
 Yes, with the right store backend. For multi-instance deployments:
 
-1. Use a shared store (Postgres, Redis)
-2. Use a distributed pub/sub for realtime events
-3. Source connections may need coordination (one instance per source)
+1. Share one `PostgresStore`, with `PostgresAdvisoryLockManager` (below)
+2. Share ephemeral events (typing, presence) through `RedisRealtimeBackend`
+   from `roomkit.realtime` (`roomkit[redis]`)
+3. Coordinate source connections yourself (one instance per source)
 
 ### How do I handle provider rate limits?
 
@@ -299,7 +289,7 @@ Or implement rate limiting in hooks:
 ```python
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
 async def rate_limit(event, ctx):
-    if await is_rate_limited(ctx.channel_id):
+    if await is_rate_limited(event.source.channel_id):
         return HookResult.block("Rate limited - try again later")
     return HookResult.allow()
 ```
@@ -366,53 +356,59 @@ startup warning.
 
 ### How do I test with RoomKit?
 
-RoomKit includes mock providers and an in-memory store for testing:
+The default `InMemoryStore` and the mock providers make no network call. A
+`WebSocketChannel` with a collecting callback stands in for the user:
 
 ```python
-from roomkit import RoomKit
+from roomkit import AIChannel, InboundMessage, RoomEvent, RoomKit, TextContent, WebSocketChannel
 from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.store.memory import InMemoryStore
-from roomkit.channels import AIChannel
 
-# Create test kit with in-memory store (default)
-kit = RoomKit()
 
-# Use mock providers that don't make real API calls
-ai = AIChannel("ai-test", provider=MockAIProvider(responses=["Hello!", "How can I help?"]))
-kit.register_channel(ai)
+async def test_ai_answers() -> None:
+    kit = RoomKit()  # InMemoryStore by default
+    user = WebSocketChannel("ws-user")
+    ai = AIChannel("ai-test", provider=MockAIProvider(responses=["Hello!"]))
+    kit.register_channel(user)
+    kit.register_channel(ai)
 
-# Test message flow
-room = await kit.create_room("test-room")
-await kit.attach_channel("test-room", "ai-test")
+    await kit.create_room(room_id="test-room")
+    await kit.attach_channel("test-room", "ws-user")
+    await kit.attach_channel("test-room", "ai-test")
 
-result = await kit.process_inbound(InboundMessage(
-    channel_id="user",
-    sender_id="test-user",
-    content=TextContent(body="Hi"),
-))
+    received: list[RoomEvent] = []
 
-assert not result.blocked
-assert result.event is not None
+    async def collect(connection_id: str, event: RoomEvent) -> None:
+        received.append(event)
+
+    user.register_connection("conn-1", collect, room_id="test-room")
+
+    result = await kit.process_inbound(
+        InboundMessage(channel_id="ws-user", sender_id="test-user", content=TextContent(body="Hi"))
+    )
+
+    assert not result.blocked
+    assert [e.content.body for e in received] == ["Hello!"]
 ```
+
+See [Testing Patterns](guides/testing-patterns.md) for voice, providers and
+hooks.
 
 ### How do I test hooks?
 
-Hooks run during normal message processing, so test them end-to-end:
+Hooks run during normal message processing, so test them end-to-end, on the
+same setup:
 
 ```python
-blocked_messages = []
-
-@kit.hook(HookTrigger.BEFORE_BROADCAST, name="test_blocker")
+@kit.hook(HookTrigger.BEFORE_BROADCAST, name="spam_filter")
 async def block_spam(event, ctx):
-    if "spam" in event.content.body.lower():
-        blocked_messages.append(event)
+    if isinstance(event.content, TextContent) and "spam" in event.content.body.lower():
         return HookResult.block("Spam detected")
     return HookResult.allow()
 
-# Test the hook
-result = await kit.process_inbound(spam_message)
+result = await kit.process_inbound(
+    InboundMessage(channel_id="ws-user", sender_id="test-user", content=TextContent(body="Buy spam now"))
+)
 assert result.blocked
-assert len(blocked_messages) == 1
 ```
 
 ---

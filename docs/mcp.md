@@ -1,233 +1,45 @@
 # MCP Integration
 
-RoomKit is designed for seamless integration with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Build AI assistants that can manage conversations, send messages, and handle multi-channel communication.
+RoomKit is an MCP **client**: its AI channels call tools that
+[Model Context Protocol](https://modelcontextprotocol.io/) servers expose.
+RoomKit does not ship an MCP server of its own.
 
-## What is MCP?
-
-The Model Context Protocol is an open standard that enables AI assistants like Claude to interact with external tools and data sources. With RoomKit's MCP integration, AI assistants can:
-
-- Create and manage conversation rooms
-- Send messages across channels (SMS, Email, WebSocket, etc.)
-- Query conversation history
-- Manage participants and identities
-- Handle real-time events
-
-## Quick Start
-
-### 1. Install RoomKit
+## MCP tools in an AI channel
 
 ```bash
-pip install roomkit
+pip install "roomkit[mcp]"
 ```
 
-### 2. Create an MCP Server
+`MCPToolProvider` connects to an MCP server, by URL or by starting it as a
+command, discovers its tools, and hands them to an `AIChannel` as ordinary
+RoomKit tools. `compose_tool_handlers` mixes them with your local tools:
 
 ```python
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
-from roomkit import RoomKit
+from roomkit import AIChannel
+from roomkit.tools import MCPToolProvider, compose_tool_handlers
 
-kit = RoomKit()
-server = Server("roomkit-mcp")
-
-@server.list_tools()
-async def list_tools():
-    return [
-        Tool(
-            name="roomkit_create_room",
-            description="Create a new conversation room",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "metadata": {
-                        "type": "object",
-                        "description": "Optional metadata for the room"
-                    }
-                }
-            }
-        ),
-        Tool(
-            name="roomkit_send_message",
-            description="Send a message to a room",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "room_id": {"type": "string", "description": "Room ID"},
-                    "body": {"type": "string", "description": "Message content"},
-                    "channel_id": {"type": "string", "description": "Target channel"}
-                },
-                "required": ["room_id", "body"]
-            }
-        ),
-        Tool(
-            name="roomkit_list_rooms",
-            description="List all conversation rooms",
-            inputSchema={"type": "object", "properties": {}}
-        ),
-        Tool(
-            name="roomkit_get_history",
-            description="Get message history for a room",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "room_id": {"type": "string", "description": "Room ID"},
-                    "limit": {"type": "integer", "description": "Max messages"}
-                },
-                "required": ["room_id"]
-            }
-        )
-    ]
-
-@server.call_tool()
-async def call_tool(name: str, arguments: dict):
-    if name == "roomkit_create_room":
-        room = await kit.create_room(metadata=arguments.get("metadata"))
-        return [TextContent(type="text", text=f"Created room: {room.id}")]
-
-    elif name == "roomkit_send_message":
-        # Implementation depends on your channel setup
-        pass
-
-    elif name == "roomkit_list_rooms":
-        rooms = await kit.list_rooms()
-        return [TextContent(type="text", text=f"Rooms: {[r.id for r in rooms]}")]
-
-    elif name == "roomkit_get_history":
-        events = await kit.get_room_events(
-            arguments["room_id"],
-            limit=arguments.get("limit", 50)
-        )
-        return [TextContent(type="text", text=str(events))]
-
-async def main():
-    async with stdio_server() as (read, write):
-        await server.run(read, write)
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
+    handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
+    ai = AIChannel("ai-assistant", provider=provider, tool_handler=handler)
+    # register the channel, then attach it with mcp.get_tools_as_dicts() in its metadata
 ```
 
-### 3. Configure Claude Desktop
+An MCP tool call passes the same gates as a local one: tool policies and
+`ON_TOOL_CALL` hooks. The [MCP Tool Provider guide](guides/mcp-tool-provider.md) covers
+transports, filtering, headers and the tool-name aliases.
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+## MCP servers for an ACP agent
 
-```json
-{
-  "mcpServers": {
-    "roomkit": {
-      "command": "python",
-      "args": ["/path/to/your/mcp_server.py"]
-    }
-  }
-}
-```
+An external agent that takes part in a room over ACP (Claude Code, for
+example) brings its own MCP servers. `ACPChannel(mcp_servers=[...])` declares
+them in the agent's session; they name servers on the agent's machine, not on
+RoomKit's. See the [ACP Agent Channel guide](guides/acp-channel.md).
 
-## Available Tools
+## Driving RoomKit from an MCP client
 
-A complete RoomKit MCP server typically exposes these tools:
-
-| Tool | Description |
-|------|-------------|
-| `roomkit_create_room` | Create a new conversation room |
-| `roomkit_list_rooms` | List all rooms with optional filtering |
-| `roomkit_get_room` | Get details about a specific room |
-| `roomkit_send_message` | Send a message to a room |
-| `roomkit_get_history` | Retrieve conversation history |
-| `roomkit_attach_channel` | Attach a channel to a room |
-| `roomkit_add_participant` | Add a participant to a room |
-| `roomkit_list_participants` | List room participants |
-
-## Example Prompts
-
-Once configured, you can interact with RoomKit through natural language:
-
-**Creating rooms:**
-> "Create a new support room for customer inquiries"
-
-**Sending messages:**
-> "Send 'Hello, how can I help you today?' to room rm_abc123"
-
-**Querying history:**
-> "Show me the last 10 messages in the support room"
-
-**Managing channels:**
-> "Attach the SMS channel to the customer's room"
-
-## AI Context Files
-
-RoomKit includes files specifically designed to help AI assistants understand the library:
-
-### llms.txt
-
-Provides a structured overview of RoomKit documentation for LLM context windows:
-
-```python
-from roomkit import get_llms_txt
-
-# Include in your MCP server's context
-context = get_llms_txt()
-```
-
-### AGENTS.md
-
-Contains coding guidelines and patterns for AI assistants:
-
-```python
-from roomkit import get_agents_md
-
-# Help AI write idiomatic RoomKit code
-guidelines = get_agents_md()
-```
-
-## Best Practices
-
-### 1. Use Meaningful Metadata
-
-```python
-room = await kit.create_room(metadata={
-    "type": "support",
-    "customer_id": "cust_123",
-    "priority": "high"
-})
-```
-
-### 2. Implement Proper Error Handling
-
-```python
-@server.call_tool()
-async def call_tool(name: str, arguments: dict):
-    try:
-        # Tool implementation
-        pass
-    except RoomNotFoundError:
-        return [TextContent(type="text", text="Error: Room not found")]
-    except Exception as e:
-        return [TextContent(type="text", text=f"Error: {str(e)}")]
-```
-
-### 3. Provide Rich Context
-
-Include conversation context when the AI needs to make decisions:
-
-```python
-Tool(
-    name="roomkit_analyze_conversation",
-    description="Analyze conversation sentiment and suggest responses",
-    inputSchema={
-        "type": "object",
-        "properties": {
-            "room_id": {"type": "string"},
-            "include_history": {"type": "boolean", "default": True}
-        }
-    }
-)
-```
-
-## Resources
-
-- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
-- [RoomKit API Reference](api/index.md)
-- [AI Integration Guide](ai-integration.md)
-- [llms.txt Specification](https://llmstxt.org/)
+To let an MCP client such as Claude Desktop act on rooms, write a server with
+the [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) whose
+tools call RoomKit's public API: `kit.create_room()`, `kit.get_room()`,
+`kit.attach_channel()`, `kit.get_timeline()`, `kit.process_inbound()`. Check
+who the caller is before each call: the server acts with the rights you give
+it.

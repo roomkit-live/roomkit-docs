@@ -1,46 +1,47 @@
 # RoomKit Documentation
 
-Technical documentation for [RoomKit](https://github.com/roomkit-live/roomkit), built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
+Documentation site for [RoomKit](https://github.com/roomkit-live/roomkit), built
+with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) and
+published at <https://www.roomkit.live/docs/>.
 
-This is the single source of truth for all RoomKit documentation — API reference, guides, architecture, and more. The `roomkit` repo itself contains no docs (only a pointer back here).
+Guides, the feature reference, the architecture and the API reference live
+here. The `roomkit` repository keeps only the files written for AI assistants:
+`AGENTS.md`, `llms.txt`, and the topic pages in `docs/c7/` that build its
+`llms-full.txt`.
 
 ## Local Development
 
+The API reference is generated from RoomKit's docstrings, so the site builds
+from a `roomkit` checkout next to this one:
+
 ```bash
-pip install mkdocs mkdocs-material mkdocstrings[python]
-mkdocs serve
+cd ../roomkit
+make docs-serve   # live preview on http://localhost:8000
+make docs         # strict build: a broken link or an unresolved API reference fails it
 ```
 
-Then open http://localhost:8000.
+Both targets read `../roomkit-docs` by default; pass `DOCS_DIR=<path>` to build
+another checkout. The output goes to `site/` in this repository.
 
 ## Structure
 
 ```
 docs/
-  index.md            Getting started
-  architecture.md     Architecture overview
+  index.md            Home
   features.md         Feature reference
-  technical.md        Technical deep dive
-  ai-integration.md   AI channel guide
-  mcp.md              MCP integration
+  architecture.md     Architecture overview
+  technical.md        Technical details
   faq.md              FAQ
-  cpaas-comparison.md CPaaS comparison
-  guides/             Hands-on guides
-    resampler.md        Audio resampler
-    sherpa-onnx.md      sherpa-onnx providers (VAD, denoiser, STT, TTS)
-    wav-file-recorder.md  WAV file recorder & debug taps
-    rtp-backend.md      RTP voice backend & SIP integration
-  api/                API reference (auto-generated from docstrings)
-mkdocs.yml            MkDocs configuration
+  ai-integration.md   llms.txt, AGENTS.md and Agent Skills for coding assistants
+  mcp.md              MCP integration
+  llms.txt            Documentation index for LLMs
+  llms-full.txt       The topic pages in one file, for LLMs
+  guides/             Hands-on guides, one per feature
+  api/                API reference (mkdocstrings directives)
+mkdocs.yml            Configuration and navigation
 ```
 
-## Build
-
-```bash
-mkdocs build
-```
-
-Output goes to `site/`.
+A new guide goes in `docs/guides/` and in the `nav` of `mkdocs.yml`.
 
 ## Related Repos
 
