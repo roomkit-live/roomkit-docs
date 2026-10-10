@@ -791,6 +791,20 @@ ACP agents may ask the client to approve a tool. `ACPChannel` rejects these
 requests by default. To approve selected operations, provide an
 `ExternalToolHandler`:
 
+!!! warning "The agent decides what it asks"
+
+    RoomKit's gate hears only of the calls the agent submits, and the agent's
+    own configuration decides which those are. Measured with
+    `claude-agent-acp` 0.61.0: in Claude Code's `auto` mode (a user's
+    `~/.claude/settings.json` sets it, and an agent spawned with that `HOME`
+    inherits it, its allow rules and skills too) the agent runs commands
+    without asking, and no permission request reaches the handler; in
+    `default` mode a command that writes is asked for (and refused by a
+    read-only policy), while reads and commands it deems safe run unasked;
+    in `plan` mode it refuses every action that is not a read itself. Set the
+    mode you rely on, per room, before the first turn:
+    `await agent.set_config_option(room_id, "mode", "default")`.
+
 ```python
 from roomkit import ACPChannel, ToolPolicy
 from roomkit.tools import PolicyExternalToolHandler
