@@ -52,12 +52,13 @@ ended.
 | A person's message naming nobody | The agents that asked that person, else `everyone`, in its order |
 | A person's message naming only people | Nobody |
 | An agent's answer naming agents | Those agents, at the back, once the turn has ended |
-| Any other sender's message (a bot, a webhook) | The agents its address names, at the back |
+| Any other sender's message (a bot, a webhook, `kit.deliver()`) | The agents its address names, at the back |
 
-- `@all` names every agent. Names are read in what the speaker wrote, never in
-  a fenced code block or a quoted (`>`) line, and they set the event's
-  `addressed_to`. A name never gets around visibility: an agent that cannot
-  read the message is not queued by it.
+- `@all` names every agent. A name holds letters of any script, digits,
+  `_ . -`. Names are read in what the speaker wrote once every host hook has
+  run, never in a fenced code block or a quoted (`>`) line, and they set the
+  event's `addressed_to`. A name never gets around visibility: an agent that
+  cannot read the message is not queued by it.
 - An agent named several times while queued is owed **one** turn; it answers
   the latest person's message among the events that asked for it.
 - The agent that just spoke does not take the next turn while another agent of
@@ -102,9 +103,18 @@ queue only listens, or if the depth limit stopped the next turn. A person's
 next message ends the wait; naming nobody, it answers the agents that asked
 that person.
 
-`people` lists the names agents address people by. Left `None`, they are the
-names of the room's participants that are neither agents nor bots, kept to an
-identifier's characters (`Alice Martin` is addressed as `@AliceMartin`).
+Agents address people by the names the transcript gives them: a participant's
+name, the name a transport stamped (`sender_name`), else the channel of a
+sender with no name (`@sms1`), kept to an identifier's characters (`Alice
+Martin` is addressed as `@AliceMartin`) and at most 32 of them. `people`, when
+set, keeps only the names it lists. What an agent asked is recorded against
+the person as the transcript labels them, and only when one person answers to
+the name: a name two people answer to records nothing, and a sender who takes
+another's name (labelled `Alice (2)`) never answers for them.
+
+Only a room with a person waits: a room whose only other senders are bots and
+webhooks stays idle instead, and the next event that asks for a turn opens it
+again.
 
 ## Depth, turns and the end
 
@@ -129,16 +139,25 @@ await kit.talk_again(room_id, ["sre"])    # "@sre you can carry on"
 
 An agent that only listens keeps its place in the queue and takes no turn an
 agent asks for; a person's message that names it gives it one turn, and it goes
-on listening. Setting it on the agent whose turn runs cuts that turn, as a
-`Cancel` steering directive does: what the turn committed stays in the room.
+on listening (a message that names nobody gives it none). Setting it on the
+agent whose turn runs cuts that turn, as a `Cancel` steering directive does:
+what the turn committed stays in the room; a turn given but not running yet is
+abandoned before it runs. `talk_again` also ends a wait that was for that
+agent.
 
 ## Instructions and regenerated answers
 
-An `INSTRUCTION` addressed to an agent queues it at the front for a turn of its
-own that takes the instruction as its input. `kit.regenerate_response(room_id)`
-queues, at the front, a turn of its own for each agent that answered the last
-person's message. Both are given even while the discussion waits for a person,
-and to an agent that only listens.
+An `INSTRUCTION` addressed to agents queues each of them at the front for a
+turn of its own that takes the instruction as its input; one addressed to no
+agent of the discussion is reported in `unavailable_targets`.
+`kit.regenerate_response(room_id)` queues, at the front, a turn of its own for
+each agent that answered the last person's message (each agent the message
+asked for, when you removed the answers first), once per agent and message.
+Both are given even while the discussion waits for a person, to an agent that
+only listens, and to the agent that just spoke. Past the depth limit, an
+instruction's turn is dropped and reported, a regenerated answer's recorded
+and dropped. Once the discussion is over, both are refused with
+`discussion_over`.
 
 ## Following the queue
 
@@ -152,7 +171,9 @@ async def follow(event: SpeakQueueEvent, ctx) -> None:
     print(event.change, event.channel_ids, queue.speaking, queue.queue, queue.waiting)
 ```
 
-`kit.speak_queue(room_id)` returns the `SpeakQueue` at any time:
+`kit.speak_queue(room_id)` returns the `SpeakQueue` at any time. It, and
+`listen_only` / `talk_again`, take `organization_id` to scope the call to one
+tenant: a room of another organization reads as holding no discussion.
 
 | Field | Meaning |
 |-------|---------|
@@ -165,8 +186,35 @@ async def follow(event: SpeakQueueEvent, ctx) -> None:
 
 `ON_SPEAK_QUEUE` fires for each change, in the order the changes happened:
 `queued`, `turn_given`, `turn_ended`, `instruction_dropped`, `listening`,
-`talking_again`, `waiting`, `over`. A console that shows who speaks, who is
-next, who only listens and whether the room waits for a person follows it.
+`talking_again`, `waiting` (the wait beginning or ending: read
+`event.queue.waiting`), `over`.
+
+## A console for the discussion
+
+`DiscussionConsole` (`pip install roomkit[console]`) is a full-screen terminal
+on a room a discussion holds: the room on the left (every message and tool
+call, who asks you), a card per agent on the right (identity, model, live
+state: speaking, next, listening, asking, nothing to add), the speak queue
+below, your input at the bottom.
+
+```python
+from roomkit import WebSocketChannel
+from roomkit.console import DiscussionConsole
+
+kit.register_channel(WebSocketChannel("you"))
+await kit.attach_channel(room_id, "you")
+await DiscussionConsole(kit, room_id, channel_id="you", log_file="room.log").run()
+```
+
+What you type goes into the room through the transport channel you name.
+`/listen @a` and `/talk @a` set the listening state, `/help` and `/quit` do
+what they say, and `commands={"name": handler}` adds your own. Only messages
+from your channel and sender show as yours; every other author shows under the
+transcript's label. The kit's logs go to `log_file` while the screen is up
+(without one, warnings are held and printed once it closes). Pass `cards` to
+present the agents your way (`AgentCard`: name, role, description, model,
+tools). A runnable version, with three Claude agents, is
+`examples/discussion_console.py`.
 
 ## The room is the discussion's
 
@@ -188,7 +236,8 @@ await strategy.uninstall(kit, room_id)    # the room's policy answers again
 
 The queue, who only listens, who asked whom and the count of turns given are
 stored in the room's metadata (`_speak_queue`) and outlive a restart: call
-`strategy.install(kit, room_id)` again in the new process. Two things do not
+`strategy.install(kit, room_id)` again in the new process. Uninstalling
+forgets all of it, so a discussion installed later starts fresh. Two things do not
 outlive it: the turn running then (it has ended), and the text of a queued
 instruction, which is never stored and is reported through `ON_SPEAK_QUEUE` as
 `instruction_dropped`. One process at a time gives a room's turns.
