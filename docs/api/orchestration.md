@@ -14,6 +14,16 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ::: roomkit.orchestration.strategies.loop.Loop
 
+::: roomkit.orchestration.strategies.discussion.Discussion
+
+## Discussion's speak queue
+
+::: roomkit.orchestration.SpeakQueue
+
+::: roomkit.orchestration.SpeakQueueChange
+
+::: roomkit.orchestration.SpeakQueueEvent
+
 ## Agents
 
 ::: roomkit.Agent

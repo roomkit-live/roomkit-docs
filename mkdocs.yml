@@ -117,6 +117,7 @@ nav:
           - Structured Output: guides/structured-output.md
           - Streaming with Tools: guides/streaming-tools.md
           - Multi-Agent Orchestration: guides/orchestration.md
+          - "Discussion: Agents in a Group Chat": guides/discussion.md
           - Delivery Service: guides/delivery.md
           - Speaking Turns: guides/speaking-turns.md
           - Classifiers: guides/classifiers.md

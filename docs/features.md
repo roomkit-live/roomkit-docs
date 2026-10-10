@@ -6,7 +6,7 @@ RoomKit is designed around architectural patterns that solve real problems in mu
 
 ### Hook System with 79 Triggers
 
-Instead of a single "webhook" callback, RoomKit provides **78 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
+Instead of a single "webhook" callback, RoomKit provides **81 distinct hook triggers** covering the full event lifecycle -- across text messaging, identity, voice, video, tool execution, and multi-agent orchestration. This enables:
 
 - **Memory injection** — Add context before AI generates responses (`BEFORE_BROADCAST`)
 - **Compliance filtering** — Block or modify messages based on content rules
@@ -792,6 +792,7 @@ Filter options:
 | `ON_REALTIME_TEXT_INJECTED` | Async | Voice: text entered a realtime model's context, on a realtime voice channel and a conference alike. The event is the injection, sourced from the host channel, with `metadata.injected_role` and `metadata.session_id`; a broadcast from another channel also carries `metadata.injected_from` (`channel_id`, `event_id` of the event broadcast). Fires only for a provider's `sent` result: a session the host no longer holds, or one its provider ended, takes no injection (`not_sent`, `realtime_session_gone`) |
 | `ON_USER_INPUT_REQUIRED` | Sync | Human-in-the-loop: tool paused, waiting for user input (see [guide](guides/human-in-the-loop.md)) |
 | `ON_SPEAK_DECISION` | Async | An AI channel's speak policy decided whether the agent speaks, offers or stays silent on an event. Carries a `SpeakDecisionEvent` (room, channel, event, decision with its reason and judgments, `duration_ms` the policy took, `asked_again` when it decided again once the agent thought) |
+| `ON_SPEAK_QUEUE` | Async | A discussion's speak queue changed: an agent queued, a turn given or ended, a queued instruction dropped, an agent listening only or talking again, the discussion waiting for a person or over. Carries a `SpeakQueueEvent` (room, the `SpeakQueue` as it now is, the `SpeakQueueChange`, the agents it concerns, the event involved), in the order the changes happened |
 | `ON_THOUGHT` | Async | An AI channel's thinker came back with a new thought in a room, or speaking emptied what the agent wanted to say. Carries a `ThoughtEvent` (room, channel, thought, the one it replaces, `duration_ms` of the thinker call, `None` without one) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
 | `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
@@ -1622,10 +1623,10 @@ See the [Image Generation guide](guides/image-generation.md) and `examples/image
 
 ### Multi-Agent Orchestration
 
-Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. Four declarative **orchestration strategies** handle the common patterns — pass one to `RoomKit` or `create_room` and all wiring is automatic:
+Route conversations between multiple AI agents with state tracking, handoff protocol, and pipeline workflows. Five declarative **orchestration strategies** handle the common patterns — pass one to `RoomKit` or `create_room` and all wiring is automatic:
 
 ```python
-from roomkit import Agent, Pipeline, RoomKit, Swarm, Supervisor, Loop
+from roomkit import Agent, Discussion, Pipeline, RoomKit, Swarm, Supervisor, Loop
 
 # Linear pipeline: triage -> handler -> resolver
 kit = RoomKit(orchestration=Pipeline(agents=[triage, handler, resolver]))
@@ -1662,13 +1663,17 @@ kit = RoomKit(orchestration=Loop(
     agent=coder, reviewers=[security, perf, style], strategy="parallel",
 ))
 
+# Discussion: agents and people in one group chat, addressed by @name
+kit = RoomKit(orchestration=Discussion(agents=[investigator, dev, sre]))
+
 room = await kit.create_room()
 # Agents registered, attached, routing + handoff tools wired, state initialised.
 ```
 
 Key features:
 
-- **Orchestration strategies** — `Pipeline`, `Swarm`, `Supervisor`, `Loop` — declarative, zero-boilerplate setup
+- **Orchestration strategies** — `Pipeline`, `Swarm`, `Supervisor`, `Loop`, `Discussion` — declarative, zero-boilerplate setup
+- **Discussion** — several agents and people hold one conversation: any agent addresses any other by `@channel_id`, one agent speaks at a time, each turn reading the room as it is when it starts. A person's message asks the agents it names, else the agents that asked that person, else `everyone` (`addressed_only=True` asks only the named); an agent's answer naming another queues it once its turn has ended. Waiting for a person, `listen_only` / `talk_again`, a silence token never streamed, its own `max_depth`, `max_turns` and `done`; `kit.speak_queue()` and `ON_SPEAK_QUEUE` let a console show who speaks and who is next. Text only ([guide](guides/discussion.md))
 - **Per-room override** — `create_room(orchestration=...)` overrides or disables the kit default
 - **Per-room installs** — one agent or voice channel shared by rooms with different strategies runs each room's own: a strategy's tools are declared in its room's turns and sessions and run with that room's configuration, a sync `Loop` or auto-delegating `Supervisor` takes its own rooms' turns only, a realtime session starts with its room's active agent, and nothing is written onto the shared object for one room ([guide](guides/orchestration.md))
 - **ConversationState** — Immutable state model tracking phase, active agent, handoff count, and transition history
