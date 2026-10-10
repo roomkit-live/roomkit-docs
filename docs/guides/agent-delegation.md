@@ -120,6 +120,9 @@ task = await kit.start_task("incident-room", "dev", "Go through every support ti
 channel the `work_in_background` tool: it starts long work as a task, handed
 the room's last 12 messages, on the agent's worker (the agent itself by
 default), says in a sentence that the work is under way, and ends its turn.
+The task is always the calling agent's own: a model never runs another
+agent's worker, which may hold more than it does, nor has a result come back
+in another agent's name; it asks that agent by name instead.
 `kit.start_task(room_id, agent_id, task, hand_back=None)` starts the same task
 from the host, for any agent of the room, an external agent included. A call
 from a task's child room is refused: a worker does its work and starts no task
