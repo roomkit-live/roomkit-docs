@@ -970,6 +970,12 @@ closed = await agent.close_session("coding-session")
 await kit.close()
 ```
 
+`cancel` reaches a turn from the moment it holds the room: while the agent is
+started and its session opened or set up (which takes a second or more with
+MCP servers), the turn ends without prompting, its response metadata marked
+`interrupted`, and returns `True`. A queued turn, still waiting for the room,
+is not the active one.
+
 `close_session` forgets the session whatever the agent answers, and never
 raises for a refused close: `session/close` goes only to an agent that announces
 it, and one that does not keeps the session until the connection closes. A
