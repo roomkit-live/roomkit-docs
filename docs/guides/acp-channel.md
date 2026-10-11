@@ -271,7 +271,8 @@ agent = ACPChannel(
 ```
 
 - **`mcp_servers`** is a list given to every room's sessions, or a function of
-  the room id, sync or async, called each time a session opens for that room.
+  the room id (`MCPServersForRoom`), sync or async, called each time a session
+  opens for that room.
   A server that acts for a room (starts a task, writes a note) learns which
   one from what the function puts in its `env`, its URL or its headers.
 - **`session_config`** maps ACP config ids to values (`mode`, `model`, an
@@ -286,7 +287,10 @@ agent = ACPChannel(
   prompted, and the turn fails (or `set_config_option` raises) with a
   `RuntimeError` naming the option. The mode is what makes the agent ask
   RoomKit before it acts: a session left in another mode would not be a
-  degraded session, it would be an ungated one.
+  degraded session, it would be an ungated one. When the refused value is one
+  you set on the room (a model a restarted agent no longer offers), set
+  another: a `set_config_option` that opens the room's session sets its value
+  in place of the room's earlier one. `close_session(room_id)` forgets them all.
 
 `examples/acp_room_mcp.py` runs Claude Code in two rooms, each with its own
 notes server, every MCP call asked of the policy.
