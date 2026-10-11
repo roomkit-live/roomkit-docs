@@ -7,7 +7,8 @@ published at <https://www.roomkit.live/docs/>.
 Guides, the feature reference, the architecture and the API reference live
 here. The `roomkit` repository keeps only the files written for AI assistants:
 `AGENTS.md`, `llms.txt`, and the topic pages in `docs/c7/` that build its
-`llms-full.txt`.
+`llms-full.txt`. This site serves copies of `llms.txt` and `llms-full.txt`:
+change them in `roomkit`, then run `make llms-sync` there to refresh the copies.
 
 ## Local Development
 
@@ -34,8 +35,8 @@ docs/
   faq.md              FAQ
   ai-integration.md   llms.txt, AGENTS.md and Agent Skills for coding assistants
   mcp.md              MCP integration
-  llms.txt            Documentation index for LLMs
-  llms-full.txt       The topic pages in one file, for LLMs
+  llms.txt            Documentation index for LLMs (copy, from roomkit)
+  llms-full.txt       The topic pages in one file, for LLMs (copy, from roomkit)
   guides/             Hands-on guides, one per feature
   api/                API reference (mkdocstrings directives)
 mkdocs.yml            Configuration and navigation

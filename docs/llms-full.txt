@@ -6,7 +6,7 @@
 > identity resolution, hooks, and realtime events.
 > Python 3.12+, Pydantic 2.x, fully typed, zero required dependencies beyond Pydantic.
 
-> Minimum version: 0.58.0 | Python 3.12+
+> Minimum version: 0.66.1 | Python 3.12+
 
 RoomKit is a pure async Python library for building multi-channel conversation systems. It provides a **room-based abstraction** where conversations happen in rooms, participants communicate through channels, and hooks let you intercept and modify the flow.
 
@@ -861,6 +861,26 @@ A participant is one shared record per `(room_id, participant_id)`, even when
 record, not per-channel presence. When two channel memberships have independent
 connect/disconnect lifecycles, give them distinct participant ids and correlate
 them through `identity_id`.
+
+## Cancelling a turn
+
+Cancelling a task awaiting `kit.process_inbound()` cancels and drains that
+call's tools, generation and stream consumers before propagating
+`asyncio.CancelledError`. Other rooms and shared providers remain usable.
+Committed events and already streamed text remain in the timeline.
+
+With `defer_delivery=True`, explicitly call
+`await result.delivery.cancel(reason="hangup", timeout=5.0)` to stop that turn.
+The returned result's `cancellation_reason` names its terminal cancellation;
+`await result.delivery.wait()` joins the same cleanup. Cancelling a `wait()`
+alone leaves deferred work running. A completed handle is unchanged by cancel.
+
+The default cleanup budget is five seconds on both paths. `TimeoutError`
+means cleanup is incomplete: keep resources still in use, and for a deferred
+call await its handle later. Repeated cancellation does not interrupt
+finalizers. A handle cannot drain its own room lock or lane (`RuntimeError`).
+External effects already committed and tasks detached by application handlers
+are outside this cancellation contract. See `examples/cancel_delivery.py`.
 ---
 
 Hooks intercept events at specific points in the processing pipeline. They can block messages, modify content, trigger side effects, or observe the conversation.
@@ -1079,7 +1099,7 @@ member management API.
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
 | `ON_DELIVERY_STATUS` | ASYNC | `(DeliveryStatus, ctx) -> None` | Provider delivery receipt dispatched by `kit.process_delivery_status()` / `kit.process_webhook()`. The `@kit.on_delivery_status` decorator registers a `(status)`-only callback on this trigger. |
-| `BEFORE_DELIVER` | ASYNC | `(event, ctx) -> None` | Before a proactive `kit.deliver()` strategy executes (in-process and worker paths). Payload is a synthetic INTERNAL system-source event describing the delivery. Observational — invoked through the async pipeline, cannot block (RFC §9 lists it SYNC; code invokes it ASYNC). |
+| `BEFORE_DELIVER` | SYNC | `(event, ctx) -> HookResult` | Before a proactive `kit.deliver()` strategy executes (in-process and worker paths), a delegation's or a supervisor's background result included. Payload is a synthetic INTERNAL system-source event describing the delivery, of type `INSTRUCTION` for `deliver(instruction=True)`. `HookResult.block()` refuses the delivery (outcome `blocked`); a modified event's text replaces the content. A hook that raises does not block (fail-open, RFC §9.3). |
 | `AFTER_DELIVER` | ASYNC | `(event, ctx) -> None` | After the delivery strategy completes. Same payload shape with status DELIVERED/FAILED and `metadata.error` set on failure. |
 
 ### Side Effects
@@ -1119,8 +1139,8 @@ member management API.
 | `ON_TURN_COMPLETE` | ASYNC | `(TurnCompleteEvent, ctx) -> None` | Turn detector says turn is complete; carries combined text + confidence |
 | `ON_TURN_INCOMPLETE` | ASYNC | `(TurnIncompleteEvent, ctx) -> None` | Turn detector says turn is incomplete |
 | `ON_BACKCHANNEL` | ASYNC | `(BackchannelEvent, ctx) -> None` | Backchannel detected (uh-huh, yeah) |
-| `ON_RECORDING_STARTED` | ASYNC | `(RecordingStartedEvent, ctx) -> None` | Audio recording started (voice session or conference track) |
-| `ON_RECORDING_STOPPED` | ASYNC | `(RecordingStoppedEvent, ctx) -> None` | Audio recording stopped, result available |
+| `ON_RECORDING_STARTED` | ASYNC | `(RecordingStartedEvent, ctx) -> None` | Recording started (voice session, conference track or room), before any media: the consent point |
+| `ON_RECORDING_STOPPED` | ASYNC | `(RecordingStoppedEvent, ctx) -> None` | Recording stopped (voice session, conference track or room), result available; a room's `session` is `None` and `room_id` names it |
 | `ON_INPUT_AUDIO_LEVEL` | ASYNC | `(AudioLevelEvent, ctx) -> None` | Inbound audio level (throttled; telemetry-suppressed) |
 | `ON_OUTPUT_AUDIO_LEVEL` | ASYNC | `(AudioLevelEvent, ctx) -> None` | Outbound audio level (throttled; telemetry-suppressed) |
 | `BEFORE_BRIDGE_AUDIO` | SYNC | `(BridgeAudioEvent, ctx) -> HookResult` | Before an audio frame is forwarded across an audio bridge. Can block/modify the frame. Only invoked when hooks are registered — otherwise frames bypass the event loop for latency. |
@@ -1131,6 +1151,7 @@ member management API.
 |---------|-----------|-----------|-------------|
 | `BEFORE_TOOL_USE` | SYNC | `(ToolCallEvent, ctx) -> HookResult` | Before a tool executes (AIChannel, realtime channels, conference, external/ACP tools). Block denies the call, and the model reads the block's reason. **Fails closed**: a hook that raises, times out or returns something unusable denies the call; the model then reads `Tool 'x' denied by pre-execution hook.`, never the hook's error, which reaches ON_TOOL_CALL's observers on `error_detail` (an external tool handler decides and reports the call itself). A room context that cannot be built refuses the call too. |
 | `ON_TOOL_CALL` | SYNC | `(ToolCallEvent, ctx) -> HookResult` | A tool call executed (AIChannel, RealtimeVoiceChannel, skills, external/ACP tools). In the AI channel's tool loop, Block returns an error result to the model and marks the call failed, its structured copy dropped; `HookResult(metadata={"result": ...})` or `HookResult.modify(event)` supplies or overrides the tool result (`event.result is None` means the hook must provide it; a served result replaced with `None` reads as JSON `null`, on every channel) and keeps the copy; SYNC hooks chain, each seeing the result the previous one left, and ASYNC observers see the final one as the model reads it (a replacement serialized), a blocked call included (`is_error=True`), while a report on a call whose outcome the model already read (an external tool's, one the provider ran itself) reaches them as it was read, whatever a SYNC hook returned; `event.structured_content` is the copy the tool-call event carries for UI surfaces (MCP `structuredContent`), which `metadata={"structured_content": ...}` replaces and `None` clears. RFC §9 lists this ASYNC; code invokes it through the sync pipeline. |
+| `AFTER_TOOL_ROUND` | SYNC | `(ToolRoundEvent, ctx) -> HookResult` | Between two rounds of an AIChannel's tool loop, after each round the channel ran calls in. The event carries the round whole (`calls`, the channel's `results`, the provider's `answered`) and the names of the turn's toolset (`tools`). Act on it in place: `event.withdraw(*names)` takes tools out of the rest of the turn with every guarantee of a BEFORE_AI_GENERATION withdrawal, `event.add_message(text)` is what the next round reads after the results. A BLOCK stops the hooks after it and changes nothing of the round; a MODIFY's event is not read. Not fired by realtime sessions, a reasoning backend's agent or an ACP agent's own loop. |
 | `ON_USER_INPUT_REQUIRED` | SYNC | `(PendingInputEvent, ctx) -> HookResult` | A `HumanInputHandler`-backed tool paused awaiting human input. Sync so the notification (e.g. WebSocket push) lands before `wait()` starts blocking; block auto-rejects the pending request. |
 
 ### Realtime Voice
@@ -1144,8 +1165,8 @@ member management API.
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
 | `BEFORE_AI_GENERATION` | SYNC | `(AIGenerationEvent, ctx) -> HookResult` | Before the AI provider is invoked. `event.ai_context` (messages, system prompt, tools) may be mutated in place; block skips generation. Its `tools` are the turn's toolset after the tool policy and skill gating, under Tool Search the whole catalogue: a tool it removes is declared at no round, named by no `find_tools`, and refused; a tool it adds is declared at every round, never deferred. |
-| `ON_AI_THINKING` | — | — | Reserved — defined in the enum, not fired by any built-in code (RFC §9 marks it Implemented). |
-| `ON_AI_RESPONSE` | ASYNC | `(AIResponseEvent, ctx) -> None` | AI generation completed. Carries response content, usage, latency, tool call count. |
+| `ON_AI_THINKING` | ASYNC | `(ThinkingEvent, ctx) -> None` | A reasoning window opened (`THINKING_START`) on an AIChannel; fires whether or not a realtime backend is configured. The reasoning text itself streams on the ephemeral `THINKING_DELTA` / `THINKING_END` events, so `event.thinking` is empty here. |
+| `ON_AI_RESPONSE` | ASYNC | `(AIResponseEvent, ctx) -> None` | AI generation completed. Carries the turn's text — `response_content`, the segments a tool call cut joined with a blank line, and `segments` one by one — plus usage, latency, tool call count, and `loop_end_reason` — which of the tool loop's rules ended the turn (`completed`, `max_rounds`, `timeout`, `budget_exceeded`, `cancelled`, `force_stopped`, `truncated`, `empty_response`, `unfinished`, `error`). Read that rather than inferring a cut-off from `tool_calls_count`, which counts the calls the turn ran. |
 
 ### Protocol Observability
 
@@ -1164,7 +1185,7 @@ system event (AI-channel source; `metadata`: `from_agent`, `to_agent`,
 | `ON_HANDOFF` | ASYNC | `(event, ctx) -> None` | Agent handoff accepted and executed. |
 | `ON_HANDOFF_REJECTED` | ASYNC | `(event, ctx) -> None` | Agent handoff was rejected (`metadata.accepted=False`). |
 | `ON_PHASE_TRANSITION` | ASYNC | `(event, ctx) -> None` | Fired alongside `ON_HANDOFF` after an accepted handoff, carrying the new phase. |
-| `ON_STATUS_POSTED` | — | — | Reserved — StatusBus posts emit the `status_posted` framework event instead; no hook fires (RFC §9 marks it Implemented). |
+| `ON_STATUS_POSTED` | ASYNC | `(StatusEntry, ctx) -> None` | A `StatusBus` post whose `metadata` carries a `room_id` ran that room's hooks; a post with no room reaches no hook (the bus is global). Every post also emits the `status_posted` framework event. |
 
 ### Delegation (background tasks)
 
@@ -1203,6 +1224,13 @@ bot never triggers them.
 | `ON_CONFERENCE_TRACK_UNMUTED` | ASYNC | `(event, ctx) -> None` | Publisher unmuted a track. |
 | `ON_ACTIVE_SPEAKER_CHANGED` | ASYNC | `(event, ctx) -> None` | SFU reported a dominant-speaker change. `data`: `participant_id`. |
 | `ON_CONNECTION_QUALITY_CHANGED` | ASYNC | `(event, ctx) -> None` | SFU reported a participant's connection quality. `data`: `participant_id`, `quality`. |
+
+### Discussion
+
+| Trigger | Execution | Signature | Description |
+|---------|-----------|-----------|-------------|
+| `ON_DISPATCH_DECISION` | ASYNC | `(DispatchDecisionEvent, ctx) -> None` | A discussion's dispatch policy decided who takes a person's message that names no agent (RFC §19.7.5 rule 18): `event.candidates`, `event.decision` (`agents` in order, `reason`, `judgments`), `event.duration_ms`. The reason `fallback` means the policy failed or ran past `dispatch_timeout`, and every candidate was asked. |
+| `ON_SPEAK_QUEUE` | ASYNC | `(SpeakQueueEvent, ctx) -> None` | A discussion's speak queue changed (RFC §19.7.5): `event.change` is a `SpeakQueueChange` (`queued`, `turn_given`, `turn_ended`, `instruction_dropped`, `listening`, `talking_again`, `waiting`, `over`), `event.channel_ids` the agents it concerns, `event.queue` the `SpeakQueue` as it now is. Announced in the order the changes happened. |
 
 ### Planning
 
@@ -1291,6 +1319,7 @@ Provider notes:
 - **Gemini on Vertex AI** (`roomkit.providers.gemini.vertex`) — subclass of `GeminiAIProvider` serving the same Gemini models through a Google Cloud project with a pinned region (`GeminiVertexConfig` requires `project` and `location`, e.g. `"northamerica-northeast1"`; no API key — the identity is `impersonate_service_account`, else `service_account_json`, else ADC). Use it when data residency matters (Québec Law 25 / PIPEDA). Generation, streaming, thinking, and the model catalog are inherited; the one addition is billing labels: `GeminiVertexConfig.labels` (`{"tenant": "acme"}`) rides every request as `GenerateContentConfig.labels`, so Cloud Billing splits one project's spend per tenant or partner: metadata only, 24 to 48 h behind in the report, never a source of truth; Google's label rules (64 labels, 63 characters, lowercase letters, digits, `_`, `-`, a key starts with a letter) are enforced when the config is built, and the field is Vertex-only because the Developer API refuses it.
 - **OpenRouter** (`roomkit.providers.openrouter`) — subclass of `OpenAIAIProvider` pointed at `https://openrouter.ai/api/v1`; `OpenRouterConfig` subclasses `OpenAIConfig` (adds `site_url`/`app_name` attribution headers) and `model` is a required slug like `"anthropic/claude-sonnet-4.5"`. Reasoning is forwarded to any upstream model via OpenRouter's unified `reasoning` object. Model-listing nuance: OpenRouter's `/models` items omit the `object`/`owned_by` fields the OpenAI SDK expects, so `list_models()` reads the raw JSON instead.
 - **LiteLLM proxy** (`roomkit.providers.litellm`) — subclass of `OpenAIAIProvider` pointed at a self-hosted LiteLLM gateway (default `http://localhost:4000`); the extra installs the `openai` SDK, deliberately **not** the `litellm` package (the gateway keeps keys/budgets/routing server-side). `model` is the deployment's public alias and `api_key` a virtual or master key, both required. Reasoning rides LiteLLM's cross-provider normalisation: `reasoning_effort` passes through, `thinking_budget>0` maps to a `thinking` token budget, and the trace comes back in `reasoning_content`; `thinking_budget=0` sends no reasoning params at all (LiteLLM has no disable token every upstream translator accepts — force-off belongs in the proxy's per-model config or `extra_body`). `available_models()` is empty (the model list is the operator's config); `list_models()` reads the proxy's `/model/info` — context window, vision flag, and per-token costs per alias, with a load-balanced group merged into the one entry every deployment can honour (smallest window, vision and price only when unanimous) and LiteLLM's `0`-for-unknown costs mapped to "unpriced" rather than free.
+- **Outbound policy** (`transport=`) — `OpenAIAIProvider(config, transport=...)`, and every provider built on it (`AzureAIProvider`, `OpenRouterAIProvider`, `create_vllm_provider(config, transport=...)`, the inherited xAI, DeepSeek, Qwen, LiteLLM, Cerebras, Meta), sends every request through an `httpx.AsyncBaseTransport` placed inside the SDK's own default client (redirects followed, each hop through the transport; per-request timeout kept). The transport owns its connection pool and limits, and httpx reads no environment proxy beside a transport. The seam for a policy that judges the address actually dialled when users name the endpoint, or a `MockTransport` in a test; closed with the provider. See `examples/openai_outbound_policy.py`.
 - **xAI (Grok)** (`roomkit.providers.xai`) — subclass of `OpenAIAIProvider` pointed at `https://api.x.ai/v1`; defaults to `max_completion_tokens` and stream usage. `XAIRealtimeProvider` (Grok speech-to-speech) is a separate import from `roomkit.providers.xai.realtime`.
 - **PolarGrid** (`roomkit.providers.polargrid`) — Canadian-hosted inference network (edges in Toronto, Vancouver, Montréal) via the official `polargrid-sdk` async client; OpenAI-shaped chat-completions surface. Supports tool calling, thinking (`PolarGridConfig(thinking=True)` sets the `enable_thinking` request flag; reasoning is surfaced as `AIResponse.thinking` / `StreamThinkingDelta`), and vision (`image_url` content parts). Pin `region` in production when residency matters.
 
@@ -1307,7 +1336,7 @@ provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-...", model="gpt-4o"))
 from roomkit.providers.gemini.ai import GeminiAIProvider
 from roomkit.providers.gemini.config import GeminiConfig
 
-provider = GeminiAIProvider(GeminiConfig(api_key="...", model="gemini-2.0-flash"))
+provider = GeminiAIProvider(GeminiConfig(api_key="...", model="gemini-3.8-flash"))
 
 # Mock (for testing)
 from roomkit.providers.ai.mock import MockAIProvider
@@ -1345,6 +1374,32 @@ agent = Agent(
     greeting="Hi! How can I help you today?",
 )
 ```
+
+`role`, `description`, `scope` and `language` are appended to the system
+prompt as an `--- Agent Identity ---` block, in a turn, a handoff and a
+realtime pipeline alike. A host that renders the agent's identity in its own
+prompt passes `identity_in_prompt=False`: no block is written anywhere, and
+the fields stay readable on the agent.
+
+## Steering a Running Turn
+
+`steer()` hands a running tool loop a directive (`Cancel`, `InjectMessage`,
+`UpdateSystemPrompt`, RFC §21.3) and returns how many loops it reached. One
+channel object serves every room it is bound to, so a host acting for one
+room addresses that room:
+
+```python
+from roomkit.models.steering import Cancel, InjectMessage
+
+agent.steer(Cancel(reason="stop pressed"), room_id="room-a")   # every loop of room-a
+agent.steer(InjectMessage(content="Also check the logs."), room_id="room-a")  # its latest
+agent.steer(Cancel(reason="timeout"), loop_id="loop-abc123")   # one loop
+```
+
+Without `loop_id` or `room_id`, a directive reaches the channel's most
+recent loop, whatever its room. A loop is reachable once its turn has started
+(its response stream is read): a directive that comes before reaches none, and
+`steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
 ## Tool Calling
 
@@ -1396,6 +1451,33 @@ ai = AIChannel(
 )
 ```
 
+#### Refusing a call
+
+What the handler returns is the tool's answer, so a refusal returned as a body
+reads as work that was done: the tool-call event says `completed`, and an audit
+trail records a call that never ran. Raise `ToolRefusedError` instead.
+
+```python
+from roomkit import ToolRefusedError
+
+async def handle_tools(name: str, arguments: dict) -> str:
+    if name not in MY_TOOLS:
+        raise ToolRefusedError(f"Error: the tool '{name}' does not exist.")
+    ...
+```
+
+The message reaches the model verbatim, which is the point: any other exception
+reads as `{"error": "Tool '<name>' failed (<ExceptionClass>)"}`, its message
+withheld from the model (it can hold a password or a path) and handed to the
+log and to `ON_TOOL_CALL` observers as `event.error_detail`. The call is marked
+failed, observers see `event.is_error`, and the stored `TOOL_CALL_END` carries
+what the model read.
+
+A tool that ran and failed, with words for the model, raises `ToolFailedError`:
+the message reaches the model verbatim and the observers as `error_detail`, and
+the call is failed, not refused (`event.refused` is false). An MCP tool whose
+result says `isError` raises it.
+
 ### Tool Protocol (Tool ABC)
 
 For structured tool definitions, use the `Tool` base class:
@@ -1427,11 +1509,19 @@ Integrate Model Context Protocol servers:
 ```python
 from roomkit.tools.mcp import MCPToolProvider
 
-mcp = MCPToolProvider(server_command=["uvx", "mcp-server-sqlite", "--db", "data.db"])
-await mcp.initialize()
-
-ai = AIChannel("ai", provider=provider, tools=mcp.tools())
+async with MCPToolProvider.from_command("uvx", ["mcp-server-sqlite", "--db", "data.db"]) as mcp:
+    ai = AIChannel("ai", provider=provider, tools=mcp.get_tools(), tool_handler=mcp.as_tool_handler())
 ```
+
+Beside the model's tools, a host reads what an MCP App needs from the same
+connection: `mcp.tool_meta()` (each discovered tool's `_meta`, `ui.resourceUri`
+and `ui.csp` among it, from the listing made at connection),
+`await mcp.read_resource(uri)` (the server's `ReadResourceResult`, the app's
+HTML) and `await mcp.call_tool_result(name, arguments)` (the server's
+`CallToolResult` as it is, `isError` included, for a frame's own calls). Like
+`call_tool`, `call_tool_result` calls any tool the server has: `tool_filter`
+shapes what discovery offers the model, not what the host may call, so the
+host authorizes a frame's call itself.
 
 ## Tool Search (Progressive Tool Disclosure)
 
@@ -1599,6 +1689,12 @@ manifest advertises, and `registry.unavailable_skills` maps a name to the reason
 the model can quote instead of guessing. `registry.to_prompt_xml()` renders the
 manifest RoomKit would otherwise inject.
 
+A host that builds skills elsewhere (a store, a marketplace) registers them with
+`registry.add(skill)`, and one that narrows a registry for an agent copies it:
+`registry.copy(["reports", "invoices"])` keeps each skill's path, so a skill
+discovered but not yet loaded is still found, and keeps the source's marks;
+`marks=False` drops them (a hand-picked set, every skill advertised).
+
 ### Script execution
 
 There is **no default executor** — sandboxing, timeouts and allowed interpreters
@@ -1622,6 +1718,13 @@ never reaches your executor.
 It defaults to `"inline_full"` when the provider reports
 `supports_mid_session_reconfigure=False` (e.g. Gemini 3.x Flash Live), and to
 `"on_demand"` otherwise.
+
+When the skills belong to another agent (a reasoning backend's), the realtime
+channel still runs their scripts behind its own gate: pass
+`RunSkillScriptTool(skills, executor)` in its `tools=`. It declares the one
+`run_skill_script` schema and runs the script through the one handler every
+channel uses, so a script outside its skill is refused there too.
+`RunSkillScriptTool.name` is the name it is declared and called under.
 
 Runnable, no API key needed for the last one: `examples/agent_skills.py`
 (discovery and activation), `examples/skill_visibility.py` (the three states plus
@@ -1726,7 +1829,11 @@ class ObservingAIChannel(AIChannel):
     async def _observe(self, inner):
         async for delta in inner:
             if isinstance(delta, LoopEndMarker):
-                if delta.reason != "completed":
+                if delta.reason == "timeout":
+                    logger.warning(
+                        "agent stopped at its %ss deadline", delta.timeout_seconds
+                    )
+                elif delta.reason != "completed":
                     logger.warning(
                         "agent stopped: %s after %d rounds", delta.reason, delta.rounds
                     )
@@ -1789,6 +1896,12 @@ and thinking markers to a channel's `deliver_stream`, but **not** the terminal
 marker — it would reach a renderer as noise. Overriding `deliver_stream` on a
 WebSocket or CLI channel will therefore not see it; wrap the AI channel's own
 `response_stream` instead.
+
+A round the loop tries again without a call, a continuation the channel's
+policy asked for or a call the provider could not parse, ends on a
+`SegmentBreakMarker`: the round's text is a segment of its own, as text
+before a call is, and the room writes it as its own message, so the next
+round's text never runs on from it.
 
 Additive by construction: the streaming protocol is a mixed
 `str | StreamMarker` whose consumers already dispatch on the markers they
@@ -1904,6 +2017,21 @@ await kit.process_inbound(
 # AI sees the image and responds with analysis
 ```
 
+An event whose content extracts to nothing (a captionless image on a provider
+without vision, an upload a host stores with an empty body and its files in
+metadata) is omitted from the turn's transcript. `AIChannel(describe_empty_event=...)`
+gives the host the word: a callable asked only for such an event, whose text
+stands in for it in the history and the turn's input, `None` keeping the
+omission. The stored event is never touched.
+
+```python
+def describe_upload(event):
+    files = event.metadata.get("attachments") or []
+    return f"The member sent {len(files)} file(s) without a caption." if files else None
+
+agent = AIChannel("ai", provider=provider, describe_empty_event=describe_upload)
+```
+
 OpenAI-family providers (OpenAI, Azure, OpenRouter, LiteLLM, xAI) and PolarGrid send images as OpenAI-shaped `image_url` content parts (remote URL or `data:` URI); PolarGrid and xAI gate this on the model's `supports_vision` from their curated catalogs — whether the model actually reads the image is the deployed model's capability.
 
 ## Multi-Speaker Rooms
@@ -1995,6 +2123,31 @@ await kit.subscribe_room("room-1", my_callback)
 ```
 
 `HookTrigger.ON_PLAN_UPDATED` fires too, as an async hook carrying a `PlanUpdatedEvent` (room, channel, tasks): the signal for a host that records or acts on plan changes without a realtime backend.
+
+### The turn's footprint
+
+What the history may take is what the window leaves once the rest of the turn
+is in it. Before it reads its memory, the AI channel measures that rest as the
+first round sends it and exposes it for the turn as `current_turn_footprint()`,
+a `TurnFootprint` (RFC §20): `input_tokens` (the system prompt with an
+`Agent`'s identity, the tools declared under Tool Search and the tool policy,
+the room's plan, the digest of the tools already used, the speaker attribution)
+and `reply_tokens` (the turn's `max_tokens`, 0 when the provider applies its
+own). It is `None` in a tool handler and outside an AI channel's turn.
+
+`BudgetAwareMemory` reserves the larger of its `reserved_tokens` and the
+measured input: `reserved_tokens` is a floor on that input, not an addition, so
+a host passes 0 unless it knows a part the channel cannot. For the reply it
+reserves the larger of its safety margin and `reply_tokens`, never both. What a
+`BEFORE_AI_GENERATION` hook adds after the memory read is not measured: a host
+that adds a large block there lowers `max_context_tokens` by it.
+`CompactingMemory` and `SummarizingMemory` do not read the footprint.
+
+```python
+from roomkit.memory import BudgetAwareMemory, SlidingWindowMemory
+
+memory = BudgetAwareMemory(SlidingWindowMemory(max_events=100), max_context_tokens=128_000)
+```
 
 ### SummarizingMemory
 
@@ -2243,10 +2396,12 @@ clears history; `/quit` exits.
 
 ## Errors
 
-`ollama.ResponseError` maps to `ProviderError(retryable=...)` where
-`retryable=True` for `429`, `500`, `502`, `503`. Transport/connection
-errors (timeouts, refused connections) get marked retryable so the
-calling `RetryPolicy` decides whether to act.
+`ollama.ResponseError` maps to `ProviderError(retryable=...)` as on every
+provider: `retryable=True` for `408`, `409`, `429` and any `5xx`, and for a
+stream the server aborted with no status (`-1`, e.g. a template that failed
+to parse the model's own output). Transport/connection errors (timeouts,
+refused connections) are retryable too; a body that is not Ollama's format
+is final. The calling `RetryPolicy` decides whether to act.
 
 ## What this provider doesn't do
 
@@ -2279,23 +2434,84 @@ agent = ACPChannel(
     cwd="/srv/workspaces/my-project",  # required, absolute — on the AGENT's host
     additional_directories=None,       # extra absolute dirs for the session
     env=None,                          # added to the SDK's restricted env
-    mcp_servers=None,                  # ACP MCP-server descriptors (SDK types)
+    mcp_servers=None,                  # ACP MCP-server descriptors, or room_id -> them
+    session_config=None,               # {"mode": "default"}: set on every session opened
     authentication_method=None,        # optional ACP auth method id
     external_tool_handler=None,        # permission policy; None = reject all
+    name=None, role=None, description=None,  # its identity, as an Agent's
+    instructions=None,                 # standing direction, sent once per session
 )
 ```
+
+`instructions` open the first prompt of each session the channel opens for a
+room (again after a session is opened again), as the application's block;
+they are not an `INSTRUCTION`, which directs one turn. In a `Discussion` an
+ACPChannel takes turns like an AI channel: the turn's notes close its prompt
+under the runtime's header (copies elsewhere replaced), and `listen_only`
+while it speaks cancels its prompt.
 
 `command` is an argument vector executed directly, **no shell**; a bare string, empty/non-string args, or non-absolute `cwd`/`additional_directories` raise `ValueError`. Exactly one of `command` / `transport` is required (neither or both → `ValueError`), and `env`/`inherit_env` next to a `transport` raise rather than being ignored — they configure the spawn. Class attrs: `channel_type = ChannelType.AI`, `category = ChannelCategory.INTELLIGENCE`, `direction = BIDIRECTIONAL`; capabilities TEXT + RICH. `handle_inbound()` raises `NotImplementedError` — the channel reacts to Room events via `on_event()`.
 
 ### Transports
 
-`ACPTransport` (ABC, `channels/acp_transport.py`) is the pipe, and nothing more: `open(client, *, queue) -> ClientSideConnection` (build it with `acp.connect_to_agent(client, writer, reader, queue=queue)` — the protocol only needs a reader/writer pair), `close()` (must not raise; called on teardown *and* on a failed handshake), `is_alive()` (default `True`), and a `name` property surfaced as `info["transport"]`. `StdioACPTransport(command, cwd=…, env=…, inherit_env=…)` is the default, constructed for you from `command=`, and owns the spawn: argument-vector validation, `_resolve_spawn_env`, the stderr drain, and `returncode`-based liveness. Everything protocol-level — `initialize`, version negotiation, `authenticate`, sessions, prompts, permissions, config options, event mapping — stays on the channel, so a transport inherits it.
+`ACPTransport` (ABC, `channels/acp_transport.py`) is the pipe, and nothing more: `open(client, *, queue) -> ClientSideConnection` (build it with `acp.connect_to_agent(client, writer, reader, queue=queue)` — the protocol only needs a reader/writer pair; `queue` is `None` under SDK ≥0.12.1, which removed it and rejects the keyword, so forward it only when set), `close()` (must not raise; called on teardown *and* on a failed handshake), `is_alive()` (default `True`), and a `name` property surfaced as `info["transport"]`. `StdioACPTransport(command, cwd=…, env=…, inherit_env=…)` is the default, constructed for you from `command=`, and owns the spawn: argument-vector validation, `_resolve_spawn_env`, the stderr drain, and `returncode`-based liveness. Everything protocol-level — `initialize`, version negotiation, `authenticate`, sessions, prompts, permissions, config options, event mapping — stays on the channel, so a transport inherits it.
+
+### Recovering a refused room prompt
+
+A custom transport's connection may raise
+`ACPSessionInvalidatedError(reason, recovery_authorized=True)` from `prompt()`
+only after proving the session is unusable **and no part of the prompt ran**.
+Authorization belongs to the host: reserve any durable retry identity before
+raising, and keep the refusal's receipt. An ordinary error or the default
+`recovery_authorized=False` authorizes nothing. This is a local Python contract,
+not a new ACP wire error or a general retry policy.
+
+RoomKit keeps the room's turn lock, closes the failed stream, forgets that
+session and its catch-up cursor, then opens a session normally on the same
+connection. The same event id, contributed blocks and request are prompted once
+more, with the visible room tail recomposed under `room_history`. Opening uses
+the usual cwd, MCP servers and transport-provided instructions/configuration;
+RoomKit does not restore private agent state or copy obsolete session options.
+A successful recovery reports one response without a stale `interrupted` mark.
+
+Any observed update (including a plan, usage or thinking) or permission request
+makes the refusal terminal. So do a second refusal, an opening failure and a
+standalone turn. Cancellation/abandonment during recovery discards the replacement
+session and releases the lock. Existing transports do not opt in implicitly.
+The host must enforce its retry budget across redelivery, restarts and workers;
+RoomKit limits only this one stream to two attempts.
+
+Runnable without a remote agent: `examples/acp_session_recovery.py`.
+
+### Session setup
+
+What a session is opened with is set per room (RFC ACP agent channel, *Session setup*). `mcp_servers` is a list given to every room's sessions, or a function of the room id (sync or async), called each time a session opens for that room: a stdio server can be told its room in its `env`. `session_config` maps ACP config ids to values (`mode`, `model`, an agent's own options) and is set on every session the channel opens, before its first prompt: the room's first, one rebuilt after a recovery, one opened after the agent restarted, a standalone turn's, a task's child room's. A value the session already announces is not set again. A value the host sets with `set_config_option(room_id, id, value)` belongs to the room: its next session is set to it too, over `session_config`, until `close_session(room_id)` forgets it. A value the agent refuses fails the opening closed: the session is released, never prompted, and the turn fails (or `set_config_option` raises) with a `RuntimeError` naming the option.
+
+```python
+from acp.schema import EnvVariable, McpServerStdio
+
+agent = ACPChannel(
+    "claude-code",
+    command=["npx", "--no-install", "@agentclientprotocol/claude-agent-acp@0.61.0"],
+    cwd="/srv/workspace",
+    mcp_servers=lambda room_id: [
+        McpServerStdio(name="notes", command="notes-server", args=[],
+                       env=[EnvVariable(name="NOTES_ROOM", value=room_id)]),
+    ],
+    session_config={"mode": "default"},  # every MCP call and write is asked of RoomKit
+    external_tool_handler=PolicyExternalToolHandler(policy=ToolPolicy(allow=["mcp__notes__*"])),
+)
+```
+
+Example: `examples/acp_room_mcp.py`.
 
 ### Process and session model
 
-One connection per channel, opened lazily on the first prompt; one ACP **session** per Room, created on demand and tagged with extension key `roomkit.live/roomId`. Prompts are serialized per Room (per-room lock); different Rooms progress concurrently through the same connection. When the transport reports the connection dead (for stdio: the subprocess exited), the next prompt reconnects and clears all session mappings — a reconnect never resumes sessions. The client declares no fs/terminal capabilities: `fs/*`, `terminal/*`, and `session/request_input` (elicitation) requests get `method_not_found` — `ON_USER_INPUT_REQUIRED` never fires from ACP.
+One connection per channel, opened lazily on the first prompt; one ACP **session** per Room, created on demand; its `session/new` `_meta` carries `roomkit.live/roomId` and `roomkit.live/sessionScope: "room"`. A standalone `INSTRUCTION` (RFC §10.1.1 step 7) runs in a session of its own, opened for that turn with `roomkit.live/sessionScope: "turn"` and closed after it; the room's session is neither prompted nor told, and catches up on the reply at its next turn. A relay that keeps one remote session per room must file a `"turn"` session apart and close only that one; one that answers the turn with an open session fails the turn with `RuntimeError`. Prompts are serialized per Room (per-room lock); different Rooms progress concurrently through the same connection. When the transport reports the connection dead (for stdio: the subprocess exited), the next prompt reconnects and clears all session mappings — a reconnect never resumes sessions. The client declares no fs/terminal capabilities: `fs/*`, `terminal/*`, and `session/request_input` (elicitation) requests get `method_not_found` — `ON_USER_INPUT_REQUIRED` never fires from ACP.
 
-Methods: `session_id(room_id)` returns the process-local session id or `None`; `cancel(room_id)` cancels the active turn (`True` if a cancel was sent); `close_session(room_id)` closes and forgets one Room's session; `close()` cancels turns, closes sessions, closes the transport and stops the handler. The `info` property reports `{transport, protocol_version, sdk_version, connected, agent, session_count}`.
+Methods: `session_id(room_id)` returns the process-local session id or `None`; `cancel(room_id)` cancels the active turn (`True` if a cancel was sent); `close_session(room_id)` closes and forgets one Room's session and never raises for a refused close (`session/close` is optional in ACP: it is sent only to an agent whose `initialize` announces `sessionCapabilities.close`, or to a connection whose `initialize` reply carries no `agent_capabilities` at all; an agent that does not announce it keeps its sessions until the connection closes, with a warning per standalone turn); `close()` cancels turns, closes sessions, closes the transport and stops the handler. The `info` property reports `{transport, protocol_version, sdk_version, connected, agent, session_count}`.
+
+`acp_event_text(event)` (exported from `roomkit`) is the text the channel gives the agent for an event, its prompt and each line of room context: a `RichContent` is read as its `plain_text`, where `extract_event_text` keeps the markup body. A host that builds an ACP prompt of its own (a relay on the user's machine, say) reads events through it to send what the channel sends.
 
 ### How agent output enters the room
 
@@ -2323,6 +2539,8 @@ A turn never outlives its tool calls. Whichever way it ends — error, cancellat
 ACP fixes the envelope and leaves the payload to the agent, so `CLIChannel(console=True)` unwraps rather than prints (`roomkit.console._tool_preview`): ACP `text`/`diff` blocks, MCP `content`, and `raw_output` wrappers (`formatted_output`+`exit_code` from Codex, `output`, `result`/`error`) all reduce to their text; a `terminal` block carries no text, so the preview falls back to `raw_output`; `image`/`audio`/`resource` blocks are named, never dumped as base64; 5 lines per result, 200 chars per line; unknown shapes render as compact JSON.
 
 ### Permission flow
+
+The handler hears only of the calls the agent submits, and the agent's own mode decides which: Claude Code in `auto` mode (a user's settings, inherited with `HOME`) acts without asking; `default` asks before any action that is not a read; `plan` refuses them itself. Set it on every session with `session_config={"mode": "default"}`, or for one room with `await agent.set_config_option(room_id, "mode", "default")`, which the room keeps across a recovery or an agent restart.
 
 Every agent `session/request_permission` goes to the `external_tool_handler` (`ExternalToolHandler` ABC from `roomkit.tools`, with `PolicyExternalToolHandler` and `ToolDecision`):
 
@@ -2427,7 +2645,7 @@ another geometry.
 | Provider | Import | Extra | Notes |
 |---|---|---|---|
 | `OpenAIImageProvider` | `roomkit.providers.openai` | `roomkit[openai]` | `/v1/images`; `gpt-image-2` takes near-arbitrary sizes, older models a fixed menu — the vendor judges |
-| `GeminiImageProvider` | `roomkit.providers.gemini` | `roomkit[gemini]` | Interactions API; size translated to aspect ratio + tier (`512`/`1K`/`2K`/`4K`) |
+| `GeminiImageProvider` | `roomkit.providers.gemini` | `roomkit[gemini]` | Interactions API; size translated to aspect ratio + tier (`512`/`1K`/`2K`/`4K`); the default `gemini-nano-banana-2.1` has no `512` tier and returns JPEG only |
 | `XAIImageProvider` | `roomkit.providers.xai` | `roomkit[xai]` | Grok Imagine; size translated to ratio + `1k`/`2k`; edits go as JSON to `/v1/images/edits` |
 | `OpenRouterImageProvider` | `roomkit.providers.openrouter` | `roomkit[openrouter]` | OpenRouter's Image API — 40+ aggregated models (Seedream, FLUX, Recraft, ...); billed cost surfaces as `usage["cost"]` |
 | `AzureImageProvider` | `roomkit.providers.azure` | `roomkit[azure]` | Azure OpenAI deployment; `model` is the deployment name |
@@ -2594,6 +2812,11 @@ session = await kit.join(
 await kit.leave(session)
 ```
 
+A host serving several organizations passes `organization_id=` to `join()`:
+the room is read with that scope first (RFC §17.2), so another
+organization's room raises `RoomNotFoundError` and no session joins it or
+reaches its recordings. Left unset, the read is unscoped.
+
 ## STT Providers
 
 | Provider | Class | Config | Extra |
@@ -2683,8 +2906,34 @@ ElevenLabsConfig = get_elevenlabs_config()
 tts = ElevenLabsTTSProvider(ElevenLabsConfig(
     api_key="...",
     voice_id="21m00Tcm4TlvDq8ikWAM",
-    model="eleven_turbo_v2",
+    model_id="eleven_flash_v2_5",
+    output_format="pcm_16000",  # a VoiceChannel plays PCM only
 ))
+```
+
+A Voice Channel plays decoded 16-bit PCM (RFC §12.2): a TTS chunk in MP3,
+Opus or G.711 is refused before a byte plays, with an error naming the
+format. ElevenLabs streams MP3 by default, so give it `output_format="pcm_<rate>"`.
+
+### Voices, dialogue and custom voices
+
+Every TTS lists its voices as `VoiceInfo` (`available_voices()` offline,
+`list_voices(language=, gender=, query=)` live); `VoiceInfo.id` is what
+`synthesize(voice=...)` takes, and the filters behave the same on every
+provider (`"fr"` finds `fr-CA` and `fr-FR`). Gemini voices a two-speaker
+dialogue in one clip, and `GeminiVoiceLibrary` designs or replicates custom
+voices, replication requiring the person's recorded consent.
+
+```python
+from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
+from roomkit.voice.voices import DialogueTurn
+
+tts = GeminiTTSProvider(GeminiTTSConfig(api_key="..."))
+quebec = await tts.list_voices(language="fr-CA", gender="female")   # 37 voices
+audio = await tts.synthesize_dialogue(
+    [DialogueTurn(speaker="A", text="Bonjour!"), DialogueTurn(speaker="B", text="Salut!")],
+    {"A": quebec[0].id, "B": "fr-ca-advisor-2"},
+)
 ```
 
 ## Voice Backends
@@ -2843,7 +3092,13 @@ voice = VoiceChannel("voice", stt=stt, backend=backend, bridge=True)
 
 Audio bridge supports N-party calls with mixing and cross-rate resampling.
 
-Several transports in one room: build the channel on one backend and add the others with `voice.add_backend(sip_backend)`. The added backend's audio goes through the same pipeline, bridge and STT; everything sent to one of its sessions (bridged audio, TTS, transcriptions, the hang-up of `kit.leave()`) goes out on it. A session finds its transport through `kit.join(..., backend=)` or by the added backend reporting it holds the session. The channel needs a primary backend (else `RuntimeError`); closing it closes the added backends.
+Several transports in one room: build the channel on one backend and add the
+others with `voice.add_backend(sip_backend)`. The added backend's audio goes
+through the same pipeline, bridge and STT; everything sent to one of its
+sessions (bridged audio, TTS, transcriptions, the hang-up of `kit.leave()`)
+goes out on it. A session finds its transport through `kit.join(..., backend=)`
+or by the added backend reporting it holds the session. The channel needs a primary
+backend (else `RuntimeError`); closing it closes the added backends.
 
 ## DTMF
 
@@ -3192,7 +3447,7 @@ realtime = RealtimeVoiceChannel(
     "realtime-voice",
     provider=GeminiLiveProvider(
         api_key="...",
-        model="gemini-2.0-flash-live-001",
+        model="gemini-3.8-live",
     ),
     system_prompt="You are a helpful voice assistant. Keep responses brief.",
 )
@@ -3208,6 +3463,7 @@ await kit.attach_channel("voice-room", "realtime-voice", category=ChannelCategor
 |----------|-------|-------|-------------|
 | Google Gemini Live | `GeminiLiveProvider` | `roomkit[realtime-gemini]` | Gemini 2.0 speech-to-speech |
 | OpenAI Realtime | `OpenAIRealtimeProvider` | `roomkit[realtime-openai]` | GPT Realtime audio (reasoning-capable) |
+| OpenAI GPT-Live | `OpenAILiveProvider` | `roomkit[realtime-openai]` | Full-duplex speech-to-speech; reasoning and tools delegated to a backend model, hosted or integrator-side |
 | xAI Grok | `XAIRealtimeProvider` | — | Grok speech-to-speech |
 | Deepgram Voice Agent | `DeepgramAgentProvider` | `roomkit[realtime-deepgram]` | Nova listen + LLM think + Aura speak, each chosen separately |
 | Mock | `MockRealtimeProvider` | built-in | Testing |
@@ -3218,6 +3474,16 @@ from roomkit.voice import get_openai_realtime_provider
 
 OpenAIRealtime = get_openai_realtime_provider()
 provider = OpenAIRealtime(api_key="sk-...")  # defaults to gpt-realtime-2.1
+
+# OpenAI GPT-Live (full-duplex; the model listens and speaks at once)
+from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+
+provider = OpenAILiveProvider(
+    api_key="sk-...",  # defaults to gpt-live-1
+    delegation=HostedReasoning(model="gpt-5.6-terra"),  # backend runs at OpenAI
+)
+# IntegratorReasoning() (the default) serves delegations through
+# RealtimeVoiceChannel(reasoning_backend=AIProviderReasoningBackend(...))
 
 # xAI Grok
 from roomkit.voice import get_xai_realtime_provider, get_xai_realtime_config
@@ -3252,6 +3518,14 @@ realtime = RealtimeVoiceChannel(
 )
 ```
 
+A host that will not serve a WebRTC peer (no session waits for it, its call
+expired) refuses it with `await transport.reject_connection(webrtc_id,
+message=...)` on a `FastRTCRealtimeTransport`: the message sent as is on the
+peer's data channel, the peer connection (or a websocket client's socket)
+closed, the stream cleaned and the
+handler unregistered, each step even when an earlier one fails. A peer the
+transport's own `auth` refuses is closed the same way.
+
 ## Joining a Session
 
 ```python
@@ -3264,6 +3538,12 @@ session = await kit.join(
 # Leave when done
 await kit.leave(session)
 ```
+
+`join()` and `RealtimeVoiceChannel.start_session()` take `organization_id=`:
+the room is read with that scope before the session exists (RFC §17.2), so
+another organization's room raises `RoomNotFoundError` and no session joins
+it or reaches its recordings. Left unset, `join()` reads the room unscoped and
+`start_session()` does not read it.
 
 ## Tool Calling
 
@@ -3307,19 +3587,26 @@ await realtime.inject_text(session, "Let me check that for you...")
 
 ## VAD Configuration
 
-Configure voice activity detection for realtime providers:
+The provider's own turn detection is tuned per session through
+`provider_config` in the session metadata (keys as the provider reads them, here
+OpenAI's `server_vad`):
 
 ```python
-realtime = RealtimeVoiceChannel(
+session = await kit.join(
+    "room",
     "realtime-voice",
-    provider=provider,
-    system_prompt="...",
-    vad_config={
-        "threshold": 0.5,
-        "silence_duration_ms": 500,
+    participant_id="user",
+    metadata={
+        "provider_config": {
+            "turn_detection_type": "server_vad",
+            "threshold": 0.5,
+            "silence_duration_ms": 500,
+        }
     },
 )
 ```
+
+A local VAD instead goes in `pipeline=AudioPipelineConfig(vad=..., vad_config=...)`.
 
 ## Session Resumption
 
@@ -3505,11 +3792,15 @@ ConferenceChannel(
 
 Refused at construction (and identically at plug time): `e2ee=True` with stt/recording/realtime (bot receives ciphertext); `ConferenceRecordingMode.EGRESS` (only `FRAMEWORK` is implemented); `tts` + `realtime` together (one bot track, one voice); `realtime.tools` without `tool_handler`; a `pipeline` without a VAD when stt/realtime is set.
 
+`mint_access(room_id, participant_id, *, grants=None, attributes=None, organization_id=None)` reads the room with `organization_id` first (RFC §17.2): another organization's room raises `RoomNotFoundError` and nothing is minted; left unset, no room is read for the scope.
+
 Public surface: `mint_access()`, `plug_*/unplug_*()`, `set_bot_grants()`, `may_interrupt(participant_id)`, `active_lanes` (dict `track_id -> ConferenceLane`; `drain()`, `dropped_frames`), `info()`, `close()`.
 
 ## How the Bridge Works
 
 The bot joins lazily, only when the channel has a need (stt/tts/recording/realtime) and someone is coming: a `mint_access()`, an arrival, an occupancy probe. With no need configured the channel is pure transport — admission gate and roster, no bot in the meeting.
+
+Those triggers start the join without waiting on it. A host that must know the bot is in (to listen before it lets a meeting begin) awaits `await channel.ensure_bot(room_id) -> BotSession` (RFC §12.10.4): a live session is returned as is, concurrent calls and the triggers join once, a lost session is joined again, and a new join fires `ON_SESSION_STARTED` before it returns. `RoomNotAttachedError` when the channel is not attached to the room or is detached mid-join; `ConferenceCapabilityError` on a pure-transport channel, whose bot would be a silent observer.
 
 - **Inbound**: each subscribed AUDIO track gets its own `ConferenceLane` (queue + task + VAD state). The VAD segments utterances; one utterance → one STT call → one `RoomEvent` attributed to the track's `participant_id` (track identity replaces diarization). A full lane drops oldest frames.
 - **Outbound**: `deliver()` speaks AI-channel TextContent on the single bot track via TTS (all text events if `speak_text_events=True`); with `realtime`, text is injected into the provider's context instead.
@@ -3697,6 +3988,184 @@ kit = RoomKit(orchestration=Loop(
     max_iterations=3,
 ))
 ```
+
+### Discussion
+
+Several agents and people hold one conversation; one agent speaks at a time
+(RFC §19.7.5). Any agent may address any other with `@channel_id`, a person
+may address any agent, and who speaks next follows from who was addressed.
+The strategy queues the agents each message asks for and gives their turns
+one at a time; each turn reads the room as it is when it starts.
+
+```python
+from roomkit import Discussion
+
+room = await kit.create_room(orchestration=Discussion(
+    agents=[investigator, dev, sre],   # AI channels (Agents among them) and ACPChannel agents
+    everyone=["investigator", "dev", "sre"],  # a message naming nobody asks these, in order
+    people=["oncall"],                 # names agents address people by
+))
+```
+
+- A person's message puts the agents it names at the front of the queue;
+  naming nobody, it answers the agents that asked that person, else
+  `everyone`. With `addressed_only=True` it asks only the agents it names.
+- An agent's answer that names another queues it at the back once the turn
+  has ended, one turn per agent however often it is named. `@all` names
+  every agent.
+- An agent with nothing to add answers `silent_token` (`"(silent)"`): the row
+  is stored `BLOCKED` with `blocked_by="discussion_silent"` and never reaches
+  a transport, streamed or not.
+- `max_depth` bounds how far a chain of agent turns reaches from a person's
+  message (default: the kit's `max_chain_depth`); a stopped turn waits for
+  the next person's message. `max_turns` and `done(room_id)` end it.
+- The discussion waits for a person (`waiting`) when an agent asked one, an
+  agent of the queue only listens, or the depth limit stopped a turn.
+- `kit.listen_only(room_id, ids)` / `kit.talk_again(room_id, ids)`: an agent
+  that only listens answers only a person who names it; setting it on the
+  speaking agent cuts its turn as a `Cancel` does.
+- `kit.speak_queue(room_id)` returns the `SpeakQueue` (`speaking`, `queue`,
+  `listening`, `asked`, `waiting`, `over`); `ON_SPEAK_QUEUE` announces each
+  change as a `SpeakQueueEvent`. The host calls take `organization_id`.
+- Agents address people by the transcript's names (`@AliceMartin`, `@sms1`
+  for a sender with no name, at most 32 characters); an ask is recorded
+  against that exact person, never one who takes their name.
+- An `INSTRUCTION` addressed to agents gives each a turn of its own at the
+  front; `regenerate_response()` does for each agent that answered (else each
+  the message asked), once per agent and message. Once the discussion is
+  over, both are refused with `reason="discussion_over"`.
+- `process_inbound()` returns no agent answer: the answers come in the turns.
+- Each agent's memory provider is handed every message the agent may see
+  (not its own) as it commits, as in a room with no discussion, so a memory
+  that learns as messages arrive (an index, a summary) learns the whole
+  conversation; the turn that answers a message does not hand it again.
+- The room is the discussion's: install refuses another intelligence
+  channel, a voice or realtime channel, an agent with a thinker, a router
+  or another strategy, and refuses binding or installing them afterwards.
+  `await strategy.uninstall(kit, room_id)` gives the room back to its
+  `agent_response_policy` and forgets the discussion.
+- The configuration (`_discussion`) and the queue (`_speak_queue`) are
+  stored with the room and outlive a restart. Every process serving the room
+  follows them, even one whose host did not install the discussion: no agent
+  asked at broadcast, names read, turns queued, under the room lock (use
+  `PostgresAdvisoryLockManager` across processes). One process that
+  installed it gives the turns under a 15 s lease it renews; another takes
+  over once it expires. Example: `examples/discussion_two_workers.py`.
+  Text only in this version.
+
+**Talking and working.** A turn talks; long work runs as a task, off the
+floor (rule 19). An agent given the background tool starts it, says it is
+on it and ends its turn; a question asked meanwhile is answered in its turn:
+
+```python
+kit.setup_background(comms)                       # comms does its own tasks
+kit.setup_background(dev, worker="dev-code", hand_back="post")
+task = await kit.start_task(room_id, "dev", "Go through every support ticket.")
+await kit.cancel_task(task.id)
+```
+
+- `setup_background(agent, worker=None, hand_back="relay")` gives an AI
+  channel the `work_in_background` tool; the task runs on its worker (itself,
+  another agent, an external agent) in a child room, handed the room's last
+  12 messages (`delegate(brief=..., conversation=12)`).
+- `start_task(room_id, agent_id, task, hand_back=None)` starts the same task
+  from the host, for any agent of the room, an `ACPChannel` included.
+- `hand_back="relay"`: the agent is told the result and says it in a turn of
+  its own, at the front of the queue. `"post"`: the result is posted as the
+  agent's message, as it is, with no generation; it waits at the front of the
+  queue for the turn under way to end, and its names ask no one.
+- Tasks run in parallel; each turn's notes list the room's tasks; a worker's
+  call of the tool is refused; a result that comes back once the discussion
+  is over or gone is posted at once (relayed: refused once over).
+  Example: `examples/discussion_background.py`.
+
+**External agents.** An `ACPChannel` (Claude Code, Codex) is an agent like
+any other: its `name`, `role` and `description` present it, `instructions`
+go once per session, each turn's prompt ends with the turn's notes, and
+`listen_only` on it while it speaks cancels its prompt. Its tools are its
+own. Example: `examples/discussion_acp.py`.
+
+A **dispatch policy** decides who takes a person's message that names no
+agent, in place of giving it to the agents that asked that person, else to
+every agent of `everyone` (rule 18). In a room of specialists, most of those
+turns say `(silent)`, the agent that should answer may come third, and an
+agent that asked a question takes the next message even when it is a new
+request for someone else:
+
+```python
+from roomkit import ClassifierDispatchPolicy, Discussion, JevClassifier
+
+Discussion(
+    agents=[investigator, sre, dev, comms],  # Agents: name and description tell who does what
+    dispatch=ClassifierDispatchPolicy(JevClassifier(), threshold=0.5, max_agents=2),
+)
+```
+
+- One decision per message, by the process holding the lease, off the room
+  lock, before it gives another turn; the agents picked go to the front in
+  the order decided, at the message's place in the queue. An empty decision
+  asks no agent (a thanks, small talk).
+- The candidates are the agents that asked the person, then `everyone`,
+  less the agents the message does not reach and those that only listen; a
+  decision naming anyone else is cut down to them. `DispatchTurn.asked`
+  says which candidates wait for the person's answer, so the policy judges
+  whether the message answers them.
+- A name is never decided; `addressed_only` is refused with a policy.
+- A policy that fails, takes over `dispatch_timeout` (5 s) or returns no
+  readable decision leaves the message to rule 8 (the agents that asked the
+  person, else every candidate), with the reason `fallback`. At most 16
+  messages wait for a decision; past them, the oldest goes the same way.
+- `ON_DISPATCH_DECISION` reports each decision applied, once per message
+  (`DispatchDecisionEvent`:
+  the message, the candidates, the `DispatchDecision` with its `reason` and
+  `judgments`, `duration_ms`).
+- `ClassifierDispatchPolicy` asks one yes/no question per candidate in one
+  classifier call (`JevClassifier`, `OpenAIClassifier`, `LLMClassifier`); `MockDispatchPolicy` scripts decisions for tests; any
+  `DispatchPolicy.decide(DispatchTurn) -> DispatchDecision` will do.
+  Example: `examples/discussion_dispatch.py`.
+
+A full-screen terminal for such a room (`pip install roomkit[console]`): the
+room on the left, the agents with their identity and live state on the right,
+the speak queue below, your input at the bottom. What you type goes into the
+room through the transport channel you name; `/listen @a`, `/talk @a`,
+`/help`, `/quit`, plus the host's own slash commands. With a WebSocket
+channel, the answer an agent is writing shows as it streams. When an agent
+has background work set up (or `tasks=True`), `/task @a ...`, `/tasks` and
+`/cancel <task>` start, list and stop the room's tasks, each agent's card
+shows its running tasks, and a posted result names the worker that wrote it.
+
+```python
+from roomkit.console import DiscussionConsole
+
+kit.register_channel(WebSocketChannel("you"))
+await kit.attach_channel(room_id, "you")
+await DiscussionConsole(kit, room_id, channel_id="you", log_file="room.log").run()
+```
+
+Example: `examples/discussion_console.py`.
+
+### Installing a strategy while the room lives
+
+A room holds one strategy at a time, and can change it while it lives
+(RFC §19.7). `install_strategy` registers and attaches the strategy's agents,
+as `create_room(orchestration=...)` does, and keeps the timeline: the agents'
+turns read the conversation so far. `uninstall_strategy` runs the strategy's
+own `uninstall()` step, then takes back what its install added for the room:
+room hooks, tools and turn runners set up on the agents, agents it attached,
+room metadata it wrote.
+
+```python
+await kit.install_strategy(room_id, Discussion([assistant, dev]))   # on a live room
+await kit.uninstall_strategy(room_id)                               # back to the room's policy
+await kit.install_strategy(room_id, Swarm(agents=[assistant, billing], entry="assistant"))
+kit.room_strategy(room_id)                                          # the one installed
+```
+
+A second strategy is refused while one is installed. A host's own strategy
+gets the same treatment through `install_strategy`. If it is installed by
+calling its `install()` directly, it should call
+`kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
+Example: `examples/strategy_on_the_fly.py`.
 
 ## Using Orchestration
 
@@ -4077,6 +4546,12 @@ result = await kit.delegate(
 )
 ```
 
+`task` is the label the result is named by; `brief=` is what the worker is
+told instead, when it says more; `conversation=N` hands the worker the room's
+last N messages the notified channel may read, quoted as data;
+`hand_back="post"` publishes the result as the notified agent's message,
+with no turn of its model, instead of relaying it (`"relay"`, the default).
+
 ## Memory Providers
 
 Agents use memory providers to maintain conversation context across handoffs:
@@ -4417,9 +4892,30 @@ from roomkit.providers.http.provider import WebhookHTTPProvider
 from roomkit.providers.http.config import HTTPProviderConfig
 
 http = HTTPChannel("webhook", provider=WebhookHTTPProvider(HTTPProviderConfig(
-    url="https://api.example.com/messages",
+    webhook_url="https://api.example.com/messages",
     headers={"Authorization": "Bearer ..."},
 )))
+```
+
+`HTTPProviderConfig` refuses a `webhook_url` on a private, loopback, link-local,
+reserved or multicast address when it is built. The client resolves the name
+again at every send; a caller whose policy must judge the address actually
+dialled (pin-on-connect), or a test that wants the POST to land in a
+`MockTransport`, hands the provider its transport:
+
+```python
+provider = WebhookHTTPProvider(config, transport=my_transport)
+```
+
+A subclass shapes what is sent: `send()` posts `build_payload(event, to, text)`
+(RoomKit's envelope by default) serialized, with `build_headers(body)` (the
+configured headers and an `X-RoomKit-Signature` HMAC when a secret is set).
+`config` is the provider's `HTTPProviderConfig`.
+
+```python
+class SlackWebhook(WebhookHTTPProvider):
+    def build_payload(self, event, to, text):
+        return {"text": text}
 ```
 
 ## WebSocket
@@ -5092,6 +5588,44 @@ backend = MockVoiceBackend()
 backend.simulate_audio_received(session, audio_frame)
 ```
 
+## Voice Test Bench
+
+`roomkit.voice.testing` replaces frame-by-frame injection and `asyncio.sleep`
+with a simulated phone and a hook timeline. `ScenarioVoiceBackend` extends
+`MockVoiceBackend`: `play()` cuts a WAV or a `PCMAudio` clip into 20 ms frames
+delivered at a transport's cadence (or back to back with `realtime=False`) and
+captures what the bot sends per session. `VoiceTrace` records when each voice
+hook fired, so a test waits for the hook it needs and reads the turn's order and
+latencies off the timeline.
+
+```python
+from roomkit import HookTrigger, RoomKit, ScenarioVoiceBackend, VoiceTrace
+from roomkit.voice.testing import read_wav, tone, write_wav
+
+backend = ScenarioVoiceBackend()
+kit = RoomKit(stt=stt, tts=tts, voice=backend)
+trace = VoiceTrace(kit)                     # before the first session
+# ... register the VoiceChannel, create the room, join the session ...
+
+await backend.play(session, tone(300), realtime=False)   # or a WAV path
+heard = await trace.wait_for(HookTrigger.ON_TRANSCRIPTION, timeout=2)
+await trace.wait_for(HookTrigger.AFTER_TTS)              # TimeoutError names what did fire
+
+speech_end = trace.first(HookTrigger.ON_SPEECH_END)
+assert speech_end is not None
+trace.elapsed_ms(speech_end, heard)                      # STT latency, ms
+trace.sequence()                                         # the hooks, in order
+backend.write_capture(session, "reports/bot.wav")        # what the bot said
+```
+
+`ScenarioVoiceBackend(mute_mic_during_playback=True)` drops the caller's frames
+while the bot is speaking, as `LocalAudioBackend` does by default;
+`is_speaking(session)` holds for as long as the bot's audio lasts. Use it to
+test what a continuous STT stream does when the audio stops mid-session.
+
+`read_wav`, `write_wav`, `pcm_frames`, `silence` and `tone` are the stdlib WAV
+and PCM helpers around `PCMAudio`. Example: `examples/voice_scenario_backend.py`.
+
 ## Mock Pipeline Providers
 
 Every pipeline stage has a mock that accepts pre-configured event sequences:
@@ -5257,7 +5791,7 @@ modified = event.model_copy(update={"content": TextContent(body="new")})
 ```
 ---
 
-RoomKit exports **192 symbols** from `roomkit`. Providers and voice types import from subpackages.
+RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import from subpackages.
 
 ## Top-Level Imports (`from roomkit import ...`)
 
@@ -5276,6 +5810,7 @@ RoomKit exports **192 symbols** from `roomkit`. Providers and voice types import
 | Symbol | Description |
 |--------|-------------|
 | `ACPChannel` | Connects a room to an external ACP coding agent over stdio |
+| `acp_event_text` | The text an `ACPChannel` gives its agent for an event (a `RichContent` as its `plain_text`), for a host building its own ACP prompt |
 | `Agent` | AI agent with role, description, greeting, tools |
 | `AIChannel` | Intelligence layer for AI responses |
 | `AIChannelTurnConfig` | Per-turn generation overrides for AIChannel (None fields keep channel defaults) |
@@ -5395,6 +5930,9 @@ RoomKit exports **192 symbols** from `roomkit`. Providers and voice types import
 | `ToolCallEvent` | Tool call event model |
 | `ToolCallContent` | Content for TOOL_CALL_START and TOOL_CALL_END events |
 | `AIGenerationEvent` | Payload for BEFORE_AI_GENERATION hooks, before AI provider invocation |
+| `EmptyEventDescriber` | `AIChannel(describe_empty_event=...)`: an event whose content extracts to nothing, in; the text the transcript reads for it, or `None` to omit it, out |
+| `ContinuationPolicy` | `AIChannel(continuation=...)`: the text of a round the model ended itself without a call, in; the instruction to go on, or `None`, out (RFC §6.4) |
+| `ToolRoundEvent` | Payload for AFTER_TOOL_ROUND hooks, between two rounds of a tool loop: the round's calls and results, the turn's toolset, `withdraw()` and `add_message()` |
 | `AIResponseEvent` | Payload for ON_AI_RESPONSE hooks, after AI generation completes |
 | `BeforeGenerationCallback` | Async callback type receiving AIGenerationEvent |
 | `AfterResponseCallback` | Async callback type receiving AIResponseEvent |
@@ -5450,6 +5988,7 @@ RoomKit exports **192 symbols** from `roomkit`. Providers and voice types import
 | `RoutingConditions` | Conditions for a routing rule to match |
 | `get_conversation_state` | Extract typed ConversationState from room metadata |
 | `set_conversation_state` | Return a room copy with updated conversation state |
+| `save_conversation_state` | Persist a conversation state, writing its metadata key alone |
 | `HandoffHandler` | Processes handoff tool calls |
 | `HandoffRequest` | Parsed from an agent's handoff tool call arguments |
 | `HandoffResult` | Result returned to the calling agent after a handoff |
@@ -5461,9 +6000,11 @@ RoomKit exports **192 symbols** from `roomkit`. Providers and voice types import
 | Symbol | Description |
 |--------|-------------|
 | `MemoryProvider` | ABC for pluggable memory backends feeding AI context construction |
+| `TurnFootprint` | What a turn takes of the window besides its history, measured by the AI channel before its memory read (`input_tokens`, `reply_tokens`); read with `current_turn_footprint()` from `roomkit.memory` (RFC §20) |
 | `Skill` | Full skill definition including instructions body |
 | `SkillMetadata` | Lightweight metadata parsed from SKILL.md frontmatter |
-| `SkillRegistry` | Discovers, loads, and manages Agent Skills; tracks three visibility states — available, unlisted (`mark_unlisted`: activatable but out of the prompt manifest), unavailable (`mark_unavailable`: listed with a reason, not activatable) |
+| `SkillRegistry` | Discovers, loads, and manages Agent Skills; tracks three visibility states — available, unlisted (`mark_unlisted`: activatable but out of the prompt manifest), unavailable (`mark_unavailable`: listed with a reason, not activatable); `add(skill)` registers one built in memory, `copy(names?, marks=True)` a subset with its paths and marks |
+| `RunSkillScriptTool` | `run_skill_script` as a `Tool` a realtime channel serves for skills another agent holds, through the one script handler |
 | `ScriptExecutor` | ABC for executing skill scripts with integrator-defined policy |
 | `SandboxExecutor` | ABC for executing commands in a sandboxed environment |
 | `SandboxResult` | Result of executing a sandbox command |
@@ -5553,7 +6094,7 @@ kit = RoomKit(
 
 | Method | Description |
 |--------|-------------|
-| `join(room_id, channel_id, participant_id?, ...)` | Join voice/video session |
+| `join(room_id, channel_id, *, session=None, participant_id=None, ..., organization_id=None)` | Join voice/video session; the room read with its scope (another organization's is not found, no session joins it) |
 | `leave(session)` | Leave voice/video session |
 | `transcribe(audio)` | Speech-to-text |
 | `synthesize(text, voice?)` | Text-to-speech |
@@ -5563,6 +6104,8 @@ kit = RoomKit(
 | Method | Description |
 |--------|-------------|
 | `process_inbound(message, room_id?, defer_delivery=False)` | Process an inbound message; deferred results are backfilled by `DeliveryHandle.wait()` |
+| `regenerate_response(room_id, *, trigger_id=None)` | Re-run the intelligence channel on the newest accepted transport message; `InboundResult(blocked=True, reason="room_closed")` on a closed or archived room; with `trigger_id`, `reason="trigger_moved"` when the selection under the lock is no longer that event |
+| `regenerate_target(room_id)` | The event `regenerate_response` would replay, or `None`; raises `RoomClosedError` when the room refuses events |
 
 ### Hooks
 
@@ -5599,8 +6142,15 @@ kit = RoomKit(
 | Method | Description |
 |--------|-------------|
 | `delegate(room_id, agent_id, task, ...)` | Delegate to background agent |
+| `setup_background(agent, worker?, hand_back?)` | Give an agent the `work_in_background` tool: its long work runs as a task (RFC §23.4) |
+| `await start_task(room_id, agent_id, task, hand_back?)` | Start an agent's background task from the host, for any agent of the room |
 | `send_greeting(room_id, channel_id?, greeting?, ...)` | Send greeting |
 | `send_event(room_id, channel_id, content, ...)` | Send event directly |
+| `commit_event(room_id, event, organization_id?)` | Commit a record no member receives, outside the pipeline: its index counted delivered, no hook, no broadcast (RFC §10.5) |
+| `await start_room_recording(room_id, recorders, *, organization_id=None)` | Start recorders on an existing room, all or nothing, each announced (ON_RECORDING_STARTED) before any media |
+| `await room_recordings(room_id, *, organization_id=None)` | The handles of the room's running recordings; the room read with its scope (another organization's, or a missing room recording nothing, is not found) |
+| `await add_room_recording_track(room_id, track, *, organization_id=None)` | Declare a track to the room's recordings; returns a `RoomRecordingFeed` (`feed(data, timestamp_ms)`, `close()`), or `None` when the room records nothing; the room read with its scope |
+| `await stop_room_recording(room_id, *, organization_id=None)` | Stop the room's recordings, each result announced (ON_RECORDING_STOPPED) |
 | `get_timeline(room_id, offset?, limit?)` | Query event timeline |
 | `close()` | Shutdown framework |
 
@@ -5661,6 +6211,7 @@ from roomkit.voice.backends.mock import MockVoiceBackend
 from roomkit.voice.stt.mock import MockSTTProvider
 from roomkit.voice.tts.mock import MockTTSProvider
 from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
+from roomkit.voice.testing import ScenarioVoiceBackend, VoiceTrace, PCMAudio, read_wav, write_wav
 ```
 
 ### Pipeline
