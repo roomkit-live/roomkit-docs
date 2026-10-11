@@ -174,9 +174,23 @@ it, raise `max_tokens`, lower `reasoning_effort`, or set
 
 `reasoning_effort` rides `output_config.effort` as the turn spells it, with or
 without tools: Anthropic's levels are `low`, `medium`, `high`, `xhigh` and
-`max`, and a level the model does not take answers 400. `none` sends no
-effort. Claude Sonnet 4.5 and Claude Haiku 4.5 refuse the parameter, and are
-sent none.
+`max`, and a level the model does not take answers 400. Claude Sonnet 4.5 and
+Claude Haiku 4.5 refuse the parameter, and are sent none.
+
+A turn that states reasoning off (`thinking_budget=0`, `enable_thinking=False`
+or `reasoning_effort="none"`) is sent what turns its model off, as the model
+catalogue declares it:
+
+| Model | Sent for off |
+|-------|--------------|
+| Claude Opus 5, Sonnet 5, Haiku 5.5 | `thinking: {type: "disabled"}` |
+| Claude Sonnet 5.5 (refuses `disabled`) | `thinking: {type: "between_tools"}` |
+| Claude Opus 5.5, Fable 5.1, Fable 5 (cannot stop reasoning) | `output_config.effort: "low"` |
+| Claude Opus 4.8 and earlier, Sonnet 4.6 | nothing: leaving `thinking` out is off |
+
+With reasoning off, Claude Opus 5, Sonnet 5.5 and Haiku 5.5 refuse an effort
+above `high`, so `xhigh` and `max` go as `high` there. A model the catalogue
+does not carry (a new release, a proxy's alias) is sent nothing for off.
 
 ```python
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
