@@ -6,7 +6,7 @@
 > identity resolution, hooks, and realtime events.
 > Python 3.12+, Pydantic 2.x, fully typed, zero required dependencies beyond Pydantic.
 
-> Minimum version: 0.96.1 | Python 3.12+
+> Minimum version: 0.97.0 | Python 3.12+
 
 RoomKit is a pure async Python library for building multi-channel conversation systems. It provides a **room-based abstraction** where conversations happen in rooms, participants communicate through channels, and hooks let you intercept and modify the flow.
 
@@ -14,7 +14,7 @@ RoomKit is a pure async Python library for building multi-channel conversation s
 
 - **Room** — A container for a conversation. Holds participants, channel bindings, and an ordered event timeline.
 - **Channel** — A communication endpoint (SMS, Email, WhatsApp, Telegram, Discord, Buzz/Nostr, Voice, Video, Conference/SFU, AI, ACP coding agents, WebSocket, CLI, etc. — 23 `ChannelType` values). Registered once, attached to many rooms.
-- **Hook** — A function that intercepts events at specific points in the pipeline (76 triggers). Can block, modify, or observe messages.
+- **Hook** — A function that intercepts events at specific points in the pipeline (85 triggers). Can block, modify, or observe messages.
 - **Event Router** — Broadcasts events to all channels attached to a room, with content transcoding per channel capabilities.
 - **Identity Pipeline** — Maps external sender IDs to known participants with challenge/response flows.
 - **Realtime Events** — Ephemeral events (typing, presence, reactions) that are not stored in history.
@@ -1082,6 +1082,9 @@ are not fired by any built-in code.
 | `ON_IDENTITY_AMBIGUOUS` | SYNC | `(event, ctx) -> IdentityHookResult` | Multiple identity matches found |
 | `ON_IDENTITY_UNKNOWN` | SYNC | `(event, ctx) -> IdentityHookResult` | No identity match found |
 | `ON_PARTICIPANT_IDENTIFIED` | ASYNC | `(event, ctx) -> None` | Participant was successfully identified |
+| `ON_VERIFICATION_REQUIRED` | SYNC | `(event, ctx) -> HookResult` | An identified sender who is not verified wrote, under a `verification_policy` (RFC §11.7). `allow()` holds the message from the agents, `allow_unverified()` passes it, `block()` refuses it. |
+| `ON_VERIFICATION_COMPLETED` | ASYNC | `(event, ctx) -> None` | A verification request was completed. A SYSTEM event whose data carries `identity_id`, `organization_id`, `request_id`, `channel_id`, `method`, `expires_at`. |
+| `ON_VERIFICATION_ENDED` | ASYNC | `(event, ctx) -> None` | A verification or an open request ended: expired, revoked, cancelled or failed. Same data plus `reason` and `ended` (`"verification"` or `"request"`). |
 
 ### Membership
 
@@ -1159,6 +1162,7 @@ member management API.
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
 | `ON_REALTIME_TEXT_INJECTED` | ASYNC | `(event, ctx) -> None` | Text was injected into realtime session |
+| `ON_REALTIME_DELEGATION` | ASYNC | `(RealtimeDelegationEvent, ctx) -> None` | A full-duplex model handed reasoning or tool use to a backend, hosted or integrator-side |
 
 ### AI Generation
 
@@ -1224,6 +1228,13 @@ bot never triggers them.
 | `ON_CONFERENCE_TRACK_UNMUTED` | ASYNC | `(event, ctx) -> None` | Publisher unmuted a track. |
 | `ON_ACTIVE_SPEAKER_CHANGED` | ASYNC | `(event, ctx) -> None` | SFU reported a dominant-speaker change. `data`: `participant_id`. |
 | `ON_CONNECTION_QUALITY_CHANGED` | ASYNC | `(event, ctx) -> None` | SFU reported a participant's connection quality. `data`: `participant_id`, `quality`. |
+
+### Speaking Turns
+
+| Trigger | Execution | Signature | Description |
+|---------|-----------|-----------|-------------|
+| `ON_SPEAK_DECISION` | ASYNC | `(SpeakDecisionEvent, ctx) -> None` | An AI channel's speak policy decided whether the agent speaks, offers or stays silent on an event: the decision with its reason and judgments, `duration_ms`, `asked_again` when it decided again once the agent thought. |
+| `ON_THOUGHT` | ASYNC | `(ThoughtEvent, ctx) -> None` | An AI channel's thinker came back with a new thought in a room, or speaking emptied what the agent wanted to say: the thought, the one it replaces, `duration_ms` of the thinker call. |
 
 ### Discussion
 
@@ -3918,7 +3929,7 @@ asyncio.run(main())
 Runnable references: `examples/conference_quickstart.py`, `conference_ai_meeting.py`, `conference_realtime_ai.py`, `conference_livekit.py`.
 ---
 
-RoomKit provides four declarative orchestration strategies for multi-agent workflows. Pass a strategy to `RoomKit(orchestration=...)` or `create_room(orchestration=...)` — agents, routing, handoff tools, and conversation state are wired automatically.
+RoomKit provides five declarative orchestration strategies for multi-agent workflows. Pass a strategy to `RoomKit(orchestration=...)` or `create_room(orchestration=...)` — agents, routing, handoff tools, and conversation state are wired automatically.
 
 ## Strategies
 
@@ -5082,8 +5093,10 @@ await kit.revoke_verification(identity_id, reason="advisor")
 On completion the held messages of the request's window are released to the
 agents as the author's own turns. `ON_VERIFICATION_COMPLETED` and
 `ON_VERIFICATION_ENDED` (ASYNC; `ended` is `"verification"` or `"request"`)
-fire when it happens; a timer ends a verification at its expiry, and
-`async with RoomKit(...)` re-arms timers from the store. A code reply
+fire when it happens; a timer ends a verification at its expiry, and a
+request left unanswered at its own (the identity then has none open, so the
+next message asks again); `async with RoomKit(...)` re-arms the verifications'
+timers from the store. A code reply
 (`method="code"`) is consumed, never stored.
 
 ## Realtime Ephemeral Events
@@ -5892,9 +5905,9 @@ RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import
 | `ChannelCategory` | TRANSPORT or INTELLIGENCE |
 | `ChannelType` | 23 values: SMS, MMS, RCS, EMAIL, WHATSAPP, WHATSAPP_PERSONAL, WEBSOCKET, AI, VOICE, REALTIME_VOICE, REALTIME_AUDIO_VIDEO, PUSH, MESSENGER, TELEGRAM, TEAMS, DISCORD, BUZZ, WEBHOOK, VIDEO, AUDIO_VIDEO, CONFERENCE, CLI, SYSTEM |
 | `EventStatus` | PENDING, DELIVERED, READ, FAILED, BLOCKED |
-| `EventType` | 27 values (MESSAGE, SYSTEM, EDIT, DELETE, TOOL_CALL_START, DTMF, etc.) |
+| `EventType` | 28 values (MESSAGE, SYSTEM, EDIT, DELETE, TOOL_CALL_START, DTMF, etc.) |
 | `HookExecution` | SYNC or ASYNC |
-| `HookTrigger` | 76 hook triggers — full list in hooks.md |
+| `HookTrigger` | 85 hook triggers — full list in hooks.md |
 | `RoomStatus` | ACTIVE, PAUSED, CLOSED, ARCHIVED |
 | `Visibility` | Scope keywords for an event's `visibility` field: ALL, NONE, TRANSPORT, INTELLIGENCE, INTERNAL |
 

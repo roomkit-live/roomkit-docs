@@ -28,7 +28,7 @@ kit = RoomKit(
 @kit.hook(HookTrigger.ON_VERIFICATION_REQUIRED)
 async def ask_to_verify(event, ctx) -> HookResult:
     state = await kit.sender_verification(event, ctx)
-    if state is not None and state.request_id is None:  # no link out yet
+    if state is not None and state.request_id is None:  # no link open
         request, secret = await kit.request_verification(
             state.identity_id,
             room_id=event.room_id,
@@ -182,7 +182,8 @@ the room the request was opened in; the end of a verification in the room it
 was proven in.
 
 A verification ends **when it expires**, by a timer, not on the person's next
-message:
+message, and so does a request left unanswered: once it has, the identity has
+no request open, and its next message asks for a new one.
 
 ```python
 @kit.hook(HookTrigger.ON_VERIFICATION_ENDED, execution=HookExecution.ASYNC)
@@ -201,7 +202,9 @@ verifies.
 
 The timers live in the process. `async with RoomKit(...)` (or
 `kit.check_verifications()`) ends what expired while nothing ran and re-arms
-the rest from the store; `kit.close()` stops them.
+the rest from the store; `kit.close()` stops them. A request whose timer did
+not run here (the process restarted) reads as ended once past its expiry, and
+the next request announces its end.
 
 ## Policy
 
