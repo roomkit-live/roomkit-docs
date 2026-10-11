@@ -889,7 +889,14 @@ Tool permissions are denied by default. The agent's session tunables are
 readable and settable — `agent.session_config(room_id)` returns
 `{"model": "sonnet", "mode": "auto", ...}` and
 `await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
-with every change published as an ephemeral event.
+with every change published as an ephemeral event. Each room's session is set
+up the same way every time it opens (first prompt, recovery, agent restart,
+standalone turn): `mcp_servers` can be a function of the room id, so an MCP
+server learns its room, and `session_config={"mode": "default"}` plus the
+values the host set on the room are set before the first prompt, a refused
+value failing the turn closed (see
+[Setting up each room's session](guides/acp-channel.md#setting-up-each-rooms-session)
+and `examples/acp_room_mcp.py`).
 
 A custom transport can authorize one atomic reconstruction of a refused room
 prompt with `ACPSessionInvalidatedError(reason, recovery_authorized=True)`: the room

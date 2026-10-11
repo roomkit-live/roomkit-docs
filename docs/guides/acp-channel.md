@@ -237,6 +237,60 @@ Every change — the agent's own, or one you make — publishes an ephemeral
     observable. The Claude Code example intercepts `/model` in its
     `content_factory` and does exactly that.
 
+## Setting up each room's session
+
+What a session is opened with is set once, on the channel, and applied to
+every session it opens for a room: the room's first, one rebuilt after a
+[recovery](#recovering-a-refused-room-prompt), one opened after the agent
+process restarted, a [standalone turn's](#directing-the-agent-instructions),
+and the child room's of a task started with `kit.start_task()`.
+
+```python
+from acp.schema import EnvVariable, McpServerStdio
+
+def notes_server(room_id: str) -> list[McpServerStdio]:
+    return [
+        McpServerStdio(
+            name="notes",
+            command="python",
+            args=["notes_server.py"],
+            env=[EnvVariable(name="NOTES_ROOM", value=room_id)],  # the server knows its room
+        )
+    ]
+
+agent = ACPChannel(
+    "claude-code",
+    command=["npx", "--no-install", "@agentclientprotocol/claude-agent-acp@0.61.0"],
+    cwd=Path("/srv/workspace"),
+    mcp_servers=notes_server,                # or a list, the same for every room
+    session_config={"mode": "default"},      # set on every session before its first prompt
+    external_tool_handler=PolicyExternalToolHandler(
+        policy=ToolPolicy(allow=["mcp__notes__*", "add_note", "list_notes"]),
+    ),
+)
+```
+
+- **`mcp_servers`** is a list given to every room's sessions, or a function of
+  the room id, sync or async, called each time a session opens for that room.
+  A server that acts for a room (starts a task, writes a note) learns which
+  one from what the function puts in its `env`, its URL or its headers.
+- **`session_config`** maps ACP config ids to values (`mode`, `model`, an
+  agent's own options). The channel sets each one the new session does not
+  already announce, before the first prompt.
+- **A value you set with `set_config_option(room_id, ...)` belongs to the
+  room.** The room's next session is set to it too, over `session_config`, so
+  a restarted agent comes back on the model and the mode the room had.
+  `close_session(room_id)` forgets it: the room's next session opens on
+  `session_config` alone.
+- **A value the agent refuses fails closed.** The session is released and never
+  prompted, and the turn fails (or `set_config_option` raises) with a
+  `RuntimeError` naming the option. The mode is what makes the agent ask
+  RoomKit before it acts: a session left in another mode would not be a
+  degraded session, it would be an ungated one.
+
+`examples/acp_room_mcp.py` runs Claude Code in two rooms, each with its own
+notes server, every MCP call asked of the policy.
+
 ## Claude Code with the CLI channel
 
 The repository includes a complete interactive example that connects a
@@ -467,9 +521,10 @@ session opened for that turn and closed after it:
   its catch-up still waits for the next ordinary turn, and carries the
   standalone reply as the agent's own words (`you (in a separate session)`),
   since that session never held it;
-- the turn session takes the room session's configuration (`model`, `mode`)
-  where the agent accepts it, and host-contributed blocks still open the
-  prompt;
+- the turn session takes the [room's setup](#setting-up-each-rooms-session)
+  as the room's next session would (a refused value fails the turn), then the
+  room session's configuration (`model`, `mode`) where the agent accepts it,
+  and host-contributed blocks still open the prompt;
 - `cancel(room_id)` stops it like any other turn of the room;
 - its `session/new` says `roomkit.live/sessionScope: "turn"`, so a transport
   that files sessions by room keeps it apart from the room's.
@@ -802,8 +857,11 @@ requests by default. To approve selected operations, provide an
     `default` mode a command that writes is asked for (and refused by a
     read-only policy), while reads and commands it deems safe run unasked;
     in `plan` mode it refuses every action that is not a read itself. Set the
-    mode you rely on, per room, before the first turn:
-    `await agent.set_config_option(room_id, "mode", "default")`.
+    mode you rely on for every session with
+    `ACPChannel(session_config={"mode": "default"})`, or for one room with
+    `await agent.set_config_option(room_id, "mode", "default")`, which the room
+    keeps across a recovery or an agent restart
+    ([Setting up each room's session](#setting-up-each-rooms-session)).
 
 ```python
 from roomkit import ACPChannel, ToolPolicy
