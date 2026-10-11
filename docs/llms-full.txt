@@ -2485,7 +2485,7 @@ Runnable without a remote agent: `examples/acp_session_recovery.py`.
 
 ### Session setup
 
-What a session is opened with is set per room (RFC ACP agent channel, *Session setup*). `mcp_servers` is a list given to every room's sessions, or a function of the room id (sync or async), called each time a session opens for that room: a stdio server can be told its room in its `env`. `session_config` maps ACP config ids to values (`mode`, `model`, an agent's own options) and is set on every session the channel opens, before its first prompt: the room's first, one rebuilt after a recovery, one opened after the agent restarted, a standalone turn's, a task's child room's. A value the session already announces is not set again. A value the host sets with `set_config_option(room_id, id, value)` belongs to the room: its next session is set to it too, over `session_config`, until `close_session(room_id)` forgets it. A value the agent refuses fails the opening closed: the session is released, never prompted, and the turn fails (or `set_config_option` raises) with a `RuntimeError` naming the option.
+What a session is opened with is set per room (RFC §6.4, ACP agent channel, *Session setup*). `mcp_servers` is a list given to every room's sessions, or a function of the room id (sync or async), called each time a session opens for that room: a stdio server can be told its room in its `env`. `session_config` maps ACP config ids to values (`mode`, `model`, an agent's own options) and is set on every session the channel opens, before its first prompt: the room's first, one rebuilt after a recovery, one opened after the agent restarted, a standalone turn's, a task's child room's. A value the session already announces is not set again. A value the host sets with `set_config_option(room_id, id, value)` belongs to the room: its next session is set to it too, over `session_config`, until `close_session(room_id)` forgets it. A value the agent refuses fails the opening closed: the session is released, never prompted, and the turn fails (or `set_config_option` raises) with a `RuntimeError` naming the option. A `set_config_option` that opens the room's session sets its value in place of the room's earlier one, so a value a restarted agent no longer accepts is replaced by setting another (or forgotten with `close_session`).
 
 ```python
 from acp.schema import EnvVariable, McpServerStdio
@@ -2499,7 +2499,10 @@ agent = ACPChannel(
                        env=[EnvVariable(name="NOTES_ROOM", value=room_id)]),
     ],
     session_config={"mode": "default"},  # every MCP call and write is asked of RoomKit
-    external_tool_handler=PolicyExternalToolHandler(policy=ToolPolicy(allow=["mcp__notes__*"])),
+    # An MCP call is judged under Claude Code's alias and its own name: allow both.
+    external_tool_handler=PolicyExternalToolHandler(
+        policy=ToolPolicy(allow=["mcp__notes__*", "add_note", "list_notes"]),
+    ),
 )
 ```
 
