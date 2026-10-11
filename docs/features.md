@@ -2101,16 +2101,24 @@ Identity hooks can return `IdentityHookResult` with:
 Identity hooks also support filtering:
 
 ```python
+from roomkit import ChannelType, EventSource, HookTrigger, RoomEvent, TextContent
+from roomkit.models import ChannelDirection, IdentityHookResult, InjectedEvent
+
 @kit.identity_hook(
     HookTrigger.ON_IDENTITY_UNKNOWN,
     channel_types={ChannelType.SMS},
     directions={ChannelDirection.INBOUND},
 )
 async def challenge_unknown_sms(event, ctx, id_result):
-    # Only runs for unknown SMS senders
+    # Only runs for unknown SMS senders: ask who they are, hold the message
+    question = RoomEvent(
+        room_id=event.room_id,
+        source=EventSource(channel_id="system", channel_type=ChannelType.SYSTEM),
+        content=TextContent(body="Please reply with your account number to continue."),
+    )
     return IdentityHookResult.challenge(
-        injected_events=[...],
-        reason="Please verify your identity",
+        inject=InjectedEvent(event=question, target_channel_ids=[event.source.channel_id]),
+        message="Identification challenge sent",
     )
 ```
 

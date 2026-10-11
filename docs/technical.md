@@ -33,136 +33,72 @@
 
 ## Project Structure
 
+The `roomkit` repository, by directory. The documentation lives in its own
+repository, `roomkit-docs`.
+
 ```
 roomkit/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                 # GitHub Actions CI pipeline
-├── docs/                          # MkDocs documentation source
-│   ├── api/                       # Auto-generated API reference
-│   ├── index.md                   # Documentation home
-│   ├── architecture.md            # Architecture overview
-│   ├── technical.md               # This file
-│   ├── features.md                # Feature documentation
-│   ├── ai-integration.md          # AI integration guide
-│   ├── mcp.md                     # MCP integration
-│   └── roomkit-rfc.md             # RFC v11 (design specification)
-├── examples/                      # Executable example scripts
-│   ├── quickstart.py              # WebSocket + AI quickstart
-│   ├── anthropic_ai.py            # Anthropic Claude integration
-│   ├── openai_ai.py               # OpenAI integration
-│   ├── http_webhook.py            # Generic HTTP webhook
-│   ├── voicemeup_sms.py           # VoiceMeUp SMS provider
-│   ├── elasticemail.py            # ElasticEmail provider
-│   └── facebook_messenger.py      # Facebook Messenger integration
-├── src/roomkit/                   # Main library source
-│   ├── __init__.py                # Public API (~150 exports via __all__)
-│   ├── _version.py                # Version string (0.1.1)
-│   ├── py.typed                   # PEP 561 type marker
-│   ├── ai_docs.py                 # AI documentation helpers
-│   ├── core/                      # Framework internals
-│   │   ├── framework.py           # RoomKit orchestrator (mixin composition)
-│   │   ├── _inbound.py            # InboundMixin (message pipeline)
-│   │   ├── _channel_ops.py        # ChannelOpsMixin (channel management)
-│   │   ├── _room_lifecycle.py     # RoomLifecycleMixin (room CRUD, timers)
-│   │   ├── _helpers.py            # HelpersMixin (shared utilities)
+├── .github/workflows/ci.yml       # CI: lint, type check, security scan, tests
+├── src/roomkit/                   # The library
+│   ├── __init__.py                # Public API (__all__)
+│   ├── core/                      # Framework: RoomKit orchestrator, pipelines, routing
+│   │   ├── framework.py           # RoomKit (composed from mixins/)
+│   │   ├── mixins/                # Inbound pipeline, channel ops, room lifecycle, hooks API, …
 │   │   ├── hooks.py               # HookEngine (sync/async pipelines)
 │   │   ├── event_router.py        # EventRouter (broadcast + delivery)
-│   │   ├── inbound_router.py      # InboundRoomRouter (message routing)
+│   │   ├── inbound_router.py      # InboundRoomRouter (finds the target room)
 │   │   ├── transcoder.py          # DefaultContentTranscoder
 │   │   ├── circuit_breaker.py     # CircuitBreaker (fault isolation)
 │   │   ├── rate_limiter.py        # TokenBucketRateLimiter
 │   │   ├── retry.py               # retry_with_backoff()
 │   │   └── locks.py               # RoomLockManager + InMemoryLockManager
-│   ├── channels/                  # Channel implementations
-│   │   ├── __init__.py            # Factory functions (SMSChannel, EmailChannel, RCSChannel, etc.)
-│   │   ├── base.py                # Channel ABC
-│   │   ├── transport.py           # TransportChannel (unified generic channel)
-│   │   ├── websocket.py           # WebSocketChannel
-│   │   ├── ai.py                  # AIChannel (intelligence layer)
-│   │   └── voice.py               # VoiceChannel (real-time audio with STT/TTS)
-│   ├── models/                    # Pydantic data models
-│   │   ├── enums.py               # All StrEnum types (16 enums)
-│   │   ├── event.py               # RoomEvent, EventContent (9 content types)
-│   │   ├── room.py                # Room, RoomTimers
-│   │   ├── channel.py             # ChannelBinding, ChannelCapabilities, ChannelOutput, RateLimit, RetryPolicy
-│   │   ├── hook.py                # HookResult, InjectedEvent
-│   │   ├── identity.py            # Identity, IdentityResult, IdentityHookResult
-│   │   ├── participant.py         # Participant
-│   │   ├── delivery.py            # InboundMessage, InboundResult, ProviderResult, DeliveryResult, DeliveryStatus
-│   │   ├── context.py             # RoomContext
-│   │   ├── task.py                # Task, Observation
-│   │   └── framework_event.py     # FrameworkEvent
-│   ├── providers/                 # External service providers
-│   │   ├── ai/                    # AIProvider ABC + MockAIProvider
-│   │   ├── anthropic/             # AnthropicAIProvider + AnthropicConfig
-│   │   ├── openai/                # OpenAIAIProvider + OpenAIConfig
-│   │   ├── gemini/                # GeminiAIProvider + GeminiConfig
-│   │   ├── mistral/               # MistralAIProvider + MistralConfig
-│   │   ├── sms/                   # SMSProvider ABC + MockSMSProvider + utilities
-│   │   ├── voicemeup/             # VoiceMeUpSMSProvider + VoiceMeUpConfig + MMS aggregation
-│   │   ├── twilio/                # TwilioSMSProvider + TwilioRCSProvider + configs
-│   │   ├── telnyx/                # TelnyxSMSProvider + TelnyxRCSProvider + configs
-│   │   ├── sinch/                 # SinchSMSProvider + SinchConfig
-│   │   ├── rcs/                   # RCSProvider ABC + MockRCSProvider
-│   │   ├── email/                 # EmailProvider ABC + MockEmailProvider
-│   │   ├── elasticemail/          # ElasticEmailProvider + ElasticEmailConfig
-│   │   ├── sendgrid/              # SendGridConfig (scaffolded)
-│   │   ├── messenger/             # MessengerProvider ABC + FacebookMessengerProvider + MockMessengerProvider
-│   │   ├── whatsapp/              # WhatsAppProvider ABC + MockWhatsAppProvider
-│   │   └── http/                  # HTTPProvider ABC + WebhookHTTPProvider + MockHTTPProvider
-│   ├── identity/                  # Identity resolution
-│   │   ├── base.py                # IdentityResolver ABC
-│   │   └── mock.py                # MockIdentityResolver
-│   ├── realtime/                  # Ephemeral events
-│   │   ├── base.py                # RealtimeBackend ABC
-│   │   └── memory.py              # InMemoryRealtime
-│   ├── voice/                     # Voice/audio support
-│   │   ├── __init__.py            # Lazy loaders for optional providers
-│   │   ├── base.py                # Shared types: VoiceSession, AudioChunk, callbacks
-│   │   ├── events.py              # Voice event types (BargeIn, VAD, etc.)
+│   ├── channels/                  # Channel ABC, TransportChannel, factories (SMSChannel, …),
+│   │                              # WebSocket, AI, Voice, RealtimeVoice, ACP, CLI, …
+│   ├── models/                    # Pydantic models: events, rooms, bindings, hooks, identity, …
+│   ├── providers/                 # Messaging and AI providers: ABCs (ai/, sms/, email/, rcs/,
+│   │                              # whatsapp/, http/) and one directory per vendor
+│   ├── voice/                     # Voice subsystem
+│   │   ├── backends/              # Audio transports (FastRTC, RTP, SIP, local, mock, …)
 │   │   ├── stt/                   # Speech-to-text providers
-│   │   │   ├── base.py            # STTProvider ABC
-│   │   │   ├── deepgram.py        # DeepgramSTTProvider + DeepgramConfig
-│   │   │   └── mock.py            # MockSTTProvider
 │   │   ├── tts/                   # Text-to-speech providers
-│   │   │   ├── base.py            # TTSProvider ABC
-│   │   │   ├── elevenlabs.py      # ElevenLabsTTSProvider + ElevenLabsConfig
-│   │   │   └── mock.py            # MockTTSProvider
-│   │   ├── backends/              # Voice transport backends
-│   │   │   ├── base.py            # VoiceBackend ABC
-│   │   │   ├── fastrtc.py         # FastRTCVoiceBackend + mount_fastrtc_voice
-│   │   │   └── mock.py            # MockVoiceBackend + MockVoiceCall
-│   │   └── realtime/              # Realtime voice (speech-to-speech)
-│   │       ├── base.py            # RealtimeSession, RealtimeSessionState
-│   │       ├── provider.py        # RealtimeVoiceProvider ABC
-│   │       ├── transport.py       # RealtimeAudioTransport ABC
-│   │       ├── ws_transport.py    # WebSocketRealtimeTransport
-│   │       ├── fastrtc_transport.py # FastRTCRealtimeTransport + mount_fastrtc_realtime
-│   │       ├── events.py          # Realtime voice events
-│   │       └── mock.py            # MockRealtimeProvider + MockRealtimeTransport
-│   └── store/                     # Persistence layer
-│       ├── base.py                # ConversationStore ABC (30 abstract methods)
-│       ├── memory.py              # InMemoryStore implementation
-│       ├── sqlite.py              # Embedded single-process persistence
-│       └── postgres.py            # Shared PostgreSQL persistence
-├── tests/                         # Test suite
-│   ├── conftest.py                # Shared fixtures
-│   ├── test_channels/             # Channel-specific tests (7 files)
-│   ├── test_providers/            # Provider-specific tests (15+ files)
-│   ├── test_integration/          # End-to-end integration tests (8+ files)
-│   └── test_*.py                  # Unit tests (~35 files)
-├── site/                          # Built documentation output
-├── pyproject.toml                 # Project configuration
-├── Makefile                       # Development commands
-├── mkdocs.yml                     # MkDocs configuration
+│   │   ├── pipeline/              # Audio stages: resampler, AEC, AGC, denoiser, VAD, turn,
+│   │   │                          # diarization, DTMF, recorder, …
+│   │   └── realtime/              # Speech-to-speech providers and transports
+│   ├── video/                     # Video transport, vision AI, avatars
+│   ├── conference/                # Conference (SFU orchestration)
+│   ├── orchestration/             # Multi-agent orchestration
+│   ├── speaking/                  # Speaking turns: speak, offer or stay silent
+│   ├── tasks/                     # Background tasks through child rooms
+│   ├── tools/                     # Tool utilities (MCPToolProvider, compose_tool_handlers)
+│   ├── skills/                    # Agent Skills
+│   ├── classifiers/               # Typed questions answered with probabilities
+│   ├── memory/                    # Memory providers for AI context
+│   ├── knowledge/                 # Knowledge retrieval sources
+│   ├── scoring/                   # Conversation scoring
+│   ├── identity/                  # IdentityResolver ABC + mock
+│   ├── store/                     # ConversationStore ABC: in-memory, SQLite, PostgreSQL
+│   ├── delivery/                  # Persistent delivery backend
+│   ├── realtime/                  # Ephemeral events: in-memory and Redis backends
+│   ├── sources/                   # Event-driven sources (WebSocket, SSE, WhatsApp Personal, …)
+│   ├── recorder/                  # Room-level media recording
+│   ├── telemetry/                 # Telemetry providers
+│   ├── console/                   # Terminal displays for agent development
+│   ├── sandbox/                   # Sandbox execution integration
+│   ├── webrtc/                    # Vendored WebRTC transport
+│   └── ai_docs.py                 # get_llms_txt(), get_agents_md(), …
+├── tests/                         # Test suite (unit, integration, stress)
+├── examples/                      # Runnable examples
+├── benchmarks/                    # Chat benchmarks
+├── scripts/                       # Release, model catalog check, llms-full.txt build, …
+├── docs/c7/                       # Topic pages assembled into llms-full.txt
+├── AGENTS.md                      # Context for AI coding assistants
+├── llms.txt                       # Documentation index for LLMs
+├── llms-full.txt                  # Topic pages in one file, for LLMs
+├── CHANGELOG.md                   # Release notes
+├── pyproject.toml                 # Project configuration and extras
 ├── uv.lock                        # Dependency lock file
-├── .pre-commit-config.yaml        # Pre-commit hooks
-├── AGENTS.md                      # AI coding assistant context
-├── llms.txt                       # LLM context document
-├── README.md                      # Project README
-├── CONTRIBUTING.md                # Contribution guidelines
-└── LICENSE                        # MIT license
+├── Makefile                       # Development commands (make all, make docs, …)
+└── .pre-commit-config.yaml        # Pre-commit hooks
 ```
 
 ---

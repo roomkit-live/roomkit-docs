@@ -146,20 +146,20 @@ not verification of a sender already identified (RFC §11.7).
 ```python
 from __future__ import annotations
 
-from roomkit import HookTrigger
-from roomkit.models.identity import IdentityHookResult
-from roomkit.models.events import InjectedEvent, TextContent
+from roomkit import ChannelType, EventSource, HookTrigger, RoomEvent, TextContent
+from roomkit.models import IdentityHookResult, InjectedEvent
 
 
 @kit.identity_hook(HookTrigger.ON_IDENTITY_UNKNOWN)
 async def challenge_unknown(event, context, id_result):
-    # Ask the sender to identify themselves
-    challenge = InjectedEvent(
+    # Ask the sender to identify themselves, on the channel they wrote from
+    question = RoomEvent(
+        room_id=event.room_id,
+        source=EventSource(channel_id="system", channel_type=ChannelType.SYSTEM),
         content=TextContent(body="Please reply with your account number to continue."),
-        channel_id=event.source.channel_id,
     )
     return IdentityHookResult.challenge(
-        inject=challenge,
+        inject=InjectedEvent(event=question, target_channel_ids=[event.source.channel_id]),
         message="Identification challenge sent",
     )
 ```

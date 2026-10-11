@@ -803,237 +803,117 @@ await kit.attach_source("one-shot", source, auto_restart=False)
 
 ## Bidirectional Channel Pattern
 
-By design, **SourceProvider handles inbound messages** and **Provider handles outbound messages**. For true bidirectional communication (e.g., a WebSocket that both receives AND sends through RoomKit's pipeline), pair a Source with a Provider that share the same connection.
+By design, **a SourceProvider brings messages in** and **a provider sends them
+out**. When one connection carries both directions (a WebSocket that both
+receives and sends), the channel's provider sends through the source.
 
 ### Use Case: Multi-Client Chat
 
-Consider a chat application where:
-- Browser UI connects via HTTP/WebSocket to your server
-- CLI client connects via a separate WebSocket
-- Messages from either client should appear in both
+A browser user and a CLI client share one room. The browser connects to your
+server; the CLI talks to a gateway that RoomKit reaches over a WebSocket:
 
 ```
-Browser UI ──HTTP──► Your Server ◄──WebSocket──► CLI Client
-                         │
-                      RoomKit
-                         │
-              ┌──────────┴──────────┐
-              │                     │
-        WebSocketSource      WebSocketProvider
-        (CLI → RoomKit)      (RoomKit → CLI)
-              │                     │
-              └─────── shared ──────┘
-                     connection
+Browser ──WebSocket──► Your server ◄──WebSocket──► CLI gateway
+                           │
+                        RoomKit
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+   WebSocketChannel "browser"     TransportChannel "cli"
+                                   ├── WebSocketSource       (gateway → RoomKit)
+                                   └── WebSocketSendProvider (RoomKit → gateway)
+                                         shared connection
 ```
 
 ### Implementation
 
-**Step 1: Create a Provider that wraps the Source's send()**
+**Step 1: A provider that sends through the source**
+
+`TransportChannel` calls its provider's `send(event, to)`. Subclassing
+`HTTPProvider` gives that shape:
 
 ```python
 import json
-from roomkit import DeliveryResult
-from roomkit.providers.base import Provider, ProviderCapability, OutboundMessage
-from roomkit.sources import WebSocketSource, SourceStatus
 
-class WebSocketProvider(Provider):
-    """Provider that sends outbound messages through a WebSocketSource."""
+from roomkit import RoomEvent
+from roomkit.models.delivery import ProviderResult
+from roomkit.providers.http.base import HTTPProvider
+from roomkit.sources import SourceStatus, WebSocketSource
 
-    def __init__(self, source: WebSocketSource):
+
+class WebSocketSendProvider(HTTPProvider):
+    """Sends outbound events through the source's WebSocket connection."""
+
+    def __init__(self, source: WebSocketSource) -> None:
         self._source = source
 
-    @property
-    def name(self) -> str:
-        return "websocket"
-
-    @property
-    def capabilities(self) -> set[ProviderCapability]:
-        return {ProviderCapability.TEXT}
-
-    async def send(self, message: OutboundMessage) -> DeliveryResult:
+    async def send(self, event: RoomEvent, to: str) -> ProviderResult:
         if self._source.status != SourceStatus.CONNECTED:
-            return DeliveryResult(
-                success=False,
-                error="WebSocket not connected",
-            )
-
-        # Serialize to your WebSocket protocol format
-        payload = json.dumps({
+            return ProviderResult(success=False, error="websocket_not_connected")
+        await self._source.send(json.dumps({
             "type": "message",
-            "sender_id": message.sender_id,
-            "text": message.content.body,
-            "room_id": message.room_id,
-            "timestamp": message.timestamp.isoformat(),
-        })
-
-        await self._source.send(payload)
-        return DeliveryResult(success=True, external_id=message.id)
-```
-
-**Step 2: Wire up Source and Provider**
-
-```python
-from roomkit import RoomKit
-from roomkit.sources import WebSocketSource
-
-kit = RoomKit()
-
-# Create the source (handles inbound from CLI)
-source = WebSocketSource(
-    url="wss://cli-gateway.example.com/events",
-    channel_id="cli-channel",
-)
-
-# Create provider that wraps the source (handles outbound to CLI)
-provider = WebSocketProvider(source)
-
-# Register both
-kit.register_provider("cli-channel", provider)
-await kit.attach_source("cli-channel", source)
-```
-
-**Step 3: Prevent echo loops**
-
-Without protection, a message from CLI would broadcast back to CLI. Add a hook to filter:
-
-```python
-from roomkit import HookTrigger, HookResult
-
-@kit.hook(HookTrigger.BEFORE_BROADCAST)
-async def prevent_echo(event, context):
-    # Don't send back to the channel that originated the message
-    if event.channel_id == context.target_channel_id:
-        return HookResult.block("echo prevention")
-    return HookResult.allow()
-```
-
-Or use room-level channel filtering if you want more control:
-
-```python
-# When processing inbound, track the source
-@kit.hook(HookTrigger.BEFORE_INBOUND)
-async def tag_source(event, context):
-    context.metadata["source_channel"] = event.channel_id
-    return HookResult.allow()
-
-@kit.hook(HookTrigger.BEFORE_BROADCAST)
-async def skip_source_channel(event, context):
-    source_channel = context.metadata.get("source_channel")
-    if source_channel == context.target_channel_id:
-        return HookResult.block()
-    return HookResult.allow()
-```
-
-### Complete Example: Browser + CLI Chat
-
-```python
-import asyncio
-from fastapi import FastAPI, WebSocket
-from roomkit import RoomKit, HookTrigger, HookResult, InboundMessage, TextContent
-from roomkit.sources import WebSocketSource, SourceStatus
-
-app = FastAPI()
-kit = RoomKit()
-
-# --- CLI WebSocket Channel ---
-cli_source = WebSocketSource(
-    url="wss://cli-gateway.example.com/events",
-    channel_id="cli",
-)
-cli_provider = WebSocketProvider(cli_source)
-kit.register_provider("cli", cli_provider)
-
-# --- Echo Prevention ---
-@kit.hook(HookTrigger.BEFORE_BROADCAST)
-async def prevent_echo(event, context):
-    if event.channel_id == context.target_channel_id:
-        return HookResult.block("echo")
-    return HookResult.allow()
-
-# --- Browser WebSocket Endpoint ---
-@app.websocket("/chat/{room_id}/{user_id}")
-async def browser_chat(websocket: WebSocket, room_id: str, user_id: str):
-    await websocket.accept()
-
-    # Subscribe to room broadcasts for this browser
-    async def send_to_browser(event):
-        await websocket.send_json({
-            "type": "message",
-            "sender_id": event.sender_id,
+            "room_id": event.room_id,
+            "sender_id": event.source.participant_id,
             "text": event.content.body,
-        })
-
-    # Use hooks or realtime subscription to forward messages
-    # (simplified - in production use kit.subscribe_room or similar)
-
-    try:
-        while True:
-            data = await websocket.receive_json()
-
-            # Process browser message through RoomKit
-            await kit.process_inbound(InboundMessage(
-                channel_id="browser",
-                sender_id=user_id,
-                content=TextContent(body=data["text"]),
-                room_id=room_id,
-            ))
-    except Exception:
-        pass
-
-@app.on_event("startup")
-async def startup():
-    await kit.attach_source("cli", cli_source)
-
-@app.on_event("shutdown")
-async def shutdown():
-    await kit.close()
+        }))
+        return ProviderResult(success=True, provider_message_id=event.id)
 ```
 
-### Message Flow
+**Step 2: Wire the channel, the source and the room**
 
-```
-CLI sends "Hello":
-  CLI ──WebSocket──► WebSocketSource.emit()
-                          │
-                          ▼
-                    kit.process_inbound()
-                          │
-                          ▼
-                    BEFORE_BROADCAST hook (echo check)
-                          │
-                    ┌─────┴─────┐
-                    ▼           ▼
-              cli channel   browser channel
-              (action:      (delivered via
-               block, echo)  HTTP/WS)
+```python
+from roomkit import ChannelType, RoomEvent, RoomKit, WebSocketChannel
+from roomkit.channels import TransportChannel
 
-Browser sends "Hi":
-  Browser ──HTTP──► kit.process_inbound()
-                          │
-                          ▼
-                    BEFORE_BROADCAST hook
-                          │
-                    ┌─────┴─────┐
-                    ▼           ▼
-              cli channel   browser channel
-              (delivered    (action:
-               via WS        block, echo)
-               Provider)
+kit = RoomKit()
+
+# The CLI side: inbound from the source, outbound through the provider
+source = WebSocketSource(url="wss://cli-gateway.example.com/events", channel_id="cli")
+cli = TransportChannel(
+    "cli",
+    ChannelType.WEBSOCKET,
+    provider=WebSocketSendProvider(source),
+    requires_recipient=False,  # the connection is the address
+)
+
+# The browser side
+browser = WebSocketChannel("browser")
+
+kit.register_channel(cli)
+kit.register_channel(browser)
+
+await kit.create_room(room_id="chat")
+await kit.attach_channel("chat", "cli")
+await kit.attach_channel("chat", "browser")
+
+async def to_browser(connection_id: str, event: RoomEvent) -> None:
+    await browser_sockets[connection_id].send_json(event.model_dump(mode="json"))
+
+browser.register_connection("tab-1", to_browser, room_id="chat")
+await kit.attach_source("cli", source)
 ```
+
+A gateway message such as `{"sender_id": "cli-user", "text": "Hello"}` goes
+through the inbound pipeline and reaches the browser. A browser message
+(`kit.process_inbound(InboundMessage(channel_id="browser", ...))`) reaches the
+gateway through `WebSocketSendProvider`.
+
+**No echo filter needed:** the router never delivers an event back to the
+channel it came from, so the gateway does not receive its own messages.
 
 ### Why Source + Provider Pair?
 
 | Alternative | Problem |
 |-------------|---------|
-| AFTER_BROADCAST hook with `source.send()` | Bypasses delivery tracking, retries, circuit breakers |
-| Single "bidirectional source" | Conflates inbound/outbound concerns, harder to test |
-| Custom channel delivery | Reinvents what Provider already does |
+| AFTER_BROADCAST hook with `source.send()` | Bypasses the router: no retry policy, rate limit, circuit breaker or delivery status |
+| Single "bidirectional source" | Conflates inbound and outbound concerns, harder to test |
+| A custom `Channel` subclass | Reimplements the delivery `TransportChannel` already does |
 
-The **Source + Provider pair** pattern:
-- Uses RoomKit's existing abstractions correctly
-- Gets delivery tracking, error handling, and observability for free
-- Keeps inbound and outbound concerns separated
-- Allows different retry/circuit breaker policies per direction
+The **Source + Provider pair**:
+
+- Keeps inbound and outbound separate, each testable alone
+- Delivers through the router, with its retries, rate limits and circuit breaker
+- Reports delivery results the same way as SMS or email channels
 
 ---
 
