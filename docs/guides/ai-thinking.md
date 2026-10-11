@@ -172,6 +172,12 @@ it, raise `max_tokens`, lower `reasoning_effort`, or set
   replays them first since a response does not say where they came;
   `thinking_parts_of(response)` reads them off any provider's response.
 
+`reasoning_effort` rides `output_config.effort` as the turn spells it, with or
+without tools: Anthropic's levels are `low`, `medium`, `high`, `xhigh` and
+`max`, and a level the model does not take answers 400. `none` sends no
+effort. Claude Sonnet 4.5 and Claude Haiku 4.5 refuse the parameter, and are
+sent none.
+
 ```python
 from roomkit.providers.anthropic.ai import AnthropicAIProvider
 from roomkit.providers.anthropic.config import AnthropicConfig
