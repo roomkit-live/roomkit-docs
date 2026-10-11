@@ -322,16 +322,23 @@ count = await store.get_unread_count("room-1", "ws-alice")
 ## Tasks and Observations
 
 ```python
-from roomkit.models.events import Task, Observation
+from roomkit.models import Observation, Task
+from roomkit.models.enums import TaskStatus
 
 # Background tasks
-task = await store.add_task(Task(id="task-1", room_id="room-1", status="pending"))
+task = await store.add_task(Task(id="task-1", room_id="room-1", title="Call the customer back"))
 tasks = await store.list_tasks("room-1", status="pending")
-task.status = "completed"
-await store.update_task(task)
+await store.update_task(task.model_copy(update={"status": TaskStatus.COMPLETED}))
 
 # AI/ML observations
-obs = await store.add_observation(Observation(id="obs-1", room_id="room-1", data={"sentiment": 0.8}))
+obs = await store.add_observation(Observation(
+    id="obs-1",
+    room_id="room-1",
+    channel_id="ai-assistant",
+    content="The customer sounds satisfied",
+    category="sentiment",
+    confidence=0.8,
+))
 observations = await store.list_observations("room-1")
 ```
 

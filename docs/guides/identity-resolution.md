@@ -8,9 +8,9 @@ Identity resolution maps inbound message senders to known participants. It runs 
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.identity.base import Identity, IdentityResolver, IdentityResult
+from roomkit.identity.base import IdentityResolver, IdentityResult
+from roomkit.models import Identity, InboundMessage
 from roomkit.models.enums import IdentificationStatus
-from roomkit.models.events import InboundMessage
 
 
 class CRMResolver(IdentityResolver):

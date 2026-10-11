@@ -31,8 +31,8 @@ The most common test pattern — send a message and verify it's broadcast to oth
 ```python
 from __future__ import annotations
 
-from roomkit import InboundMessage, RoomKit, TextContent
-from roomkit.channels.base import Channel, ChannelCategory, ChannelOutput
+from roomkit import EventSource, InboundMessage, RoomEvent, RoomKit, TextContent
+from roomkit.channels.base import Channel, ChannelOutput
 from roomkit.models.enums import ChannelType
 
 
@@ -46,12 +46,10 @@ class SimpleChannel(Channel):
         self.delivered: list = []
 
     async def handle_inbound(self, message, context):
-        from roomkit.models.events import RoomEvent
         return RoomEvent(
-            id=f"evt-{message.sender_id}",
             room_id=context.room.id,
+            source=EventSource(channel_id=self.channel_id, channel_type=self.channel_type),
             content=message.content,
-            source=message.to_event_source(self),
         )
 
     async def deliver(self, event, binding, context):
@@ -708,8 +706,16 @@ async def test_hook_modifies_event() -> None:
 ```python
 from __future__ import annotations
 
-from roomkit import HookResult, HookTrigger, RoomKit
-from roomkit.models.events import InjectedEvent, TextContent
+from roomkit import (
+    ChannelType,
+    EventSource,
+    HookResult,
+    HookTrigger,
+    InjectedEvent,
+    RoomEvent,
+    RoomKit,
+    TextContent,
+)
 
 
 async def test_hook_injects_event() -> None:
@@ -717,11 +723,12 @@ async def test_hook_injects_event() -> None:
 
     @kit.hook(HookTrigger.BEFORE_BROADCAST)
     async def auto_reply(event, ctx):
-        reply = InjectedEvent(
+        reply = RoomEvent(
+            room_id=event.room_id,
+            source=EventSource(channel_id="system", channel_type=ChannelType.SYSTEM),
             content=TextContent(body="Auto-reply: received!"),
-            channel_id="sms1",
         )
-        return HookResult.allow(injected=[reply])
+        return HookResult.allow(injected=[InjectedEvent(event=reply, target_channel_ids=["sms1"])])
 
     # ... process message ...
     # Original message is broadcast, plus the injected auto-reply
@@ -792,7 +799,7 @@ async def test_async_flow() -> None:
 from __future__ import annotations
 
 from roomkit.models.enums import ChannelType
-from roomkit.models.events import EventSource, RoomEvent, TextContent
+from roomkit.models import EventSource, RoomEvent, TextContent
 
 
 def make_event(

@@ -135,7 +135,7 @@ Edits are **persistent events** — stored and broadcast to all channels:
 from __future__ import annotations
 
 from roomkit import EventType, InboundMessage, RoomKit, TextContent
-from roomkit.models.events import EditContent
+from roomkit.models import EditContent
 
 kit = RoomKit()
 
@@ -161,7 +161,7 @@ from __future__ import annotations
 
 from roomkit import EventType, InboundMessage, RoomKit
 from roomkit.models.enums import DeleteType
-from roomkit.models.events import DeleteContent
+from roomkit.models import DeleteContent
 
 kit = RoomKit()
 

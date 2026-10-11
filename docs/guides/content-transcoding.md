@@ -78,12 +78,12 @@ whatsapp_caps = ChannelCapabilities(
 ```python
 from __future__ import annotations
 
-from roomkit.models.events import CompositeContent, LocationContent, MediaContent, TextContent
+from roomkit.models import CompositeContent, LocationContent, MediaContent, TextContent
 
 # A composite with text + image + location
 message = CompositeContent(parts=[
     TextContent(body="Here's the restaurant:"),
-    MediaContent(url="https://example.com/photo.jpg", caption="Restaurant entrance"),
+    MediaContent(url="https://example.com/photo.jpg", mime_type="image/jpeg", caption="Restaurant entrance"),
     LocationContent(latitude=48.8566, longitude=2.3522, label="Le Petit Bistro"),
 ])
 
@@ -105,35 +105,10 @@ RichContent (500 chars body) → SMS (max_length=160) → TextContent truncated 
 
 ## Custom Transcoder
 
-Implement `ContentTranscoder` for custom logic:
-
-```python
-from __future__ import annotations
-
-from roomkit import RoomKit
-from roomkit.core.router import ContentTranscoder
-from roomkit.models.channel import ChannelBinding
-from roomkit.models.events import EventContent, RichContent, TextContent
-
-
-class WhatsAppStyleTranscoder(ContentTranscoder):
-    async def transcode(
-        self,
-        content: EventContent,
-        source_binding: ChannelBinding,
-        target_binding: ChannelBinding,
-    ) -> EventContent | None:
-        # Custom: convert RichContent to WhatsApp bold markdown
-        if isinstance(content, RichContent):
-            return TextContent(body=f"*{content.plain_text or content.body}*")
-        # Fall through for other types
-        return content
-
-
-kit = RoomKit(transcoder=WhatsAppStyleTranscoder())
-```
-
-Return `None` to signal that the content cannot be represented on the target channel — the channel will be skipped for this message.
+The transcoder is not pluggable: every `RoomKit` uses
+`DefaultContentTranscoder`, and no public parameter replaces it. To change
+what a channel shows, adapt the content in the channel itself or in a
+`BEFORE_BROADCAST` hook (which changes it for every channel).
 
 ## Practical Example: Multichannel Room
 
@@ -142,7 +117,7 @@ from __future__ import annotations
 
 from roomkit import RoomKit
 from roomkit.channels import EmailChannel, SMSChannel, WebSocketChannel
-from roomkit.models.events import RichContent
+from roomkit.models import RichContent
 
 kit = RoomKit()
 kit.register_channel(SMSChannel("sms", provider=twilio))
