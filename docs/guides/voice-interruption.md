@@ -420,8 +420,8 @@ Until a session has played `echo_guard_ms` of response audio (6 s by default),
 speech whose words are only words of the response being played, consecutive
 and in order, is taken for its echo, whatever the strategy. Case, punctuation
 and accents do not matter, and the last word may be cut short, as a partial
-transcript catches it. The echo does not interrupt and is no turn: its final
-transcript is discarded, even when the STT delivers it seconds after the
+transcript catches it. The echo does not interrupt and is no turn: its partial
+transcripts are not published, and its final transcript is discarded, even when the STT delivers it seconds after the
 response ended. One word the response does not say there makes it speech:
 "Hi, wait" cuts in.
 
