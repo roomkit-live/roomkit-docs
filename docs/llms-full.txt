@@ -1563,7 +1563,9 @@ is cut at 8192 characters with a warning, and is introduced as not outranking
 the system's or the user's instructions. The label must be an identifier
 (letters, digits, `_ . -`). A server mapped to `None` is left out, which is how
 a host keeps one out. `RealtimeVoiceChannel(server_instructions=...)` does the
-same for a realtime session whose provider takes tools.
+same for a realtime session whose provider takes tools, and the `Agent` an
+`AgentReasoningBackend` drives reads its own. A realtime pipeline refuses an
+agent that carries some: its sessions read the voice channel's.
 
 ## Tool Search (Progressive Tool Disclosure)
 

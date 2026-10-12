@@ -198,7 +198,9 @@ The text is the server's, the same trust boundary as its tool descriptions:
 - it sits in a `<server_instructions>` block it cannot close (RFC §6.4);
 - the section is named by **your** label, never by the name the server gives
   itself. The label must be an identifier (letters, digits, `_ . -`, at most
-  64), or the channel refuses to build with `ValueError`;
+  64), or the channel refuses to build with `ValueError`; a value that is
+  neither text nor `None` (the provider itself rather than its
+  `instructions`) raises `TypeError`;
 - a server's text past 8192 characters is cut, with a warning naming it;
 - a server mapped to `None` (it published nothing) is left out, and leaving a
   server out of the mapping is how you keep its instructions away from the model.
@@ -206,6 +208,22 @@ The text is the server's, the same trust boundary as its tool descriptions:
 `RealtimeVoiceChannel(server_instructions=...)` does the same for a realtime
 session, as long as its provider takes tools: a model with no tool to call has
 no use for instructions on using them.
+
+Two other places compose a model's prompt:
+
+- **A reasoning backend.** The `Agent` an `AgentReasoningBackend` drives
+  calls the voice session's tools from its own model: give it the servers'
+  instructions (`Agent(..., server_instructions=...)`) and its model reads
+  them after its prompt. The voice channel's own reach the realtime model,
+  not the backend's.
+- **A realtime pipeline.** Its sessions run on the voice channel's prompt, so
+  an agent that carries instructions would have them dropped while its tools
+  are served: the pipeline refuses it at install and names
+  `RealtimeVoiceChannel(server_instructions=...)` instead, as it does for an
+  agent's skills.
+
+A conference's realtime bot sends the prompt you wrote as it is: the channel
+adds nothing to it.
 
 RoomKit reads the instructions from the `initialize` handshake, which is the one
 `mcp` 1.x negotiates. A host on its own `mcp` 2 session reads them with
