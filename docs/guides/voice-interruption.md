@@ -224,9 +224,15 @@ acknowledgements is a backchannel. "Okay", "mm-hmm", "yeah, right",
 "d'accord" or "c'est ça" let the assistant keep talking; "okay, and what about
 Calgary?" does not, and since each partial transcript is classified as it
 grows, the words after the "okay" still cut in. Thanks and reactions count as
-acknowledgements too: "merci", "thank you" or "beurk" said over the assistant
-answer what it just said, while "merci, mais attends" or "non merci" cut in.
-Punctuation, case and held letters ("hmmm", "ouiii") do not matter.
+acknowledgements too: "merci", "thank you", "wow", "ouh", "ayoye" or a laugh
+("haha", "[laughter]") said over the assistant answer what it just said, while
+"merci, mais attends" or "non merci" cut in. The French list covers Québec
+("ouin", "mets-en", "c'est malade") as well as France. Left out on purpose:
+what asks the assistant to stop or repeat ("wait", "huh?", "hein ?"), what
+disagrees or doubts ("no", "oh no", "really?", "voyons donc"), what opens a
+turn ("um", "euh", "well"), and polite refusals ("that's okay", "c'est
+correct"). Punctuation, case and held letters ("hmmm", "ouiii") do not matter;
+a hummed "no" ("mm-mm", "uh-uh") still cuts in.
 
 ```python
 from __future__ import annotations
@@ -241,7 +247,7 @@ interruption = InterruptionConfig(
     strategy=InterruptionStrategy.SEMANTIC,
     backchannel_detector=PhraseBackchannelDetector(),  # English and French
 )
-english_only = PhraseBackchannelDetector(ENGLISH_BACKCHANNELS + ("cheers",), max_words=3)
+english_only = PhraseBackchannelDetector(ENGLISH_BACKCHANNELS + ("righto",), max_words=3)
 ```
 
 | Option | Default | Description |
