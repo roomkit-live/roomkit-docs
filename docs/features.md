@@ -1337,6 +1337,8 @@ async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
 
 Beside the model's tools, an MCP App's host reads `mcp.tool_meta()` (each tool's `_meta`, `ui` among it), `await mcp.read_resource(uri)` and `await mcp.call_tool_result(name, args)` (the raw `CallToolResult`, not bound by `tool_filter`: the host authorizes the call); `mcp.connected` says whether the connection is live. The tools are listed once, on entry, every page of the listing; no call lists them again, and a successful result is checked against the output schema its tool was listed with. `discover=False` connects without listing, for a host that only reads a resource.
 
+A server's instructions (`InitializeResult.instructions`, read as `mcp.instructions`) reach the model through `AIChannel(..., server_instructions={"gm": mcp.instructions})`, or the same parameter on `RealtimeVoiceChannel`: every system prompt the channel composes carries them after its own prompt and before the skills, through a room's own prompt, Tool Search and compaction alike, each server's text set apart in a `<server_instructions>` block under the host's label for it and cut at 8192 characters with a warning. `mcp.server_info` is what the server said of itself.
+
 `compose_tool_handlers` chains multiple handlers with first-match-wins dispatch, so MCP tools and local tools work side by side. Supports streamable HTTP and SSE for servers reached by URL, and stdio for a server started as a command: `MCPToolProvider.from_command("uvx", ["mcp-server-time"])` starts it on entry and stops it on exit. Install with `pip install roomkit[mcp]`. See the [MCP Tool Provider guide](guides/mcp-tool-provider.md) for details.
 
 !!! note

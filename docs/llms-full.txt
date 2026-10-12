@@ -1534,6 +1534,37 @@ HTML) and `await mcp.call_tool_result(name, arguments)` (the server's
 shapes what discovery offers the model, not what the host may call, so the
 host authorizes a frame's call itself.
 
+#### Server instructions
+
+A server may publish, when it connects, how to use its tools
+(`InitializeResult.instructions`). `mcp.instructions` keeps that text (`None`
+when the server sent none) and `mcp.server_info` what the server says of itself
+(`name`, `version`). Hand the instructions to the channel, under a label of
+your own for each server:
+
+```python
+async with MCPToolProvider.from_command("gamemaster-mcp") as gm:
+    ai = AIChannel(
+        "ai",
+        provider=provider,
+        system_prompt="You are the game master.",
+        tools=gm.get_tools(),
+        tool_handler=gm.as_tool_handler(),
+        server_instructions={"gm": gm.instructions},
+    )
+```
+
+The channel adds them to every system prompt it composes, after its own prompt
+and before the skills, so a prompt a binding or a `config_provider` sets for the
+room keeps them, Tool Search does not hide them, and no eviction or compaction
+reaches them. Each server's text is that server's data: it sits in a
+`<server_instructions>` block it cannot close, under `## MCP server: <label>`,
+is cut at 8192 characters with a warning, and is introduced as not outranking
+the system's or the user's instructions. The label must be an identifier
+(letters, digits, `_ . -`). A server mapped to `None` is left out, which is how
+a host keeps one out. `RealtimeVoiceChannel(server_instructions=...)` does the
+same for a realtime session whose provider takes tools.
+
 ## Tool Search (Progressive Tool Disclosure)
 
 When an agent has dozens of tools, sending every schema to the model on
