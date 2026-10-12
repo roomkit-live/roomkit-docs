@@ -1944,6 +1944,13 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
         transport.send_audio(session, chunk)
 ```
 
+A `SegmentBreakMarker` in the stream ends the text before it: what the splitter
+holds goes out at once as a sentence, however short, and `filtered_stream`
+flushes its filter there and passes the marker on. A voice channel puts one
+where the agent's text before a tool call ends, so "Let me check." is said
+while the tool runs, never once it is done, and never runs on into the next
+round's text.
+
 ---
 
 ## Sentence Budget
