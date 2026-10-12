@@ -136,6 +136,10 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `read_resource(uri, timeout=30)` | `ReadResourceResult` | A resource as the server returns it (an MCP App's HTML) |
 | `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `isError` included, for a host relaying it |
 | `connected` | `bool` | Whether the connection is live: entered, not yet exited |
+| `server_extensions` | `dict[str, dict]` | The extensions the server declared when it connected (a copy) |
+| `request(method, params=None, timeout=30)` | `dict` | A raw JSON-RPC request, its result as a dict: a method the SDK does not model, such as `skills/list` |
+
+A server that publishes skills under the MCP Skills extension is registered with `SkillRegistry.add_mcp_server()`: see [Skills over MCP](mcp-skills.md).
 
 By default the handler raises `UnservedToolCallError` for a name this
 connection did not discover, which is what lets `compose_tool_handlers` fall

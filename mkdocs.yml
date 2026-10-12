@@ -124,6 +124,7 @@ nav:
           - Status Bus: guides/status-bus.md
           - Auditing (Session & Tool): guides/tool-audit.md
           - Agent Skills: guides/agent-skills.md
+          - Skills over MCP: guides/mcp-skills.md
           - Speech-to-Speech Orchestration: guides/realtime-orchestration.md
           - PolarGrid Provider: guides/polargrid.md
           - OpenRouter Provider: guides/openrouter.md

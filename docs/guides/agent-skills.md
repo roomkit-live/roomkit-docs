@@ -8,6 +8,9 @@ pip install roomkit
 
 No extra dependencies required — skills are built into the core package.
 
+!!! tip "Skills an MCP server publishes"
+    A registry also takes the skills an MCP server serves, beside its own: see [Skills over MCP](mcp-skills.md).
+
 ---
 
 ## What are Agent Skills?

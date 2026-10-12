@@ -74,7 +74,7 @@ with distributed implementations (Redis, PostgreSQL, etc.) for production deploy
 - [Memory](docs/api/memory.md): SlidingWindowMemory, SummarizingMemory (two-tier context budget), RetrievalMemory - AI context management
 - [Knowledge (RAG)](docs/api/knowledge.md): KnowledgeSource ABC, PostgresKnowledgeSource (full-text search) - retrieval-augmented context
 - [Tools](docs/api/tools.md): Tool ABC, tool handlers, MCP tool provider, Tool Search (progressive disclosure)
-- [Skills](docs/api/skills.md): reusable agent skill packages with availability gating
+- [Skills](docs/api/skills.md): reusable agent skill packages with availability gating, and the skills an MCP server serves (SEP-2640)
 - [Scoring](docs/api/scoring.md): ScoringHook, ConversationScorer - automatic response quality scoring; user feedback via kit.submit_feedback()
 - [Delegation](docs/api/delegation.md): agent-to-agent task delegation over the status bus
 - [Voice Pipeline](docs/api/voice-pipeline.md): pluggable stages - VAD, AEC, AGC, denoiser, diarization, DTMF, recorder, resampler, turn detection

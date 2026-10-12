@@ -1384,6 +1384,32 @@ or uncertain reconnection; gates open after successful delivery. The activation
 result carries complete instructions, reference names and authorized prerequisite
 schemas. Existing inline and native reconfiguration modes remain available.
 
+#### Skills Served over MCP
+
+An MCP server can publish skills beside its tools (the MCP Skills extension,
+`io.modelcontextprotocol/skills`, SEP-2640). `add_mcp_server` registers them in
+the same `SkillRegistry` as the host's own, named `<label>:<path>` so they never
+shadow a host skill or another server's:
+
+```python
+async with MCPToolProvider.from_url("https://huggingface.co/mcp", discover=False) as hf:
+    registry = SkillRegistry()
+    await registry.add_mcp_server(hf, "hf")       # hf:hf-cli, hf:huggingface-zerogpu, ...
+    ai = AIChannel("ai", provider=provider, skills=registry)
+```
+
+Nothing of a skill is read before it is activated. `activate_skill` then reads
+its `SKILL.md` from its own server and checks it against the listing (size,
+SHA-256, frontmatter field by field); `read_skill_reference` reads only a file
+the listing names, verified. The body reaches the model as that server's data,
+fenced and naming its origin, after the host's own skills. A served skill's
+`allowed_tools` grants nothing and its scripts never run; while one is active, a
+tool that runs code (the sandbox's, or any matching `execution_tools`) is served
+only if the host's `approve_execution` approves it, per conversation and entry
+fingerprint. Dynamic skills, whose content nothing can verify, are refused
+unless `allow_dynamic=True`. Text and realtime (`on_demand`) channels serve
+them. See the [Skills over MCP guide](guides/mcp-skills.md).
+
 #### Structured Output (Response Schema)
 
 A call that needs data rather than prose sets `AIContext.response_schema` to a

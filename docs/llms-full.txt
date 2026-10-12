@@ -1742,6 +1742,73 @@ Runnable, no API key needed for the last one: `examples/agent_skills.py`
 a recommender hook), `examples/skill_active_manifest.py` (a host manifest reading
 the active set).
 
+### Skills served over MCP
+
+An MCP server may serve skills beside its tools (the MCP Skills extension,
+`io.modelcontextprotocol/skills`, SEP-2640). `add_mcp_server` registers them in
+the same registry, beside the host's own (RFC §24.7). Requires
+`pip install roomkit[mcp]`.
+
+```python
+from roomkit.skills import SkillRegistry
+from roomkit.tools import MCPToolProvider
+
+async with MCPToolProvider.from_url("https://huggingface.co/mcp", discover=False) as hf:
+    registry = SkillRegistry()
+    registry.discover("./skills")                 # the host's own skills, unchanged
+    await registry.add_mcp_server(hf, "hf")       # hf:hf-cli, hf:huggingface-zerogpu, ...
+    ai = AIChannel("ai", provider=provider, skills=registry)
+```
+
+- **Names** are `<label>:<path>`, with the label chosen by the host and never the
+  server's own name. A served skill never shadows a host's skill or another
+  server's, and `add()` refuses a name holding `:`.
+- **Nothing is read before activation.** The listing gives each skill's files
+  with their size and SHA-256. `activate_skill` reads `SKILL.md` then and checks
+  its length, its digest and its frontmatter field by field. A mismatch loads
+  nothing and the model is told the skill changed on its server.
+  `read_skill_reference` reads only a file the entry lists (any listed path,
+  `templates/invoice.md`), from the same server, verified; a file that fails
+  retires the skill.
+- **The body is the server's data, not the host's rules.** It rides the prompt
+  under `# Active skills served by MCP servers`, in a `<skill>` block naming the
+  label and the URI, after the host's own skills.
+- **Unavailable, with the reason**: a malformed entry, one past 512 files or
+  16 MiB, and a dynamic one (`resources: "dynamic"`, whose content nothing can
+  verify) unless `allow_dynamic=True`.
+- **A name the listing did not hold** (`hf:some/path`) is asked of the server
+  with `skills/get` and activated unlisted. A copy narrowed to some names
+  (`registry.copy([...])`) reaches those names only.
+- **Registering the server again** replaces its entries: a skill it no longer
+  offers, or offers in a form the host does not take, retires in the registry
+  and in every copy of it.
+- **Nothing a served skill says runs code.** Its `allowed_tools` grants nothing
+  and `run_skill_script` refuses it. While one is active in a conversation, a
+  sandbox command and every tool matching `execution_tools` (globs) are refused
+  unless `approve_execution` approves; with no callback they are always
+  refused. An approval holds for the conversation and the entry's fingerprint;
+  a dynamic skill has no fingerprint and is asked every time.
+
+```python
+from roomkit.skills import SkillExecutionRequest
+
+async def approve(request: SkillExecutionRequest) -> bool:
+    # name, label, uri, fingerprint, room_id, tool
+    return request.label == "internal" and request.fingerprint in reviewed
+
+await registry.add_mcp_server(
+    server, "internal", approve_execution=approve, execution_tools=["run_*"]
+)
+```
+
+- **Realtime**: `on_demand` serves them the same way. Under `inline_full` they
+  are unavailable, since every body would be fetched when the session starts.
+- **The connection**: `MCPToolProvider.server_extensions` is what the server
+  declared when it connected, and `request(method, params)` sends a raw request.
+
+`examples/mcp_skills.py` lists huggingface.co/mcp's skills, loads one and reads
+a file with no API key, then chats with an agent using them (`--chat`).
+
 ## Per-Room Configuration
 
 Override AI settings per room via binding metadata:

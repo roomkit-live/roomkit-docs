@@ -16,6 +16,22 @@ Agent skills framework for structured tool definitions. See the [Agent Skills gu
 
 ::: roomkit.channels.skill_script_tool.RunSkillScriptTool
 
+## Served over MCP
+
+Skills an MCP server publishes under the MCP Skills extension. See the [Skills over MCP guide](../guides/mcp-skills.md).
+
+::: roomkit.skills.mcp.skill.MCPSkill
+
+::: roomkit.skills.mcp.approval.SkillExecutionRequest
+
+::: roomkit.skills.mcp.catalog.ServedOrigin
+
+::: roomkit.skills.mcp.server.MCPSkillServer
+
+::: roomkit.skills.mcp.catalog.SkillChangedError
+
+::: roomkit.skills.errors.SkillVerificationError
+
 ## Exceptions
 
 ::: roomkit.skills.parser.SkillParseError
