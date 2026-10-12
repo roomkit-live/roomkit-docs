@@ -198,9 +198,10 @@ The text is the server's, the same trust boundary as its tool descriptions:
 - it sits in a `<server_instructions>` block it cannot close (RFC §6.4);
 - the section is named by **your** label, never by the name the server gives
   itself. The label must be an identifier (letters, digits, `_ . -`, at most
-  64), or the channel refuses to build with `ValueError`; a value that is
+  64), or the channel refuses to build with `ValueError`; anything but a
+  mapping (one server's text without its label), or a server mapped to
   neither text nor `None` (the provider itself rather than its
-  `instructions`) raises `TypeError`;
+  `instructions`), raises `TypeError`;
 - a server's text past 8192 characters is cut, with a warning naming it;
 - a server mapped to `None` (it published nothing) is left out, and leaving a
   server out of the mapping is how you keep its instructions away from the model.
