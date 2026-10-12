@@ -55,6 +55,7 @@ config = InterruptionConfig(
 | `keep_partial_transcript` | `True` | Record what the room actually heard as an internal event when the bot is cut off |
 | `backchannel_detector` | `None` | Required for SEMANTIC strategy |
 | `transcript_wait_ms` | `1000` | SEMANTIC: how long transcribed speech may run without words before it is judged on duration alone |
+| `echo_guard_ms` | `6000` | While a session has played less response audio than this, speech made only of the response's own words is its echo: it neither interrupts nor becomes a turn ([Echo guard](#echo-guard-echo_guard_ms)). `0` turns it off |
 
 ### What an interruption leaves behind
 
@@ -407,6 +408,26 @@ async def on_backchannel(event, ctx):
     # event is a BackchannelEvent
     print(f"Backchannel: '{event.text}' (confidence={event.confidence})")
 ```
+
+## Echo guard: echo_guard_ms
+
+An echo canceller learns the room from the responses it hears. At a session's
+start it has heard none: the first response's opening words ("Hi! How are
+you?") come back through the microphone at full strength, a streaming STT
+transcribes them, and they cut the agent off, then arrive as the person's turn.
+
+Until a session has played `echo_guard_ms` of response audio (6 s by default),
+speech whose words are only words of the response being played, consecutive
+and in order, is taken for its echo, whatever the strategy. Case, punctuation
+and accents do not matter, and the last word may be cut short, as a partial
+transcript catches it. The echo does not interrupt and is no turn: its final
+transcript is discarded, even when the STT delivers it seconds after the
+response ended. One word the response does not say there makes it speech:
+"Hi, wait" cuts in.
+
+Past the guard, the response's own words cut in as any words do, so someone
+answering "the sword" to "the sword or the shield?" is heard. Raise it for a
+canceller that learns slowly, or set `echo_guard_ms=0` to turn it off.
 
 ## Grace Period: allow_during_first_ms
 
