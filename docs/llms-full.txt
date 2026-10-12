@@ -6,7 +6,7 @@
 > identity resolution, hooks, and realtime events.
 > Python 3.12+, Pydantic 2.x, fully typed, zero required dependencies beyond Pydantic.
 
-> Minimum version: 0.97.0 | Python 3.12+
+> Minimum version: 0.98.0 | Python 3.12+
 
 RoomKit is a pure async Python library for building multi-channel conversation systems. It provides a **room-based abstraction** where conversations happen in rooms, participants communicate through channels, and hooks let you intercept and modify the flow.
 
@@ -2019,7 +2019,7 @@ ai = AIChannel(
 )
 ```
 
-Per-provider mechanisms: Anthropic uses `thinking_budget` as above and sends `reasoning_effort` as is in `output_config.effort` (`low` to `max`; none to Claude Sonnet 4.5 and Haiku 4.5, which refuse it), and a turn stating off is sent what turns its model off (`thinking: disabled`, `between_tools` on Sonnet 5.5, effort `low` on Opus 5.5 and Fable, which cannot stop); OpenAI-family providers (OpenAI, Azure, OpenRouter, LiteLLM, xAI) use the `reasoning_effort` config field — OpenRouter translates it into its unified `reasoning` object for any upstream model, and a LiteLLM gateway normalises it (plus an explicit `thinking` budget when `thinking_budget>0`) for every upstream it fronts; Gemini (and Vertex) use `GeminiConfig.thinking_level`; Ollama exposes the native `think` parameter (see `docs/c7/ollama-provider.md`); PolarGrid uses `PolarGridConfig(thinking=True)` (the `enable_thinking` flag, surfaced as `AIResponse.thinking` / `StreamThinkingDelta`).
+Per-provider mechanisms: Anthropic uses `thinking_budget` as above and sends `reasoning_effort` in `output_config.effort` as the nearest level the model takes (`low` to `max`, `minimal` as `low`, `xhigh` as `high` on Opus 4.6, Sonnet 4.6 and Opus 4.5, `max` as `high` on Opus 4.5; none to Claude Sonnet 4.5 and Haiku 4.5, which refuse it), and a turn stating off is sent what turns its model off (`thinking: disabled`, `between_tools` on Sonnet 5.5, effort `low` on Opus 5.5 and Fable, which cannot stop); OpenAI-family providers (OpenAI, Azure, OpenRouter, LiteLLM, xAI) use the `reasoning_effort` config field — OpenRouter translates it into its unified `reasoning` object for any upstream model, and a LiteLLM gateway normalises it (plus an explicit `thinking` budget when `thinking_budget>0`) for every upstream it fronts; Gemini (and Vertex) use `GeminiConfig.thinking_level`; Ollama exposes the native `think` parameter (see `docs/c7/ollama-provider.md`); PolarGrid uses `PolarGridConfig(thinking=True)` (the `enable_thinking` flag, surfaced as `AIResponse.thinking` / `StreamThinkingDelta`).
 
 `thinking_budget`, `enable_thinking` and `reasoning_effort` all ride the
 per-turn chain described under *Per-Turn Configuration*, so reasoning is
