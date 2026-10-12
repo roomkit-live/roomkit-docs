@@ -419,11 +419,17 @@ transcribes them, and they cut the agent off, then arrive as the person's turn.
 Until a session has played `echo_guard_ms` of response audio (6 s by default),
 speech whose words are only words of the response being played, consecutive
 and in order, is taken for its echo, whatever the strategy. Case, punctuation
-and accents do not matter, and the last word may be cut short, as a partial
-transcript catches it. The echo does not interrupt and is no turn: its partial
-transcripts are not published, and its final transcript is discarded, even when the STT delivers it seconds after the
-response ended. One word the response does not say there makes it speech:
-"Hi, wait" cuts in.
+and accents do not matter. In a partial transcript the last word may be cut
+short after a whole word ("Hi! How are y"); a lone word and a final are
+matched whole, so "No" over "I'm not sure" cuts in. The echo does not
+interrupt and is no turn: its partial transcripts are not published, and its
+final transcript is discarded, even when the STT delivers it seconds after the
+response ended (up to 10 s). One word the response does not say there makes
+it speech: "Hi, wait" cuts in, and so does a final that says it during the
+playback when its first words were taken for the echo. Audio played with
+`VoiceChannel.play()` counts toward the guard. In continuous-STT mode, while
+the guard is open, loud audio with no words yet waits for the STT's first
+words (up to `transcript_wait_ms`) before it may cut on its duration.
 
 Past the guard, the response's own words cut in as any words do, so someone
 answering "the sword" to "the sword or the shield?" is heard. Raise it for a
