@@ -510,7 +510,7 @@ Pass `strict=False` when skills come from a source you do not control and a part
 count = registry.discover("./skills", strict=False)  # logs warnings, returns valid count
 ```
 
-With PyYAML installed (the `mcp` extra), a frontmatter is read within the bounds a served skill's is: a YAML alias, collections nested past 64 levels, more than 64 brackets or braces open at once (quoted ones counted too) and a frontmatter past 65536 characters raise `SkillParseError` before anything is built. A frontmatter that is not YAML, or read without PyYAML, is read line by line (`key: value`). That reading keeps both list forms, a key followed by `- item` lines and `[a, b]` whole on the key's line. Whichever reader, an `allowed_tools` or `requires` that cannot be read whole as a text or a list of texts (a list spread over lines, a block scalar, a mapping, a line under the key that is not a `- item`) refuses the skill with `SkillParseError`: a skill never loads without what it gates.
+With PyYAML installed (the `mcp` extra), a frontmatter is read within the bounds a served skill's is: a YAML alias, collections nested past 64 levels, more than 64 brackets or braces open at once (quoted ones counted too) and a frontmatter past 65536 characters raise `SkillParseError` before anything is built. A frontmatter that is not YAML, or read without PyYAML, is read line by line (top-level `key: value` lines; a line indented under a key is that key's value), and of a frontmatter that is also YAML it never gates less than YAML does. That reading keeps both list forms, a key followed by `- item` lines and `[a, b]` whole on the key's line. Whichever reader, an `allowed_tools` or `requires` that cannot be read whole as a text or a list of texts (a list spread over lines, a block scalar, a mapping, a line under the key that is not a `- item`) refuses the skill with `SkillParseError`: a skill never loads without what it gates.
 
 Each failure keeps its own type, all deriving from `SkillError`:
 
@@ -545,7 +545,7 @@ A model often takes tools for a skill ("activate the spotify skill" when `spotif
 | `description` | `str` | Yes | Brief description (1-1024 chars) |
 | `license` | `str \| None` | No | License identifier (e.g. "MIT") |
 | `compatibility` | `str \| None` | No | Compatibility hint |
-| `allowed_tools` | `str \| list[str] \| None` | No | Allowed tool patterns |
+| `allowed_tools` | `str \| list[str] \| None` | No | Gated tool patterns: a list, or a text separated by commas (`[a, b]` and quoted entries read alike, as `requires` reads them) |
 | `extra_metadata` | `dict[str, str]` | No | Additional frontmatter keys |
 
 ### AIChannel constructor params
