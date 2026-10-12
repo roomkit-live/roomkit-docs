@@ -510,6 +510,8 @@ Pass `strict=False` when skills come from a source you do not control and a part
 count = registry.discover("./skills", strict=False)  # logs warnings, returns valid count
 ```
 
+With PyYAML installed (the `mcp` extra), a frontmatter is read within the bounds a served skill's is: a YAML alias, collections nested past 64 levels and a frontmatter past 64 KiB raise `SkillParseError` before anything is built. A frontmatter that is not YAML, or read without PyYAML, is read line by line (`key: value`).
+
 Each failure keeps its own type, all deriving from `SkillError`:
 
 ```python
@@ -520,7 +522,7 @@ try:
 except SkillDiscoveryError as e:
     print(f"Directory problem: {e}")  # missing or unreadable directory
 except SkillParseError as e:
-    print(f"Parse error: {e}")  # missing frontmatter, etc.
+    print(f"Parse error: {e}")  # missing frontmatter, a YAML alias, nesting past 64, over 64 KiB
 except SkillValidationError as e:
     print(f"Validation error: {e}")  # bad name, missing description, etc.
 ```
