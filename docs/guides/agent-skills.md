@@ -510,7 +510,7 @@ Pass `strict=False` when skills come from a source you do not control and a part
 count = registry.discover("./skills", strict=False)  # logs warnings, returns valid count
 ```
 
-With PyYAML installed (the `mcp` extra), a frontmatter is read within the bounds a served skill's is: a YAML alias, collections nested past 64 levels, more than 64 brackets or braces open at once (quoted ones counted too) and a frontmatter past 65536 characters raise `SkillParseError` before anything is built. A frontmatter that is not YAML, or read without PyYAML, is read line by line (`key: value`), and that reader keeps no YAML list: write `allowed_tools` and `requires` as YAML that parses.
+With PyYAML installed (the `mcp` extra), a frontmatter is read within the bounds a served skill's is: a YAML alias, collections nested past 64 levels, more than 64 brackets or braces open at once (quoted ones counted too) and a frontmatter past 65536 characters raise `SkillParseError` before anything is built. A frontmatter that is not YAML, or read without PyYAML, is read line by line (`key: value`). That reading keeps both list forms, a key followed by `- item` lines and `[a, b]` on the key's line, and refuses the skill with `SkillParseError` when a line under `allowed_tools` or `requires` is not a `- item`: a skill never loads without what it gates.
 
 Each failure keeps its own type, all deriving from `SkillError`:
 
