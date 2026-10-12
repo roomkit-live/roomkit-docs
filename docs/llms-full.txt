@@ -4570,6 +4570,10 @@ last N messages the notified channel may read, quoted as data;
 `hand_back="post"` publishes the result as the notified agent's message,
 with no turn of its model, instead of relaying it (`"relay"`, the default).
 
+The child room belongs to the parent room's organization: a tool in it reads
+the tenant from `current_tool_room().organization_id`, as in the parent, and
+`get_room(child_id, organization_id=...)` finds it for that organization only.
+
 ## Memory Providers
 
 Agents use memory providers to maintain conversation context across handoffs:

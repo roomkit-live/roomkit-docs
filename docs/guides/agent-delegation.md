@@ -52,7 +52,10 @@ Child room (call-room::task-a1b2c3d4)
 
 The flow:
 
-1. **Child room created** with parent link in metadata
+1. **Child room created** with parent link in metadata, in the parent room's
+   organization: a tool, hook or provider in the child room reads
+   `room.organization_id` as it does in the parent, and a read scoped to that
+   organization finds the child room (another organization's does not)
 2. **Agent attached** as `INTELLIGENCE` in the child room
 3. **Channels shared** from parent (same provider instance, different binding)
 4. **Task event injected** into child room → agent picks it up
