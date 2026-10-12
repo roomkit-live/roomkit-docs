@@ -236,7 +236,14 @@ silently misinterpreted.
 
 AEC activation is also isolated per stream and playback source. When playback
 ends, RoomKit bypasses a pipeline AEC's stream but preserves the converged
-adaptive filter; the filter is reset only when the voice session ends. For a
+adaptive filter; the filter is reset only when the voice session ends. A
+backend that also reports the silence it plays between responses keeps the
+pipeline AEC running instead: `LocalAudioBackend` in realtime mode marks every
+played block `reference_continues`, and the canceller then runs on that silent
+reference until the session ends. Bypassed and resumed, WebRTC AEC3 came back
+with its timelines out of step, and the echo it left reached the provider's
+server VAD as the user speaking (the next response's echo 0 to 5 dB below the
+microphone, against 34 to 44 dB kept running). For a
 transport-owned AEC path such as `LocalAudioBackend(aec=aec)`, the reference
 follows audio actually rendered by the device, every block, silence included,
 so capture and render do not drift apart. RoomKit prevents the pipeline from feeding that same reference a

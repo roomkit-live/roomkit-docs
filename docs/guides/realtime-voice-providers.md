@@ -543,7 +543,8 @@ Keep `DENOISE=webrtc` when using open speakers. OpenAI's server VAD cancels an
 active response when it detects new speech; without continuous local noise
 suppression, residual echo at the beginning of a playback turn can therefore
 produce a false interruption. This stage complements OpenAI's `far_field`
-input noise reduction and remains active while AEC is bypassed between turns.
+input noise reduction and runs on every captured frame, whether the AEC is
+active or not.
 
 OpenAI may finish generating (`response.done`) several seconds before the local
 speaker drains its buffered audio. Its WebSocket VAD can otherwise hear that
