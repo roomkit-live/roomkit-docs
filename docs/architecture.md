@@ -482,7 +482,7 @@ Voice providers use the same **lazy dependency loading** pattern as other provid
 | SendGrid | -- | Email | Config scaffolded |
 | Facebook Messenger | `httpx>=0.27` | Messenger | Delivery and webhook parsing |
 
-All external providers use **lazy dependency loading** -- the SDK is only imported when the specific provider class is instantiated. This keeps the core library lightweight with only `pydantic` as a hard dependency.
+All external providers use **lazy dependency loading** -- the SDK is only imported when the specific provider class is instantiated. This keeps the core library lightweight with only `pydantic` and `pyyaml` (skill frontmatter) as hard dependencies.
 
 ---
 

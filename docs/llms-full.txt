@@ -4,7 +4,7 @@
 > systems. It provides room-based abstractions for managing conversations across
 > SMS, Email, Voice, WebSocket, AI, and other channels with pluggable storage,
 > identity resolution, hooks, and realtime events.
-> Python 3.12+, Pydantic 2.x, fully typed, zero required dependencies beyond Pydantic.
+> Python 3.12+, Pydantic 2.x, fully typed, no required dependency beyond Pydantic and PyYAML.
 
 > Minimum version: 0.98.0 | Python 3.12+
 
@@ -64,7 +64,7 @@ pip install roomkit
 uv add roomkit
 ```
 
-The core library has a single dependency: `pydantic>=2.9`.
+The core library has two dependencies: `pydantic>=2.9`, and `pyyaml>=6`, which reads skill frontmatter.
 
 ## Optional Extras
 

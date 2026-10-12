@@ -545,7 +545,7 @@ A model often takes tools for a skill ("activate the spotify skill" when `spotif
 | `description` | `str` | Yes | Brief description (1-1024 chars) |
 | `license` | `str \| None` | No | License identifier (e.g. "MIT") |
 | `compatibility` | `str \| None` | No | Compatibility hint |
-| `allowed_tools` | `str \| list[str] \| None` | No | Gated tool patterns: a list, or a text separated by commas (`[a, b]` and quoted entries read alike, as `requires` reads them) |
+| `allowed_tools` | `str \| list[str] \| None` | No | Gated tool patterns: a list, or a text separated by commas (`[a, b]` and quoted entries read alike, as `requires` reads them); a text in brackets also gates the glob it is (`[ab]` covers `a` and `b`) |
 | `extra_metadata` | `dict[str, str]` | No | Additional frontmatter keys |
 
 ### AIChannel constructor params

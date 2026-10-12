@@ -6,6 +6,7 @@
 |---|---|---|
 | **Language** | Python | >= 3.12 |
 | **Data Validation** | Pydantic | >= 2.9 |
+| **Skill frontmatter** | PyYAML | >= 6 |
 | **HTTP Client** | httpx | >= 0.27 (optional) |
 | **AI - Anthropic** | anthropic SDK | >= 1.8, < 2 (optional) |
 | **AI - OpenAI** | openai SDK | >= 2.28, < 3 (optional) |
