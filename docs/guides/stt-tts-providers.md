@@ -1946,10 +1946,17 @@ async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
 
 A `SegmentBreakMarker` in the stream ends the text before it: what the splitter
 holds goes out at once as a sentence, however short, and `filtered_stream`
-flushes its filter there and passes the marker on. A voice channel puts one
-where the agent's text before a tool call ends, so "Let me check." is said
-while the tool runs, never once it is done, and never runs on into the next
-round's text.
+calls its filter's `end_segment()` there and passes the marker on. A voice
+channel puts one where the agent's text before a tool call ends, so "Let me
+check." is said while the tool runs, never once it is done, and never runs on
+into the next round's text.
+
+`end_segment()` lets out the text a filter has decided to speak and keeps a
+span it removes open: an `[internal]` block the model opens before the call
+and closes after it is never spoken. The default lets out nothing, so a
+filter written before it keeps what it holds until the next text or the end
+of the stream (`flush()` is called only there). A filter that holds text it
+has decided to speak overrides it.
 
 ---
 
