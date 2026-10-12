@@ -6,7 +6,7 @@ name it `MODEL_API_KEY`, RoomKit's examples read `META_API_KEY`):
 
 | Model | RoomKit provider | What it does | Extra |
 |-------|------------------|--------------|-------|
-| `muse-spark-1.3` (and 1.2, 1.1) | `MetaAIProvider` | Chat, tools, images in, 1M-token window | `roomkit[meta]` |
+| `muse-spark-1.3` (and 1.2, 1.1), `muse-wonder-1.0` (preview) | `MetaAIProvider` | Chat, tools, images in, 1M-token window | `roomkit[meta]` |
 | `muse-image-1.0` | `MetaImageProvider` | Image generation and editing | `roomkit[meta]` |
 | `muse-voice-transcribe-1.0` | `MetaSTTProvider` | Streaming and batch speech-to-text, with speaker labels | `roomkit[meta-stt]` |
 
@@ -43,11 +43,16 @@ errors are inherited. What is Meta's own:
   (2026-09-27): 3.0 s at `minimal`, 4.6 s at `low`; streaming at `low` showed
   its first text after ~7 s, the reasoning coming first. The reasoning is
   counted in `reasoning_tokens`, never returned.
-- **`list_models()`** keeps the `muse-spark-*` ids: Meta's `/v1/models` also
-  lists the image, speech and segmentation models.
+- **`list_models()`** keeps the `muse-spark-*` and `muse-wonder-*` ids: Meta's
+  `/v1/models` also lists the image, speech and segmentation models.
 - **Contributor ids** (`muse-spark-1.3-contributor`, `-1.2-contributor`) cost
   $0.10 / $0.20 per million tokens instead of $1.25 / $4.25, because Meta trains
   its models on their prompts and completions. They are never a default.
+- **Muse Wonder** (`MetaConfig(model="muse-wonder-1.0")`) is Meta's preview
+  model above Muse Spark: the same window, tools and image input, reasoning from
+  `minimal` to `max` (`"none"` refused, sent as `"minimal"` as for Spark), at
+  $4.00 / $20.00 per million tokens ($0.20 cached), Standard mode only, with no
+  contributor id.
 
 `examples/meta_ai.py` is a terminal chat on it (`--effort minimal` for speed).
 
