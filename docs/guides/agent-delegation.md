@@ -122,7 +122,10 @@ task = await kit.start_task("incident-room", "dev", "Go through every support ti
 `kit.setup_background(agent, worker=None, hand_back="relay")` gives an AI
 channel the `work_in_background` tool: it starts long work as a task, handed
 the room's last 12 messages, on the agent's worker (the agent itself by
-default), says in a sentence that the work is under way, and ends its turn.
+default), says once, in a sentence, that the work is under way (before the
+call or after it), and ends its turn. In a voice session the relayed result
+waits for the agent to finish that sentence: a response never cuts the
+playback under way, only the person does.
 The task is always the calling agent's own: a model never runs another
 agent's worker, which may hold more than it does, nor has a result come back
 in another agent's name; it asks that agent by name instead.

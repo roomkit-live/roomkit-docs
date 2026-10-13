@@ -431,6 +431,10 @@ playback when its first words were taken for the echo. Audio played with
 the guard is open, loud audio with no words yet waits for the STT's first
 words (up to `transcript_wait_ms`) before it may cut on its duration.
 
+Words taken for the echo decide nothing else: when the STT never closes that
+utterance, they cut neither the response that took over from the echoed one
+nor the next, and they lapse with the verdict.
+
 Past the guard, the response's own words cut in as any words do, so someone
 answering "the sword" to "the sword or the shield?" is heard. Raise it for a
 canceller that learns slowly, or set `echo_guard_ms=0` to turn it off.
