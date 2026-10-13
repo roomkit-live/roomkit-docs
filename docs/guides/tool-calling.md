@@ -687,7 +687,8 @@ tool usage — no configuration needed:
   from the data instead of invented. Each result sits in a `<tool_result>`
   block the model is told to read as data, never as instructions, since it
   comes from a tool and not from the prompt's author. A longer result is cut
-  and marked so, telling the model to call the tool again rather than guess;
+  and marked so, telling the model to call the tool again rather than guess,
+  and not to take back what it already said from the whole result;
   older calls shrink to a short preview, set apart as data too. In a live conversation
   the result kept is what the tool returned, even when eviction gave the model
   a placeholder for it. Bounded by recent *calls*.
