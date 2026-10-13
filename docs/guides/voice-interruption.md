@@ -439,6 +439,15 @@ Past the guard, the response's own words cut in as any words do, so someone
 answering "the sword" to "the sword or the shield?" is heard. Raise it for a
 canceller that learns slowly, or set `echo_guard_ms=0` to turn it off.
 
+With an STT that tells voices apart (Meta's `DIARIZATION`), the agent's own
+voice is caught past the guard too. A voice heard speaking while nothing played
+is a person's. A final from a voice never heard so, said over a response, whose
+words are the response's in their order, one misheard at most ("Eh bien, la
+lampe salon" for "c'est bien la lampe Salon") and three at least heard right,
+is the response coming back past the canceller: it is discarded. Its first
+words may still have cut the response, as the voice is known only with the
+final.
+
 ## Grace Period: allow_during_first_ms
 
 The `allow_during_first_ms` field prevents interruptions during the first N milliseconds of playback. It counts audio actually played: a response still waiting for its first TTS chunk has played 0 ms, however long synthesis takes. This is useful for:
