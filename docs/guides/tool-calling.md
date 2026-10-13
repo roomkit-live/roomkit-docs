@@ -692,6 +692,15 @@ tool usage — no configuration needed:
   older calls shrink to a short preview, set apart as data too. In a live conversation
   the result kept is what the tool returned, even when eviction gave the model
   a placeholder for it. Bounded by recent *calls*.
+- **Images tools returned** — for a model that sees, the two latest images the
+  room's tool results returned (a drawing, a screenshot) ride each later turn's
+  input, after the notes, each after the call that returned it and framed as
+  data, never instructions: the digest says what a result showed, never what
+  it looks like. They go in the turn's input, never an assistant's message,
+  which providers refuse an image in. Only a live result's are kept; return an
+  image sized for the model to read (about 768 px on its long side is plenty),
+  as each costs a thousand tokens and more on every turn. Bounded by the
+  latest *images*.
 - **Sticky re-exposure** — the distinct tool names called recently are
   re-revealed each turn, so a tool used once stays callable even while Tool
   Search hides the rest of the catalogue. Bounded by recent distinct *tools* —
