@@ -433,7 +433,8 @@ words (up to `transcript_wait_ms`) before it may cut on its duration.
 
 Words taken for the echo decide nothing else: when the STT never closes that
 utterance, they cut neither the response that took over from the echoed one
-nor the next, and they lapse with the verdict.
+nor the next, nor do the STT's later partials of the same echo, and they lapse
+with the verdict.
 
 Past the guard, the response's own words cut in as any words do, so someone
 answering "the sword" to "the sword or the shield?" is heard. Raise it for a
