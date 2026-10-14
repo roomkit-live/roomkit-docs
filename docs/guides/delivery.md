@@ -52,7 +52,7 @@ kit = RoomKit(delivery_strategy=Queued(buffer=2.0, separator="\n\n"))
 
 | Strategy | When it delivers | Best for |
 |----------|-----------------|----------|
-| `Immediate()` | Now | Urgent alerts, text channels |
+| `Immediate()` | Now; on voice, once the playback under way is sent whole (call `interrupt()` first to cut it) | Urgent alerts, text channels |
 | `WaitForIdle(buffer)` | After AI stops speaking + user stops talking + buffer | Voice conversations |
 | `Queued(buffer, separator)` | Batches multiple items, delivers at next idle | High-frequency results |
 
