@@ -146,7 +146,7 @@ consequence a probe can have (RFC §12.10.4 step 1).
 
 What remains is exactly what a purely human meeting needs from RoomKit:
 `ensure_room()` creates the conference, `mint_access()` admits participants,
-arrivals a backend reports are still recorded on the roster, and `info()`
+arrivals a backend reports are still recorded on the roster, and `info`
 answers truthfully — `bot_present: false`, nothing active. What is given up
 is the event bridge: the bot's connection is how presence becomes observable
 (RFC §12.10.3), so against a real SFU a pure-transport conference produces
@@ -263,9 +263,9 @@ On LiveKit the reveal happens in place — `UpdateParticipant` removes
 Concealment is the asymmetric half: no SFU interface can *un-tell* clients
 about a participant they were told of, so a visible→hidden change always
 replaces the session — the announced leave is the retraction — whatever the
-backend's capabilities. `info()["bot_grant_update_in_place"]` says
+backend's capabilities. `info["bot_grant_update_in_place"]` says
 beforehand which price a change will carry, the per-room
-`info()["rooms"][id]["bot_hidden"]` reports the status in force on the
+`info["rooms"][id]["bot_hidden"]` reports the status in force on the
 session (§17.7), and every effective change on a connected session emits
 the `conference_bot_grants_changed` framework event.
 
@@ -277,7 +277,7 @@ verb offers it, so the observation gap belongs in the open — unplug, then
 plug. Unplugging an empty slot is a no-op. An unplugged provider is closed
 under the same `close_providers` rule that governs the channel's own
 `close()` (the default `True` closes it; pass `False` to keep a shared
-provider alive). And `info()` answers §17.7 with the configuration in
+provider alive). And `info` answers §17.7 with the configuration in
 force, not the constructor's: a meeting that gained a transcriber mid-way
 reads as transcribed from that moment, and one that lost it reads as clean.
 
@@ -482,7 +482,7 @@ words. An output that could not be sent is not waited for.
 The slot hot-plugs like every other need — `plug_realtime(config)` /
 `unplug_realtime()`, with the occupancy probe re-run at the plug and the bot
 retiring on the last unplug — and the lanes it shares with a recognizer
-survive whichever of the two unplugs first. `info()` discloses
+survive whichever of the two unplugs first. `info` discloses
 `realtime_configured`, `realtime_provider`, and per room `realtime_active`
 (the session is actually connected) and `realtime_dropped_windows` (audio
 the mix discarded to stay near-live).
@@ -501,11 +501,13 @@ call:
 |---------|-----------|---------------|
 | `backend.list_participants()` | The SFU | **Media presence**: who is connected right now, since when, with which tracks (kind, muted) and which metadata the SFU asserts — a dial-in carries its number here |
 | `kit.store.list_participants()` | RoomKit's roster | **The room's records**: role, status, identification, resolved identity, display name — survives the meeting |
-| `conference.info()` | The channel | **The RFC §17.7 disclosure**: bot present, collection permitted, STT *active* (as distinct from configured), recording active, dropped frames — at the moment you ask |
+| `conference.info` | The channel | **The RFC §17.7 disclosure**: bot present, collection permitted, STT *active* (as distinct from configured), recording active, dropped frames — at the moment you ask |
 
 The SFU forgets a participant on disconnect; the roster remembers them; and
-neither can answer "is anything listening right now", which is `info()`'s
-job. A UI composes the three. The [LiveKit example][example-livekit] dumps
+neither can answer "is anything listening right now", which is `info`'s
+job. `info` is a property, like every channel's; calling `info()`, as
+before 0.102, still returns the map and emits a `DeprecationWarning`.
+A UI composes the three. The [LiveKit example][example-livekit] dumps
 all three side by side.
 
 Two facts about the bot's own presence belong here. First, where there is
@@ -513,11 +515,11 @@ intelligence it is not optional: media is only observable through a
 connection, so transcription, recording and AI voice all require the bot in
 the meeting — there is no "STT without the participant". The reverse holds
 too: with no stt, tts or recording configured, the bot never joins at all
-and `info()` says so — see [Pure transport mode](#pure-transport-mode).
+and `info` says so — see [Pure transport mode](#pure-transport-mode).
 Second, *visible* is a grant, not a law: a
 `ConferenceGrants` with `hidden=True` as `bot_grants` keeps the bot off the
 meeting's participant lists where the SFU supports it (LiveKit does) — but
-`info()` reports `bot_hidden` either way. Whether a silent notetaker is
+`info` reports `bot_hidden` either way. Whether a silent notetaker is
 acceptable is jurisdiction and policy, the integrator's to decide; RFC §17.7
 makes sure they can always answer for what is in the room.
 

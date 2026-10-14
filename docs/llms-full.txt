@@ -3914,7 +3914,7 @@ Refused at construction (and identically at plug time): `e2ee=True` with stt/rec
 
 `mint_access(room_id, participant_id, *, grants=None, attributes=None, organization_id=None)` reads the room with `organization_id` first (RFC §17.2): another organization's room raises `RoomNotFoundError` and nothing is minted; left unset, no room is read for the scope.
 
-Public surface: `mint_access()`, `plug_*/unplug_*()`, `set_bot_grants()`, `may_interrupt(participant_id)`, `active_lanes` (dict `track_id -> ConferenceLane`; `drain()`, `dropped_frames`), `info()`, `close()`.
+Public surface: `mint_access()`, `plug_*/unplug_*()`, `set_bot_grants()`, `may_interrupt(participant_id)`, `active_lanes` (dict `track_id -> ConferenceLane`; `drain()`, `dropped_frames`), `info` (a property like every channel's; calling `info()` still returns the map and warns), `close()`.
 
 ## How the Bridge Works
 
@@ -3998,9 +3998,9 @@ await channel.set_bot_grants(ConferenceGrants.observer())  # None returns to der
 
 ## Shutdown Semantics (RFC §12.10.4)
 
-`close()` runs exactly one shutdown per channel (`ConferenceShutdownCoordinator`): concurrent callers join the same shielded task and the terminal result is replayed on later calls. Order: close admission → stop playbacks → wait teardowns/joins → disconnect realtime sessions → bots leave every conference → close lanes → finalize recordings → close backend → close providers → settle roster writes. Every backend/provider call holds an operation lease; a resource still leased is **retained**, not closed — it closes in the background when its last lease returns, and the close **fails**: `ConferenceCloseError` aggregates structured `CloseIssue`s (`component`, `operation`, `status` in `FAILED`/`TIMED_OUT`/`ABANDONED`/`RETAINED`, `step`, `detail`) plus any bot session that could not be removed (still reported by `info()`). All waits are bounded — a slow store never holds a bot in a meeting.
+`close()` runs exactly one shutdown per channel (`ConferenceShutdownCoordinator`): concurrent callers join the same shielded task and the terminal result is replayed on later calls. Order: close admission → stop playbacks → wait teardowns/joins → disconnect realtime sessions → bots leave every conference → close lanes → finalize recordings → close backend → close providers → settle roster writes. Every backend/provider call holds an operation lease; a resource still leased is **retained**, not closed — it closes in the background when its last lease returns, and the close **fails**: `ConferenceCloseError` aggregates structured `CloseIssue`s (`component`, `operation`, `status` in `FAILED`/`TIMED_OUT`/`ABANDONED`/`RETAINED`, `step`, `detail`) plus any bot session that could not be removed (still reported by `info`). All waits are bounded — a slow store never holds a bot in a meeting.
 
-`info()` answers RFC §17.7 disclosure per room: `bot_present`, `bot_hidden`, `stt_active`, `realtime_active`, `recording_active`, `recording_dropped_frames`, `active_lanes`, `collecting`, `leave_failed`.
+`info` answers RFC §17.7 disclosure per room: `bot_present`, `bot_hidden`, `stt_active`, `realtime_active`, `recording_active`, `recording_dropped_frames`, `active_lanes`, `collecting`, `leave_failed`.
 
 ## Minimal Example
 

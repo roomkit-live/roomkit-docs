@@ -257,7 +257,7 @@ async def recording_started(event: ConferenceRecordingStarted, ctx) -> None:
 
 If you write your own `MediaRecorder`, this is the contract from your side: `on_data` hands you bytes and nothing else, so `track.codec`, `track.sample_rate` and `track.channels` are the only things that say how to read them. `channels` is `None` where a caller did not state it, which means mono.
 
-Recording counts as collection, so it stops when the room binding stops permitting it (`kit.set_access(room, "conf", Access.NONE)`), and `channel.info()["rooms"][room]["recording_active"]` answers whether a given conference is being recorded right now.
+Recording counts as collection, so it stops when the room binding stops permitting it (`kit.set_access(room, "conf", Access.NONE)`), and `channel.info["rooms"][room]["recording_active"]` answers whether a given conference is being recorded right now.
 
 `ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
 
@@ -273,7 +273,7 @@ Two consequences worth knowing:
 - **A recording that falls behind drops frames rather than memory.** Each track's write backlog is bounded by `max_queued_frames` (the same bound the transcription lanes use — default 100 frames, about two seconds), and a full backlog drops its **oldest** frame. That leaves a gap in the file rather than an ever-growing queue and an ever-growing lag.
 
 ```python
-channel.info()["rooms"][room]["recording_dropped_frames"]  # 0 when nothing was lost
+channel.info["rooms"][room]["recording_dropped_frames"]  # 0 when nothing was lost
 ```
 
 Frames a failed write lost — a full disk, a codec that refuses one frame — are counted there too, and the log says which of the two it was. None of it reaches the transcription path: a conference that cannot be recorded goes on being transcribed, and a track whose recording could not be opened at all is logged once rather than retried on every frame.
