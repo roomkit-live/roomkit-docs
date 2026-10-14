@@ -3003,7 +3003,7 @@ async def pin_language(event, ctx):
 | Provider | Class | Config | Extra |
 |----------|-------|--------|-------|
 | ElevenLabs | `ElevenLabsTTSProvider` | `ElevenLabsConfig` | `roomkit[elevenlabs]` |
-| SherpaOnnx | `SherpaOnnxTTSProvider` | `SherpaOnnxTTSConfig` | `roomkit[sherpa-onnx]` |
+| SherpaOnnx (VITS/Piper, Kokoro) | `SherpaOnnxTTSProvider` | `SherpaOnnxTTSConfig` | `roomkit[sherpa-onnx]` |
 | Gradium | `GradiumTTSProvider` | `GradiumTTSConfig` | `roomkit[gradium]` |
 | Qwen3 | `Qwen3TTSProvider` | `Qwen3TTSConfig` | `roomkit[qwen-tts]` |
 | NeuTTS | `NeuTTSProvider` | `NeuTTSConfig` | `roomkit[neutts]` |
@@ -3028,6 +3028,23 @@ tts = ElevenLabsTTSProvider(ElevenLabsConfig(
 A Voice Channel plays decoded 16-bit PCM (RFC §12.2): a TTS chunk in MP3,
 Opus or G.711 is refused before a byte plays, with an error naming the
 format. ElevenLabs streams MP3 by default, so give it `output_format="pcm_<rate>"`.
+
+Kokoro runs locally through sherpa-onnx (`kokoro-int8-multi-lang-v1_0` from
+sherpa-onnx's `tts-models` release). `lang` names the espeak-ng language of
+text that is neither English nor Chinese; without it French is read as English.
+A voice is an index into `voices.bin` (`ff_siwis` is 30). It speaks 24 kHz.
+
+```python
+from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+
+d = "kokoro-int8-multi-lang-v1_0"
+tts = SherpaOnnxTTSProvider(SherpaOnnxTTSConfig(
+    model_type="kokoro", model=f"{d}/model.int8.onnx", voices=f"{d}/voices.bin",
+    tokens=f"{d}/tokens.txt", data_dir=f"{d}/espeak-ng-data",
+    lexicon=f"{d}/lexicon-us-en.txt,{d}/lexicon-zh.txt",
+    lang="fr", speaker_id=30, sample_rate=24000,
+))
+```
 
 ### Voices, dialogue and custom voices
 

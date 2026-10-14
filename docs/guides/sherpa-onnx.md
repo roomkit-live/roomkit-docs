@@ -429,6 +429,73 @@ When streaming is not supported, VoiceChannel uses VAD to segment speech and cal
 
 ---
 
+## SherpaOnnxTTSProvider
+
+Text-to-speech using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), on the CPU or a CUDA GPU. Two model families: **VITS/Piper** (the default) and **Kokoro** (`model_type="kokoro"`). Audio streams sentence by sentence, at the model's own sample rate.
+
+### Piper (VITS)
+
+```python
+from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+
+tts = SherpaOnnxTTSProvider(
+    SherpaOnnxTTSConfig(
+        model="fr_FR-siwis-medium.onnx",
+        tokens="tokens.txt",
+        data_dir="espeak-ng-data",
+    )
+)
+```
+
+### Kokoro
+
+[Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (Apache 2.0) speaks 24 kHz audio with 54 voices in v1.0: American and British English, Spanish, French, Hindi, Italian, Japanese, Brazilian Portuguese and Mandarin. sherpa-onnx packages it with its voices, lexicons and espeak-ng data:
+
+```bash
+# int8, 126 MB (the float model is kokoro-multi-lang-v1_0, 333 MB)
+wget https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2
+tar xf kokoro-int8-multi-lang-v1_0.tar.bz2
+```
+
+```python
+d = "kokoro-int8-multi-lang-v1_0"
+tts = SherpaOnnxTTSProvider(
+    SherpaOnnxTTSConfig(
+        model_type="kokoro",
+        model=f"{d}/model.int8.onnx",
+        voices=f"{d}/voices.bin",
+        tokens=f"{d}/tokens.txt",
+        data_dir=f"{d}/espeak-ng-data",
+        lexicon=f"{d}/lexicon-us-en.txt,{d}/lexicon-zh.txt",
+        lang="fr",
+        speaker_id=30,  # ff_siwis
+    )
+)
+```
+
+- **`lang` is required for a language other than English or Chinese.** Without it, the multi-lang model reads any other text as English: French comes out mispronounced. It is an espeak-ng language name (`"fr"`, `"es"`, `"it"`, `"pt-BR"`, `"hi"`); French and English are the ones checked against a transcription.
+- **A voice is an index** into `voices.bin` (`speaker_id`, or `voice="30"` per call). sherpa-onnx prints the table when the model loads with `debug`; in v1.0, `af_heart` is 3, `ef_dora` 28, `ff_siwis` 30, `if_sara` 35, `pf_dora` 42. A voice keeps its accent: pick one of the text's language.
+- On two threads of a desktop CPU the int8 model renders a sentence in about two thirds of its spoken length.
+
+### Configuration
+
+| Parameter | Default | Description |
+|---|---|---|
+| `model_type` | `"vits"` | `"vits"` (VITS/Piper) or `"kokoro"`. |
+| `model` | `""` | Path to the `.onnx` model. |
+| `tokens` | `""` | Path to `tokens.txt`. |
+| `data_dir` | `""` | Path to the espeak-ng data directory (Piper and Kokoro). |
+| `lexicon` | `""` | Optional lexicon; several, comma-separated, for a multi-lang Kokoro. |
+| `voices` | `""` | Kokoro's `voices.bin` (required with `"kokoro"`). |
+| `lang` | `""` | Kokoro's espeak-ng language for text that is neither English nor Chinese. |
+| `speaker_id` | `0` | Speaker of a multi-speaker model; a voice index for Kokoro. |
+| `speed` | `1.0` | Speech speed multiplier. |
+| `sample_rate` | `22050` | The rate a caller sets its output up for (Kokoro: 24000). Audio always carries the model's own rate. |
+| `num_threads` | `2` | CPU threads for inference. |
+| `provider` | `"cpu"` | ONNX execution provider (`"cpu"` or `"cuda"`). |
+
+---
+
 ## NVIDIA Parakeet TDT
 
 [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) is a 600M-parameter FastConformer-TDT model with excellent accuracy (6.34% average WER). It supports **25 European languages** with automatic language detection, punctuation, and capitalization.
@@ -529,6 +596,7 @@ await stt.warmup()  # loads the model into memory
 
 ## Examples
 
+- [`examples/kokoro_tts_room.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/kokoro_tts_room.py) — a room that speaks every line typed into it with Kokoro, in the language and voice you pick.
 - [`examples/voice_parakeet_tdt.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_parakeet_tdt.py) — local voice assistant with NVIDIA Parakeet TDT 0.6B v3 STT + sherpa-onnx TTS/VAD + Ollama/vLLM.
 - [`examples/voice_local_onnx_vllm.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_local_onnx_vllm.py) — fully local voice assistant with sherpa-onnx STT/TTS/VAD + Ollama/vLLM, CUDA support. Supports optional [smart-turn detection](smart-turn.md) via `SMART_TURN_MODEL` env var.
 - [`examples/voice_smart_turn.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_smart_turn.py) — audio-native turn detection with smart-turn + sherpa-onnx STT/TTS/VAD. See the [Smart Turn Detection guide](smart-turn.md).
