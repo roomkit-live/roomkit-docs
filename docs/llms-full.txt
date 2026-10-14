@@ -6090,7 +6090,7 @@ RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import
 | Symbol | Description |
 |--------|-------------|
 | `DeliveryStrategy` | ABC controlling when and how content is delivered to a channel |
-| `Immediate` | Deliver now; may interrupt ongoing TTS playback |
+| `Immediate` | Deliver now; on voice, after the playback under way |
 | `Queued` | Add to queue, deliver at the next idle window |
 | `WaitForIdle` | Wait for TTS/speech to finish, then send |
 | `DeliveryBackend` | ABC for persistent delivery queue backends |

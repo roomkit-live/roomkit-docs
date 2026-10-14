@@ -278,7 +278,7 @@ Control **when** results are delivered to the channel:
 ```python
 from roomkit import Immediate, WaitForIdle, Queued
 
-# Send immediately (may interrupt voice)
+# Send now (on voice, after the playback under way)
 kit = RoomKit(delivery_strategy=Immediate())
 
 # Wait for voice idle + buffer
@@ -290,7 +290,7 @@ kit = RoomKit(delivery_strategy=Queued(buffer=2.0))
 
 | Strategy | Behavior |
 |----------|----------|
-| `Immediate()` | Deliver now, may interrupt TTS |
+| `Immediate()` | Deliver now; on voice, after the playback under way |
 | `WaitForIdle(buffer)` | Wait for AI + user silence, then deliver |
 | `Queued(buffer)` | Batch multiple results, deliver at next idle |
 

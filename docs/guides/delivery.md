@@ -40,7 +40,7 @@ Strategies control **when** content is delivered:
 ```python
 from roomkit import Immediate, WaitForIdle, Queued
 
-# Send immediately — may interrupt ongoing voice playback
+# Send now; on voice, it plays once the playback under way is sent whole
 kit = RoomKit(delivery_strategy=Immediate())
 
 # Wait for AI + user silence, then deliver after buffer

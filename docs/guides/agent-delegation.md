@@ -600,7 +600,7 @@ async def task_results(event, ctx):
 
 | Strategy | Behavior |
 |----------|----------|
-| `Immediate` | Deliver now (the default); may interrupt voice playback |
+| `Immediate` | Deliver now (the default); on voice, after the playback under way |
 | `WaitForIdle` | Wait for voice playback, or a realtime session's idle, then deliver |
 | `Queued` | Batch compatible deliveries at idle; an instruction is never merged with a message |
 
