@@ -519,7 +519,7 @@ backend = InMemoryDeliveryBackend(retry_delay=2.0, max_retry_delay=30.0)
 Exhausted or non-retryable failures move to the dead-letter queue with `item.outcome`, address, key and session target preserved. Explicit hook refusals are consumed without retry and retain a blocked outcome:
 
 ```python
-# Inspect dead-lettered items
+# Inspect dead-lettered items, the most recent first in every backend
 dead = await backend.get_dead_letter_items(limit=50)
 for item in dead:
     print(f"{item.id}: {item.error}")
