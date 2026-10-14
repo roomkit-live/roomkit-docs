@@ -17,9 +17,11 @@ A `MediaContent` URL is one of:
 | A reference | `media://photo-42` | Asks the application's `media_resolver` for the bytes |
 
 A reference is `<scheme>://…` in a scheme your application chooses: RoomKit
-never interprets it. A `file:`, `ftp:`, `javascript:` or `vbscript:` URL, and a
-URL without a scheme, are refused when the `MediaContent` is built, because
-some transports read a URL they are handed.
+never interprets it. A `file:`, `ftp:`, `javascript:` or `vbscript:` URL, a URL
+without a scheme, and a reference a path reader could follow (a one-letter
+scheme read as a Windows drive, a `..` segment, a backslash) are refused when
+the `MediaContent` is built, because some transports read a URL they are
+handed as a local path.
 
 ## Images by reference
 
@@ -76,7 +78,8 @@ agent = AIChannel("assistant", provider=provider, max_author_images=None) # ever
 ```
 
 Only an image every vision provider takes goes as an image: PNG, JPEG, GIF or
-WebP, up to 5 MB. Shrink larger photos before you store them, or in the
+WebP (`image/jpg`, capitals and parameters are read as the same types), with
+data, up to 5 MB. Shrink larger photos before you store them, or in the
 resolver.
 
 ## What takes an image's place
@@ -93,16 +96,20 @@ An image that does not go is replaced by a short mention, never a failed turn:
 The name is the caption, else the filename, else the media type: a mention
 never carries a `data:` URI or a reference.
 
-When a request that carried author images fails on a provider error that is
-not retried (the provider could not process an image), those images read as
-refused on the turns after it, so one bad image does not fail every later turn
-while it stays in the history window. The images the channel's tools returned
-are dropped the same way.
+When the turn's first request fails, before anything of it streamed, on a
+provider error that is not retried and is no authentication, permission,
+missing model or rate limit (the provider could not process an image), the
+author images it carried read as refused on the turns after it, so one bad
+image does not fail every later turn while it stays in the history window. A
+failure on a later round, or once the answer streams, leaves them: the
+provider took them. The images the channel's tools returned are dropped the
+same way.
 
 ## A model that does not see
 
 A model without vision reads each media as its label (`[Media: lamp.jpg]`),
-never its bytes, in the history and the turn's input alike. A captionless media
+never its bytes, in the history and the turn's input alike: an AI channel takes
+media whatever its model sees, so the router hands it the event untranscoded. A captionless media
 alone in its event goes to `describe_empty_event` first, so a host keeps the
 word on what such an upload says:
 
