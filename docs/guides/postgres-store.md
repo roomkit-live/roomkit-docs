@@ -177,10 +177,11 @@ await store.update_room(room)
 # Delete (cascades to events, bindings, participants, tasks, observations)
 await store.delete_room("room-1")
 
-# List with pagination
+# List with pagination: oldest first, by created_at then id, in every store
 rooms = await store.list_rooms(offset=0, limit=50)
 
-# Find by criteria (supports JSONB metadata filtering)
+# Find by criteria, in the same order (JSONB metadata filtering: a nested
+# value matches by containment here, by equality in the other stores)
 rooms = await store.find_rooms(
     organization_id="org-1",
     status="active",
