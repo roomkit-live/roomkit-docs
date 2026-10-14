@@ -66,16 +66,17 @@ ended.
   `name` kept to a name's characters (`Research Desk` gives `@ResearchDesk`).
   An application that keys agents by record id (`agent:3f2a…`) gets
   `@Jev` for an agent named Jev: `@agent:3f2a…` would read as `@agent`, and
-  a uuid is no name to copy. A handle is at most 32 characters and not
+  a uuid is no name to copy. A handle is at most 32 characters, kept as
+  the transcript labels it (no leading, trailing or doubled `-`), and not
   `all`; an agent with none, or two whose handles read alike ignoring case,
   are refused when the `Discussion` is built. The queue, `addressed_to`,
   `SpeakQueue` and hooks keep channel ids; `strategy.handles()` maps them.
 
   ```python
   Discussion(
-      [Agent("agent:3f2a…", name="Jev"), Agent("agent:9b1c…", name="Juriste")],
+      [Agent("agent:3f2a…", name="Jev"), Agent("agent:9b1c…", name="Counsel")],
       everyone=["agent:3f2a…"],
-  )  # "@juriste is clause 4 lawful?" queues agent:9b1c…
+  )  # "@counsel is clause 4 lawful?" queues agent:9b1c…
   ```
 - An agent named several times while queued is owed **one** turn; it answers
   the latest person's message among the events that asked for it.

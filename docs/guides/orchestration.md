@@ -427,7 +427,8 @@ async def on_loop_result(event, ctx):
 ### Discussion
 
 Several agents and people hold one conversation; any agent addresses any other
-by `@channel_id`, and one agent speaks at a time. The strategy queues the agents
+by `@handle` (its channel id, its `name` or the host's `handles=`), and one
+agent speaks at a time. The strategy queues the agents
 each message asks for and gives their turns one by one, each reading the room
 as it is when it starts.
 
