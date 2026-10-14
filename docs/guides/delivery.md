@@ -482,6 +482,7 @@ Features:
 - **Consumer groups** distribute items across workers automatically
 - **At-least-once delivery** via Redis Streams PEL (Pending Entries List)
 - **Bounded dead-letter stream** for items that exhaust retries
+- **Delayed retries** held in a sorted set on the server's clock
 - **Injected client support** for connection pooling
 
 ```python
@@ -507,7 +508,15 @@ backend = RedisDeliveryBackend(
 
 ### Retry and dead-letter
 
-Retryable failures are attempted up to `max_retries` (default 3). Exhausted or non-retryable failures move to the dead-letter queue with `item.outcome`, address, key and session target preserved. Explicit hook refusals are consumed without retry and retain a blocked outcome:
+A retryable failure is retried up to `max_retries` times after the first attempt (default 3, so four attempts at most), as a binding's `RetryPolicy` counts them. Each retry waits first, so a destination that is briefly unavailable (a voice session reconnecting) has time to come back: `min(retry_delay * 2 ** (n - 1), max_retry_delay)` seconds before retry `n`, 1 s and 60 s by default. Both are set on the backend; `retry_delay=0` retries at once:
+
+```python
+backend = InMemoryDeliveryBackend(retry_delay=2.0, max_retry_delay=30.0)
+```
+
+`RedisDeliveryBackend` keeps a waiting retry in a sorted set (`{stream_prefix}:delayed`), timed by the Redis server's clock, and the next worker to dequeue puts it back on the stream once due; no two workers take the same retry. `get_queue_depth()` counts the retries waiting out their delay.
+
+Exhausted or non-retryable failures move to the dead-letter queue with `item.outcome`, address, key and session target preserved. Explicit hook refusals are consumed without retry and retain a blocked outcome:
 
 ```python
 # Inspect dead-lettered items
