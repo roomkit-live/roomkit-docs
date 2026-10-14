@@ -156,6 +156,7 @@ bridge = RealtimeAVBridge(
     ),
     provider_sample_rate=48000,          # Anam outputs 48kHz
     on_transcription=my_handler,         # Optional callbacks
+    on_video_detection=my_detections,    # What the video filters detect
 )
 ```
 
@@ -214,6 +215,26 @@ bridge = RealtimeAVBridge(
 ```
 
 The pipeline supports all standard stages: resizer, filters (watermark, YOLO, censor), transforms, and vision analysis.
+
+### Video Detections
+
+A filter that inspects frames (face touch, an object in view) emits detections. `on_video_detection` receives each one as a `VideoDetectionEvent` whose `session` is the call it was seen on; the callback may be sync or async, and a failure is logged without stopping the video. Without it the detections are dropped.
+
+```python
+from roomkit.video.events import VideoDetectionEvent
+from roomkit.video.pipeline.filter import FaceTouchFilter
+
+async def on_detection(event: VideoDetectionEvent) -> None:
+    print(f"{event.kind} {event.labels} on call {event.session.id}")
+
+bridge = RealtimeAVBridge(
+    provider, sip,
+    video_pipeline=VideoPipelineConfig(filters=[FaceTouchFilter()]),
+    on_video_detection=on_detection,
+)
+```
+
+A `RealtimeAudioVideoChannel` fires the `ON_VIDEO_DETECTION` hook for the same detections instead.
 
 ### Video Encoder
 
@@ -402,3 +423,4 @@ await provider.simulate_video(session, frame)
 |---------|-------------|
 | `examples/realtime_av_anam.py` | Talk to an Anam avatar from your microphone and speakers; its video is written to an MP4 |
 | `examples/sip_anam_avatar.py` | SIP-to-Anam bridge with video pipeline and H.264 encoding |
+| `examples/realtime_av_bridge_detections.py` | What the bridge's video filters detect, handed to `on_video_detection` (mock provider, no API key) |

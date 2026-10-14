@@ -3337,7 +3337,7 @@ bridge = RealtimeAVBridge(
 await sip.start()
 ```
 
-The bridge handles audio resampling (48kHz → SIP codec rate), H.264 encoding, session lifecycle (auto-connect on INVITE, auto-disconnect on BYE), and graceful cleanup. For room-based integration, use `RealtimeAudioVideoChannel` instead.
+The bridge handles audio resampling (48kHz → SIP codec rate), H.264 encoding, session lifecycle (auto-connect on INVITE, auto-disconnect on BYE), and graceful cleanup. What its video filters detect reaches `on_video_detection=`, each detection carrying the call it was seen on. For room-based integration, use `RealtimeAudioVideoChannel` instead.
 
 See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP integration, video pipeline, and testing patterns.
 
