@@ -3280,8 +3280,8 @@ backend = SIPVideoBackend(
     supported_video_codecs=["H264", "VP8"],
 )
 
-# Receive inbound video frames
-backend.on_video_received(lambda session, frame: print(
+# Receive inbound video frames: the calls' video is the backend's video facet
+backend.video.on_video_received(lambda session, frame: print(
     f"Video: {frame.codec} {'KEY' if frame.keyframe else '   '} seq={frame.sequence}"
 ))
 

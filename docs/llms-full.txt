@@ -3842,6 +3842,8 @@ Key filters: `YOLODetectorFilter(model="yolo26n.pt", confidence=0.5, classes=Non
 
 `WebSocketVideoBackend` mounts on FastAPI via `mount_websocket_video(app, backend, path=...)` and auto-creates sessions via `set_session_factory()`. Each backend has a `get_*` lazy loader in `roomkit.video` (e.g. `get_sip_video_backend()`).
 
+The combined A/V backends are `AudioVideoBackend`s: voice backends whose calls may carry video (RFC §12.8.3). Their own `on_session_ready` / `on_client_disconnected` report every call, audio-only ones included; the video of a call is served by the `backend.video` facet, a `VideoBackend` whose sessions carry the call's id (`backend.video.on_video_received(cb)`, `backend.video.get_session(call_id)`, `VideoChannel("cam", backend=backend.video)`). `AudioVideoChannel` reads it there and fires `ON_VIDEO_SESSION_STARTED` / `ENDED` once per call with video. The video methods once on the backend itself (`get_video_session()`, `on_video_received()`, `send_video()`…) still work, with a `DeprecationWarning`.
+
 ## Vision Providers
 
 ```python

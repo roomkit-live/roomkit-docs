@@ -4,23 +4,25 @@ Transport backends for sending and receiving real-time video over RTP, with opti
 
 ## Architecture
 
-Both video backends use multiple inheritance to combine voice and video transport:
+Both are `AudioVideoBackend`s: voice backends whose calls may carry video (RFC §12.8.3).
 
 ```
-RTPVideoBackend(RTPVoiceBackend, VideoBackend)
-SIPVideoBackend(SIPVoiceBackend, VideoBackend)
+RTPVideoBackend(RTPVoiceBackend, AudioVideoBackend)    backend.video → its calls' video
+SIPVideoBackend(SIPVoiceBackend, AudioVideoBackend)    backend.video → its calls' video
 ```
 
-A single `connect()` or incoming INVITE creates both audio and video RTP sessions. The video session shares the same session ID as the voice session, so you can look up either from the same ID.
+The call is the voice session: the backend's own `on_session_ready` and `on_client_disconnected` report every call, audio-only ones included. The video of a call is served by `backend.video`, a `VideoBackend` whose sessions carry the call's id, so you can look up either from the same ID. A single `connect()` or incoming INVITE creates both audio and video RTP sessions.
+
+The backend is not itself a `VideoBackend`: the two interfaces share `on_session_ready` and `on_client_disconnected` with different meanings. Hand `backend.video` to whatever takes a `VideoBackend`, e.g. `VideoChannel("cam", backend=backend.video)`.
 
 ```
 Inbound:
   RTP video packets → aiortp VideoRTPSession → H.264 depacketization
     → VideoFrame(codec="h264", data=nal_bytes, keyframe, timestamp_ms)
-    → on_video_received callback
+    → backend.video.on_video_received callback
 
 Outbound:
-  send_video(session, bytes | AsyncIterator[VideoChunk])
+  backend.video.send_video(session, bytes | AsyncIterator[VideoChunk])
     → H.264 packetization → RTP video packets → remote
 ```
 
@@ -48,7 +50,7 @@ voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, pipeline=pipeli
 session = await kit.join("room-1", "voice", participant_id="user-1")
 # Audio + video RTP sessions are now active
 
-video_session = backend.get_video_session(session.id)
+video_session = backend.video.get_session(session.id)
 ```
 
 Install with:
@@ -110,7 +112,7 @@ backend = SIPVideoBackend(
 def on_video(session, frame):
     print(f"Video: codec={frame.codec}, keyframe={frame.keyframe}, seq={frame.sequence}")
 
-backend.on_video_received(on_video)
+backend.video.on_video_received(on_video)
 
 # Route incoming calls
 async def on_call(session: VoiceSession):
@@ -151,7 +153,7 @@ PBX/SIP Trunk                    SIPVideoBackend
   ◄──── 200 OK (combined SDP)     ├── on_call fires (has_video=True)
                                    │
   RTP audio ◄──────────────────►  audio pipeline
-  RTP video ◄──────────────────►  on_video_received
+  RTP video ◄──────────────────►  video.on_video_received
                                    │
   BYE ─────────────────────────► cleanup (audio + video)
 ```
@@ -165,7 +167,7 @@ If video SDP negotiation fails (no matching codecs), the call proceeds audio-onl
 ```python
 async def on_call(session: VoiceSession):
     if session.metadata.get("has_video"):
-        video_session = backend.get_video_session(session.id)
+        video_session = backend.video.get_session(session.id)
         # wire up video processing
     else:
         # audio-only call
@@ -184,7 +186,7 @@ def on_video(session, frame: VideoFrame):
           f"keyframe={frame.keyframe}, seq={frame.sequence}, "
           f"ts={frame.timestamp_ms:.1f}ms")
 
-backend.on_video_received(on_video)
+backend.video.on_video_received(on_video)
 ```
 
 `VideoFrame` fields:
@@ -203,7 +205,7 @@ Send video frames to the remote party:
 
 ```python
 # Send raw bytes (single NAL unit)
-await backend.send_video(video_session, nal_bytes)
+await backend.video.send_video(video_session, nal_bytes)
 
 # Send a stream of VideoChunks
 from roomkit.video.base import VideoChunk
@@ -212,26 +214,32 @@ async def video_source():
     yield VideoChunk(data=nal_bytes, keyframe=True, timestamp_ms=0)
     yield VideoChunk(data=nal_bytes, keyframe=False, timestamp_ms=33)
 
-await backend.send_video(video_session, video_source())
+await backend.video.send_video(video_session, video_source())
 ```
 
 ## Session queries
 
 ```python
 # Get video session by ID (same ID as voice session)
-video_session = backend.get_video_session(session.id)
+video_session = backend.video.get_session(session.id)
 
 # List all video sessions in a room
-sessions = backend.list_video_sessions("room-1")
+sessions = backend.video.list_sessions("room-1")
 ```
 
 ## Callbacks
 
 | Callback | Description |
 |---|---|
-| `on_video_received(cb)` | Inbound video frames (NAL units). |
-| `on_video_session_ready(cb)` | Video session created and active. |
-| `on_client_disconnected(cb)` | Video session ended (call teardown). |
+| `backend.on_session_ready(cb)` | A call's audio path is live (every call), with its `VoiceSession`. |
+| `backend.on_client_disconnected(cb)` | A call ended (every call), with its `VoiceSession`. |
+| `backend.video.on_session_ready(cb)` | A call's video path is live (calls with video only), with its `VideoSession`. |
+| `backend.video.on_client_disconnected(cb)` | A call's video ended, which is when its call ends. |
+| `backend.video.on_video_received(cb)` | Inbound video frames (NAL units). |
+
+`AudioVideoChannel` subscribes to both: it fires `ON_SESSION_STARTED` for every call and `ON_VIDEO_SESSION_STARTED` / `ON_VIDEO_SESSION_ENDED` once per call with video.
+
+The video methods that used to sit on the backend itself (`get_video_session()`, `list_video_sessions()`, `on_video_received()`, `add_video_tap()`, `send_video()`, `send_video_sync()`, `request_keyframe()`, `set_video_passthrough()`, `video_capabilities`) still work and emit a `DeprecationWarning`; use `backend.video` instead.
 
 ## RTP vs SIP video backend
 
