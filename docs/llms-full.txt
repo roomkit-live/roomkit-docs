@@ -3423,7 +3423,13 @@ keeps the model's state between frames; its output trails the input by a constan
 through unchanged with a warning. The silence gate (`silence_threshold`) stops the
 model once the input has been quiet for 100 ms. A DPDFNet config without `model`,
 an unknown `model_type`, or `context_frames` (GTCRN's sliding window) set with
-DPDFNet is refused when the config is built.
+DPDFNet is refused when the config is built. A model file of the other family
+(its ONNX `model_type` metadata says `gtcrn` under a DPDFNet config, or the
+reverse), or an 8 kHz DPDFNet with sherpa-onnx older than 1.13.5, is refused when
+the provider is built: sherpa-onnx would end the process on it.
+`provider.model_sample_rate` gives the rate the file declares. A stream's model is
+kept for the next stream when `reset()` ends it, so a new session does not load it
+again; a model that fails to load is reported once, then audio passes through.
 
 WebRTC NS, RNNoise, and ai|coustics accept arbitrary caller chunk sizes without
 duplicating or dropping audio; an irregular stream uses a fixed one-native-block

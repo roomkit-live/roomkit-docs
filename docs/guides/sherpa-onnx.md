@@ -190,6 +190,12 @@ denoiser = SherpaOnnxDenoiserProvider(
 - The silence gate stops the model once the input has stayed quiet for 100 ms, so its
   delayed output is not cut off.
 - `context_frames` is GTCRN-only: a DPDFNet config refuses another value.
+- A file of the other family is refused with `ValueError` when the provider is built:
+  the provider reads the ONNX `model_type` metadata the file carries, since sherpa-onnx
+  ends the process on a mismatch (`gtcrn_simple.onnx` under `model_type="dpdfnet"`, or
+  the reverse). An 8 kHz DPDFNet file is refused the same way on sherpa-onnx older
+  than 1.13.5. `provider.model_sample_rate` gives the rate the file declares, to set
+  the resampler from.
 
 Measured on one core of an i7-13700KF, 20 ms frames, SI-SDR on four 5 s clips mixed at
 5 dB SNR (the noisy input scores 5.0 dB):
@@ -242,8 +248,12 @@ The default `context_frames=3` (60 ms at 16 kHz) gives the model's recurrent lay
 
 The denoiser is created lazily on the first call to `process()`, not at construction time. This means:
 
-- Constructing `SherpaOnnxDenoiserProvider` is fast.
+- Constructing `SherpaOnnxDenoiserProvider` is fast: it reads only the file's metadata (above).
 - Model loading happens only when audio actually arrives.
+- `reset()` ends a stream but keeps its model for the next one, its state reset, so a new
+  session does not load it again (67 ms for `dpdfnet2`; the next session's first frame took
+  2.5 ms).
+- A model that fails to load is logged once; the audio then passes through unchanged.
 - `sherpa-onnx` must be installed at construction time (the import check happens in `__init__`).
 
 ### Lazy loader
