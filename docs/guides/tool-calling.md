@@ -693,15 +693,17 @@ tool usage — no configuration needed:
   the result kept is what the tool returned, even when eviction gave the model
   a placeholder for it. Bounded by recent *calls*.
 - **Images tools returned** — for a model that sees, the two latest images the
-  room's tool results returned (a drawing, a screenshot) ride each later turn's
-  input, after the notes, each after the call that returned it and framed as
-  data, never instructions: the digest says what a result showed, never what
-  it looks like. They go in the turn's input, never an assistant's message,
-  which OpenAI refuses an image in. Only images returned since the process
-  started are kept: a result reloaded from stored history after a restart
-  carries its JSON form, not its image. Return an image sized for the model to read (about 768 px on its long side is plenty),
-  as each costs a thousand tokens and more on every turn. Bounded by the
-  latest *images*.
+  agent's own tool calls in the room returned (a drawing, a screenshot) ride
+  each later turn's input, after the notes, each after the call that returned
+  it and framed as data, never instructions: the digest says what a result
+  showed, never what it looks like. They go in the turn's input, never an
+  assistant's message, which providers refuse an image in. Only an image every
+  vision provider takes is kept: inline (a `data:` URI; a link may expire or be
+  out of the vendor's reach), PNG, JPEG, GIF or WebP, up to 2 MB, from a live
+  result. A turn the provider refuses (an error not retried) replays none
+  after it. Return an image sized for the model to read (about 768 px on its
+  long side is plenty): each costs a thousand tokens and more on every turn,
+  counted before the history gets its share. Bounded by the latest *images*.
 - **Sticky re-exposure** — the distinct tool names called recently are
   re-revealed each turn, so a tool used once stays callable even while Tool
   Search hides the rest of the catalogue. Bounded by recent distinct *tools* —
