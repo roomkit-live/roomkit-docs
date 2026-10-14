@@ -2737,6 +2737,8 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `PocketTTSProvider` | Kyutai / Gradium Pocket TTS, local, CPU or CUDA GPU, streaming, voice cloning; English, French, German, Portuguese, Italian, Spanish, Dutch (pocket-tts 3.3+). See the [Pocket TTS guide](guides/pocket-tts.md) | `roomkit[pocket-tts]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
+**Denoisers:** WebRTC NS, RNNoise, ai|coustics, sherpa-onnx GTCRN and DPDFNet (streaming, 16/48 kHz). See the [sherpa-onnx guide](guides/sherpa-onnx.md#sherpaonnxdenoiserprovider).
+
 **PCM only.** A Voice Channel plays decoded 16-bit PCM (RFC §12.2): the
 backends and the outbound pipeline read every chunk as samples, and encoding
 for the wire belongs to the backend. A TTS chunk in another encoding (MP3,

@@ -3404,7 +3404,26 @@ from roomkit.voice import get_sherpa_onnx_denoiser_provider, get_sherpa_onnx_den
 SherpaDenoiser = get_sherpa_onnx_denoiser_provider()
 SherpaDenoiserConfig = get_sherpa_onnx_denoiser_config()
 denoiser = SherpaDenoiser(SherpaDenoiserConfig())
+
+# DPDFNet through the same provider (sherpa-onnx 1.12.30+), streaming
+from roomkit.voice.pipeline import SherpaOnnxDenoiserConfig, SherpaOnnxDenoiserProvider
+
+denoiser = SherpaOnnxDenoiserProvider(
+    SherpaOnnxDenoiserConfig(model_type="dpdfnet", model="dpdfnet2.onnx")
+)
 ```
+
+`SherpaOnnxDenoiserConfig.model_type` is `"gtcrn"` (default, `gtcrn_simple.onnx`)
+or `"dpdfnet"`. DPDFNet models come from sherpa-onnx's `speech-enhancement-models`
+release: `dpdfnet_baseline`, `dpdfnet2`, `dpdfnet4`, `dpdfnet8` (16 kHz) and
+`dpdfnet2_48khz_hr` (48 kHz). DPDFNet runs sherpa-onnx's streaming denoiser, which
+keeps the model's state between frames; its output trails the input by a constant
+50 ms. It denoises frames at the model's own rate only: a 16 kHz model needs a
+16 kHz pipeline, the 48 kHz model a 48 kHz one, and frames at another rate pass
+through unchanged with a warning. The silence gate (`silence_threshold`) stops the
+model once the input has been quiet for 100 ms. A DPDFNet config without `model`,
+an unknown `model_type`, or `context_frames` (GTCRN's sliding window) set with
+DPDFNet is refused when the config is built.
 
 WebRTC NS, RNNoise, and ai|coustics accept arbitrary caller chunk sizes without
 duplicating or dropping audio; an irregular stream uses a fixed one-native-block

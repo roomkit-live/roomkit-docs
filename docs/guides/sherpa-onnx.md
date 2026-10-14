@@ -150,7 +150,7 @@ If CUDA is unavailable at runtime, ONNX Runtime falls back to CPU automatically.
 
 ## SherpaOnnxDenoiserProvider
 
-Neural speech enhancement using the GTCRN model. Removes background noise from microphone audio before it reaches VAD and STT.
+Neural speech enhancement with GTCRN (the default) or DPDFNet. Removes background noise from microphone audio before it reaches VAD and STT.
 
 Unlike `RNNoiseDenoiserProvider` (which requires `librnnoise` installed via apt/brew), the sherpa-onnx denoiser is a pure-Python dependency.
 
@@ -170,11 +170,46 @@ denoiser = SherpaOnnxDenoiserProvider(
 config = AudioPipelineConfig(denoiser=denoiser)
 ```
 
-### Download the model
+### DPDFNet
+
+`model_type="dpdfnet"` loads one of the DPDFNet exports sherpa-onnx publishes in its
+`speech-enhancement-models` release: `dpdfnet_baseline`, `dpdfnet2`, `dpdfnet4`, `dpdfnet8`
+(16 kHz) or `dpdfnet2_48khz_hr` (48 kHz). It needs sherpa-onnx 1.12.30 or later.
+
+```python
+denoiser = SherpaOnnxDenoiserProvider(
+    SherpaOnnxDenoiserConfig(model_type="dpdfnet", model="path/to/dpdfnet2.onnx")
+)
+```
+
+- It streams, keeping its state per audio stream, and its output trails the input by a
+  constant 50 ms (40 ms inside the model, 10 ms of overlap-add).
+- It denoises only at the model's own rate: set the pipeline's resampler to it (16 kHz,
+  or 48 kHz for `dpdfnet2_48khz_hr`). A frame at another rate passes through unchanged,
+  with a warning.
+- The silence gate stops the model once the input has stayed quiet for 100 ms, so its
+  delayed output is not cut off.
+- `context_frames` is GTCRN-only: a DPDFNet config refuses another value.
+
+Measured on one core of an i7-13700KF, 20 ms frames, SI-SDR on four 5 s clips mixed at
+5 dB SNR (the noisy input scores 5.0 dB):
+
+| Model | Recorded noise | White noise | ms per frame (RTF) |
+|---|---|---|---|
+| GTCRN (sliding window) | 7.3 dB | 9.4 dB | 1.96 (0.098) |
+| `dpdfnet2` | 10.8 dB | 11.5 dB | 2.51 (0.125) |
+| `dpdfnet_baseline` | 10.5 dB | 11.4 dB | 1.47 (0.073) |
+
+### Download the models
 
 ```bash
-wget https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/gtcrn_simple.onnx
+BASE=https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models
+wget $BASE/gtcrn_simple.onnx
+wget $BASE/dpdfnet2.onnx            # or dpdfnet_baseline / dpdfnet4 / dpdfnet8 / dpdfnet2_48khz_hr
 ```
+
+GitHub publishes the DPDFNet files' sha256 on the release page; the release's
+`checksum.txt` lists `gtcrn_simple.onnx`'s.
 
 ### Configuration
 
@@ -182,10 +217,12 @@ All parameters are set via `SherpaOnnxDenoiserConfig`:
 
 | Parameter | Default | Description |
 |---|---|---|
-| `model` | `""` | Path to the `gtcrn_simple.onnx` model file. |
+| `model_type` | `"gtcrn"` | `"gtcrn"` or `"dpdfnet"`; an unknown type is refused. |
+| `model` | `""` | Path to the model file: `gtcrn_simple.onnx`, or a DPDFNet export (required for DPDFNet). |
 | `num_threads` | `1` | CPU threads for inference. |
 | `provider` | `"cpu"` | ONNX execution provider (`"cpu"` or `"cuda"`). |
-| `context_frames` | `10` | Number of preceding frames for temporal context (see below). |
+| `context_frames` | `3` | GTCRN only: preceding frames given as temporal context (see below). |
+| `silence_threshold` | `0.005` | RMS (float32 scale, about −46 dBFS) below which inference is skipped; `0` disables. |
 
 ### How it works
 
@@ -199,7 +236,7 @@ GTCRN is an offline model — it needs temporal context to distinguish speech fr
 6. A new `AudioFrame` is returned with the cleaned audio, preserving all metadata.
 7. On any error, the original frame is returned unchanged (pass-through).
 
-The default `context_frames=10` (200ms at 16kHz) provides ~6x better signal-to-noise ratio compared to frame-by-frame processing, at ~5ms per frame (well within the 20ms real-time budget).
+The default `context_frames=3` (60 ms at 16 kHz) gives the model's recurrent layers enough warmup context while keeping inference about three times faster than the former 200 ms window. DPDFNet needs none of this: it streams.
 
 ### Lazy initialization
 
