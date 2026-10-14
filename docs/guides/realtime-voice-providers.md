@@ -534,7 +534,7 @@ OPENAI_API_KEY=... \
 |----------|---------|-------------|
 | `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
 | `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
-| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` lets the local backend seed AEC3 from actual PortAudio latencies |
+| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` lets the local backend give AEC3 the delay its devices' clocks report, on every captured frame |
 | `BARGE_IN_GUARD_MS` | `2000` | Silence sent to provider-side VAD after physical playback starts while local AEC converges; `0` disables the guard |
 | `MUTE_MIC` | `1` | `1` mutes capture during assistant playback (stable half-duplex); `0` opts into full-duplex/barge-in |
 | `OPENAI_LANGUAGE` | automatic | Optional input transcription language such as `fr`; useful when ambiguous noise is decoded in another script |
@@ -553,8 +553,12 @@ The example therefore defaults to `MUTE_MIC=1`: stable half-duplex operation,
 with no barge-in while the assistant speaks. Use `MUTE_MIC=0` only with
 headphones or a calibrated full-duplex AEC setup. `AEC_DELAY_MS` should include
 the speaker and microphone device latency when a fixed value is used. With
-`AEC_DELAY_MS=0`, `LocalAudioBackend` now obtains both actual stream latencies
-from PortAudio and supplies their sum to AEC3 before playback.
+`AEC_DELAY_MS=0`, `LocalAudioBackend` seeds AEC3 with the sum of PortAudio's
+two stream latencies before playback, then, from the first captured frame,
+tells it the delay the devices' clocks give (`outputBufferDacTime`,
+`inputBufferAdcTime`), as browsers do: on a MacBook the latencies added up to
+296 ms where the clocks put the delay at 42 ms. A host API that reports no
+clock keeps the seed.
 
 In full-duplex mode, `BARGE_IN_GUARD_MS=2000` protects only playback onset.
 During that interval, RoomKit still processes and records the real microphone
@@ -1375,7 +1379,7 @@ Its audio-specific environment variables are:
 |----------|---------|-------------|
 | `AEC` | `webrtc` | `webrtc`, `speex`, or `0` to disable echo cancellation |
 | `DENOISE` | `webrtc` | `webrtc`, `rnnoise`, `sherpa`, or `0` to disable continuous noise suppression |
-| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` leaves WebRTC delay estimation enabled |
+| `AEC_DELAY_MS` | `0` | Fixed speaker-to-microphone delay in milliseconds; `0` lets the local backend give AEC3 the delay its devices' clocks report, on every captured frame |
 | `AUDIO_PREBUFFER_MS` | `240` | Local speaker jitter buffer used by this Deepgram example |
 | `MUTE_MIC` | automatic | `0` keeps capture open; `1` mutes capture during playback. Automatic mode mutes only when AEC is unavailable |
 

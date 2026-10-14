@@ -697,8 +697,9 @@ tool usage — no configuration needed:
   input, after the notes, each after the call that returned it and framed as
   data, never instructions: the digest says what a result showed, never what
   it looks like. They go in the turn's input, never an assistant's message,
-  which providers refuse an image in. Only a live result's are kept; return an
-  image sized for the model to read (about 768 px on its long side is plenty),
+  which OpenAI refuses an image in. Only images returned since the process
+  started are kept: a result reloaded from stored history after a restart
+  carries its JSON form, not its image. Return an image sized for the model to read (about 768 px on its long side is plenty),
   as each costs a thousand tokens and more on every turn. Bounded by the
   latest *images*.
 - **Sticky re-exposure** — the distinct tool names called recently are
