@@ -1,7 +1,7 @@
 # Discussion: Agents in a Group Chat
 
 Several agents and one or more people hold one conversation in a room. Any
-agent may address any other with `@channel_id`, a person may address any
+agent may address any other with `@handle`, a person may address any
 agent, and nobody fixes the order in advance: who speaks next follows from who
 was addressed. One agent speaks at a time (RFC §19.7.5); long work runs as
 tasks, apart from the conversation. An agent is an AI channel or an external
@@ -61,6 +61,22 @@ ended.
   run, never in a fenced code block or a quoted (`>`) line, and they set the
   event's `addressed_to`. A name never gets around visibility: an agent that
   cannot read the message is not queued by it.
+- An agent is named by its **handle**: the one `handles={channel_id: handle}`
+  gives it, else its channel id when that can be a name (`dev`), else its
+  `name` kept to a name's characters (`Research Desk` gives `@ResearchDesk`).
+  An application that keys agents by record id (`agent:3f2a…`) gets
+  `@Jev` for an agent named Jev: `@agent:3f2a…` would read as `@agent`, and
+  a uuid is no name to copy. A handle is at most 32 characters and not
+  `all`; an agent with none, or two whose handles read alike ignoring case,
+  are refused when the `Discussion` is built. The queue, `addressed_to`,
+  `SpeakQueue` and hooks keep channel ids; `strategy.handles()` maps them.
+
+  ```python
+  Discussion(
+      [Agent("agent:3f2a…", name="Jev"), Agent("agent:9b1c…", name="Juriste")],
+      everyone=["agent:3f2a…"],
+  )  # "@juriste is clause 4 lawful?" queues agent:9b1c…
+  ```
 - An agent named several times while queued is owed **one** turn; it answers
   the latest person's message among the events that asked for it.
 - The agent that just spoke does not take the next turn while another agent of
@@ -173,9 +189,11 @@ Each turn is a rerun of the event it answers, planned for one agent and run in
 the room's delivery lane. Its context is built when the turn starts, so what
 was said while the agent waited is in it, and the event it answers keeps its
 place in the history instead of being read as the last message. The turn's
-notes tell the agent who else is in the room (their channel ids, with the
-`name`, `role` and `description` of Agents and of external agents given one),
-whom it may address, who asked for this turn, and how the room works.
+notes tell the agent its own handle and who else is in the room (their
+handles, with the `name`, `role` and `description` of Agents and of external
+agents given one), whom it may address, who asked for this turn, and how the
+room works. In the conversation it reads, another agent's turn carries the
+same handle (`@Jev: "…"`), and a dispatch policy reads agents by handle too.
 
 A speak policy is consulted on a turn as on any event the agent would answer.
 Without one, the model may stay silent itself by answering the silence token
