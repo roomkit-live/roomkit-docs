@@ -205,6 +205,19 @@ Install with: `pip install roomkit[fluxions]`.
 
 Install with: `pip install roomkit[azure-speech]`.
 
+### Fish Audio TTS (Drama 3)
+
+::: roomkit.voice.tts.fish_audio.FishAudioTTSProvider
+
+::: roomkit.voice.tts.fish_audio.FishAudioTTSConfig
+
+::: roomkit.voice.tts.fish_audio.FishAudioTTSError
+
+See the [STT & TTS Providers guide](../guides/stt-tts-providers.md#fish-audio-cloud-api-drama-3)
+for expressive mode, the texts never sent and the measured limits.
+
+Install with: `pip install roomkit[fish-audio]`.
+
 ### Pocket TTS
 
 ::: roomkit.voice.tts.pocket.PocketTTSProvider

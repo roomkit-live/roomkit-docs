@@ -1775,6 +1775,140 @@ sentence and plays it back to MAI-Transcribe.
 
 ---
 
+## Fish Audio (Cloud API, Drama 3)
+
+Fish Audio hosts Drama 3 (`drama-3`, in preview since 2026-10-13) and its S2
+family (`s2.1-pro`, `s2.1-pro-free`, `s2-pro`) behind one API; a `model`
+header picks the model. Drama 3 is directed in the text itself: a direction
+in square brackets before the words it colours (`[calm, then annoyed]`, in any
+language), a sound (`[sigh]`), or a paired tag around a few words
+(`<whisper>…</whisper>`).
+
+```python
+from __future__ import annotations
+
+import os
+
+from roomkit.voice.tts.fish_audio import FishAudioTTSConfig, FishAudioTTSProvider
+
+tts = FishAudioTTSProvider(
+    FishAudioTTSConfig(
+        api_key=os.environ["FISH_API_KEY"],
+        voice="933563129e564b19a115bedd57b7406a",  # a voice model id ("Sarah")
+        expressive=True,  # perform [directions] and <tags>
+    )
+)
+
+async for chunk in tts.synthesize_stream(
+    "[calm] I understand. [growing impatient] But this is the third time! <whisper>Let us start over.</whisper>"
+):
+    ...
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `api_key` | *(required)* | A Fish Audio API key; API credit is separate from the platform's |
+| `model` | `drama-3` | `drama-3`, `s2.1-pro`, `s2.1-pro-free` or `s2-pro`; any other name is refused |
+| `voice` | `None` | A voice model id (`reference_id`); `None` lets Fish pick its default voice |
+| `expressive` | `False` | Perform the directions and tags written in the text |
+| `sample_rate` | `24000` | 8, 16, 24, 32 or 44.1 kHz, the rates the API renders |
+| `latency` | `balanced` | `low`, `balanced` or `normal`; `normal` holds the audio until the whole clip is generated |
+| `speed` | `None` | Speaking rate, 0.5 to 2.0 |
+| `base_url` / `ws_url` | Fish's | The REST API and the streaming-input socket (https/wss; plain on loopback only) |
+| `timeout` / `connect_timeout` | `60.0` / `5.0` | Read and connect budgets, in seconds |
+
+Install with `pip install roomkit[fish-audio]` (`httpx`, `websockets`,
+`msgpack`; no Fish SDK).
+
+**An unknown model name is refused**: the API renders any name it does not
+know with `s2.1-pro`, bills it so and says nothing (measured by the balance).
+
+### Directions: expressive or plain
+
+With `expressive=True` the text goes as written and Fish performs what it
+directs. The paired tags are `<whisper>`, `<emphasis>`, `<soft>`, `<fast>`,
+`<slow>`, `<stress>` and `<forceful>`. Measured 2026-10-14: no direction was
+read aloud, French or English, on either family; `<whisper>` lowered the
+volume about five times on Drama 3 and did nothing on `s2.1-pro`.
+
+With `expressive=False` the text is spoken as written: brackets become
+parentheses, because Fish drops what a bracket holds ("The price [tax
+included]" lost "tax included" on both models), and tag-shaped markup is
+read out.
+
+Do not put `StripBrackets` in front of an expressive provider: it removes the
+directions before they arrive. As for any TTS that performs cues (RFC §12.2),
+text the application does not trust has its cues removed in a `BEFORE_TTS`
+hook.
+
+### A text with no word to say is never sent
+
+Given a direction alone, both families invent speech: a lone
+`[Calling show_join_codes now]` gave up to 20 s of unrelated speech over REST
+and 47 s on the socket, and `[pause]` once gave 4 s (measured 2026-10-14). So
+a text with no letter or digit outside its directions and tags makes no
+request; on a stream such a sentence waits for the next one and goes with it,
+and one left at the end is not sent. A dialogue turn without words is
+refused with `ValueError`.
+
+### Control tokens are neutralised
+
+Fish models read control tokens in the text: `<|speaker:1|>` switches to the
+second voice of a dialogue, `<|phoneme_start|>…<|phoneme_end|>` rewrites a
+pronunciation. The provider writes a dialogue's speaker tokens itself; in any
+text it is given, every `<|…|>` becomes one space, in both modes, a zero-width
+character or a look-alike mark inside included. Measured on `s2.1-pro`, a
+forged `<|speaker:1|>` in a quoted line switched the voice on every take, and
+with a zero-width space inside it still did: Fish drops invisible characters.
+
+### Streaming input
+
+`synthesize_stream_input()` opens Fish's `/v1/tts/live` socket and sends each
+sentence the Voice Channel hands over with a flush: without one the server
+waits for about 300 characters or the end, and a flush after every token
+breaks the words apart. No keep-alive is needed: a socket idle for 130 s still
+answered. Over the account's concurrency limit (5 sessions on the starter
+tier) Fish closes the extra socket when its text arrives, with no message;
+the provider raises `FishAudioTTSError`.
+
+### Dialogue
+
+`synthesize_dialogue()` voices up to four speakers in one render; a turn's
+`style` becomes its direction (`[annoyed] My order still has not arrived!`).
+Four voices rendered on both families; Drama 3 ran away at five and six were
+refused ("Reference audio too long": the limit is the total length of the
+voices' reference audio, so long references can fail sooner). On Drama 3 the
+change of voice varies between takes.
+
+### Voices
+
+`list_voices()` returns the account's own voices, then one page of 100 public
+voices, best rated first, narrowed server side by the language's primary
+subtag and by `query` on the voice name. Fish tags a voice with a language and
+no region: `language="fr"` finds French voices, `fr-CA` none. The public
+catalog is uploaded by Fish users and holds voices named after real people:
+pick voices you have the right to use.
+
+**Constraints** (measured on the live service, 2026-10-14):
+
+- First audio after 0.22 to 0.25 s on Drama 3, over REST and the socket;
+  0.26 to 0.31 s on `s2.1-pro`. `s2.1-pro-free` was three times slower.
+- Drama 3 costs 10 $ per million UTF-8 bytes, `s2.1-pro` 15 $.
+- Drama 3 speaks 40 to 60 % slower than `s2.1-pro` on the same text; `speed`
+  compensates.
+- Drama 3 is in preview: takes vary. A few clicks were heard in long renders,
+  on both families.
+- An account without API credit is refused with 402 (`insufficient_balance`):
+  API credit is bought apart from the platform's.
+- No conversation context: each render stands on its own.
+- A refused render raises `FishAudioTTSError`, with `status_code` and
+  `retryable` (true for 429 and 5xx).
+
+**Output**: mono 16-bit PCM at `sample_rate`. `examples/voice_fish_audio.py`
+renders a plain line, a directed one, sentences fed one by one and a dialogue.
+
+---
+
 ## TTS Filters
 
 Filters clean AI-generated text before it reaches the TTS provider. Essential for removing reasoning markers, annotations, or bracketed instructions.
@@ -2012,6 +2146,7 @@ four, and what the room keeps of it.
 | **Vui Nano** | Local TTS | Yes | Low (GPU) | Free | Replies conditioned on the dialogue audio, English |
 | **Fluxions** | Cloud TTS | Yes | Low | Per-character | Vui without a GPU, English |
 | **Azure Speech** | Cloud TTS | Yes | Medium (MAI Flash ~0.65 s to first audio) | Per-character | MAI-Voice and Azure's neural voices, preview |
+| **Fish Audio** | Cloud TTS | Yes + input | Low (Drama 3 ~0.23 s to first audio) | Per-byte | Directed speech (Drama 3), dialogue, preview |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Seven languages incl. French, no GPU needed |
 
 ## Using with VoiceChannel
