@@ -109,6 +109,7 @@ nav:
           - Guardrails: guides/guardrails.md
           - AI Steering Directives: guides/ai-steering.md
           - Multi-Speaker Rooms: guides/multi-speaker-rooms.md
+          - Images in AI Turns: guides/ai-images.md
           - Tool Calling & Policies: guides/tool-calling.md
           - Human-in-the-Loop: guides/human-in-the-loop.md
           - MCP Tool Provider: guides/mcp-tool-provider.md

@@ -26,7 +26,7 @@ The `DefaultContentTranscoder` applies intelligent fallbacks:
 |---------------|----------------|----------|
 | `TextContent` | Always | N/A (universal) |
 | `RichContent` | `RICH` in media_types | `plain_text` field or `body` as TextContent |
-| `MediaContent` | `MEDIA` | `[Media: {caption or filename or url}]` |
+| `MediaContent` | `MEDIA` | `[Media: {caption or filename or url}]`, the URL only when a link (`http`, `https`), else the media type: never a `data:` URI or a reference |
 | `AudioContent` | `AUDIO` | `transcript` field, or `[Voice message: {url}]` |
 | `VideoContent` | `VIDEO` | `[Video: {url}]` |
 | `LocationContent` | `LOCATION` | `[Location: {label} ({lat}, {lon})]` |
