@@ -447,7 +447,13 @@ words are the response's in their order, one misheard at most ("Eh bien, la
 lampe salon" for "c'est bien la lampe Salon") and three at least heard right,
 is the response coming back past the canceller: it is discarded. Its first
 words may still have cut the response, as the voice is known only with the
-final.
+final. The rule has a cost: a person not yet heard while nothing played who
+answers over a response with three or more of its words ("the kitchen lamp"
+to "the kitchen lamp or the living room lamp?") cuts it and is not heard, so
+the agent stops and says nothing; what they say next while nothing plays is
+heard. Voices are known within one STT stream: when the provider closes the
+stream, those heard alone are forgotten, as the next one numbers its voices
+afresh.
 
 ## Grace Period: allow_during_first_ms
 
