@@ -4197,6 +4197,8 @@ kit = RoomKit(orchestration=Supervisor(
 ### Loop
 
 Producer/reviewer cycle. The reviewer has an `approve_output` tool to break the loop.
+A message that is not plain text (a photo, a text with a photo) is answered by the
+producer alone, which sees the media: the loop's tasks carry text only.
 
 ```python
 from roomkit import Loop
