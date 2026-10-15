@@ -378,6 +378,10 @@ assistant = AIChannel(
             "since": "2026-10-05T19:27:56+00:00"}]}
 ```
 
+`agent` is the worker's channel id; in a room a `Discussion` holds, an agent
+of the discussion is named by its handle (`"agent": "Comms"` for
+`agent:7c1e…`), the name the room addresses it by.
+
 The tool answers for the room of the call only: one room's tasks never show in
 another. A `task_id` argument narrows the answer to one task. It is a tool of
 its own, given to whichever agent should see the tasks, independently of
