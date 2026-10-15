@@ -4281,7 +4281,7 @@ room = await kit.create_room(orchestration=Discussion(
 - The room is the discussion's: install refuses another intelligence
   channel, a voice or realtime channel, an agent with a thinker, a router
   or another strategy, and refuses binding or installing them afterwards.
-  `await strategy.uninstall(kit, room_id)` gives the room back to its
+  `await kit.uninstall_strategy(room_id)` gives the room back to its
   `agent_response_policy` and forgets the discussion.
 - The configuration (`_discussion`) and the queue (`_speak_queue`) are
   stored with the room and outlive a restart. Every process serving the room
@@ -4291,6 +4291,16 @@ room = await kit.create_room(orchestration=Discussion(
   installed it gives the turns under a 15 s lease it renews; another takes
   over once it expires. Example: `examples/discussion_two_workers.py`.
   Text only in this version.
+- `kit.install_strategy(room_id, Discussion(...))` on a room that holds a
+  discussion, installed here or stored by another process, takes its place
+  and keeps the queue, who listens and the turns given: how a restarted
+  process takes the discussion back, and how the host changes the agents.
+  An agent left out leaves the queue, its running turn is cut and it is
+  detached when an install attached it (one the host bound itself is
+  refused). Every process routes by the new configuration; one whose host
+  installed the old one gives no turn until its host installs the new one.
+  `kit.uninstall_strategy(room_id)` works from any process, one that only
+  follows included, and detaches the agents the installs attached.
 
 **Talking and working.** A turn talks; long work runs as a task, off the
 floor (rule 19). An agent given the background tool starts it, says it is
@@ -4402,8 +4412,9 @@ await kit.install_strategy(room_id, Swarm(agents=[assistant, billing], entry="as
 kit.room_strategy(room_id)                                          # the one installed
 ```
 
-A second strategy is refused while one is installed. A host's own strategy
-gets the same treatment through `install_strategy`. If it is installed by
+A second strategy is refused while one is installed, but for a Discussion
+installed over a discussion, which takes its place and keeps its queue. A
+host's own strategy gets the same treatment through `install_strategy`. If it is installed by
 calling its `install()` directly, it should call
 `kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
 Example: `examples/strategy_on_the_fly.py`.

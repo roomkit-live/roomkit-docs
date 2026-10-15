@@ -450,7 +450,9 @@ discussion when a team joins, and become a swarm later (see
 
 The discussion's configuration (`_discussion`) and speak queue (`_speak_queue`)
 are stored in the room's metadata and outlive a restart: call
-`strategy.install(kit, room_id)` again in the new process.
+`kit.install_strategy(room_id, Discussion(...))` again in the new process. A
+discussion installed over the one a room holds takes its place and keeps the
+queue as it is.
 
 Several processes may serve one room, behind a load balancer, on one store
 (`PostgresStore` with `PostgresAdvisoryLockManager`):
@@ -470,10 +472,31 @@ Several processes may serve one room, behind a load balancer, on one store
 | A message reaches a worker that did not install the discussion | It is queued; the lease holder gives the turns, one at a time |
 | Two messages reach two workers at once | One queue, one holder: one agent after the other |
 | The worker giving the turns crashes | Its lease expires; another worker that installed the discussion takes over |
+| The only worker that installed it restarts | It follows the stored discussion until its host calls `install_strategy`, then gives the turns again from the stored queue |
+| A worker changes the agents | Every worker routes by the new agents; a worker whose host installed the old ones gives no turn until its host installs the new ones |
 
-Uninstalling, in any process, forgets the discussion in all of them. A
-runnable version with two simulated workers is
-`examples/discussion_two_workers.py`.
+Uninstalling, in any process, forgets the discussion in all of them, a process
+that only follows it included, and detaches the agents its installs attached
+(stored with the configuration). A runnable version with two simulated
+workers is `examples/discussion_two_workers.py`.
+
+### Changing the agents
+
+Install the new set over the discussion, in any process: never uninstall
+first, which forgets the queue (who listens, who asked whom, the turns given).
+
+```python
+await kit.install_strategy(room_id, Discussion(agents=[investigator, sre]))  # dev leaves
+```
+
+The queue, who only listens, what agents asked people and the turns given
+stay. An agent left out leaves the queue (an instruction it was owed is
+reported dropped through `ON_SPEAK_QUEUE`), its running turn is cut, and it is
+detached when an install attached it. An agent the host bound itself before
+the install is refused: detach it first. Every other worker routes by the
+new agents at once; the ones whose host installed the old set stop giving
+turns until their host installs the new one, since a worker can only run the
+turns of agents it holds.
 
 ## Limits of this version
 

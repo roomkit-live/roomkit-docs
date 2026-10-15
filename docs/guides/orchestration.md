@@ -464,9 +464,13 @@ kit.room_strategy(room_id)                                          # the instal
   what its install added for the room: room hooks, tools and turn runners on
   the agents, agents it attached, room metadata it wrote. If something cannot
   be taken back, the room stays claimed and a retry finishes it.
-- A second strategy is refused while one is installed. A host's own strategy
-  gets the same treatment through `install_strategy`; installed by calling its
-  `install()` directly, it calls `kit.claim_room_strategy(room_id, self)` first.
+- A second strategy is refused while one is installed, but for a
+  `Discussion` installed over a discussion, here or stored by another
+  process, which takes its place and keeps its queue (see
+  [Changing the agents](discussion.md#changing-the-agents)). A host's own
+  strategy gets the same treatment through `install_strategy`; installed by
+  calling its `install()` directly, it calls
+  `kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
 
 Runnable: `examples/strategy_on_the_fly.py`.
 
