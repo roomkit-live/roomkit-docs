@@ -4300,7 +4300,9 @@ room = await kit.create_room(orchestration=Discussion(
   refused). Every process routes by the new configuration; one whose host
   installed the old one gives no turn until its host installs the new one.
   `kit.uninstall_strategy(room_id)` works from any process, one that only
-  follows included, and detaches the agents the installs attached.
+  follows included, and detaches the agents the installs attached. Both may
+  run while the host holds `kit.lock_manager.locked(room_id)`: uninstalling
+  cuts the running turn without waiting for its end.
 
 **Talking and working.** A turn talks; long work runs as a task, off the
 floor (rule 19). An agent given the background tool starts it, says it is

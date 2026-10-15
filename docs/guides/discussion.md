@@ -446,6 +446,17 @@ A room holds one strategy at a time; it can start as a plain chat, take a
 discussion when a team joins, and become a swarm later (see
 [Installing a strategy while the room lives](orchestration.md#installing-a-strategy-while-the-room-lives)).
 
+Both calls may run while the host holds the room's lock, as it does to
+serialise its own changes of the room:
+
+```python
+async with kit.lock_manager.locked(room_id):
+    await kit.uninstall_strategy(room_id)  # returns at once, even mid-turn
+```
+
+Uninstalling cuts the turn that runs, and nothing of that turn's end is
+recorded: the queue is forgotten anyway.
+
 ## State and processes
 
 The discussion's configuration (`_discussion`) and speak queue (`_speak_queue`)
