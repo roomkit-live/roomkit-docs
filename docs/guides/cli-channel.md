@@ -384,7 +384,7 @@ CONSOLE=1 uv run python examples/acp_claude_code.py            # external coding
 | `prompt` | `"You: "` (`"❯ "` in console mode) | Input prompt |
 | `user_color` / `agent_color` | yellow / cyan | ANSI colors (plain mode) |
 | `use_color` | auto-detected | Force colors on/off |
-| `agent_label` | derived from channel id | Maps `channel_id` to a display name |
+| `agent_label` | the agent's discussion handle, else derived from channel id | Maps `channel_id` to a display name |
 | `show_thinking` | `False` | Render model reasoning above answers |
 | `markdown` | `False` | Progressive Markdown rendering |
 | `console` | `False` | Branded console mode (subsumes `markdown`) |

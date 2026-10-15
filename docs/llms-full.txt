@@ -2715,7 +2715,7 @@ cli = CLIChannel(
     agent_color="\033[36m",     # cyan
     thinking_color="\033[2;3m", # dim italic
     use_color=None,             # None = auto-detect TTY
-    agent_label=None,           # channel_id -> display name ("agent-researcher" -> "Researcher")
+    agent_label=None,           # channel_id -> display name; default: the agent's discussion handle, else "agent-researcher" -> "Researcher"
     show_thinking=False,        # render ThinkingDeltaMarker chunks
     markdown=False,             # live Markdown rendering, requires roomkit[console]
 )
