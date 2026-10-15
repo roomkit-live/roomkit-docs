@@ -471,6 +471,9 @@ kit.room_strategy(room_id)                                          # the instal
   strategy gets the same treatment through `install_strategy`; installed by
   calling its `install()` directly, it calls
   `kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
+- Both calls may run while the host holds `kit.lock_manager.locked(room_id)`,
+  as it does to serialise its own changes of the room: they take the lock
+  again in the same task, and neither waits on work that needs it.
 
 Runnable: `examples/strategy_on_the_fly.py`.
 
