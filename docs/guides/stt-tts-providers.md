@@ -1856,10 +1856,12 @@ refused with `ValueError`.
 Fish models read control tokens in the text: `<|speaker:1|>` switches to the
 second voice of a dialogue, `<|phoneme_start|>…<|phoneme_end|>` rewrites a
 pronunciation. The provider writes a dialogue's speaker tokens itself; in any
-text it is given, every `<|…|>` becomes one space, in both modes, a zero-width
-character or a look-alike mark inside included. Measured on `s2.1-pro`, a
-forged `<|speaker:1|>` in a quoted line switched the voice on every take, and
-with a zero-width space inside it still did: Fish drops invisible characters.
+text it is given, every `<|…|>` becomes one space, in both modes, look-alike
+marks included, and so does one with anything but letters and digits between
+its marks. Measured on `s2.1-pro`, a forged `<|speaker:1|>` in a quoted line
+switched the voice on every take, and still did with a zero-width space, an
+emoji or a format character (U+0600, U+1D173) between its marks: Fish drops
+them before it reads.
 
 ### Streaming input
 

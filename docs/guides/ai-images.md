@@ -78,9 +78,11 @@ agent = AIChannel("assistant", provider=provider, max_author_images=None) # ever
 ```
 
 Only an image every vision provider takes goes as an image: PNG, JPEG, GIF or
-WebP (`image/jpg`, capitals and parameters are read as the same types), with
-data, up to 5 MB. Shrink larger photos before you store them, or in the
-resolver.
+WebP (`image/jpg`, capitals and parameters are read as the same types, and the
+image is sent under the type it was read as: `image/jpg` goes as `image/jpeg`),
+with data, up to 5 MB. Shrink larger photos before you store them, or in the
+resolver. A link's or a `data:` URI's scheme is stored in lower case
+(`HTTP://…` as `http://…`), the spelling every transport tests.
 
 ## What takes an image's place
 
@@ -97,8 +99,8 @@ The name is the caption, else the filename, else the media type: a mention
 never carries a `data:` URI or a reference.
 
 When the turn's first request fails, before anything of it streamed, on a
-provider error that is not retried and is no authentication, permission,
-missing model or rate limit (the provider could not process an image), the
+provider error that is not retried and is no authentication, payment (a 402),
+permission, missing model or rate limit (the provider could not process an image), the
 author images it carried read as refused on the turns after it, so one bad
 image does not fail every later turn while it stays in the history window. A
 failure on a later round, or once the answer streams, leaves them: the
