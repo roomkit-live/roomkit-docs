@@ -330,7 +330,7 @@ kit = RoomKit(
 
 A producing agent generates output, reviewers evaluate it, and the cycle repeats until all reviewers approve or `max_iterations` is reached. The framework controls the flow — agents just produce content.
 
-A message that is not plain text (a photo, or a text with a photo) is answered by the producer alone, as a one-pass supervisor answers it: the loop's tasks carry text only, and the producer's own channel sees the media. Elsewhere outside the AI channel (a delegated worker's brief, the speak and dispatch classifiers, a discussion's notes, scoring) a message reads as its text and each media as its `[Media: …]` label; a discussion's addressing and a memory's search read the author's words alone, captions included, never a file name.
+A message the loop's tasks cannot carry (a photo, a text with a photo, or an empty text) is answered by the producer alone, as a one-pass supervisor answers it: the loop's tasks carry text only, and the producer's own channel sees the media. Elsewhere outside the AI channel (a delegated worker's brief, the speak and dispatch classifiers, a discussion's notes, scoring, a memory's summary) a message reads as its text and each media as its label: `[Media: …]`, a voice message's transcript (else `[Voice message: …]`), `[Video: …]`. A discussion's addressing and a memory's search read the author's words alone, captions and transcripts included, never a file name.
 
 ```python
 from roomkit import Agent, Loop, RoomKit
