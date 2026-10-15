@@ -4231,8 +4231,10 @@ room = await kit.create_room(orchestration=Discussion(
   to a name's characters (`Agent("agent:3f2a…", name="Jev")` is `@Jev`; an
   `agent:<uuid>` id cannot be a name). Letters, digits, `_ . -`, at most 32,
   not `all`; an agent with none, or two alike ignoring case, is refused at
-  construction. Notes, transcript labels and the dispatch policy show
-  handles; the queue, `addressed_to` and hooks keep channel ids.
+  construction. Notes, transcript labels, the dispatch policy,
+  `DiscussionConsole` and a `CLIChannel` (its banner and its labels, unless
+  the host passes `agent_label`) show handles; the queue, `addressed_to` and
+  hooks keep channel ids.
   `strategy.handles()` returns them by channel id.
 
 - A person's message puts the agents it names at the front of the queue;

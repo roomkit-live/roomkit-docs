@@ -195,6 +195,8 @@ handles, with the `name`, `role` and `description` of Agents and of external
 agents given one), whom it may address, who asked for this turn, and how the
 room works. In the conversation it reads, another agent's turn carries the
 same handle (`@Jev: "…"`), and a dispatch policy reads agents by handle too.
+A person at a `CLIChannel` or a `DiscussionConsole` sees each agent under the
+handle they type (`Dev:`, `@dev`), the banner included.
 
 A speak policy is consulted on a turn as on any event the agent would answer.
 Without one, the model may stay silent itself by answering the silence token
