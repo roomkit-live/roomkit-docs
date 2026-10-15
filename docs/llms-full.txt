@@ -6,7 +6,7 @@
 > identity resolution, hooks, and realtime events.
 > Python 3.12+, Pydantic 2.x, fully typed, no required dependency beyond Pydantic and PyYAML.
 
-> Minimum version: 0.103.0 | Python 3.12+
+> Minimum version: 0.104.0 | Python 3.12+
 
 RoomKit is a pure async Python library for building multi-channel conversation systems. It provides a **room-based abstraction** where conversations happen in rooms, participants communicate through channels, and hooks let you intercept and modify the flow.
 
@@ -1622,8 +1622,12 @@ Notes:
 - **Pinned tools** stay visible without a search. The discovery tools always
   pass tool-policy and skill gating, so they work even under a restrictive
   `tool_policy`.
-- A second `find_tools` call **swaps** the revealed window (keeping the visible
-  surface small); `list_tools` reveals nothing — it is purely informational.
+- A second `find_tools` call **swaps** the search window while retaining tools
+  already called in this turn. A call rejected solely for its model-supplied
+  arguments also retains its schema, so the provider can parse the next attempt
+  correctly; it is not remembered as an executed call. Access refusals and
+  skill gates still apply. Realtime sessions retain called schemas until their
+  catalogue is replaced or the session ends. `list_tools` reveals nothing.
 
 See `examples/ai_tool_search.py` for a runnable, no-API-key walkthrough.
 
@@ -2154,15 +2158,17 @@ await kit.process_inbound(
 Per turn, the newest four images authors sent go to a model that sees, history
 and input together, each with its author's words (`AIChannel(max_author_images=...)`
 changes the bound, `None` removes it). Only PNG, JPEG, GIF and WebP up to 5 MB
-go as images. Anything else takes the image's place as a short mention, never a
+go as images, each under the type it was read as (`image/jpg` goes as
+`image/jpeg`). Anything else takes the image's place as a short mention, never a
 failed turn: `[Media: contract.pdf]` for a document or a model without vision,
 `[Earlier image not shown: …]` past the bound, `[Image unavailable: …]` for a
 reference that does not resolve, `[Image refused by the model's provider: …]`
 for an image a provider refused on an earlier turn (the turn's first request
-failed on a non-retried error that is no authentication, permission, missing
-model or rate limit). A `file:`, `ftp:`, `javascript:`, `vbscript:` or
+failed on a non-retried error that is no authentication, payment, permission,
+missing model or rate limit). A `file:`, `ftp:`, `javascript:`, `vbscript:` or
 schemeless URL, a one-letter scheme, a `..` segment or a backslash is refused
-when the `MediaContent` is built. A transport channel receives the reference
+when the `MediaContent` is built, and a link's or a `data:` URI's scheme is
+stored in lower case (`HTTP://…` as `http://…`). A transport channel receives the reference
 as it is: resolve it yourself where a transport needs the media. An AI channel
 takes media whatever its model sees, so the turn reads a live event as it reads
 the same event in its history.
