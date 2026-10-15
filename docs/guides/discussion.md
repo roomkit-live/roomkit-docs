@@ -411,7 +411,10 @@ from your channel and sender show as yours; every other author shows under the
 transcript's label. The kit's logs go to `log_file` while the screen is up
 (without one, warnings are held and printed once it closes). Pass `cards` to
 present the agents your way (`AgentCard`: name, role, description, model,
-tools). A runnable version, with three Claude agents, is
+tools). An agent shows, and is named in `/listen @Dev`, `/talk` and `/task`,
+by its handle in the discussion; a card of your own keys an agent whose
+handle is not its channel id with `AgentCard("Dev", channel_id="agent:8e41…")`.
+A runnable version, with three Claude agents, is
 `examples/discussion_console.py`.
 
 With a WebSocket channel as yours, the answer an agent is writing shows as it

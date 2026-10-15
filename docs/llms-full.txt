@@ -4356,7 +4356,9 @@ A full-screen terminal for such a room (`pip install roomkit[console]`): the
 room on the left, the agents with their identity and live state on the right,
 the speak queue below, your input at the bottom. What you type goes into the
 room through the transport channel you name; `/listen @a`, `/talk @a`,
-`/help`, `/quit`, plus the host's own slash commands. With a WebSocket
+`/help`, `/quit`, plus the host's own slash commands. Agents show and are
+named by their discussion handle (`@Dev` for `agent:8e41…`); a host's own
+`AgentCard("Dev", channel_id="agent:8e41…")` does the same. With a WebSocket
 channel, the answer an agent is writing shows as it streams. When an agent
 has background work set up (or `tasks=True`), `/task @a ...`, `/tasks` and
 `/cancel <task>` start, list and stop the room's tasks, each agent's card
