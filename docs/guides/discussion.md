@@ -509,6 +509,22 @@ new agents at once; the ones whose host installed the old set stop giving
 turns until their host installs the new one, since a worker can only run the
 turns of agents it holds.
 
+Such a worker's host is told by `room_strategy_is_current`. `room_strategy()`
+still returns the worker's own `Discussion`, so ask this instead, wherever the
+host checks its agents (a change of one, a request for the room):
+
+```python
+if not await kit.room_strategy_is_current(room_id, Discussion):
+    await kit.install_strategy(room_id, Discussion(agents=current_agents))
+```
+
+It is false once another worker installed other agents over this worker's
+discussion, when this worker installed none, and once the discussion was
+uninstalled; it reads the room as it is when called. Without it, a worker
+replaced by one that then stopped leaves the room waiting. Asked about a
+strategy that is not stored with the room (`Pipeline`, `Swarm`, ...), it
+raises `TypeError`.
+
 ## Limits of this version
 
 - Text only: voice and realtime channels and agents that think while they
