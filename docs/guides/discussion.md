@@ -193,7 +193,12 @@ place in the history instead of being read as the last message. The turn's
 notes tell the agent its own handle and who else is in the room (their
 handles, with the `name`, `role` and `description` of Agents and of external
 agents given one), whom it may address, who asked for this turn, and how the
-room works. In the conversation it reads, another agent's turn carries the
+room works: by default, to end its message with the handle of the agent that
+must act next, since a name without `@` reaches nobody. A host gives its own
+rules with `Discussion(rules=...)`, where `{handle}` stands for another
+agent's `@handle` and `{silent}` for the silence token; they are stored with
+the discussion, so every process gives its turns with them. In the
+conversation it reads, another agent's turn carries the
 same handle (`@Jev: "…"`), and a dispatch policy reads agents by handle too.
 A person at a `CLIChannel` or a `DiscussionConsole` sees each agent under the
 handle they type (`Dev:`, `@dev`), the banner included.
