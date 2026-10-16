@@ -4305,12 +4305,14 @@ room = await kit.create_room(orchestration=Discussion(
   cuts the running turn without waiting for its end.
 - `await kit.room_strategy_is_current(room_id, Discussion)` says whether the
   discussion this process installed is the one the room stores. It is false
-  once another process installed another one over it (this process then
-  gives no turn), when this process installed none, and once it was
-  uninstalled. A host that finds it false installs the agents it holds:
-  `if not await kit.room_strategy_is_current(room_id, Discussion): await
-  kit.install_strategy(room_id, Discussion(agents))`. A kind not stored with
-  the room (`Pipeline`, `Swarm`, ...) raises `TypeError`.
+  once another process installed another configuration over it (this
+  process then gives no turn), when this process installed none, and once it
+  was uninstalled; an uninstall made elsewhere is taken at once, and
+  `kit.room_strategy(room_id)` then answers `None`. A host that finds it
+  false installs its agents again only while its own state still wants the
+  discussion: `if wanted and not await kit.room_strategy_is_current(room_id,
+  Discussion): await kit.install_strategy(room_id, Discussion(agents))`. A
+  kind not stored with the room (`Pipeline`, `Swarm`, ...) raises `TypeError`.
 
 **Talking and working.** A turn talks; long work runs as a task, off the
 floor (rule 19). An agent given the background tool starts it, says it is
