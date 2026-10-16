@@ -9,6 +9,7 @@
         - hook_engine
         - realtime
         - status_bus
+        - lock_manager
         - create_room
         - get_room
         - close_room
@@ -17,6 +18,14 @@
         - check_all_timers
         - update_room_metadata
         - set_agent_response_policy
+        - install_strategy
+        - uninstall_strategy
+        - room_strategy
+        - room_strategy_is_current
+        - claim_room_strategy
+        - speak_queue
+        - listen_only
+        - talk_again
         - register_channel
         - attach_channel
         - detach_channel
