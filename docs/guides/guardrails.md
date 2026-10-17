@@ -239,7 +239,7 @@ logger = logging.getLogger("roomkit.guardrails")
 kit = RoomKit()
 
 
-@kit.hook(HookTrigger.ON_TOOL_CALL, name="tool_gate")
+@kit.turn_executor.hook(HookTrigger.ON_TOOL_CALL, name="tool_gate")
 async def tool_gate(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
     # Block tools that access sensitive resources without authorization
     if event.name == "query_database" and "users" in event.arguments.get("table", ""):
@@ -271,7 +271,7 @@ serve one. They fire the async observers instead, with `is_error=True`:
 from roomkit import HookExecution
 
 
-@kit.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC, name="tool_auditor")
+@kit.turn_executor.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC, name="tool_auditor")
 async def tool_auditor(event: ToolCallEvent, ctx: RoomContext) -> HookResult:
     logger.info(
         "Tool call: %s(%s) in room %s — %s",
@@ -467,7 +467,7 @@ logger = logging.getLogger("roomkit.guardrails")
 kit = RoomKit()
 
 
-@kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC, name="ai_monitor")
+@kit.turn_executor.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC, name="ai_monitor")
 async def ai_monitor(event, ctx: RoomContext) -> None:
     logger.info(
         "AI response in room %s | tools=%s | latency=%sms | offered=%s",

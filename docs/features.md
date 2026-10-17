@@ -381,9 +381,10 @@ reaches the lane as a live object.
   the room moves on. An error of a class outside RoomKit and Python comes
   back as `RemoteTurnError`, keeping its class name.
 
-Hooks, steering, human input, RoomKit's own tools and the strategies' turn
-runners still run on the channel the kit holds; running turns in another
-process follows with a distributed backend.
+The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
+see [Hook System](#hook-system)). Steering, human input, RoomKit's own tools
+and the strategies' turn runners still run on the channel the kit holds;
+running turns in another process follows with a distributed backend.
 
 ### Inbound Routing: One Conversation per Correspondent
 
@@ -664,6 +665,24 @@ async def log_event(event: RoomEvent, ctx: RoomContext) -> None:
     await analytics.track("message_sent", {"room": event.room_id})
 ```
 
+**Hooks of a turn.** The triggers a turn fires (`BEFORE_AI_GENERATION`,
+`ON_AI_THINKING`, `ON_AI_RESPONSE`, `BEFORE_TOOL_USE`, `AFTER_TOOL_ROUND`,
+`ON_TOOL_CALL`, `ON_USER_INPUT_REQUIRED`, `ON_SPEAK_DECISION`, `ON_THOUGHT`,
+`ON_PLAN_UPDATED`) fire on the turn executor that runs the turn (RFC §10.6.6),
+so their hooks register there; `kit.hook(...)` refuses them with a
+`ValueError` that names the right call. Write them in one function you run on
+every executor, the kit's own included: realtime voice and conference tool
+calls fire the same hooks.
+
+```python
+def register_turn_hooks(executor):
+    @executor.hook(HookTrigger.BEFORE_TOOL_USE, name="tool_gate")
+    async def tool_gate(event, ctx) -> HookResult:
+        return HookResult.allow()
+
+register_turn_hooks(kit.turn_executor)
+```
+
 Hook features:
 - **Priority ordering** -- Hooks execute in priority order (lower numbers first)
 - **Per-room hooks** -- Attach hooks to specific rooms dynamically via `add_room_hook()`
@@ -694,7 +713,7 @@ run; a MODIFY's returned event is not read. Neither a realtime session, nor a
 reasoning backend's agent, nor an ACP agent's own loop fires it.
 
 ```python
-@kit.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")
+@kit.turn_executor.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")
 async def close_mailbox(event: ToolRoundEvent, ctx: RoomContext) -> HookResult:
     if event.results and all(r.is_error for r in event.results):
         event.withdraw("mail_search", "mail_read")
@@ -2012,14 +2031,14 @@ from roomkit.models.enums import HookTrigger
 from roomkit.models.hook import HookResult
 
 # Budget gating — block expensive generation before tokens are spent
-@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def check_budget(event, ctx):
     if await is_over_budget(ctx.room.metadata.get("tenant_id")):
         return HookResult.block(reason="Monthly token budget exceeded")
     return HookResult.allow()
 
 # PII redaction — strip sensitive data before it leaves your infrastructure
-@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def redact_pii(event, ctx):
     for msg in event.ai_context.messages:
         if msg.role == "user" and isinstance(msg.content, str):
@@ -2029,7 +2048,7 @@ async def redact_pii(event, ctx):
 # Knowledge injection — a block in the turn's notes, never the system prompt,
 # which a provider caches ahead of the whole history (RFC §6.4). The search
 # reads the participant's words, not the notes the channel already added.
-@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def inject_knowledge(event, ctx):
     last = event.ai_context.messages[-1]
     if last.role != "user" or not isinstance(last.content, str):

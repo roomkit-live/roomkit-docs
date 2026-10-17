@@ -434,7 +434,7 @@ Fires when the AI produces thinking content. Use it for logging, observability, 
 ```python
 from roomkit import HookTrigger
 
-@kit.hook(HookTrigger.ON_AI_THINKING)
+@kit.turn_executor.hook(HookTrigger.ON_AI_THINKING)
 async def log_thinking(event, ctx):
     thinking = ctx.get("thinking", "")
     print(f"AI reasoning ({len(thinking)} chars): {thinking[:100]}...")

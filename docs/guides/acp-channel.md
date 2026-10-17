@@ -671,7 +671,7 @@ Post-processing an integrator hangs off that hook therefore runs for a
 conversation an agent held:
 
 ```python
-@kit.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC)
+@kit.turn_executor.hook(HookTrigger.ON_AI_RESPONSE, execution=HookExecution.ASYNC)
 async def summarize(event, ctx: RoomContext) -> None:
     logger.info(
         "%s answered in %sms with %d tool calls (%s tokens)",

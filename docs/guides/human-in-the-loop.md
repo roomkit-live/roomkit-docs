@@ -62,7 +62,7 @@ ai = AIChannel(
 kit.register_channel(ai)
 
 # React when the AI asks for human input
-@kit.hook(HookTrigger.ON_USER_INPUT_REQUIRED, execution=HookExecution.SYNC)
+@kit.turn_executor.hook(HookTrigger.ON_USER_INPUT_REQUIRED, execution=HookExecution.SYNC)
 async def notify_user(event, ctx):
     # Broadcast to frontend via WebSocket, REST, etc.
     # `actor_id` is who to ask: the participant whose turn raised the request.
@@ -310,7 +310,7 @@ Mutable dataclass representing a pending request:
 Frozen dataclass passed to `ON_USER_INPUT_REQUIRED` hooks:
 
 ```python
-@kit.hook(HookTrigger.ON_USER_INPUT_REQUIRED, execution=HookExecution.SYNC)
+@kit.turn_executor.hook(HookTrigger.ON_USER_INPUT_REQUIRED, execution=HookExecution.SYNC)
 async def on_input(event, ctx):
     print(event.pending_id)    # ID for resolving
     print(event.tool_name)     # "AskUserQuestion"

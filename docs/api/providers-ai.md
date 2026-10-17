@@ -361,7 +361,7 @@ that credential for one turn without rebuilding the shared provider:
 from roomkit import HookResult, HookTrigger
 from roomkit.providers.ai import API_KEY_METADATA_KEY
 
-@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def select_anthropic_key(event, ctx):
     key = await tenant_secrets.anthropic_key(ctx.room.metadata["tenant_id"])
     event.ai_context.metadata[API_KEY_METADATA_KEY] = key

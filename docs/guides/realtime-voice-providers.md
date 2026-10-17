@@ -1604,7 +1604,7 @@ from roomkit.models.hook import HookResult
 kit = RoomKit()
 
 
-@kit.hook(HookTrigger.ON_TOOL_CALL)
+@kit.turn_executor.hook(HookTrigger.ON_TOOL_CALL)
 async def on_tool_call(event, ctx):
     if event.name == "get_weather":
         result = await fetch_weather(event.arguments["city"])
