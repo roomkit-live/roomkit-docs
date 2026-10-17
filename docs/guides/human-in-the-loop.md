@@ -239,12 +239,14 @@ await kit.reject_input(pending_id, "Not now")               # the tool reads a r
 ```
 
 The record is opened before `ON_USER_INPUT_REQUIRED` fires, and an answer
-that comes before it is held for 60 seconds, so a request is answerable from
-its creation. The request settles where its tool waits, first come first
-served: an answer `human.handler.resolve()` takes there, a hook's `BLOCK`, the
-timeout or a release closes the kit's record, and a later
-`kit.answer_input()` returns `False` and changes nothing. The kit's door
-answers the requests of its turns; a voice session's or a conference's
+that comes before it waits for it, at most 60 seconds, so a request is
+answerable from its creation. The request settles where its tool waits,
+first come first served: an answer `human.handler.resolve()` takes there, a
+hook's `BLOCK`, the timeout or a release closes the kit's record.
+`kit.answer_input()` returns `True` only when the tool reads its answer, and
+`False` when the request was settled otherwise first. A request still open
+when its turn ends is withdrawn (its waiter reads it released). The kit's
+door answers the requests of its turns; a voice session's or a conference's
 requests are answered through the handler.
 
 ### Parallel Tool Execution
