@@ -683,6 +683,11 @@ def register_turn_hooks(executor):
 register_turn_hooks(kit.turn_executor)
 ```
 
+`kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
+code that registers on triggers of both sides (`roomkit.TURN_TRIGGERS` lists
+the turn's). Only the kit's own executor fires these hooks today: an executor
+you build runs its turns without them.
+
 Hook features:
 - **Priority ordering** -- Hooks execute in priority order (lower numbers first)
 - **Per-room hooks** -- Attach hooks to specific rooms dynamically via `add_room_hook()`

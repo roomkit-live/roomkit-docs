@@ -924,6 +924,11 @@ def register_turn_hooks(executor):
 register_turn_hooks(kit.turn_executor)
 ```
 
+`kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
+code that registers on triggers of both sides (`roomkit.TURN_TRIGGERS` lists
+the turn's). Only the kit's own executor fires these hooks today: an executor
+you build runs its turns without them.
+
 ## HookResult
 
 Sync hooks (BEFORE_BROADCAST) must return a `HookResult`:
@@ -983,8 +988,9 @@ oversight. Two levers exist if you need more, and their exact scope matters:
   }
   ```
 
-  A trigger a turn fires (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`...) reads the
-  set of the turn executor's engine instead: `kit.turn_executor.hooks`.
+  A trigger a turn fires (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`...) is in the
+  set of the turn executor's engine instead, `kit.turn_executor.hooks`, and
+  setting it on the kit's raises.
 
   Weigh it first: fail-closed moderation means an outage in your hook is an
   outage of the room.
