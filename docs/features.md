@@ -562,7 +562,10 @@ await kit.create_room(room_id=room_id, orchestration=Supervisor(supervisor="desk
 a strategy reads the agent's identity (`purpose` and `voice` included) from
 its declaration. A strategy given a live agent whose id the kit holds by
 declaration is refused (give it the id), and a realtime
-`ConversationPipeline` takes live agents only. Runnable:
+`ConversationPipeline` takes live agents only. A declaration's
+`takes_owner_tools` (true by default, false for an `ACPChannel`) says whether
+its turns declare the owner's tools: none is set up for one that does not,
+and its delegated result is its text. Runnable:
 `examples/declared_agent.py`, `examples/declared_supervisor.py`.
 
 ### Inbound Routing: One Conversation per Correspondent
