@@ -437,8 +437,11 @@ of the context of the owner's task reading the turn, so its reentrancy is the
 same; it reads `None` from `current_response_metadata()`, the turn's record
 being the executor's. The call keeps its bound: past it, or when the turn is
 cut, the owner cancels the handler. `ON_TOOL_CALL` still reports it on the
-executor, with the handler's error class name. `TaskStatusTool` and
-`CancelTaskTool` remain your tools, run with the channel.
+executor, with the handler's error class name. `kit.setup_task_tools(agent)`
+gives an agent `task_status` and `cancel_task` served by the owner the same
+way; `TaskStatusTool(kit)` and `CancelTaskTool(kit)` are the same tools for an
+agent run in the kit's process. A `cancel_task` reaches a task of the room of
+the call only, as the kit submitted it.
 
 **Your tools reach the room through the turn's host.** A tool of yours, or a
 hook the executor fires (`kit.turn_executor.hook(...)`), runs where the turn

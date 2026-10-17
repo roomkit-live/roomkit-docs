@@ -464,12 +464,21 @@ assistant = AIChannel(
  "message": "Cancelled: its result will not come back."}
 ```
 
+For an agent whose turns run on an executor of another process, give the
+same two tools from the room's owner, which serves them there:
+
+```python
+kit.setup_task_tools(assistant)  # task_status and cancel_task, served by the owner
+```
+
 The task ends `cancelled`, as any task cancelled from outside:
 `ON_TASK_COMPLETED` fires and the status bus posts its end. The agent that
 cancelled it is **not** handed the cancellation back: the tool's answer told it,
 and a second word of it would have it say so twice. Like `task_status`, the tool
 reaches only the tasks of the room of the call; it answers `unknown` for another
-room's task, and the task's own status when it had already ended.
+room's task, and the task's own status when it had already ended. The kit
+checks the room itself: a `task` line on the status bus naming another room's
+task, whoever posted it, cancels nothing.
 
 A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
 say). That cancellation is the host's, so the agent the result was going to is
