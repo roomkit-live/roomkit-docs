@@ -385,8 +385,10 @@ reaches the lane as a live object.
   between two turns (an AI channel's thought, an ACP agent's session). The
   backend places a room's turns of a channel on the executor that took its
   last one while that executor serves, and each request names the room's
-  previous turn (`TurnRequest.previous_turn`): an executor whose state for
-  the room another turn made stale drops it before the turn runs.
+  previous turn (`TurnRequest.previous_turn`, a channel call counting as
+  one): an executor whose state for the room another turn made stale drops
+  it before the turn runs, and so does one whose record of the room fell
+  out (past 10 000 rooms).
 
 The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
 see [Hook System](#hook-system)). A strategy that takes an agent's turns (a
@@ -436,7 +438,8 @@ reentrancy of the task reading the turn: a delegation inherits the turn's
 chain depth, and an event sent into the room from a turn the room's lane
 itself reads comes back detached rather than waiting on that lane. A host
 acts for its turn's room and that room's organization: a verb naming another
-room raises `ValueError`, as does an option a verb does not take. In memory a
+room raises `ValueError`, as does an option a verb does not take, or a
+`roomkit:` room-metadata key, which the framework alone writes. In memory a
 tool may still call the kit it holds; the host is the way that keeps working
 when the executor runs in another process.
 
@@ -452,7 +455,8 @@ channel to a room, and detaching it, reaches every executor that declares the
 channel (`RoomAttached`, `RoomDetached`): the executor calls the channel's
 `on_room_attached` / `on_room_detached` and logs what they raise, which no
 longer cancels the attachment. A verb a channel keeps per room runs on the
-executor holding the room's state, through the kit:
+executor holding the room's state, through the kit, for a channel attached
+to the room (`organization_id=` scopes it to a tenant):
 
 ```python
 values = await kit.channel_call(
@@ -463,9 +467,11 @@ values = await kit.channel_call(
 What the room keeps for the channel when a verb changes it (an ACP session's
 config values) is stored with the room, under the room-metadata key
 `roomkit:channel_state:<channel_id>`, and handed to the channel on the room's
-next turn, on whichever executor runs it; a detach forgets it. A channel
-declares its verbs with `Channel.channel_call`, and what belongs to the room
-with `room_state` / `restore_room_state`. Running turns in another process
+next turn, on whichever executor runs it; a detach forgets it. Only
+`kit.channel_call` writes that key (`update_room_metadata` and `create_room`
+refuse it, a turn's host writes no `roomkit:` key). A channel declares its
+verbs with `Channel.channel_call`, and what belongs to the room with
+`room_state` / `restore_room_state`. Running turns in another process
 follows with a distributed backend.
 
 ### Inbound Routing: One Conversation per Correspondent

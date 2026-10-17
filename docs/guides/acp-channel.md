@@ -211,10 +211,14 @@ await kit.channel_call(
 
 `kit.channel_call` reaches the room's session wherever its turns run: the
 agent's turns go through the [turn backend](../features.md#turn-execution-every-agent-turn-behind-a-backend),
-and the call goes to the executor that holds the room's session. The same
-methods exist on the channel object (`agent.session_config(room_id)`,
+and the call goes to the executor that holds the room's session. The agent
+must be attached to the room (`ChannelNotFoundError` otherwise), and
+`organization_id=` scopes the call to a tenant as the kit's other room
+methods do. The same methods exist on the channel object
+(`agent.session_config(room_id)`,
 `await agent.set_config_option(room_id, "model", "opus[1m]")`), which reach
-this process's copy alone: a value set there is not kept with the room.
+this process's copy alone: a value set there is stored with the room only by
+a later `kit.channel_call`.
 
 Both readers are empty until the room's session exists — sessions open on the
 first prompt. `set_config_option()` opens one if needed (which starts the
@@ -295,6 +299,9 @@ agent = ACPChannel(
   executor opens for the room after losing this one is set to it as well.
   `close_session` forgets it: the room's next session opens on
   `session_config` alone. Detaching the agent from the room forgets it too.
+  Only `kit.channel_call` writes that key: `kit.update_room_metadata` and
+  `kit.create_room` refuse it, and a tool or hook of a turn writes no
+  `roomkit:` key at all, so nothing but the host sets the agent's mode.
 - **A value the agent refuses fails closed.** The session is released and never
   prompted, and the turn fails (or `set_config_option` raises) with a
   `RuntimeError` naming the option. The mode is what makes the agent ask
@@ -990,15 +997,18 @@ await kit.detach_channel("coding-session", "claude-code")
 await kit.close()
 ```
 
-An `ACPChannel` steers a `Cancel` only (`Cancel` from `roomkit.models.steering`):
-another directive reaches no turn and answers 0, and so does a room with no
-turn running. `agent.cancel(room_id)` is the same cancel on this process's
-channel object.
+An `ACPChannel` steers a `Cancel` only (`Cancel` from `roomkit.models.steering`),
+and reaches the turn the kit names: once the turn holds the agent (its
+session being opened, or its prompt out), the cancel is the channel's own;
+before that, the kit cuts the turn itself. Another directive reaches no
+turn and answers 0. `agent.cancel(room_id)` is the same cancel on this
+process's channel object.
 
 A detach closes the room's session and forgets the values set on it, so a
-later attachment opens a new session caught up on the room. A turn still
-running keeps its session to its end, and the session is closed then: the
-detach does not wait for it.
+later attachment opens a new session caught up on the room. It never waits
+for the agent: the session is closed in the background, or by the room's
+turn still running, at its end. A turn started before the detach that has
+not prompted yet ends without prompting, marked `interrupted`.
 
 `cancel` reaches a turn from the moment it holds the room: while the agent is
 started and its session opened or set up (which takes a second or more with
