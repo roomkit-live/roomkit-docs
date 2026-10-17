@@ -217,8 +217,8 @@ must be attached to the room (`ChannelNotFoundError` otherwise), and
 methods do. The same methods exist on the channel object
 (`agent.session_config(room_id)`,
 `await agent.set_config_option(room_id, "model", "opus[1m]")`), which reach
-this process's copy alone: a value set there is stored with the room only by
-a later `kit.channel_call`.
+this process's copy alone: a value set there is stored with the room only
+when a later `kit.channel_call` changes the room's values, never by a read.
 
 Both readers are empty until the room's session exists — sessions open on the
 first prompt. `set_config_option()` opens one if needed (which starts the
@@ -1006,9 +1006,10 @@ process's channel object.
 
 A detach closes the room's session and forgets the values set on it, so a
 later attachment opens a new session caught up on the room. It never waits
-for the agent: the session is closed in the background, or by the room's
-turn still running, at its end. A turn started before the detach that has
-not prompted yet ends without prompting, marked `interrupted`.
+for the agent: the session is closed in the background once the room's turn
+still running has ended (a standalone turn's included), or by that turn
+itself. A turn started before the detach that has not prompted yet ends
+without prompting, marked `interrupted`.
 
 `cancel` reaches a turn from the moment it holds the room: while the agent is
 started and its session opened or set up (which takes a second or more with

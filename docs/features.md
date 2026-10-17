@@ -438,8 +438,10 @@ reentrancy of the task reading the turn: a delegation inherits the turn's
 chain depth, and an event sent into the room from a turn the room's lane
 itself reads comes back detached rather than waiting on that lane. A host
 acts for its turn's room and that room's organization: a verb naming another
-room raises `ValueError`, as does an option a verb does not take, or a
-`roomkit:` room-metadata key, which the framework alone writes. In memory a
+room raises `ValueError` (a status post's `metadata["room_id"]` included,
+which is the turn's room when the post names none), as does an option a verb
+does not take, or a `roomkit:` room-metadata key, which the framework alone
+writes. In memory a
 tool may still call the kit it holds; the host is the way that keeps working
 when the executor runs in another process.
 
