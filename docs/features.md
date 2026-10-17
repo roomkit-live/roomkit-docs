@@ -547,8 +547,23 @@ live agent; `channel.declaration()` gives a live channel's, and registering
 it reads on the kit as registering the agent does. The kit's own executor
 never builds a declared channel: with no executor taking the id, its turns
 fail at once with `no_executor`. A declared channel is bound as an
-intelligence channel only, and a strategy given a live agent whose id the kit
-holds by declaration is refused. Runnable: `examples/declared_agent.py`.
+intelligence channel only. Strategies and the owner's tools take it by its
+id, the kit keeping its tools beside its declaration (RFC §10.6.2):
+
+```python
+kit.register_channel(ChannelDeclaration(channel_id="desk", identity=AgentIdentity(role="Front desk")))
+kit.register_channel(ChannelDeclaration(channel_id="meteo", identity=AgentIdentity(purpose="the weather")))
+await kit.create_room(room_id=room_id, orchestration=Supervisor(supervisor="desk", workers=["meteo"]))
+```
+
+`Loop`, `Swarm`, `Pipeline`, `Discussion`, `ConversationRouter.install`,
+`ConversationPipeline.install`, `setup_handoff`, `setup_delegation`,
+`kit.setup_background` and `kit.setup_task_tools` take an id the same way;
+a strategy reads the agent's identity (`purpose` and `voice` included) from
+its declaration. A strategy given a live agent whose id the kit holds by
+declaration is refused (give it the id), and a realtime
+`ConversationPipeline` takes live agents only. Runnable:
+`examples/declared_agent.py`, `examples/declared_supervisor.py`.
 
 ### Inbound Routing: One Conversation per Correspondent
 
