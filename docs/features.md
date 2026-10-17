@@ -344,6 +344,47 @@ Every message passes through a deterministic processing pipeline:
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
 
+### Turn Execution: Every Agent Turn Behind a Backend
+
+Every turn of an intelligence channel (an `AIChannel`, an `ACPChannel`, a
+channel of your own) runs through a turn backend (RFC §10.6). The room's
+delivery lane submits the turn as a serialized `TurnRequest`; a
+`TurnExecutor` builds the channel, runs its `on_event`, and sends the turn
+back as frames: the output, then one stream item per item the lane reads.
+The lane reads them as the channel's own `ChannelOutput`, so ordering, the
+commit and the broadcast stay where they were.
+
+```python
+from roomkit import RoomKit, InMemoryTurnBackend
+
+kit = RoomKit()                                     # in memory by default
+kit = RoomKit(turn_backend=InMemoryTurnBackend())   # the same, spelled out
+```
+
+The default backend keeps the turn in the kit's process, on the kit's own
+executor, which reads the channels you register. It still serializes every
+message, as a distributed backend will: nothing the channel holds (its
+stream, its response-metadata record, its tool-call markers, an exception)
+reaches the lane as a live object.
+
+- **The stream is pulled.** The executor advances the channel's stream only
+  as the lane reads it: a muted agent, or an event a hook injected for an
+  agent, closes the stream unread and never calls the provider.
+- **What the channel changes after yielding it** (its record, a call's
+  arguments once a `BEFORE_TOOL_USE` hook fixed them, a call's end) reaches
+  the lane before the next item.
+- **A turn runs on a task of its own**, in a copy of the context of the task
+  that submitted it: a tool that calls the kit (`send_event`, `delegate`)
+  behaves as before.
+- **Liveness both ways.** A silent executor fails the turn with
+  `TurnLinkError` (`executor_lost`, or `no_executor` when none took it) and
+  the room moves on. An error of a class outside RoomKit and Python comes
+  back as `RemoteTurnError`, keeping its class name.
+
+Hooks, steering, human input, RoomKit's own tools and the strategies' turn
+runners still run on the channel the kit holds; running turns in another
+process follows with a distributed backend.
+
 ### Inbound Routing: One Conversation per Correspondent
 
 A message that arrives without a `room_id` is routed by the default

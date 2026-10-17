@@ -175,6 +175,7 @@ nav:
           - Realtime: api/realtime.md
           - Event Sources: api/sources.md
           - Delegation: api/delegation.md
+          - Turn Execution: api/turns.md
           - Speaking Turns: api/speaking.md
           - Classifiers: api/classifiers.md
           - Orchestration: api/orchestration.md

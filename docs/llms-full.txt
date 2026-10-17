@@ -6256,6 +6256,12 @@ RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import
 | `DeliveryItem` | Serializable delivery request — the unit of work in the queue |
 | `DeliveryItemStatus` | Lifecycle status of a delivery item |
 | `InMemoryDeliveryBackend` | Asyncio-queue delivery backend (single process, no persistence) |
+| `TurnBackend` | ABC for what carries an intelligence channel's turns between the room owner and an executor (RFC §10.6) |
+| `InMemoryTurnBackend` | Default turn backend: in this process, every message serialized |
+| `TurnExecutor` | Builds a channel and runs its turns; the kit owns one reading its registered channels |
+| `TurnClient` | The room owner's side: runs a turn, reads it back as the channel's `ChannelOutput` |
+| `TurnLinkError` | A turn the backend could not carry to its end (`no_executor`, `executor_lost`, `frame_lost`) |
+| `RemoteTurnError` | A turn's error of a class outside RoomKit and Python, keeping its class name |
 | `DeliveryResult` | Result of delivering a message |
 | `DeliveryStatus` | Delivery status from provider webhook |
 
@@ -6365,6 +6371,7 @@ kit = RoomKit(
     inbound_rate_limit=None,       # RateLimit applied to inbound messages, keyed per channel_id
     orchestration=None,            # Default Orchestration strategy for create_room()
     persistence_policy=None,       # PersistencePolicy — which event types are persisted (None = all)
+    turn_backend=None,             # TurnBackend for intelligence turns (default: InMemoryTurnBackend)
 )
 ```
 
