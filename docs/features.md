@@ -433,8 +433,13 @@ room raises `ValueError`, as does an option a verb does not take. In memory a
 tool may still call the kit it holds; the host is the way that keeps working
 when the executor runs in another process.
 
-Steering and human input still run on the channel the kit holds; running
-turns in another process follows with a distributed backend.
+**The kit steers and answers its turns wherever they run.**
+`kit.steer(directive, channel_id, room_id=...)` reaches the turns the kit
+started (see the [steering guide](guides/ai-steering.md)), and
+`kit.answer_input(pending_id, value)` / `kit.reject_input(pending_id, reason)`
+answer a human-input request a turn opened, held 60 seconds when it comes
+before the request (see [human in the loop](guides/human-in-the-loop.md)).
+Running turns in another process follows with a distributed backend.
 
 ### Inbound Routing: One Conversation per Correspondent
 

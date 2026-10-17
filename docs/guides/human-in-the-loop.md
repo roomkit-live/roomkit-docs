@@ -226,6 +226,25 @@ An outcome that has been recorded stays readable. A request settling — answere
 
 The retention fills when the answer arrives, not when someone reads it, so a host that keeps its own bookkeeping and drops the request on `resolve()` cannot turn the answer it just recorded into a tool failure for the model that asked the question.
 
+### Answering from the kit
+
+An AI channel's turns run through the kit's turn backend (RFC §10.6), so the
+tool waiting for the human may run in another process than the one that hears
+the answer. The kit that started the turn keeps the request's record and
+answers it wherever the tool runs:
+
+```python
+await kit.answer_input(pending_id, '{"answer": "blue"}')   # the tool reads it
+await kit.reject_input(pending_id, "Not now")               # the tool reads a refusal
+```
+
+The record is opened before `ON_USER_INPUT_REQUIRED` fires, and an answer
+that comes before it is held for 60 seconds (`TurnTimeouts(input_hold=...)`),
+so a request is answerable from its creation. A request is answered once:
+`human.handler.resolve()` forwards to the same record, and the second door
+answers `False`. A request settled where the tool runs (a hook's `BLOCK`, its
+timeout, a release) closes the record, and one whose turn ends is withdrawn.
+
 ### Parallel Tool Execution
 
 When the AI calls multiple tools in one round, `asyncio.gather` runs them concurrently. If one tool is a human-input tool, it blocks while the others complete normally. The tool loop waits for **all** results before the next AI generation round.

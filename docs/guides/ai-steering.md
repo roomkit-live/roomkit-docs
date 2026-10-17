@@ -185,6 +185,19 @@ ACP agent) takes a `Cancel` as its turn's cancel, which counts as one; any
 other directive reaches nothing there. `ai.steer()` still reaches the loops
 running in the process it is called in.
 
+One turn is addressed by its id, which a tool or a hook of that turn reads
+with `current_turn_id()`:
+
+```python
+from roomkit import current_turn_id
+
+turn_id = current_turn_id()          # inside a tool call or a hook of the turn
+await kit.steer(InjectMessage(content="Budget is 100."), "ai-assistant", turn_id=turn_id)
+```
+
+A channel that overrides `steer()` receives `turn_id=` from the kit; an
+override without that keyword is given the turn's `room_id` instead.
+
 ## Fallback Provider Chain
 
 Configure a fallback AI provider for production resilience:
