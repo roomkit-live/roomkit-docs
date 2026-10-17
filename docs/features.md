@@ -385,9 +385,22 @@ The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
 see [Hook System](#hook-system)). A strategy that takes an agent's turns (a
 `Loop`, a supervisor's delegation passes) runs on the room's owner, and each
 generation it asks of the agent is a turn of its own through the backend.
-Steering, human input and RoomKit's own tools still run on the channel the
-kit holds; running turns in another process follows with a distributed
-backend.
+
+**RoomKit's own tools are served by the room's owner.** The tools
+orchestration sets up (a delegation's `delegate_task`, `work_in_background`,
+a handoff, a supervisor's `delegate_workers` or `delegate_to_<worker>`, a
+delegation's `submit_result`) travel in the turn's request: the channel
+declares them to its model with its own, and each call, past its
+`BEFORE_TOOL_USE` gate, goes back to the owner, which runs the handler and
+answers. The handler reads the turn as a local one does (`current_tool_room_id()`,
+`current_tool_actor_id()`, `current_tool_requester()`, the allowed names, the
+call's id) and runs in a copy of the context of the owner's task reading the
+turn, so its reentrancy is the same. The call keeps its bound: past it, or
+when the turn is cut, the owner cancels the handler. `ON_TOOL_CALL` still
+reports it on the executor, with the handler's error class.
+
+Steering and human input still run on the channel the kit holds; running
+turns in another process follows with a distributed backend.
 
 ### Inbound Routing: One Conversation per Correspondent
 
