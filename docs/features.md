@@ -404,27 +404,34 @@ executor, with the handler's error class name. `TaskStatusTool` and
 **Your tools reach the room through the turn's host.** A tool of yours, or a
 hook the executor fires (`kit.turn_executor.hook(...)`), runs where the turn
 runs. To change a room it asks `current_turn_host()`, which answers inside a
-tool call of a turn and inside such a hook during it, and `None` anywhere else:
+call of your tool during a turn and inside such a hook during it, and `None`
+anywhere else:
 
 ```python
 from roomkit import TextContent, current_turn_host
+from roomkit.models.enums import TaskStatus
 from roomkit.tools import current_tool_room_id
 
 async def handler(name, arguments):
     host, room_id = current_turn_host(), current_tool_room_id()
     await host.send_event(room_id, "ops", TextContent(body="Looking it up"), addressed_to=[])
-    task_id = await host.delegate(room_id, "researcher", arguments["question"])
-    result = await host.wait_task(task_id, timeout=120)
-    return result.output if result else "Still working on it."
+    task_id = await host.delegate(room_id, "researcher", arguments["question"], notify="ops")
+    result = await host.wait_task(task_id, timeout=20)  # within the tool's 30 s bound
+    if result is None or result.status != TaskStatus.COMPLETED:
+        return "Still working on it."
+    return result.output
 ```
 
 Each verb (`send_event`, `delegate`, `wait_task`, `post_status`,
 `update_room_metadata`, `add_observation`) crosses the backend as data and
-runs on the room's owner, with the reentrancy of the task reading the turn: an
-event sent into the room from a turn the room's lane itself reads comes back
-detached rather than waiting on that lane. In memory a tool may still call the
-kit it holds; the host is the way that keeps working when the executor runs
-in another process.
+runs on the room's owner, under what the turn gave the call and with the
+reentrancy of the task reading the turn: a delegation inherits the turn's
+chain depth, and an event sent into the room from a turn the room's lane
+itself reads comes back detached rather than waiting on that lane. A host
+acts for its turn's room and that room's organization: a verb naming another
+room raises `ValueError`, as does an option a verb does not take. In memory a
+tool may still call the kit it holds; the host is the way that keeps working
+when the executor runs in another process.
 
 Steering and human input still run on the channel the kit holds; running
 turns in another process follows with a distributed backend.
