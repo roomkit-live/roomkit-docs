@@ -15,6 +15,10 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.TurnTimeouts
 
+::: roomkit.TurnLink
+
+::: roomkit.ExecutorLink
+
 ## Messages
 
 ::: roomkit.TurnRequest
