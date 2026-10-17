@@ -530,7 +530,10 @@ kit.register_channel(
 await kit.attach_channel(room_id, "meteo")
 ```
 
-The kit holds a `DeclaredChannel` under the id, which a binding, routing,
+A field left out reads as an `AIChannel` built with its defaults (text, rich
+and media capabilities, a 50-event history), and the host's executor needs
+`hosts=`, without which it takes every channel's turns. The kit holds a
+`DeclaredChannel` under the id, which a binding, routing,
 `delegate`, `start_task`, `send_greeting` and auto-greet read as they read a
 live agent; `channel.declaration()` gives a live channel's, and registering
 it reads on the kit as registering the agent does. The kit's own executor
