@@ -461,8 +461,9 @@ kit.room_strategy(room_id)                                          # the instal
   `create_room(orchestration=...)` does (which takes the same path), and keeps
   the timeline: the agents' turns read the conversation so far.
 - `uninstall_strategy` runs the strategy's `uninstall()` step, then takes back
-  what its install added for the room: room hooks, tools and turn runners on
-  the agents, agents it attached, room metadata it wrote. If something cannot
+  what its install added for the room: room hooks, tools on the agents, the
+  turn runners the kit keeps for them, agents it attached, room metadata it
+  wrote. If something cannot
   be taken back, the room stays claimed and a retry finishes it.
 - A second strategy is refused while one is installed, but for a
   `Discussion` installed over a discussion, here or stored by another
@@ -496,8 +497,9 @@ room3 = await kit.create_room(orchestration=None)
 
 A strategy is installed per room, but its agents (and a voice channel it
 serves) serve every room they are attached to. What it adds for one room is
-set up for that room on the shared agent or channel, with that install's
-configuration, and reaches that room only (RFC §19.7):
+set up for that room, on the shared agent or channel or on the kit that owns
+the room, with that install's configuration, and reaches that room only
+(RFC §19.7):
 
 - its tools are declared in the room's turns and in the room's realtime
   sessions: a supervisor's `delegate_workers` or `delegate_to_<worker>`, a
@@ -509,8 +511,10 @@ configuration, and reaches that room only (RFC §19.7):
   install a `Supervisor` on the same agent with different workers each run
   their own, whichever was installed first;
 - a sync `Loop` or an auto-delegating `Supervisor` takes the turns of the
-  rooms it was installed in; in a room where it was not, the agent answers as
-  itself.
+  rooms it was installed in, on the kit that owns the room, and asks each
+  generation of the agent (a formulation pass, a presentation) as a turn of
+  its own, which enters through the agent's `on_event`; in a room where it
+  was not, the agent answers as itself.
 
 Nothing is written onto the shared agent or channel for one room: no wrapped
 handler, no rewritten prompt, no default another room would read. A busy
