@@ -1440,6 +1440,20 @@ recent loop, whatever its room. A loop is reachable once its turn has started
 (its response stream is read): a directive that comes before reaches none, and
 `steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
+The agent's turns run through the kit's turn backend (RFC §10.6), so a host
+that may run them in another process steers through the kit, which reaches
+the turns it started wherever they run:
+
+```python
+reached = await kit.steer(Cancel(reason="stop pressed"), "agent", room_id="room-a")
+```
+
+`kit.steer(directive, channel_id, room_id=..., turn_id=...)` follows the same
+rules (a `Cancel` reaches every turn of the room, another directive the most
+recent one) and answers the loops reached. A channel without steering (an ACP
+agent) takes a `Cancel` as its turn's cancel, counted as one. `agent.steer()`
+reaches the loops of the process it is called in.
+
 ## Tool Calling
 
 Define tools as JSON schema and attach them to the AI channel:

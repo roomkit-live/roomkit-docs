@@ -167,6 +167,24 @@ room; giving both raises `ValueError`. A loop is reachable once its turn has
 started (its response stream is read): a directive that comes before reaches
 none, and `steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
+### Steering through the kit
+
+Every agent turn runs through the kit's turn backend (RFC §10.6), in the kit's
+process by default and, with a distributed backend, wherever an executor runs
+it. `kit.steer()` reaches the turns the kit started, wherever they run, under
+the same rules:
+
+```python
+reached = await kit.steer(Cancel(reason="stop pressed"), "ai-assistant", room_id="room-a")
+await kit.steer(InjectMessage(content="The user attached a file."), "ai-assistant",
+                room_id="room-a")
+```
+
+It answers the loops it reached. A channel without steering of its own (an
+ACP agent) takes a `Cancel` as its turn's cancel, which counts as one; any
+other directive reaches nothing there. `ai.steer()` still reaches the loops
+running in the process it is called in.
+
 ## Fallback Provider Chain
 
 Configure a fallback AI provider for production resilience:
