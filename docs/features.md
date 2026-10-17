@@ -443,6 +443,14 @@ way; `TaskStatusTool(kit)` and `CancelTaskTool(kit)` are the same tools for an
 agent run in the kit's process. A `cancel_task` reaches a task of the room of
 the call only, as the kit submitted it.
 
+The kit keeps these tools itself, per channel and room, beside the channel's
+declaration, never on the agent object (RFC §10.6.2): a channel it holds by
+its declaration alone gets them as a live one does, and `AIChannel.extra_tools`
+lists the host's tools only. The kit refuses one named as a tool of an agent
+it holds live when it sets it up; the executor that builds the agent refuses
+its turn when the agent itself declares a tool of that name, so a clash shows
+at the first turn rather than reaching one handler or the other.
+
 **Your tools reach the room through the turn's host.** A tool of yours, or a
 hook the executor fires (`kit.turn_executor.hook(...)`), runs where the turn
 runs. To change a room it asks `current_turn_host()`, which answers inside a
