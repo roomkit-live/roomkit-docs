@@ -6406,12 +6406,15 @@ RoomKit exports **344 symbols** from `roomkit`. Providers and voice types import
 | `OwnerTools` | ABC for the tools a room owner serves its turns: what a request lists, how a call's handler runs |
 | `OwnerTool` | One tool a turn's request lists, served by the room owner (`tool`, `waits_by_design`) |
 | `TurnHost` | What a host's tool or hook on a turn's executor asks of the room owner: `send_event`, `delegate`, `wait_task`, `post_status`, `update_room_metadata`, `add_observation` |
-| `current_turn_host()` | The `TurnHost` of the turn the current code runs in; `None` outside a turn |
+| `current_turn_host()` | The `TurnHost` of the turn the current code runs in; after the turn, in work it began, the host for `send_event`, `post_status`, `update_room_metadata`, `add_observation` (`host.open` false); `None` elsewhere |
+| `RoomCall` / `RoomPublication` | What an executor sends its room owner after a turn ended (RFC §10.6.3): a host verb, answered by a `HostResult`, and a publication; accepted from the executor of the room's last turn only |
+| `RoomOwner` | ABC for what reaches a room owner outside a turn (`room_call`, `room_publication`); `TurnBackend.attend(owner)` has executors reach it |
 | `current_turn_id()` | The id of the turn the current code runs in, which `kit.steer(turn_id=...)` addresses; `None` outside a turn |
 | `PreviousTurn` | A request's (or a channel call's) `previous_turn`: the room's last turn or channel call of the channel (`turn_id`, `executor_id`), `None` after a detach; an executor drops a room's state another left (RFC §10.6.2) |
 | `RoomAttached` / `RoomDetached` | Channel control to every executor declaring the channel: it calls `on_room_attached` / `on_room_detached` and logs what they raise (RFC §10.6.3) |
 | `ChannelCall` / `ChannelResult` | A channel's per-room verb, sent to the executor holding the room's state, and its answer (`result`, `error`, the changed `room_state`) |
-| `ChannelControl` | The union of `RoomAttached`, `RoomDetached` and `ChannelCall` that `TurnBackend.control()` carries |
+| `CommittedEvent` | Channel control to the executor holding the room's state, else one declaring the channel, without moving the holder: it calls `on_room_event(room_id, event)` (a discussion's memory hand-off, RFC §10.6.3) |
+| `ChannelControl` | The union of `RoomAttached`, `RoomDetached`, `CommittedEvent` and `ChannelCall` that `TurnBackend.control()` carries |
 | `TurnLinkError` | A turn the backend could not carry to its end (`no_executor`, at once when no executor declares the channel; `executor_lost`, `frame_lost`) |
 | `RemoteTurnError` | An error raised across the turn backend of a class outside RoomKit and Python, keeping its class name |
 | `DeliveryResult` | Result of delivering a message |

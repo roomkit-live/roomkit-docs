@@ -486,6 +486,27 @@ writes. In memory a
 tool may still call the kit it holds; the host is the way that keeps working
 when the executor runs in another process.
 
+**Work a turn began reaches the room after the turn.** A background
+thinker's `ON_THOUGHT` that lands after its turn returned, or a task a tool
+started, still finds its host with `current_turn_host()` (`host.open` is then
+false): `send_event`, `post_status`, `update_room_metadata` and
+`add_observation` cross to the owner outside the turn's link, at the turn's
+chain depth, so the bound on agent loops holds. The owner takes them only
+from the executor of the room's last turn of the channel, and only for that
+turn: once a later turn was sent, the earlier one's work is refused with
+`PermissionError`. `delegate`, `wait_task` and the readers need the turn and
+raise `RuntimeError` after it. What the channel publishes on its realtime
+backend, and the framework events its hooks emit, take the same path and are
+published by the owner for the room alone. A `ScoringHook` writes its scores
+the same way, never the store itself. Runnable:
+`examples/thought_after_turn.py`.
+
+**A discussion feeds memories where the agents run.** Each message a
+discussion commits reaches every agent it is for as a `committed_event`
+through the turn backend (`Channel.on_room_event`; an AI channel hands it to
+its memory), so an agent on a host's executor, or held by its declaration
+alone, learns the whole conversation.
+
 **The kit steers and answers its turns wherever they run.**
 `kit.steer(directive, channel_id, room_id=...)` reaches the turns the kit
 started (see the [steering guide](guides/ai-steering.md)), and

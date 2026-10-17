@@ -39,6 +39,14 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.current_turn_host
 
+::: roomkit.RoomOwner
+
+::: roomkit.RoomCall
+
+::: roomkit.RoomPublication
+
+::: roomkit.CommittedEvent
+
 ## Messages
 
 ::: roomkit.TurnRequest
