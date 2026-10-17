@@ -377,9 +377,16 @@ reaches the lane as a live object.
   that submitted it: a tool that calls the kit (`send_event`, `delegate`)
   behaves as before.
 - **Liveness both ways.** A silent executor fails the turn with
-  `TurnLinkError` (`executor_lost`, or `no_executor` when none took it) and
-  the room moves on. An error of a class outside RoomKit and Python comes
-  back as `RemoteTurnError`, keeping its class name.
+  `TurnLinkError` (`executor_lost`) and the room moves on. A turn no
+  executor declares fails at once with `no_executor`. An error of a class
+  outside RoomKit and Python comes back as `RemoteTurnError`, keeping its
+  class name.
+- **A room's turns stay where its state is.** A channel keeps state per room
+  between two turns (an AI channel's thought, an ACP agent's session). The
+  backend places a room's turns of a channel on the executor that took its
+  last one while that executor serves, and each request names the room's
+  previous turn (`TurnRequest.previous_turn`): an executor whose state for
+  the room another turn made stale drops it before the turn runs.
 
 The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
 see [Hook System](#hook-system)). A strategy that takes an agent's turns (a
@@ -439,7 +446,27 @@ started (see the [steering guide](guides/ai-steering.md)), and
 `kit.answer_input(pending_id, value)` / `kit.reject_input(pending_id, reason)`
 answer a human-input request a turn opened, held 60 seconds when it comes
 before the request (see [human in the loop](guides/human-in-the-loop.md)).
-Running turns in another process follows with a distributed backend.
+
+**A channel's per-room verbs are channel calls.** Attaching an intelligence
+channel to a room, and detaching it, reaches every executor that declares the
+channel (`RoomAttached`, `RoomDetached`): the executor calls the channel's
+`on_room_attached` / `on_room_detached` and logs what they raise, which no
+longer cancels the attachment. A verb a channel keeps per room runs on the
+executor holding the room's state, through the kit:
+
+```python
+values = await kit.channel_call(
+    "claude", room_id, "set_config_option", config_id="model", value="opus"
+)
+```
+
+What the room keeps for the channel when a verb changes it (an ACP session's
+config values) is stored with the room, under the room-metadata key
+`roomkit:channel_state:<channel_id>`, and handed to the channel on the room's
+next turn, on whichever executor runs it; a detach forgets it. A channel
+declares its verbs with `Channel.channel_call`, and what belongs to the room
+with `room_state` / `restore_room_state`. Running turns in another process
+follows with a distributed backend.
 
 ### Inbound Routing: One Conversation per Correspondent
 
@@ -1007,10 +1034,12 @@ await kit.attach_channel(
 The channel maps one ACP session to each Room and supports streamed text,
 thinking, tool-call activity, plans, permission requests, and cancellation.
 Tool permissions are denied by default. The agent's session tunables are
-readable and settable — `agent.session_config(room_id)` returns
+readable and settable through the kit, wherever the room's session is —
+`await kit.channel_call("claude", room_id, "session_config")` returns
 `{"model": "sonnet", "mode": "auto", ...}` and
-`await agent.set_config_option(room_id, "model", "opus[1m]")` switches one,
-with every change published as an ephemeral event. Each room's session is set
+`await kit.channel_call("claude", room_id, "set_config_option", config_id="model", value="opus[1m]")`
+switches one, with every change published as an ephemeral event. Detaching
+the agent from a room closes the room's session. Each room's session is set
 up the same way every time it opens (first prompt, recovery, agent restart,
 standalone turn): `mcp_servers` can be a function of the room id, so an MCP
 server learns its room, and `session_config={"mode": "default"}` plus the

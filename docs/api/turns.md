@@ -35,6 +35,18 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.TurnRequest
 
+::: roomkit.PreviousTurn
+
+## Channel control
+
+::: roomkit.RoomAttached
+
+::: roomkit.RoomDetached
+
+::: roomkit.ChannelCall
+
+::: roomkit.ChannelResult
+
 ## Errors
 
 ::: roomkit.TurnLinkError

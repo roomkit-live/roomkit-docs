@@ -196,16 +196,25 @@ current value and its available choices. RoomKit records them when a session
 opens and follows the agent's `config_option_update` notifications:
 
 ```python
-agent.session_config(room_id)
+await kit.channel_call("claude-code", room_id, "session_config")
 # {"mode": "auto", "model": "sonnet", "effort": "xhigh"}
 
-agent.config_options(room_id)          # full descriptors, for a picker
+await kit.channel_call("claude-code", room_id, "config_options")  # for a picker
 # [{"id": "model", "name": "Model", "currentValue": "sonnet",
 #   "options": [{"value": "opus[1m]", "name": "Opus"}, ...]}, ...]
 
-await agent.set_config_option(room_id, "model", "opus[1m]")
+await kit.channel_call(
+    "claude-code", room_id, "set_config_option", config_id="model", value="opus[1m]"
+)
 # {"mode": "auto", "model": "opus[1m]", "effort": "xhigh"}
 ```
+
+`kit.channel_call` reaches the room's session wherever its turns run: the
+agent's turns go through the [turn backend](../features.md#turn-execution-every-agent-turn-behind-a-backend),
+and the call goes to the executor that holds the room's session. The same
+methods exist on the channel object (`agent.session_config(room_id)`,
+`await agent.set_config_option(room_id, "model", "opus[1m]")`), which reach
+this process's copy alone: a value set there is not kept with the room.
 
 Both readers are empty until the room's session exists — sessions open on the
 first prompt. `set_config_option()` opens one if needed (which starts the
@@ -278,11 +287,14 @@ agent = ACPChannel(
 - **`session_config`** maps ACP config ids to values (`mode`, `model`, an
   agent's own options). The channel sets each one the new session does not
   already announce, before the first prompt.
-- **A value you set with `set_config_option(room_id, ...)` belongs to the
-  room.** The room's next session is set to it too, over `session_config`, so
-  a restarted agent comes back on the model and the mode the room had.
-  `close_session(room_id)` forgets it: the room's next session opens on
-  `session_config` alone.
+- **A value you set with `set_config_option` belongs to the room.** The
+  room's next session is set to it too, over `session_config`, so a
+  restarted agent comes back on the model and the mode the room had. Set
+  through `kit.channel_call`, it is stored with the room (room metadata,
+  under `roomkit:channel_state:<channel_id>`), so the session another
+  executor opens for the room after losing this one is set to it as well.
+  `close_session` forgets it: the room's next session opens on
+  `session_config` alone. Detaching the agent from the room forgets it too.
 - **A value the agent refuses fails closed.** The session is released and never
   prompted, and the turn fails (or `set_config_option` raises) with a
   `RuntimeError` naming the option. The mode is what makes the agent ask
@@ -368,7 +380,8 @@ uv run python examples/acp_claude_code.py --thinking-tokens 0
 The model is pinned at startup with `--model` (forwarded as
 `ANTHROPIC_MODEL`, the adapter's highest-priority model source) and switched
 mid-session with the example's own `/model` command, which routes through
-`set_config_option()` so the console's status bar follows:
+`kit.channel_call(..., "set_config_option", ...)` so the console's status bar
+follows:
 
 ```bash
 uv run python examples/acp_claude_code.py --model sonnet
@@ -577,9 +590,11 @@ an AI channel does: `Discussion(agents=[investigator, dev, sre])` with `dev` an
 the room, which message the turn answers, how the room works) under the
 runtime's header, and a copy of that header in what participants wrote is
 replaced. Holding the agent (`listen_only`) while its turn runs cancels its
-prompt. Its long work is better started with `kit.start_task(room_id, "dev",
-...)`: the task runs in a session of its own, in a child room, while the
-discussion goes on.
+prompt, through `kit.steer` as the discussion cuts any agent: wherever the
+turn runs, the agent receives `session/cancel` and the turn ends as its
+prompt returns. Its long work is better started with
+`kit.start_task(room_id, "dev", ...)`: the task runs in a session of its own,
+in a child room, while the discussion goes on.
 
 ## Contributing context the agent cannot fetch
 
@@ -863,8 +878,9 @@ requests by default. To approve selected operations, provide an
     in `plan` mode it refuses every action that is not a read itself. Set the
     mode you rely on for every session with
     `ACPChannel(session_config={"mode": "default"})`, or for one room with
-    `await agent.set_config_option(room_id, "mode", "default")`, which the room
-    keeps across a recovery or an agent restart
+    `await kit.channel_call("claude-code", room_id, "set_config_option",
+    config_id="mode", value="default")`, which the room keeps across a
+    recovery, an agent restart or another executor
     ([Setting up each room's session](#setting-up-each-rooms-session)).
 
 ```python
@@ -960,15 +976,29 @@ permission options it presents.
 ## Cancellation and lifecycle
 
 ```python
-# Notify the agent that the active turn should stop.
-cancelled = await agent.cancel("coding-session")
+# Stop the room's running turn, wherever it runs: the agent is sent
+# session/cancel and the turn ends as its prompt returns. How many it reached.
+reached = await kit.steer(Cancel(reason="stop"), "claude-code", room_id="coding-session")
 
 # Forget one Room's ACP session but keep the process for other Rooms.
-closed = await agent.close_session("coding-session")
+closed = await kit.channel_call("claude-code", "coding-session", "close_session")
+
+# Detaching the agent from the room closes the room's session too.
+await kit.detach_channel("coding-session", "claude-code")
 
 # RoomKit.close() closes all sessions and the subprocess.
 await kit.close()
 ```
+
+An `ACPChannel` steers a `Cancel` only (`Cancel` from `roomkit.models.steering`):
+another directive reaches no turn and answers 0, and so does a room with no
+turn running. `agent.cancel(room_id)` is the same cancel on this process's
+channel object.
+
+A detach closes the room's session and forgets the values set on it, so a
+later attachment opens a new session caught up on the room. A turn still
+running keeps its session to its end, and the session is closed then: the
+detach does not wait for it.
 
 `cancel` reaches a turn from the moment it holds the room: while the agent is
 started and its session opened or set up (which takes a second or more with
