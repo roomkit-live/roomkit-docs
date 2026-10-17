@@ -416,8 +416,10 @@ await backend.serve(executor)
 ```
 
 It builds a channel once per id, wires it, and closes what it built when it
-closes. Each request also carries the broadcast span's context
-(`TurnRequest.trace`), which an executor in another process continues.
+closes. Each request also carries the broadcast span's id
+(`TurnRequest.trace`), which a turn in a context of its own continues on the
+same telemetry provider; a trace another process's provider continues comes
+with the distributed backend.
 
 A strategy that takes an agent's turns (a
 `Loop`, a supervisor's delegation passes) runs on the room's owner, and each
