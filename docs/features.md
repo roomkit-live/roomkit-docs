@@ -382,9 +382,12 @@ reaches the lane as a live object.
   back as `RemoteTurnError`, keeping its class name.
 
 The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
-see [Hook System](#hook-system)). Steering, human input, RoomKit's own tools
-and the strategies' turn runners still run on the channel the kit holds;
-running turns in another process follows with a distributed backend.
+see [Hook System](#hook-system)). A strategy that takes an agent's turns (a
+`Loop`, a supervisor's delegation passes) runs on the room's owner, and each
+generation it asks of the agent is a turn of its own through the backend.
+Steering, human input and RoomKit's own tools still run on the channel the
+kit holds; running turns in another process follows with a distributed
+backend.
 
 ### Inbound Routing: One Conversation per Correspondent
 

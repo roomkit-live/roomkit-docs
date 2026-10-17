@@ -4471,8 +4471,8 @@ A room holds one strategy at a time, and can change it while it lives
 as `create_room(orchestration=...)` does, and keeps the timeline: the agents'
 turns read the conversation so far. `uninstall_strategy` runs the strategy's
 own `uninstall()` step, then takes back what its install added for the room:
-room hooks, tools and turn runners set up on the agents, agents it attached,
-room metadata it wrote.
+room hooks, tools set up on the agents, the turn runners the kit keeps for
+them, agents it attached, room metadata it wrote.
 
 ```python
 await kit.install_strategy(room_id, Discussion([assistant, dev]))   # on a live room
