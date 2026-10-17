@@ -1442,6 +1442,45 @@ realtime pipeline alike. A host that renders the agent's identity in its own
 prompt passes `identity_in_prompt=False`: no block is written anywhere, and
 the fields stay readable on the agent.
 
+## An Agent the Kit Holds by Its Declaration
+
+The kit that owns the rooms needs no live agent object (RFC §10.6.2): it
+registers a `ChannelDeclaration`, and a `TurnExecutor` builds the agent where
+its turns run, from the host's factory:
+
+```python
+from roomkit import AgentIdentity, ChannelDeclaration, RoomKit
+from roomkit.turns import InMemoryTurnBackend, TurnExecutor
+
+backend = InMemoryTurnBackend()
+executor = TurnExecutor(build_agent, hosts=lambda channel_id: channel_id == "meteo", store=store)
+await backend.serve(executor)  # in this process or another, on a shared backend
+
+kit = RoomKit(store=store, turn_backend=backend)
+kit.register_channel(
+    ChannelDeclaration(
+        channel_id="meteo",
+        identity=AgentIdentity(name="Meteo", greeting="Hi, ask me the weather."),
+        recent_events_window=50,
+    )
+)
+await kit.attach_channel(room_id, "meteo")  # an intelligence binding
+```
+
+- The kit holds a `DeclaredChannel` under the id: a binding takes its
+  `capabilities`, routing plans its turns, `delegate` / `start_task` name it,
+  `send_greeting` and auto-greet read its identity (`auto_greet` defaults to
+  true, as on `Agent`).
+- Its turns run on an executor that takes the id; the kit's own executor never
+  builds it, so with none they fail at once with `no_executor`.
+- `agent.declaration()` gives any channel's declaration; registering it reads
+  on the kit as registering the agent does.
+- Refused: a declaration that is not an intelligence channel's, a binding of
+  it with another category, and a strategy (Supervisor, Loop, Discussion,
+  Pipeline, Swarm) given a live agent whose id the kit holds by declaration.
+
+Runnable: `examples/declared_agent.py`.
+
 ## Steering a Running Turn
 
 `steer()` hands a running tool loop a directive (`Cancel`, `InjectMessage`,
@@ -6332,6 +6371,9 @@ RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import
 | `TurnBackend` | ABC for what carries an intelligence channel's turns between the room owner and an executor (RFC §10.6) |
 | `InMemoryTurnBackend` | Default turn backend: in this process, every message serialized |
 | `TurnExecutor` | Builds a channel and runs its turns; the kit owns one reading its registered channels. One a host builds (`TurnExecutor(build_channel, store=, media_resolver=, attached_media=, telemetry=)`) builds each channel once, wires it as the kit wires the ones it registers (its hooks fire, what the channel publishes during a turn crosses as `ephemeral` / `framework_event` frames), and closes what it built; `executor.room_hook(name, trigger)(fn)` defines a room hook by name |
+| `ChannelDeclaration` | What the room's owner knows of a channel without its object: `channel_id`, `channel_type`, `category`, `capabilities`, `identity`, `thinks_while_listening`, `recent_events_window`; `channel.declaration()` gives a live channel's |
+| `AgentIdentity` | An agent's identity in its declaration: `name`, `role`, `description`, `scope`, `greeting`, `language`, `auto_greet` |
+| `DeclaredChannel` | The channel the kit holds for a registered declaration: bound and routed to, never run in the kit's process |
 | `TurnClient` | The room owner's side: runs a turn, reads it back as the channel's `ChannelOutput` |
 | `OwnerTools` | ABC for the tools a room owner serves its turns: what a request lists, how a call's handler runs |
 | `OwnerTool` | One tool a turn's request lists, served by the room owner (`tool`, `waits_by_design`) |
@@ -6474,7 +6516,7 @@ kit = RoomKit(
 
 | Method | Description |
 |--------|-------------|
-| `register_channel(channel)` | Register a channel |
+| `register_channel(channel)` | Register a channel, or a `ChannelDeclaration`: an intelligence channel held by its declaration alone, its turns run on an executor that builds it (RFC §10.6.2) |
 | `attach_channel(room_id, channel_id, category?, access?, ...)` | Attach channel to room |
 | `detach_channel(room_id, channel_id)` | Detach channel from room |
 | `mute(room_id, channel_id)` | Mute a channel |

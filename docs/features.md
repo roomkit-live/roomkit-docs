@@ -509,6 +509,36 @@ verbs with `Channel.channel_call`, and what belongs to the room with
 `room_state` / `restore_room_state`. Running turns in another process
 follows with a distributed backend.
 
+**The kit can hold an agent by its declaration alone.** An agent holds live
+objects (its provider, its MCP clients, its memory) that the kit owning the
+rooms does not need. The kit registers a `ChannelDeclaration` instead, and an
+executor builds the agent where its turns run (RFC §10.6.2):
+
+```python
+from roomkit import AgentIdentity, ChannelDeclaration
+
+executor = TurnExecutor(build_agent, hosts=lambda channel_id: channel_id == "meteo", store=store)
+await backend.serve(executor)
+
+kit = RoomKit(store=store, turn_backend=backend)
+kit.register_channel(
+    ChannelDeclaration(
+        channel_id="meteo",
+        identity=AgentIdentity(name="Meteo", greeting="Hi, ask me the weather."),
+    )
+)
+await kit.attach_channel(room_id, "meteo")
+```
+
+The kit holds a `DeclaredChannel` under the id, which a binding, routing,
+`delegate`, `start_task`, `send_greeting` and auto-greet read as they read a
+live agent; `channel.declaration()` gives a live channel's, and registering
+it reads on the kit as registering the agent does. The kit's own executor
+never builds a declared channel: with no executor taking the id, its turns
+fail at once with `no_executor`. A declared channel is bound as an
+intelligence channel only, and a strategy given a live agent whose id the kit
+holds by declaration is refused. Runnable: `examples/declared_agent.py`.
+
 ### Inbound Routing: One Conversation per Correspondent
 
 A message that arrives without a `room_id` is routed by the default
