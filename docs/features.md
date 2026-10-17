@@ -391,7 +391,35 @@ reaches the lane as a live object.
   out (past 10 000 rooms).
 
 The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
-see [Hook System](#hook-system)). A strategy that takes an agent's turns (a
+see [Hook System](#hook-system)). **The executor wires the channels it runs**,
+the kit's own as one you build: the callbacks an AI channel's loop fires
+`BEFORE_TOOL_USE`, `ON_TOOL_CALL`, `ON_AI_RESPONSE` and the other turn
+triggers through, its realtime backend, its readers of the store, the host's
+media readers. During a turn, what the channel publishes (thinking, tool-call
+progress, a plan) and the framework events its hooks emit cross the backend as
+`ephemeral` and `framework_event` frames, which the room's owner publishes on
+its realtime backend and its bus; what the room's owner process alone knows (a
+room's background tasks, what its cameras last saw) the turn reads through
+its host. An executor you build takes the store its hooks read a room's
+context from, and the host's media readers and telemetry:
+
+```python
+from roomkit import TurnExecutor
+
+executor = TurnExecutor(
+    build_agent,                  # the channel for a channel id, built once
+    store=store,                  # shared with the room's owner
+    media_resolver=resolve_media,
+    telemetry=telemetry,
+)
+await backend.serve(executor)
+```
+
+It builds a channel once per id, wires it, and closes what it built when it
+closes. Each request also carries the broadcast span's context
+(`TurnRequest.trace`), which an executor in another process continues.
+
+A strategy that takes an agent's turns (a
 `Loop`, a supervisor's delegation passes) runs on the room's owner, and each
 generation it asks of the agent is a turn of its own through the backend.
 
@@ -775,12 +803,30 @@ register_turn_hooks(kit.turn_executor)
 
 `kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
 code that registers on triggers of both sides (`roomkit.TURN_TRIGGERS` lists
-the turn's). Only the kit's own executor fires these hooks today: an executor
-you build runs its turns without them.
+the turn's). An executor you build fires them too: it wires each channel its
+factory builds, as the kit wires the ones it registers, and gives its hooks a
+room context read from the store you give it:
+
+```python
+executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared store
+register_turn_hooks(executor)
+```
+
+A room hook on one of these triggers is defined by name on the executors and
+enabled per room on the kit, which names a room's hooks in each turn's
+request; only an executor that defines every name takes the room's turns:
+
+```python
+@kit.turn_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
+async def audit(event, ctx) -> None: ...
+
+kit.enable_room_hook("vip-room", "audit")
+kit.disable_room_hook("vip-room", "audit")
+```
 
 Hook features:
 - **Priority ordering** -- Hooks execute in priority order (lower numbers first)
-- **Per-room hooks** -- Attach hooks to specific rooms dynamically via `add_room_hook()`
+- **Per-room hooks** -- Attach hooks to specific rooms dynamically via `add_room_hook()`; a trigger a turn fires is a named hook enabled per room (`enable_room_hook()`)
 - **Global hooks** -- Apply to all rooms via the `@kit.hook()` decorator
 - **Timeout protection** -- Configurable timeout per hook (default 30s)
 - **Error isolation** -- Hook failures are logged and collected as `hook_errors` but don't crash the pipeline
