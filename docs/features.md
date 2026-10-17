@@ -401,6 +401,31 @@ cut, the owner cancels the handler. `ON_TOOL_CALL` still reports it on the
 executor, with the handler's error class name. `TaskStatusTool` and
 `CancelTaskTool` remain your tools, run with the channel.
 
+**Your tools reach the room through the turn's host.** A tool of yours, or a
+hook the executor fires (`kit.turn_executor.hook(...)`), runs where the turn
+runs. To change a room it asks `current_turn_host()`, which answers inside a
+tool call of a turn and inside such a hook during it, and `None` anywhere else:
+
+```python
+from roomkit import TextContent, current_turn_host
+from roomkit.tools import current_tool_room_id
+
+async def handler(name, arguments):
+    host, room_id = current_turn_host(), current_tool_room_id()
+    await host.send_event(room_id, "ops", TextContent(body="Looking it up"), addressed_to=[])
+    task_id = await host.delegate(room_id, "researcher", arguments["question"])
+    result = await host.wait_task(task_id, timeout=120)
+    return result.output if result else "Still working on it."
+```
+
+Each verb (`send_event`, `delegate`, `wait_task`, `post_status`,
+`update_room_metadata`, `add_observation`) crosses the backend as data and
+runs on the room's owner, with the reentrancy of the task reading the turn: an
+event sent into the room from a turn the room's lane itself reads comes back
+detached rather than waiting on that lane. In memory a tool may still call the
+kit it holds; the host is the way that keeps working when the executor runs
+in another process.
+
 Steering and human input still run on the channel the kit holds; running
 turns in another process follows with a distributed backend.
 

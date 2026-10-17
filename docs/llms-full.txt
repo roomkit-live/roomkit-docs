@@ -6289,6 +6289,8 @@ RoomKit exports **255 symbols** from `roomkit`. Providers and voice types import
 | `TurnClient` | The room owner's side: runs a turn, reads it back as the channel's `ChannelOutput` |
 | `OwnerTools` | ABC for the tools a room owner serves its turns: what a request lists, how a call's handler runs |
 | `OwnerTool` | One tool a turn's request lists, served by the room owner (`tool`, `waits_by_design`) |
+| `TurnHost` | What a host's tool or hook on a turn's executor asks of the room owner: `send_event`, `delegate`, `wait_task`, `post_status`, `update_room_metadata`, `add_observation` |
+| `current_turn_host()` | The `TurnHost` of the turn the current code runs in; `None` outside a turn |
 | `TurnLinkError` | A turn the backend could not carry to its end (`no_executor`, `executor_lost`, `frame_lost`) |
 | `RemoteTurnError` | An error raised across the turn backend of a class outside RoomKit and Python, keeping its class name |
 | `DeliveryResult` | Result of delivering a message |
