@@ -19,6 +19,12 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.ExecutorLink
 
+## Owner-served tools
+
+::: roomkit.OwnerTools
+
+::: roomkit.OwnerTool
+
 ## Messages
 
 ::: roomkit.TurnRequest
