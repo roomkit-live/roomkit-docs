@@ -125,6 +125,31 @@ it, a refusal places it again, and a process that does not answer within
 retries a pipeline whose connection dropped after Redis executed it writes
 its messages twice: each is still handled once.
 
+## Errors across processes
+
+An error a turn raised on the executor reaches the room owner rebuilt from a
+message (RFC §10.6.8). RoomKit's classes and Python's come back as
+themselves; your application's come back as themselves only in a process
+that declares them, and each process declares its own: the owner reads what
+the executor raised, and the executor reads what an owner-served tool or a
+host verb raised.
+
+```python
+ERRORS = (QuotaExceededError, httpx.HTTPError)  # a class covers its subclasses
+
+# The room owner
+kit = RoomKit(store=store, turn_backend=backend, error_classes=ERRORS)
+# Each executor's process
+executor = TurnExecutor(build_agent, hosts={"meteo"}, store=store, error_classes=ERRORS)
+```
+
+A class a process does not declare comes back as a `RemoteTurnError`: its
+`kind` names the class, its attributes JSON carries are kept, and it is also
+an instance of the nearest ancestor the process rebuilds, so a subclass of
+`ProviderError` still reads as a `ProviderError` (its log line, `ON_ERROR`).
+A class named in a message is looked up among the modules the process has
+already loaded: a message never makes a process import anything.
+
 ## Work after a turn
 
 A thought posted after the turn ended, a background task's status: what an

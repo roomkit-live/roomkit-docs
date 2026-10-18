@@ -392,9 +392,13 @@ reaches the lane as a live object.
   behaves as before.
 - **Liveness both ways.** A silent executor fails the turn with
   `TurnLinkError` (`executor_lost`) and the room moves on. A turn no
-  executor declares fails at once with `no_executor`. An error of a class
-  outside RoomKit and Python comes back as `RemoteTurnError`, keeping its
-  class name.
+  executor declares fails at once with `no_executor`. An error comes back as
+  its own class, attributes and causes kept, when it is RoomKit's, Python's
+  or one the application declares (`RoomKit(error_classes=...)`,
+  `TurnExecutor(error_classes=...)`, a class covering its subclasses); any
+  other as a `RemoteTurnError` that keeps its class name, its JSON
+  attributes, and reads as its nearest ancestor rebuilt there (a
+  `ProviderError` subclass still reads as a `ProviderError`).
 - **A room's turns stay where its state is.** A channel keeps state per room
   between two turns (an AI channel's thought, an ACP agent's session). The
   backend places a room's turns of a channel on the executor that took its

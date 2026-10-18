@@ -6422,7 +6422,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `TurnBackend` | ABC for what carries an intelligence channel's turns between the room owner and an executor (RFC §10.6) |
 | `InMemoryTurnBackend` | Default turn backend: in this process, every message serialized |
 | `RedisTurnBackend` | Turn backend across processes (`pip install roomkit[redis]`): one per process on a shared Redis and store; an executor declared with `hosts={...}` takes turns from every process, beating from a thread; a killed executor fails its turn with `executor_lost` |
-| `TurnExecutor` | Builds a channel and runs its turns; the kit owns one reading its registered channels. One a host builds (`TurnExecutor(build_channel, hosts={...}, store=, media_resolver=, attached_media=, telemetry=)`, `hosts` the set of channel ids it runs, or a predicate for its own process only) builds each channel once, wires it as the kit wires the ones it registers (its hooks fire, what the channel publishes during a turn crosses as `ephemeral` / `framework_event` frames), and closes what it built; `executor.room_hook(name, trigger)(fn)` defines a room hook by name |
+| `TurnExecutor` | Builds a channel and runs its turns; the kit owns one reading its registered channels. One a host builds (`TurnExecutor(build_channel, hosts={...}, store=, media_resolver=, attached_media=, telemetry=, error_classes=)`, `hosts` the set of channel ids it runs, or a predicate for its own process only) builds each channel once, wires it as the kit wires the ones it registers (its hooks fire, what the channel publishes during a turn crosses as `ephemeral` / `framework_event` frames), and closes what it built; `executor.room_hook(name, trigger)(fn)` defines a room hook by name |
 | `ChannelDeclaration` | What the room's owner knows of a channel without its object: `channel_id`, `channel_type`, `category`, `capabilities`, `identity`, `thinks_while_listening`, `recent_events_window`; `channel.declaration()` gives a live channel's |
 | `AgentIdentity` | An agent's identity in its declaration: `name`, `role`, `description`, `scope`, `greeting`, `language`, `auto_greet` |
 | `DeclaredChannel` | The channel the kit holds for a registered declaration: bound and routed to, never run in the kit's process |
@@ -6440,7 +6440,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `CommittedEvent` | Channel control to the executor holding the room's state, else one declaring the channel, without moving the holder: it calls `on_room_event(room_id, event)` (a discussion's memory hand-off, RFC §10.6.3) |
 | `ChannelControl` | The union of `RoomAttached`, `RoomDetached`, `CommittedEvent` and `ChannelCall` that `TurnBackend.control()` carries |
 | `TurnLinkError` | A turn the backend could not carry to its end (`no_executor`, at once when no executor declares the channel; `executor_lost`, `frame_lost`) |
-| `RemoteTurnError` | An error raised across the turn backend of a class outside RoomKit and Python, keeping its class name |
+| `RemoteTurnError` | An error raised across the turn backend of a class the reading side does not rebuild (outside RoomKit, Python and its `error_classes`): keeps the class name (`kind`), its ancestors (`bases`) and its JSON attributes, and is also an instance of the nearest ancestor that side rebuilds (a `ProviderError` subclass still reads as one) |
 | `DeliveryResult` | Result of delivering a message |
 | `DeliveryStatus` | Delivery status from provider webhook |
 
@@ -6551,6 +6551,7 @@ kit = RoomKit(
     orchestration=None,            # Default Orchestration strategy for create_room()
     persistence_policy=None,       # PersistencePolicy — which event types are persisted (None = all)
     turn_backend=None,             # TurnBackend for intelligence turns (default: InMemoryTurnBackend)
+    error_classes=(),              # Application exception classes (with subclasses) rebuilt as themselves across the turn backend
 )
 ```
 
