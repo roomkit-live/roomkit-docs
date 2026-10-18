@@ -100,7 +100,7 @@ wrapping it:
 from roomkit import HookExecution, HookTrigger, SpeakDecisionEvent
 
 
-@kit.turn_executor.hook(HookTrigger.ON_SPEAK_DECISION, execution=HookExecution.ASYNC)
+@kit.hook(HookTrigger.ON_SPEAK_DECISION, execution=HookExecution.ASYNC)
 async def on_decision(event: SpeakDecisionEvent, ctx) -> None:
     again = " (asked again)" if event.asked_again else ""
     logger.info(
@@ -403,7 +403,7 @@ early on `purpose == "thought"`:
 from roomkit import HookResult, HookTrigger
 
 
-@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def no_ai_without_consent(event, ctx) -> HookResult:
     if not consented(event.room_id):
         return HookResult.block("no consent")  # no answer, no thought
@@ -422,7 +422,7 @@ nothing.
 from roomkit import HookExecution, HookTrigger, ThoughtEvent
 
 
-@kit.turn_executor.hook(HookTrigger.ON_THOUGHT, execution=HookExecution.ASYNC)
+@kit.hook(HookTrigger.ON_THOUGHT, execution=HookExecution.ASYNC)
 async def on_thought(event: ThoughtEvent, ctx) -> None:
     took = f"{event.duration_ms} ms" if event.duration_ms is not None else "no call"
     logger.info("%s thinks (%s): %s", event.channel_id, took, event.thought.text)

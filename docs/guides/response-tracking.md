@@ -52,7 +52,7 @@ thread and always names the thread's root (see
 from roomkit import HookResult, HookTrigger, add_turn_note
 from roomkit.tools.fence import fence
 
-@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def scope_the_turn(event, ctx) -> HookResult:
     trigger = event.trigger
     note = "This turn answers the message below. Answer that only.\n" + fence(

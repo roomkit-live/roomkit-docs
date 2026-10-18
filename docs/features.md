@@ -404,8 +404,8 @@ reaches the lane as a live object.
   it before the turn runs, and so does one whose record of the room fell
   out (past 10 000 rooms).
 
-The hooks of a turn register on the executor (`kit.turn_executor.hook(...)`,
-see [Hook System](#hook-system)). **The executor wires the channels it runs**,
+The hooks of a turn fire on the executor (`kit.hook(...)` registers them on
+the kit's own, see [Hook System](#hook-system)). **The executor wires the channels it runs**,
 the kit's own as one you build: the callbacks an AI channel's loop fires
 `BEFORE_TOOL_USE`, `ON_TOOL_CALL`, `ON_AI_RESPONSE` and the other turn
 triggers through, its realtime backend, its readers of the store, the host's
@@ -466,7 +466,7 @@ its turn when the agent itself declares a tool of that name, so a clash shows
 at the first turn rather than reaching one handler or the other.
 
 **Your tools reach the room through the turn's host.** A tool of yours, or a
-hook the executor fires (`kit.turn_executor.hook(...)`), runs where the turn
+hook the executor fires (`kit.hook(...)`), runs where the turn
 runs. To change a room it asks `current_turn_host()`, which answers inside a
 call of your tool during a turn and inside such a hook during it, and `None`
 anywhere else:
@@ -927,11 +927,24 @@ async def log_event(event: RoomEvent, ctx: RoomContext) -> None:
 **Hooks of a turn.** The triggers a turn fires (`BEFORE_AI_GENERATION`,
 `ON_AI_THINKING`, `ON_AI_RESPONSE`, `BEFORE_TOOL_USE`, `AFTER_TOOL_ROUND`,
 `ON_TOOL_CALL`, `ON_USER_INPUT_REQUIRED`, `ON_SPEAK_DECISION`, `ON_THOUGHT`,
-`ON_PLAN_UPDATED`) fire on the turn executor that runs the turn (RFC §10.6.6),
-so their hooks register there; `kit.hook(...)` refuses them with a
-`ValueError` that names the right call. Write them in one function you run on
-every executor, the kit's own included: realtime voice and conference tool
-calls fire the same hooks.
+`ON_PLAN_UPDATED`) fire on the turn executor that runs the turn (RFC §10.6.6).
+Registered on the kit, such a hook is the kit's own executor's: it fires for
+the agents the kit runs, and for realtime voice and conference tool calls.
+
+```python
+@kit.hook(HookTrigger.BEFORE_TOOL_USE, name="tool_gate")
+async def tool_gate(event, ctx) -> HookResult:
+    return HookResult.allow()
+```
+
+An agent the kit holds by its declaration alone
+(`kit.register_channel(ChannelDeclaration(...))`) runs its turns on another
+executor, where a hook on the kit never fires. So the kit refuses, with a
+`ValueError` naming the executor-side call, a turn hook such an agent could
+fire (`channel_ids` can leave it out), and such a declaration while such a
+hook is registered; a room hook on a turn trigger is refused while the kit
+holds any declared agent. Register those hooks on the executor that runs the
+agent, in one function you run on every executor:
 
 ```python
 def register_turn_hooks(executor):
@@ -939,7 +952,7 @@ def register_turn_hooks(executor):
     async def tool_gate(event, ctx) -> HookResult:
         return HookResult.allow()
 
-register_turn_hooks(kit.turn_executor)
+register_turn_hooks(host_executor)
 ```
 
 `kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
@@ -953,12 +966,14 @@ executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared s
 register_turn_hooks(executor)
 ```
 
-A room hook on one of these triggers is defined by name on the executors and
-enabled per room on the kit, which names a room's hooks in each turn's
-request; only an executor that defines every name takes the room's turns:
+`kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
+kit's own executor's hook for that room. For agents other executors run, a
+room hook is defined by name on the executors and enabled per room on the
+kit, which names a room's hooks in each turn's request; only an executor that
+defines every name takes the room's turns:
 
 ```python
-@kit.turn_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
+@host_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
 async def audit(event, ctx) -> None: ...
 
 kit.enable_room_hook("vip-room", "audit")
@@ -995,7 +1010,7 @@ run; a MODIFY's returned event is not read. Neither a realtime session, nor a
 reasoning backend's agent, nor an ACP agent's own loop fires it.
 
 ```python
-@kit.turn_executor.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")
+@kit.hook(HookTrigger.AFTER_TOOL_ROUND, name="close_mailbox")
 async def close_mailbox(event: ToolRoundEvent, ctx: RoomContext) -> HookResult:
     if event.results and all(r.is_error for r in event.results):
         event.withdraw("mail_search", "mail_read")
@@ -2315,14 +2330,14 @@ from roomkit.models.enums import HookTrigger
 from roomkit.models.hook import HookResult
 
 # Budget gating — block expensive generation before tokens are spent
-@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def check_budget(event, ctx):
     if await is_over_budget(ctx.room.metadata.get("tenant_id")):
         return HookResult.block(reason="Monthly token budget exceeded")
     return HookResult.allow()
 
 # PII redaction — strip sensitive data before it leaves your infrastructure
-@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def redact_pii(event, ctx):
     for msg in event.ai_context.messages:
         if msg.role == "user" and isinstance(msg.content, str):
@@ -2332,7 +2347,7 @@ async def redact_pii(event, ctx):
 # Knowledge injection — a block in the turn's notes, never the system prompt,
 # which a provider caches ahead of the whole history (RFC §6.4). The search
 # reads the participant's words, not the notes the channel already added.
-@kit.turn_executor.hook(HookTrigger.BEFORE_AI_GENERATION)
+@kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def inject_knowledge(event, ctx):
     last = event.ai_context.messages[-1]
     if last.role != "user" or not isinstance(last.content, str):

@@ -909,11 +909,24 @@ async def log_event(event: RoomEvent, ctx: RoomContext) -> None:
 **Hooks of a turn.** The triggers a turn fires (`BEFORE_AI_GENERATION`,
 `ON_AI_THINKING`, `ON_AI_RESPONSE`, `BEFORE_TOOL_USE`, `AFTER_TOOL_ROUND`,
 `ON_TOOL_CALL`, `ON_USER_INPUT_REQUIRED`, `ON_SPEAK_DECISION`, `ON_THOUGHT`,
-`ON_PLAN_UPDATED`) fire on the turn executor that runs the turn (RFC §10.6.6),
-so their hooks register there; `kit.hook(...)` refuses them with a
-`ValueError` that names the right call. Write them in one function you run on
-every executor, the kit's own included: realtime voice and conference tool
-calls fire the same hooks.
+`ON_PLAN_UPDATED`) fire on the turn executor that runs the turn (RFC §10.6.6).
+Registered on the kit, such a hook is the kit's own executor's: it fires for
+the agents the kit runs, and for realtime voice and conference tool calls.
+
+```python
+@kit.hook(HookTrigger.BEFORE_TOOL_USE, name="tool_gate")
+async def tool_gate(event, ctx) -> HookResult:
+    return HookResult.allow()
+```
+
+An agent the kit holds by its declaration alone
+(`kit.register_channel(ChannelDeclaration(...))`) runs its turns on another
+executor, where a hook on the kit never fires. So the kit refuses, with a
+`ValueError` naming the executor-side call, a turn hook such an agent could
+fire (`channel_ids` can leave it out), and such a declaration while such a
+hook is registered; a room hook on a turn trigger is refused while the kit
+holds any declared agent. Register those hooks on the executor that runs the
+agent, in one function you run on every executor:
 
 ```python
 def register_turn_hooks(executor):
@@ -921,7 +934,7 @@ def register_turn_hooks(executor):
     async def tool_gate(event, ctx) -> HookResult:
         return HookResult.allow()
 
-register_turn_hooks(kit.turn_executor)
+register_turn_hooks(host_executor)
 ```
 
 `kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
@@ -935,12 +948,14 @@ executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared s
 register_turn_hooks(executor)
 ```
 
-A room hook on one of these triggers is defined by name on the executors and
-enabled per room on the kit, which names a room's hooks in each turn's
-request; only an executor that defines every name takes the room's turns:
+`kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
+kit's own executor's hook for that room. For agents other executors run, a
+room hook is defined by name on the executors and enabled per room on the
+kit, which names a room's hooks in each turn's request; only an executor that
+defines every name takes the room's turns:
 
 ```python
-@kit.turn_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
+@host_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
 async def audit(event, ctx) -> None: ...
 
 kit.enable_room_hook("vip-room", "audit")
@@ -1006,9 +1021,9 @@ oversight. Two levers exist if you need more, and their exact scope matters:
   }
   ```
 
-  A trigger a turn fires (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`...) is in the
-  set of the turn executor's engine instead, `kit.turn_executor.hooks`, and
-  setting it on the kit's raises.
+  A trigger a turn fires (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`...) set there
+  goes to the kit's own executor; an executor you build has its own set,
+  `executor.hooks.FAIL_CLOSED_TRIGGERS`.
 
   Weigh it first: fail-closed moderation means an outage in your hook is an
   outage of the room.
@@ -4000,7 +4015,7 @@ provider = OpenAIRealtime(
 ```python
 from roomkit import HookTrigger, HookExecution
 
-@kit.turn_executor.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC)
+@kit.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC)
 async def on_tool(event, ctx):
     print(f"Realtime tool call: {event}")
 
