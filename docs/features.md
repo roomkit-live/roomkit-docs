@@ -369,7 +369,21 @@ reaches the lane as a live object.
 
 - **The stream is pulled.** The executor advances the channel's stream only
   as the lane reads it: a muted agent, or an event a hook injected for an
-  agent, closes the stream unread and never calls the provider.
+  agent, closes the stream unread and never calls the provider. Each read
+  grants a window of items, so text and reasoning deltas are read ahead of
+  the lane, never past a call's start, a segment break or a round's end
+  until the lane asks for what follows: a tool call or a round starts only
+  once the lane reads on. Text deltas the channel yields without a wait
+  between them cross as one item, their text joined: a reader sees the
+  same text, cut differently (a voice channel's sentence budget reads it a
+  sentence at a time). 2000 deltas yielded at once cost the lane about 3 ms
+  of CPU, 68 ms before.
+- **What is kept is what was read.** Deltas read ahead that the lane had not
+  read when the turn was cancelled or its stream closed are dropped, so the
+  room stores what its readers showed. A close that finds the executor
+  reading ahead cuts that read at once; a tool call already running
+  finishes first. A cancelled delivery reports its cleanup done only once
+  each turn it read has ended on its executor.
 - **What the channel changes after yielding it** (its record, a call's
   arguments once a `BEFORE_TOOL_USE` hook fixed them, a call's end) reaches
   the lane before the next item.
