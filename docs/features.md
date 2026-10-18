@@ -549,8 +549,8 @@ next turn, on whichever executor runs it; a detach forgets it. Only
 `kit.channel_call` writes that key (`update_room_metadata` and `create_room`
 refuse it, a turn's host writes no `roomkit:` key). A channel declares its
 verbs with `Channel.channel_call`, and what belongs to the room with
-`room_state` / `restore_room_state`. Running turns in another process
-follows with a distributed backend.
+`room_state` / `restore_room_state`, which follow the room to an executor in
+another process too (see *Turns in another process* below).
 
 **The kit can hold an agent by its declaration alone.** An agent holds live
 objects (its provider, its MCP clients, its memory) that the kit owning the
@@ -560,7 +560,7 @@ executor builds the agent where its turns run (RFC §10.6.2):
 ```python
 from roomkit import AgentIdentity, ChannelDeclaration
 
-executor = TurnExecutor(build_agent, hosts=lambda channel_id: channel_id == "meteo", store=store)
+executor = TurnExecutor(build_agent, hosts={"meteo"}, store=store)
 await backend.serve(executor)
 
 kit = RoomKit(store=store, turn_backend=backend)
@@ -602,6 +602,48 @@ declaration is refused (give it the id), and a realtime
 its turns declare the owner's tools: none is set up for one that does not,
 and its delegated result is its text. Runnable:
 `examples/declared_agent.py`, `examples/declared_supervisor.py`.
+
+**Turns in another process, over Redis.** `RedisTurnBackend`
+(`pip install roomkit[redis]`) carries an agent's turns to an executor in
+another process, or on another machine, while the kit keeps the room: its
+ordering, its commits and its broadcasts do not move (RFC §10.6). One backend
+per process, on the same Redis and the same store:
+
+```python
+# The room owner's process
+backend = RedisTurnBackend("redis://localhost:6379")
+kit = RoomKit(store=PostgresStore(dsn=DSN), turn_backend=backend)
+kit.register_channel(ChannelDeclaration(channel_id="meteo", identity=AgentIdentity(name="Meteo")))
+
+# The executor's process
+backend = RedisTurnBackend("redis://localhost:6379")
+executor = TurnExecutor(build_agent, hosts={"meteo"}, store=PostgresStore(dsn=DSN))
+await backend.serve(executor)
+```
+
+- **An executor declares its channels as a set** (`hosts={"meteo"}`): only
+  such an executor takes turns from other processes; one given a predicate,
+  as the kit's own, takes those of its process only. The agents the kit
+  registers live stay in its process, carried in memory as before.
+- **Placement.** A room's turns of a channel go to the executor that took
+  its last one while it lives (its session state stays there, RFC §10.6.7),
+  else to one alive that declares the channel and defines the room's hooks;
+  new rooms spread over them. A turn no executor declares fails at once with
+  `no_executor`.
+- **Liveness.** An executor's process beats from a thread of its own, so a
+  turn busy with its CPU is slow, never lost; a killed executor fails its
+  turn with `executor_lost` within `heartbeat_timeout`, the text already
+  shown kept, and the room's next turn goes to another executor. The
+  backend's `timeouts` are the kit's and its executors': every process
+  keeps the same.
+- **Work after a turn** (a thought posted through `current_turn_host()`)
+  reaches the owner process that submitted the turn.
+- **Redis is the trust boundary**: whoever can write to it can act as an
+  executor or an owner. Restrict it as the rooms it carries (ACL, TLS).
+
+Guide: [Agent Turns in Another Process (Redis)](guides/turn-backend-redis.md).
+Runnable: `examples/turns_redis.py` (an executor in a second process, killed
+mid-answer, then replaced).
 
 ### Inbound Routing: One Conversation per Correspondent
 

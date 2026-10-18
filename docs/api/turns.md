@@ -9,6 +9,8 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.InMemoryTurnBackend
 
+::: roomkit.RedisTurnBackend
+
 ::: roomkit.TurnExecutor
 
 ::: roomkit.TurnClient

@@ -119,6 +119,7 @@ nav:
           - Multi-Agent Orchestration: guides/orchestration.md
           - "Discussion: Agents in a Group Chat": guides/discussion.md
           - Delivery Service: guides/delivery.md
+          - Agent Turns in Another Process (Redis): guides/turn-backend-redis.md
           - Speaking Turns: guides/speaking-turns.md
           - Classifiers: guides/classifiers.md
           - Agent Delegation: guides/agent-delegation.md

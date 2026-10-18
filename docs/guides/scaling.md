@@ -5,6 +5,12 @@ RoomKit processes behind a load balancer — all sharing **one** PostgreSQL stor
 you must add cross-process coordination, or concurrent workers can corrupt a
 room's event ordering. This guide covers what changes and how to configure it.
 
+!!! tip "Agent turns in other processes"
+    Several owner processes share rooms through the store and the lock
+    manager described here. To move the agents' turns themselves (their CPU,
+    their providers) to other processes, use the Redis turn backend: see
+    [Agent Turns in Another Process (Redis)](turn-backend-redis.md).
+
 ## Why a shared store needs more than the default lock
 
 Every event in a room gets a sequential `index` (0, 1, 2, …) that is unique and
