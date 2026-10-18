@@ -97,7 +97,9 @@ never stalls more than a few milliseconds.
 |---|---|
 | The executor's process is killed mid-answer | The turn fails with `executor_lost` within `heartbeat_timeout`; the text already shown is stored, as a response that failed (RFC §12.2 step 13s) |
 | No executor takes the turn within `accept_timeout` | The turn fails (`executor_lost`) |
-| The executor closed but its process still runs | The turn fails at once with `no_executor` |
+| The executor closed but its process still runs | Its process refuses the turn at once, and the turn goes to another executor (or fails with `no_executor` when none takes it) |
+| The executor is restarted under the same id | It is another executor: the turns of the dead process are lost, never kept alive by the new one |
+| Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
 
 In every case the room goes on: the next message is delivered, and its turn
@@ -110,8 +112,13 @@ timeouts = TurnTimeouts(heartbeat_interval=2.0, heartbeat_timeout=10.0, accept=1
 backend = RedisTurnBackend(url, timeouts=timeouts)   # the same in every process
 ```
 
-The backend's timeouts are those of the kit it is given to and of the
-executors it serves: give every process the same.
+The backend's timeouts are those of the kit it is given to: give every
+process, and every executor's `TurnExecutor(timeouts=...)`, the same (the
+backend warns when an executor it serves keeps others).
+
+A request reaches one executor at most: an executor's process acknowledges
+it, a refusal places it again, and a process that does not answer within
+`accept_timeout` loses the turn, which is never run twice.
 
 ## Work after a turn
 
@@ -128,6 +135,13 @@ Redis server can act as an executor or an owner, and whoever can read it
 reads the rooms' turns. Restrict it as the rooms it carries: Redis ACLs, TLS
 (`rediss://`), a network only your processes reach. Use a `key_prefix` per
 deployment.
+
+## Connecting
+
+`RedisTurnBackend(url)` connects with a pool its callers wait on when every
+connection is in use. To use a client of your own (a sentinel, custom TLS),
+pass both: `RedisTurnBackend(url, client=client)`; the process's beat thread
+connects with `url`, so it must name the same server.
 
 ## Prerequisites
 
