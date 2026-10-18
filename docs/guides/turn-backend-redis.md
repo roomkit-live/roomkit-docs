@@ -128,8 +128,8 @@ its messages twice: each is still handled once.
 ## Errors across processes
 
 An error a turn raised on the executor reaches the room owner rebuilt from a
-message (RFC §10.6.8). RoomKit's classes and Python's come back as
-themselves; your application's come back as themselves only in a process
+message (RFC §10.6.8). RoomKit's classes and Python's built-in ones come back
+as themselves; your application's come back as themselves only in a process
 that declares them, and each process declares its own: the owner reads what
 the executor raised, and the executor reads what an owner-served tool or a
 host verb raised.

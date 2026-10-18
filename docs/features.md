@@ -393,8 +393,8 @@ reaches the lane as a live object.
 - **Liveness both ways.** A silent executor fails the turn with
   `TurnLinkError` (`executor_lost`) and the room moves on. A turn no
   executor declares fails at once with `no_executor`. An error comes back as
-  its own class, attributes and causes kept, when it is RoomKit's, Python's
-  or one the application declares (`RoomKit(error_classes=...)`,
+  its own class, attributes and causes kept, when it is RoomKit's, a Python
+  built-in or one the application declares (`RoomKit(error_classes=...)`,
   `TurnExecutor(error_classes=...)`, a class covering its subclasses); any
   other as a `RemoteTurnError` that keeps its class name, its JSON
   attributes, and reads as its nearest ancestor rebuilt there (a

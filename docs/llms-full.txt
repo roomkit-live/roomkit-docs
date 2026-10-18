@@ -6440,7 +6440,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `CommittedEvent` | Channel control to the executor holding the room's state, else one declaring the channel, without moving the holder: it calls `on_room_event(room_id, event)` (a discussion's memory hand-off, RFC §10.6.3) |
 | `ChannelControl` | The union of `RoomAttached`, `RoomDetached`, `CommittedEvent` and `ChannelCall` that `TurnBackend.control()` carries |
 | `TurnLinkError` | A turn the backend could not carry to its end (`no_executor`, at once when no executor declares the channel; `executor_lost`, `frame_lost`) |
-| `RemoteTurnError` | An error raised across the turn backend of a class the reading side does not rebuild (outside RoomKit, Python and its `error_classes`): keeps the class name (`kind`), its ancestors (`bases`) and its JSON attributes, and is also an instance of the nearest ancestor that side rebuilds (a `ProviderError` subclass still reads as one) |
+| `RemoteTurnError` | An error raised across the turn backend of a class the reading side does not rebuild (outside RoomKit, Python's built-ins and its `error_classes`): keeps the class name (`kind`), its ancestors (`bases`) and its JSON attributes, and is also an instance of the nearest ancestor that side rebuilds (a `ProviderError` subclass still reads as one) |
 | `DeliveryResult` | Result of delivering a message |
 | `DeliveryStatus` | Delivery status from provider webhook |
 
