@@ -99,6 +99,8 @@ never stalls more than a few milliseconds.
 | No executor takes the turn within `accept_timeout` | The turn fails (`executor_lost`) |
 | The executor closed but its process still runs | Its process refuses the turn at once, and the turn goes to another executor (or fails with `no_executor` when none takes it) |
 | The executor is restarted under the same id | It is another executor: the turns of the dead process are lost, never kept alive by the new one |
+| A process serves a new executor under the id of one it closed (a reload) | The new one takes the turns from then on |
+| The executor's process closes right after a turn ended | The turn's end, still queued, is written before the process goes (within `cancel_timeout`) |
 | Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
 
@@ -118,7 +120,9 @@ backend warns when an executor it serves keeps others).
 
 A request reaches one executor at most: an executor's process acknowledges
 it, a refusal places it again, and a process that does not answer within
-`accept_timeout` loses the turn, which is never run twice.
+`accept_timeout` loses the turn, which is never run twice. A client that
+retries a pipeline whose connection dropped after Redis executed it writes
+its messages twice: each is still handled once.
 
 ## Work after a turn
 
@@ -145,6 +149,7 @@ connects with `url`, so it must name the same server.
 
 ## Prerequisites
 
+- **Redis 6.2 or later.**
 - **A shared store**: `PostgresStore` (or `SQLiteStore` on one machine). An
   executor that takes turns from other processes without one logs a warning.
 - **Several owner processes** need the distributed lock manager as well (see
