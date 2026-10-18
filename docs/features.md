@@ -386,7 +386,12 @@ reaches the lane as a live object.
   each turn it read has ended on its executor.
 - **What the channel changes after yielding it** (its record, a call's
   arguments once a `BEFORE_TOOL_USE` hook fixed them, a call's end) reaches
-  the lane before the next item.
+  the lane before the next item. Before a text or reasoning delta, the
+  record counts as changed once one of its keys was written
+  (`ResponseMetadata.writes`): deltas that leave it alone cost no copy of
+  it, whatever its size, and a change made inside a value it holds
+  (`record["sources"].append(...)`) reaches the lane before the next item
+  that is no delta, the one ending the segment stored with it.
 - **A turn runs on a task of its own**, in a copy of the context of the task
   that submitted it: a tool that calls the kit (`send_event`, `delegate`)
   behaves as before.
