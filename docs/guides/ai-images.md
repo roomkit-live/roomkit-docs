@@ -3,8 +3,9 @@
 An image a person sends reaches an AI channel's model as an image, with the
 words of the message that brought it, on later turns too. This guide covers
 what decides which images go, how an application that keeps its media in
-private storage hands them over without publishing them, and what the model
-reads when an image cannot go (RFC §6.4).
+private storage hands them over without publishing them, how one that keeps a
+message's files beside its words names them, and what the model reads when an
+image cannot go (RFC §6.4).
 
 ## Three kinds of URL
 
@@ -64,6 +65,47 @@ A transport channel that takes media (MMS, WhatsApp) is handed the reference
 as it is, which its vendor cannot fetch. Where a transport needs the media,
 resolve the reference yourself, for example in a `BEFORE_BROADCAST` hook that
 swaps it for a link the vendor can reach.
+
+## Files kept beside a message
+
+An application that stores a message as its words, with the files the person
+attached in a record of its own (the event's metadata, say), names those files
+with an `attached_media` reader rather than reshaping every message it stores
+into a composite. The reader takes an event and returns the media it carries
+outside its content:
+
+```python
+from roomkit import RoomKit
+from roomkit.models.event import MediaContent, RoomEvent
+
+
+def attached(event: RoomEvent) -> list[MediaContent]:
+    """The files the application recorded beside this message's words."""
+    return [
+        MediaContent(url=f"media://{f['id']}", mime_type=f["mime_type"], filename=f["name"])
+        for f in event.metadata.get("files", [])
+    ]
+
+
+kit = RoomKit(media_resolver=resolve, attached_media=attached)
+```
+
+Every AI channel registered on the kit reads the events of a turn through it,
+the history its memory measures and the event it answers alike. The media it
+names follow the event's own content, as the parts of a composite; a message
+whose text has no words gives them its place. From there they are an author's
+images like any other: a reference among them goes to the `media_resolver`,
+and the bound, the type and size rules and the mentions below all apply.
+
+The store and every broadcast keep the event as stored, its words and its
+metadata: only the model's reading changes.
+
+- **Name the same media in the same order each time.** The reader is asked on
+  every turn, and an image is known by its event and its place, which is how
+  a refusal is recorded.
+- **A reader that raises names none for that event**; the turn goes on, and
+  the failure is logged.
+- **An instruction is read as it is**: the reader is not asked for one.
 
 ## Which images go
 
@@ -128,3 +170,7 @@ agent = AIChannel("assistant", provider=text_only_provider, describe_empty_event
 sends it by reference with a question, then asks a follow-up that needs the
 image again. Offline it shows what a mock model received on each turn; with
 `anthropic`, Claude names the colour, then the shape from the history.
+
+`examples/ai_attached_media.py` does the same with the swatch recorded in the
+message's metadata: an `attached_media` reader names it, the model sees it on
+both turns, and the store keeps the message as its words and its metadata.
