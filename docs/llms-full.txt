@@ -919,6 +919,10 @@ async def tool_gate(event, ctx) -> HookResult:
     return HookResult.allow()
 ```
 
+The channel filters read the turn's agent: `channel_ids={"support"}` keeps a
+turn hook to that agent's turns, and `channel_types` to agents of a type when
+the trigger's payload carries it (a tool call, an input request).
+
 An agent the kit holds by its declaration alone
 (`kit.register_channel(ChannelDeclaration(...))`) runs its turns on another
 executor, where a hook on the kit never fires. So the kit refuses, with a
@@ -952,11 +956,15 @@ register_turn_hooks(executor)
 kit's own executor's hook for that room. For agents other executors run, a
 room hook is defined by name on the executors and enabled per room on the
 kit, which names a room's hooks in each turn's request; only an executor that
-defines every name takes the room's turns:
+defines every name takes the room's turns, so define it on each executor
+that runs the room's agents, the kit's own included when the room holds an
+agent the kit runs:
 
 ```python
-@host_executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)
 async def audit(event, ctx) -> None: ...
+
+for executor in (kit.turn_executor, host_executor):
+    executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)(audit)
 
 kit.enable_room_hook("vip-room", "audit")
 kit.disable_room_hook("vip-room", "audit")
