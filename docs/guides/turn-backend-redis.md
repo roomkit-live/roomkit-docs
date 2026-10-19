@@ -101,6 +101,8 @@ never stalls more than a few milliseconds.
 | The executor is restarted under the same id | It is another executor: the turns of the dead process are lost, never kept alive by the new one |
 | A process serves a new executor under the id of one it closed (a reload) | The new one takes the turns from then on |
 | The executor's process closes right after a turn ended | The turn's end, still queued, is written before the process goes (within `cancel_timeout`) |
+| The executor's process closes mid-answer | The process cuts the turn and writes its end: the turn fails with `executor_lost` within `cancel_timeout`, not `heartbeat_timeout` |
+| The executor's loop stalls right after a turn ended, before its end is written | The process still names the turn running until its end is written, so the owner waits for it and the turn completes |
 | A turn reaches an executor whose process is closing | That process refuses it, and the turn goes to another executor |
 | Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
