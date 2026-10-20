@@ -1510,8 +1510,9 @@ await kit.attach_channel(room_id, "meteo")  # an intelligence binding
 - A field left out reads as an `AIChannel` built with its defaults (text,
   rich and media capabilities, a 50-event history); `agent.declaration()`
   gives a live agent's own.
-- Give the host's executor `hosts=`: without it, it takes every channel's
-  turns, the kit's live ones included.
+- Give the host's executor `hosts=`: without it, it takes the turns of every
+  channel the kit does not run itself. The kit's own executor alone takes the
+  turns of the agents the kit holds live (RFC §10.6.7).
 - The kit holds a `DeclaredChannel` under the id: a binding takes its
   `capabilities`, routing plans its turns, `delegate` / `start_task` name it,
   `send_greeting` and auto-greet read its identity (`auto_greet` defaults to

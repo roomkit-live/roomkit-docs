@@ -60,7 +60,8 @@ on one of them, new rooms spread over them.
 declared with a set takes turns from other processes; one given a predicate
 (`hosts=lambda channel_id: ...`) takes the turns of its own process only, as
 the kit's own executor does for the agents you register live. An executor
-with no `hosts` would take every channel's turns: always pass the set.
+with no `hosts` would take the turns of every channel the kit does not run
+itself: always pass the set.
 
 Room hooks are part of the declaration: an executor that does not define a
 hook a room enabled (`executor.room_hook("audit", ...)`,
@@ -68,7 +69,10 @@ hook a room enabled (`executor.room_hook("audit", ...)`,
 
 ## Where a turn goes
 
-The room owner chooses, from the executors alive and what they declare:
+An agent you registered live on the kit runs on the kit's own executor alone,
+whatever else declares it; a turn that executor does not take (a room hook it
+does not define) fails with `no_executor`. For the other channels the room
+owner chooses, from the executors alive and what they declare:
 
 1. the executor that took the room's last turn of the channel, while it
    lives and takes it: its caches and its session state stay (an ACP
