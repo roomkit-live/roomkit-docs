@@ -897,10 +897,22 @@ cancelled = await kit.cancel_delivery("task-42", reason="lead_cancelled")
 cancelled: 0 once they are over, for a key never sent, or when they were
 already cancelled. Several messages may share a key, and one call cancels
 them all. It returns at once, without waiting for their cleanup; each call's
-caller reads the cancelled end on its result (`cancellation_reason`, and under
-`response_metadata["turns"]` the end of each turn that ran). The key is never
-stored, and it grants nothing: check who may cancel before calling. It reaches
-the deliveries this process runs. See `examples/cancel_delivery_by_key.py`.
+caller reads `cancellation_reason` on its result. The key is never stored, and
+it grants nothing: check who may cancel before calling, and pass
+`organization_id=` when rooms belong to tenants, so a key two tenants both
+chose only reaches the caller's rooms:
+
+```python
+await kit.cancel_delivery("task-42", organization_id=tenant_id)
+```
+
+It reaches the deliveries this process runs. What it does not stop: a channel
+that is not an intelligence one still receives the message (a realtime voice
+session included, whose model may answer it); in a room a discussion holds,
+the turns the discussion queued for the message are the discussion's; and a
+message cancelled while it waited in the room's lane is delivered after the
+cancel returns, so its result's `delivery_results` stay empty. See
+`examples/cancel_delivery_by_key.py`.
 
 ### Message Threading
 
