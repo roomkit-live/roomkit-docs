@@ -109,6 +109,7 @@ never stalls more than a few milliseconds.
 | The executor's loop stalls right after a turn ended, before its end is written | The process still names the turn running until its end is written, so the owner waits for it and the turn completes |
 | A turn reaches an executor whose process is closing | That process refuses it, and the turn goes to another executor |
 | Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
+| Redis goes silent without closing a connection (a NAT or a load balancer forgot it) | The process stays among the living and its turns go on: the beat and the inbox read again on a new connection within `heartbeat_timeout`; a turn's message whose write was cut fails that turn |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
 
 In every case the room goes on: the next message is delivered, and its turn
@@ -178,6 +179,14 @@ deployment.
 connection is in use. To use a client of your own (a sentinel, custom TLS),
 pass both: `RedisTurnBackend(url, client=client)`; the process's beat thread
 connects with `url`, so it must name the same server.
+
+Every connection the backend opens gives up a call after half of
+`heartbeat_timeout` (5 s by default, never under `heartbeat_interval`), so a
+Redis gone silent without closing the connection costs one call, never the
+process's place among the living. A client you pass keeps its own settings:
+give it a `socket_timeout` of the same order (redis-py before 8.0 sets none).
+Options in the URL's query (`?socket_timeout=...`) take precedence over the
+backend's.
 
 ## Prerequisites
 
