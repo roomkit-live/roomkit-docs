@@ -478,9 +478,12 @@ and a second word of it would have it say so twice. Like `task_status`, the tool
 reaches only the tasks of the room of the call; it answers `unknown` for another
 room's task, and the task's own status when it had already ended. The kit
 checks the room itself: a `task` line on the status bus naming another room's
-task, whoever posted it, cancels nothing. A task a strategy runs without
-posting it (`post_status=False`) is the strategy's to follow, so `cancel_task`
-answers `unknown` for it; the host still cancels it with `kit.cancel_task()`.
+task, whoever posted it, cancels nothing and reveals nothing: what is the
+room's is the kit's own record of the tasks it runs for each room. A task of
+the room the tool may not cancel is answered `running`, with why: an inline
+delegation runs inside the turn that asked for it and ends with it, and a task
+a strategy runs without posting it (`post_status=False`) is the strategy's to
+follow; the host still cancels the latter with `kit.cancel_task()`.
 
 A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
 say). That cancellation is the host's, so the agent the result was going to is
