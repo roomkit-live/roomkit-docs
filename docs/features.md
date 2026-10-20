@@ -367,6 +367,15 @@ message, as a distributed backend will: nothing the channel holds (its
 stream, its response-metadata record, its tool-call markers, an exception)
 reaches the lane as a live object.
 
+- **A turn's request carries the room's recent history.** The
+  `TurnRequest` holds the turn's room context, its recent events with their
+  full `metadata`, serialized and parsed on every turn, in memory too. Its
+  cost grows with the history's length times what your application keeps in
+  each event's metadata: with 51 events in the request, about 0.4 ms of CPU
+  per turn for plain messages, about 1 ms when each stored answer carries
+  some 7 KB of metadata (30 retrieval sources). Data that heavy, wanted on
+  every message, is better kept in a store of your own and referenced from
+  the event by an id.
 - **The stream is pulled.** The executor advances the channel's stream only
   as the lane reads it: a muted agent, or an event a hook injected for an
   agent, closes the stream unread and never calls the provider. Each read
