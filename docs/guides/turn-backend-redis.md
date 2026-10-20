@@ -109,6 +109,7 @@ never stalls more than a few milliseconds.
 | The executor's loop stalls right after a turn ended, before its end is written | The process still names the turn running until its end is written, so the owner waits for it and the turn completes |
 | A turn reaches an executor whose process is closing | That process refuses it, and the turn goes to another executor |
 | Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
+| Redis goes silent without closing the connection (a NAT or a load balancer's idle timeout) | Each read and write gives up within `heartbeat_timeout` and is tried again on a new connection, whatever redis-py is installed; a client you pass as `client=` keeps its own settings |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
 
 In every case the room goes on: the next message is delivered, and its turn
