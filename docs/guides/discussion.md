@@ -430,7 +430,11 @@ background work set up (or with `tasks=True`), `/task @dev <what to do>`
 starts a task for it, `/tasks` lists the room's tasks and `/cancel <task>`
 stops one (six hex digits of its id are enough); each agent's card shows its
 running tasks, and a result posted as an agent's message names the worker
-that wrote it (`@dev · a task's result, by dev-code`).
+that wrote it (`@dev · a task's result, by dev-code`). `/cancel` stops a task
+the kit runs for the room, with the host's reach (a strategy's background
+worker included), and says of one no cancel reaches (an inline delegation, a
+strategy's inline run) that it is still running, and why; a task the room's
+lines name but the kit does not run for the room is left alone.
 
 ## The room is the discussion's
 
