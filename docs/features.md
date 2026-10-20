@@ -584,7 +584,10 @@ await kit.attach_channel(room_id, "meteo")
 
 A field left out reads as an `AIChannel` built with its defaults (text, rich
 and media capabilities, a 50-event history), and the host's executor needs
-`hosts=`, without which it takes every channel's turns. The kit holds a
+`hosts=`, without which it takes the turns of every channel the kit does not
+run itself. The kit's own executor alone takes the turns of the agents the kit
+holds live, whatever other executor declares them (RFC §10.6.7): an agent a
+host runs is one the kit holds by its declaration. The kit holds a
 `DeclaredChannel` under the id, which a binding, routing,
 `delegate`, `start_task`, `send_greeting` and auto-greet read as they read a
 live agent; `channel.declaration()` gives a live channel's, and registering
