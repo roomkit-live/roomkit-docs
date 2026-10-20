@@ -1543,7 +1543,7 @@ await kit.attach_channel(room_id, "meteo")  # an intelligence binding
   holds by declaration (give it the id), and a realtime `ConversationPipeline`
   or a `HandoffHandler` serving a realtime channel given a declared agent or
   another non-`Agent` intelligence channel, its `set_language()` included
-  (the session runs each agent's prompt and identity block).
+  (the session runs each agent's own prompt).
 
 Runnable: `examples/declared_agent.py`, `examples/declared_supervisor.py`.
 
