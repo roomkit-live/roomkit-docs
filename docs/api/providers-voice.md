@@ -226,6 +226,16 @@ Install with: `pip install roomkit[fish-audio]`.
 
 Install with: `pip install roomkit[pocket-tts]` (CPU or CUDA GPU).
 
+### Phonon TTS
+
+::: roomkit.voice.tts.phonon.PhononTTSProvider
+
+::: roomkit.voice.tts.phonon.PhononTTSConfig
+
+See the [Phonon guide](../guides/phonon.md) for models, voices and measured speed.
+
+Install with: `pip install roomkit[phonon]` (CPU).
+
 ### Sherpa-ONNX TTS
 
 ::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSProvider

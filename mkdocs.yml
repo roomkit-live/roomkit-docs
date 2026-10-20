@@ -79,6 +79,7 @@ nav:
           - sherpa-onnx Providers: guides/sherpa-onnx.md
           - NeuTTS Provider: guides/neutts.md
           - Pocket TTS Provider: guides/pocket-tts.md
+          - Phonon TTS Provider: guides/phonon.md
           - Smart Turn Detection: guides/smart-turn.md
           - WAV File Recorder: guides/wav-file-recorder.md
           - Voice Greeting: guides/voice-greeting.md

@@ -1534,6 +1534,28 @@ local French assistant example.
 
 ---
 
+## Phonon (Local/CPU, Multilingual)
+
+Gradium's 31M- and 40M-parameter models, built on Pocket TTS, run by their own
+Rust runtime (no torch, no GPU): 24 kHz streaming at about ten times real time
+on two CPU threads, English, French, German, Spanish and Portuguese, about a
+hundred catalog voices. Install with `pip install roomkit[phonon]`.
+
+```python
+from roomkit.voice.tts.phonon import PhononTTSConfig, PhononTTSProvider
+
+tts = PhononTTSProvider(PhononTTSConfig(
+    model="hf://gradium/phonon-40m-fr",  # None: Phonon 31m English
+    language="fr",                       # how numbers and dates are spelled out
+    voice="Noémie",                      # a catalog voice
+))
+```
+
+See the [Phonon guide](phonon.md) for models, voices, measured speed and the
+local French assistant example.
+
+---
+
 ## Vui Nano (Local/GPU, Conversational)
 
 [Vui Nano](https://huggingface.co/fluxions/vui) (fluxions.ai, Apache 2.0) is a
@@ -2150,6 +2172,7 @@ four, and what the room keeps of it.
 | **Azure Speech** | Cloud TTS | Yes | Medium (MAI Flash ~0.65 s to first audio) | Per-character | MAI-Voice and Azure's neural voices, preview |
 | **Fish Audio** | Cloud TTS | Yes + input | Low (Drama 3 ~0.23 s to first audio) | Per-byte | Directed speech (Drama 3), dialogue, preview |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Seven languages incl. French, no GPU needed |
+| **Phonon** | Local TTS | Yes | Low (CPU, ~50 ms to first audio) | Free | Five languages incl. French, no torch, ~10x real time on two threads |
 
 ## Using with VoiceChannel
 

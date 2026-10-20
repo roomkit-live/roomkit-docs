@@ -99,6 +99,7 @@ pip install roomkit[gradium]      # Gradium TTS
 pip install roomkit[qwen-tts]     # Qwen3 TTS
 pip install roomkit[neutts]       # NeuTTS
 pip install roomkit[fish-audio]   # Fish Audio TTS (Drama 3, S2)
+pip install roomkit[phonon]       # Phonon TTS (Gradium, local CPU)
 ```
 
 ### Voice — Backends
@@ -3248,6 +3249,7 @@ async def pin_language(event, ctx):
 | Grok TTS | `GrokTTSProvider` | `GrokTTSConfig` | xAI |
 | Gemini TTS | `GeminiTTSProvider` | `GeminiTTSConfig` | `roomkit[gemini]` |
 | Fish Audio (Drama 3, S2) | `FishAudioTTSProvider` | `FishAudioTTSConfig` | `roomkit[fish-audio]` |
+| Phonon (Gradium, local CPU) | `PhononTTSProvider` | `PhononTTSConfig` | `roomkit[phonon]` |
 | Mock | `MockTTSProvider` | — | built-in |
 
 ```python
