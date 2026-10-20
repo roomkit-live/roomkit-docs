@@ -1541,7 +1541,9 @@ await kit.attach_channel(room_id, "meteo")  # an intelligence binding
 - Refused: a declaration that is not an intelligence channel's, a binding of
   it with another category, a strategy given a live agent whose id the kit
   holds by declaration (give it the id), and a realtime `ConversationPipeline`
-  given a declared agent (its session runs the agents' prompts and tools).
+  or a `HandoffHandler` serving a realtime channel given a declared agent or
+  another non-`Agent` intelligence channel, its `set_language()` included
+  (the session runs each agent's prompt and identity block).
 
 Runnable: `examples/declared_agent.py`, `examples/declared_supervisor.py`.
 
