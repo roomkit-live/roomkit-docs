@@ -368,14 +368,16 @@ stream, its response-metadata record, its tool-call markers, an exception)
 reaches the lane as a live object.
 
 - **A turn's request carries the room's recent history.** The
-  `TurnRequest` holds the turn's room context, its recent events with their
-  full `metadata`, serialized and parsed on every turn, in memory too. Its
-  cost grows with the history's length times what your application keeps in
-  each event's metadata: with 51 events in the request, about 0.4 ms of CPU
-  per turn for plain messages, about 1 ms when each stored answer carries
-  some 7 KB of metadata (30 retrieval sources). Data that heavy, wanted on
-  every message, is better kept in a store of your own and referenced from
-  the event by an id.
+  `TurnRequest` holds the turn's room context: the room's tail, as long as
+  the largest `recent_events_window` of its channels (50 events for an
+  `AIChannel` by default), each event with its full `metadata`, serialized
+  and parsed on every turn, in memory too. Its cost grows with the history's
+  length, and with what your application keeps in each event's metadata: with
+  51 events in the request (the default window and the message), about
+  0.4 ms of CPU per turn on a desktop i7 for plain messages, about 1 ms when
+  each stored answer carries some 10 KB of metadata (30 retrieval sources).
+  Data that heavy, stored on every answer, is better kept in a store of your
+  own and referenced from the event by an id.
 - **The stream is pulled.** The executor advances the channel's stream only
   as the lane reads it: a muted agent, or an event a hook injected for an
   agent, closes the stream unread and never calls the provider. Each read
@@ -819,7 +821,9 @@ result.response_metadata       # final AI/ACP response record, also backfilled
 
 `response_metadata` merges the root intelligence outputs for the turn. It is
 available after ordinary streaming or non-streaming delivery and can contain
-citations, provenance, or protocol-specific outcomes. `response_metadata["turns"]`
+citations, provenance, or protocol-specific outcomes. What a turn writes there
+is stored on its answer, so every later turn's request carries it (see *A
+turn's request carries the room's recent history*). `response_metadata["turns"]`
 names how each channel that replied to the caller's event ended, streamed or
 buffered, keyed by channel id (`{"ai": {"loop_end_reason": "max_rounds",
 "ai_usage": {...}}}`; an ACP agent's entry carries its stop reason, `completed`
