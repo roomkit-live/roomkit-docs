@@ -832,12 +832,19 @@ lane), `wait()` returns unwaited instead of deadlocking. See
 
 ### Cancelling a Delivery
 
-Cancelling the task awaiting `process_inbound()` cancels that call's delivery
-cascade, including generation, tools, reentry and streams. RoomKit waits for
-the owned work's cleanup before propagating `asyncio.CancelledError`. It keeps
-the committed inbound event and any persisted response segments. Other calls,
-rooms and shared providers continue; the next turn can use a new tool handler
-once cleanup has finished.
+Cancelling a message's delivery stops the agents' turns it started or would
+start, and only those (RFC §10.1): a turn still waiting in the room's lane, or
+for the room's previous ACP prompt, never starts; a turn being handed to its
+executor is cut as it arrives; a running one is cut, its tools included; no
+answer re-enters after. The message itself is still delivered: the room's
+other channels receive it and its `AFTER_BROADCAST` hooks fire. The room's
+other turns go on.
+
+Cancelling the task awaiting `process_inbound()` cancels that call's delivery.
+RoomKit waits for the owned work's cleanup before propagating
+`asyncio.CancelledError`. It keeps the committed inbound event and any
+persisted response segments. Other calls, rooms and shared providers continue;
+the next turn can use a new tool handler once cleanup has finished.
 
 For a deferred call, cancel explicitly through its handle:
 
@@ -866,6 +873,34 @@ own delivery lane or under its room lock cannot drain it: `cancel()` raises
 owned by this process; it does not stop delivery in another worker.
 
 See `examples/cancel_delivery.py` for an executable example.
+
+#### By a key of your own
+
+Code that does not hold the handle (another task, a tool an agent calls with
+the task's id as text) names the delivery by a key the caller put on the
+message:
+
+```python
+message = InboundMessage(
+    channel_id="system",
+    sender_id="lead",
+    content=TextContent(body="Review the PR."),
+    delivery_key="task-42",
+)
+result = await kit.process_inbound(message, room_id="r1")   # awaited elsewhere
+
+# Anywhere in the process, a tool handler or a hook included:
+cancelled = await kit.cancel_delivery("task-42", reason="lead_cancelled")
+```
+
+`cancel_delivery()` answers how many deliveries in flight the key named and
+cancelled: 0 once they are over, for a key never sent, or when they were
+already cancelled. Several messages may share a key, and one call cancels
+them all. It returns at once, without waiting for their cleanup; each call's
+caller reads the cancelled end on its result (`cancellation_reason`, and under
+`response_metadata["turns"]` the end of each turn that ran). The key is never
+stored, and it grants nothing: check who may cancel before calling. It reaches
+the deliveries this process runs. See `examples/cancel_delivery_by_key.py`.
 
 ### Message Threading
 

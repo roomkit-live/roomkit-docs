@@ -198,6 +198,13 @@ await kit.steer(InjectMessage(content="Budget is 100."), "ai-assistant", turn_id
 A channel that overrides `steer()` receives `turn_id=` from the kit; an
 override without that keyword is given the turn's `room_id` instead.
 
+A directive reaches the turns that have started. To stop the turns of one
+message, whether they have started or not (a task waiting behind another in
+the same room), cancel that message's delivery instead of steering its room:
+`result.delivery.cancel()`, or `kit.cancel_delivery(key)` for a message sent
+with `delivery_key=key` (see [Cancelling a Delivery](../features.md#cancelling-a-delivery)).
+The room's other turns go on.
+
 ## Fallback Provider Chain
 
 Configure a fallback AI provider for production resilience:
