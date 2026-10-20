@@ -4528,9 +4528,7 @@ await kit.cancel_task(task.id)
   §10.6.5); a `cancel_task` reaches only a task the kit delegated for the
   room of the call and posts on the status bus. A `task` line naming another
   room's task cancels nothing, and a task a strategy runs unposted
-  (`post_status=False`) is the strategy's to follow. A task the room lists
-  running that runs in no background (an inline delegation, a strategy's
-  worker run) is answered `running`, ending with what runs it.
+  (`post_status=False`) is the strategy's to follow.
 - The tools strategies and `setup_*` set up (handoff, `delegate_workers`,
   `delegate_to_<id>`, `submit_result`, `work_in_background`, `task_status`,
   `cancel_task`, `delegate_task`) are the kit's, kept per channel and room
