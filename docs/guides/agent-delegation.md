@@ -476,7 +476,7 @@ The task ends `cancelled`, as any task cancelled from outside:
 cancelled it is **not** handed the cancellation back: the tool's answer told it,
 and a second word of it would have it say so twice. Like `task_status`, the tool
 reaches only the tasks of the room of the call; it answers `unknown` for another
-room's task, and the task's own status when it had already ended. The kit
+room's running task, and the task's own status when it had already ended. The kit
 checks the room itself: a `task` line on the status bus naming another room's
 task, whoever posted it, cancels nothing and reveals nothing: what is the
 room's is the kit's own record of the tasks it runs for each room. A task of
