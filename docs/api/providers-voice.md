@@ -169,6 +169,9 @@ stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="...", turn_detection=None))
 # A recording, on the most accurate model
 stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="...", model="voxtral-small-transcribe-3"))
 result = await stt.transcribe(audio_content)
+
+# Who spoke: every final names its speaker (continuous mode, no turn detection)
+stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="...", diarize=True, turn_detection=None))
 ```
 
 See the [Voxtral guide](../guides/voxtral.md) for the turn timing and the latency.

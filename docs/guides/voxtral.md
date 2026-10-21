@@ -80,10 +80,12 @@ next `turn.start` (measured: "What is the capital of Italy?" had its last two wo
 arrive after the next turn had started). So a turn's final waits the delay plus
 100 ms (`final_wait_ms`, 0.58 s by default), and the text arriving until then is
 that turn's; a new turn's speech start is reported at once. When the next turn
-starts during that wait, the final comes at most three quarters of the delay
-later: the new turn's own words trail its start by the delay, while the ending
-turn's last ones came at most 0.09 s after it. Words later than the wait are
-dropped with a warning naming `final_wait_ms`.
+starts during that wait, the final comes a little sooner, 0.95 of the delay after
+the end: the ending turn's last words came up to 0.9 of the delay after it
+(0.43 s at 480 ms), and the new turn's first word comes no sooner than a delay
+after it — with the plain wait, that word had been joined to the last turn. Words
+later than the wait are dropped, with a warning naming `final_wait_ms` when they
+arrive.
 
 With turn detection the provider reports `keeps_stream_across_turns`, so the
 `VoiceChannel` keeps one realtime session for the whole conversation instead of
@@ -100,6 +102,44 @@ Measured on 2026-10-21, a spoken question fed in real time through a `VoiceChann
 
 The faster settings end a turn on a shorter pause: "What is the capital of Italy?
 Answer in one word." came out as two turns, and the agent answered both.
+
+## Speaker labels
+
+`diarize=True` labels who spoke, in a file and live: the provider reports
+`supports_diarization`, and every final names its speaker in `segments`
+(RFC §12.2.3) — Mistral's `speaker_1` arrives as `"1"`, so a `VoiceChannel` names
+the voice "Speaker 1".
+
+```python
+stt = VoxtralSTTProvider(VoxtralSTTConfig(
+    api_key="...",
+    diarize=True,
+    turn_detection=None,        # live, Voxtral labels speakers or detects turns, not both
+    speaker_references={"Julie": julie_wav, "Sylvain": sylvain_wav},  # optional, live
+))
+```
+
+- **File:** one segment per run of a speaker, with its start and end (the
+  endpoint returns a sentence or so per segment; consecutive ones of one speaker
+  are joined).
+- **Live:** the session sends a few words at a time with their speaker and no
+  turn events, so a turn ends when another voice starts, or after a pause
+  without new words (`diarized_pause_ms`, 1.5 s by default). One person's words
+  came up to 2 s apart in hesitant speech and a new speaker's 1.5 s after the
+  last (measured), so a long hesitation can end someone's turn in two.
+- **Channel:** a `VoiceChannel` carries the labels in continuous mode (no pipeline
+  VAD), keeping one session across turns; behind a VAD it refuses the provider.
+- **Speaker references** name known voices live: a 3 to 15 s recording of each
+  person (WAV, MP3, FLAC or Opus, mostly speech), at most 8, under the name their
+  words then carry. A voice the references do not match is numbered after them
+  ("3"). Matching is the model's, and partial: in one measured session a voice
+  came back under its name for its first words, then as "3". The file endpoint
+  took references and kept its own labels, so the provider sends them live only.
+  The channel names a label "Speaker Julie"; an `ON_TRANSCRIPTION` hook that sets
+  `sender_name` to the label makes it "Julie" (the diarization example does).
+
+[`examples/voice_voxtral_diarization.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_voxtral_diarization.py)
+labels the voices around one microphone (`REFERENCES="Julie=julie.wav"`).
 
 ## Text-to-speech
 
@@ -169,8 +209,6 @@ MISTRAL_API_KEY=... uv run --extra mistral-voice --extra mistral \
 
 ## Not covered yet
 
-- Speaker labels (`diarize`, in files and live): next. Live diarization excludes
-  turn detection.
 - The eager end of a turn (`turn.eager_end`, `turn.resume`), which would let the
   agent prepare its answer early: RoomKit's STT contract has no such signal yet.
 - Voice cloning and voice management, and `phoneme_hints`.

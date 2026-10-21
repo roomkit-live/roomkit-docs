@@ -143,9 +143,11 @@ a diarizing provider at construction, and so does a `ConferenceChannel`, which
 knows who spoke from each participant's track and transcribes utterance by
 utterance.
 
-Three providers fill `segments`: `MetaSTTProvider` in `DIARIZATION` mode
-(labels per turn), `DeepgramSTTProvider` with `diarize_model` (labels per word)
-and `GeminiSTTProvider` with `speaker_segments` (batch only). Labels are
+Four providers fill `segments`: `MetaSTTProvider` in `DIARIZATION` mode
+(labels per turn), `DeepgramSTTProvider` with `diarize_model` (labels per word),
+`VoxtralSTTProvider` with `diarize` (labels per run of a speaker, in a file and
+live; named voices from reference clips) and `GeminiSTTProvider` with
+`speaker_segments` (batch only). Labels are
 normalised by `roomkit.voice.base.speaker_label`: a string, `None` for an
 unattributed speaker, and without a leading "speaker" word (`"Speaker 1"` →
 `"1"`). Deepgram's older `diarize=True` keeps its ids in `words` and does not
