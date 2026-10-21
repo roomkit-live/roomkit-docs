@@ -3812,7 +3812,8 @@ Models: streaming STT `zipformer-en-2023-06-26`, `zipformer-en-20M-2023-02-17`,
 `parakeet-tdt-0.6b-v3-int8` (25 European languages), `whisper-tiny.en-int8`,
 `whisper-base-int8` (multilingual, `language="fr"` to fix the language); TTS
 `kokoro-int8-multi-lang-v1_0` (54 named voices), `vits-piper-en_US-amy-low`,
-`vits-piper-fr_FR-siwis-medium`; VAD `ten-vad`, `silero-vad`; denoiser
+`vits-piper-fr_FR-siwis-medium`, `kitten-nano-en-v0_8-int8`, `kitten-mini-en-v0_8`
+(Kitten, English, 8 named voices, `model_type="kitten"`); VAD `ten-vad`, `silero-vad`; denoiser
 `gtcrn-simple`, `dpdfnet2` (16 kHz), `dpdfnet2-48khz-hr` (48 kHz); turn
 `smart-turn-v3.2-cpu`, `smart-turn-v3.2-gpu`. They live in
 `$ROOMKIT_MODELS_DIR`, else `~/.cache/roomkit/models`; `--models-dir` /

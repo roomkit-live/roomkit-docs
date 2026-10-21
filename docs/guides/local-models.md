@@ -45,6 +45,8 @@ The complete agent, with a local LLM through llama.cpp and RNNoise, is
 | `kokoro-int8-multi-lang-v1_0` | `SherpaOnnxTTSConfig` | 132 MB | Kokoro v1.0, 54 named voices, 24 kHz |
 | `vits-piper-en_US-amy-low` | `SherpaOnnxTTSConfig` | 67 MB | Piper "amy", American English, 16 kHz |
 | `vits-piper-fr_FR-siwis-medium` | `SherpaOnnxTTSConfig` | 67 MB | Piper "siwis", French, 22 kHz |
+| `kitten-nano-en-v0_8-int8` | `SherpaOnnxTTSConfig` | 31 MB | Kitten nano v0.8, English, 8 named voices, 24 kHz |
+| `kitten-mini-en-v0_8` | `SherpaOnnxTTSConfig` | 68 MB | Kitten mini v0.8, English, 8 named voices, 24 kHz |
 | `ten-vad` | `SherpaOnnxVADConfig` | < 1 MB | TEN-VAD |
 | `silero-vad` | `SherpaOnnxVADConfig` | < 1 MB | Silero VAD |
 | `gtcrn-simple` | `SherpaOnnxDenoiserConfig` | < 1 MB | GTCRN speech enhancement |
@@ -126,7 +128,8 @@ await tts.synthesize("Bonjour", voice="ff_siwis")
 
 The names come from the model's own speaker table and fill
 `SherpaOnnxTTSConfig.voice_names`; a speaker id given as a number still works.
-`KOKORO_V1_VOICES` in `roomkit.local_models` lists the 54 names in id order. A
+`KOKORO_V1_VOICES` in `roomkit.local_models` lists the 54 Kokoro names in id
+order, `KITTEN_V08_VOICES` the 8 Kitten ones (`expr-voice-2-f`...). A
 voice keeps its accent: pick one of the text's language, and set `lang` for a
 language other than English or Chinese.
 
@@ -153,5 +156,5 @@ on macOS 15, pip installs 0.4.3, the last release built for it.
   you already hold.
 - **Models without an entry.** Any sherpa-onnx or Smart Turn model still works
   through the config's path fields; the list holds the models RoomKit has
-  checked end to end. Nemotron 3.5 streaming, Kitten TTS and Moonshine STT
-  need provider support first.
+  checked end to end. Nemotron 3.5 streaming and Moonshine STT need provider
+  support first.

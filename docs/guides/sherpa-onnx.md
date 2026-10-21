@@ -534,18 +534,31 @@ tts = SherpaOnnxTTSProvider(
 - **A voice is an index** into `voices.bin` (`speaker_id`, or `voice="30"` per call). sherpa-onnx prints the table when the model loads with `debug`; in v1.0, `af_heart` is 3, `ef_dora` 28, `ff_siwis` 30, `if_sara` 35, `pf_dora` 42. With `voice_names` set (`from_local_model()` sets it), a voice is named instead: `voice="ff_siwis"`. A voice keeps its accent: pick one of the text's language.
 - On two threads of a desktop CPU the int8 model renders a sentence in about two thirds of its spoken length.
 
+### Kitten
+
+[Kitten TTS](https://github.com/KittenML/KittenTTS) v0.8 (Apache 2.0) is English only, 24 kHz, with eight voices: the nano model has 15M parameters (31 MB int8), the mini 80M. Both are [local models](local-models.md), their voices named:
+
+```python
+tts = SherpaOnnxTTSProvider(
+    SherpaOnnxTTSConfig.from_local_model("kitten-nano-en-v0_8-int8", voice="expr-voice-2-f")
+)
+```
+
+By hand, `model_type="kitten"` takes the same files as Kokoro (`model`, `voices`, `tokens`, `data_dir`) without the lexicons. On a desktop CPU the nano model renders a sentence in about a third of its spoken length.
+
 ### Configuration
 
 | Parameter | Default | Description |
 |---|---|---|
-| `model_type` | `"vits"` | `"vits"` (VITS/Piper) or `"kokoro"`. |
+| `model_type` | `"vits"` | `"vits"` (VITS/Piper), `"kokoro"` or `"kitten"`. |
 | `model` | `""` | Path to the `.onnx` model. |
 | `tokens` | `""` | Path to `tokens.txt`. |
-| `data_dir` | `""` | Path to the espeak-ng data directory (Piper and Kokoro). |
+| `data_dir` | `""` | Path to the espeak-ng data directory (Piper, Kokoro, Kitten). |
 | `lexicon` | `""` | Optional lexicon; several, comma-separated, for a multi-lang Kokoro. |
-| `voices` | `""` | Kokoro's `voices.bin` (required with `"kokoro"`). |
+| `voices` | `""` | The `voices.bin` of a Kokoro or Kitten model (required with those). |
 | `lang` | `""` | Kokoro's espeak-ng language for text that is neither English nor Chinese. |
-| `speaker_id` | `0` | Speaker of a multi-speaker model; a voice index for Kokoro. |
+| `speaker_id` | `0` | Speaker of a multi-speaker model; a voice index for Kokoro and Kitten. |
+| `voice_names` | `()` | Speaker names in id order, so a voice is named (`"af_heart"`); `from_local_model()` fills them. |
 | `speed` | `1.0` | Speech speed multiplier. |
 | `sample_rate` | `22050` | The rate a caller sets its output up for (Kokoro: 24000). Audio always carries the model's own rate. |
 | `num_threads` | `2` | CPU threads for inference. |
