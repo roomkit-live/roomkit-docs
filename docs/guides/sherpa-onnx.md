@@ -6,6 +6,12 @@ RoomKit integrates with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) for
 pip install roomkit[sherpa-onnx]
 ```
 
+The models below can be downloaded by name instead of by hand, pinned to their
+SHA-256, and their configs built by name with no network:
+`python -m roomkit.local_models download kokoro-int8-multi-lang-v1_0`, then
+`SherpaOnnxTTSConfig.from_local_model("kokoro-int8-multi-lang-v1_0", voice="af_heart")`.
+See [Local Models](local-models.md).
+
 ---
 
 ## GPU Acceleration (CUDA)
@@ -521,7 +527,7 @@ tts = SherpaOnnxTTSProvider(
 ```
 
 - **`lang` is required for a language other than English or Chinese.** Without it, the multi-lang model reads any other text as English: French comes out mispronounced. It is an espeak-ng language name (`"fr"`, `"es"`, `"it"`, `"pt-BR"`, `"hi"`); French and English are the ones checked against a transcription.
-- **A voice is an index** into `voices.bin` (`speaker_id`, or `voice="30"` per call). sherpa-onnx prints the table when the model loads with `debug`; in v1.0, `af_heart` is 3, `ef_dora` 28, `ff_siwis` 30, `if_sara` 35, `pf_dora` 42. A voice keeps its accent: pick one of the text's language.
+- **A voice is an index** into `voices.bin` (`speaker_id`, or `voice="30"` per call). sherpa-onnx prints the table when the model loads with `debug`; in v1.0, `af_heart` is 3, `ef_dora` 28, `ff_siwis` 30, `if_sara` 35, `pf_dora` 42. With `voice_names` set (`from_local_model()` sets it), a voice is named instead: `voice="ff_siwis"`. A voice keeps its accent: pick one of the text's language.
 - On two threads of a desktop CPU the int8 model renders a sentence in about two thirds of its spoken length.
 
 ### Configuration

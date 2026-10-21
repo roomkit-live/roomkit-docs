@@ -77,6 +77,7 @@ nav:
           - Audio Resampler: guides/resampler.md
           - ai|coustics Denoiser: guides/aicoustics-denoiser.md
           - sherpa-onnx Providers: guides/sherpa-onnx.md
+          - Local Models (download once, run offline): guides/local-models.md
           - NeuTTS Provider: guides/neutts.md
           - Pocket TTS Provider: guides/pocket-tts.md
           - Phonon TTS Provider: guides/phonon.md
@@ -193,6 +194,7 @@ nav:
           - Voice Channel: api/providers-voice.md
           - Conference: api/conference.md
           - Audio Pipeline: api/voice-pipeline.md
+          - Local Models: api/local-models.md
           - Capture Sources: api/capture.md
           - RTP Backend: api/rtp-backend.md
           - SIP Backend: api/sip-backend.md

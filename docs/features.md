@@ -3183,7 +3183,9 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `VoxtralTTSProvider` | Mistral Voxtral Speech 3: each text rendered and streamed as 24 kHz PCM (first audio about 0.45 s), 36 Voxtral 3 presets in 21 languages (four French) plus Voxtral 2's and the workspace's saved voices, inline emotion and pace tags, expressiveness; public preview. See the [Voxtral guide](guides/voxtral.md) | `roomkit[mistral-voice]` |
 | `MockTTSProvider` | Simulated audio content | None |
 
-**Denoisers:** WebRTC NS, RNNoise, ai|coustics, sherpa-onnx GTCRN and DPDFNet (streaming, 16/48 kHz). See the [sherpa-onnx guide](guides/sherpa-onnx.md#sherpaonnxdenoiserprovider).
+**Denoisers:** WebRTC NS, RNNoise, ai|coustics, sherpa-onnx GTCRN and DPDFNet (streaming, 16/48 kHz). See the [sherpa-onnx guide](guides/sherpa-onnx.md#sherpaonnxdenoiserprovider). RNNoise uses the system `librnnoise`, else the copy `pip install roomkit[rnnoise]` installs (Linux, macOS, Windows).
+
+**Local models by name.** The sherpa-onnx STT, TTS, VAD and denoiser models and Smart Turn are known by name, each pinned to its URLs and SHA-256: `python -m roomkit.local_models download zipformer-en-2023-06-26 kokoro-int8-multi-lang-v1_0 ten-vad smart-turn-v3.2-cpu` fetches them once (checked, atomic, skipped when present), and `SherpaOnnxSTTConfig.from_local_model("zipformer-en-2023-06-26")` (likewise on the TTS, VAD, denoiser and Smart Turn configs) builds a config with no network, raising `ModelNotDownloadedError` with the download command when a model is missing. Kokoro voices are named (`voice="af_heart"`). See [Local Models](guides/local-models.md).
 
 **PCM only.** A Voice Channel plays decoded 16-bit PCM (RFC §12.2): the
 backends and the outbound pipeline read every chunk as samples, and encoding

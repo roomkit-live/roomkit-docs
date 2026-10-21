@@ -337,7 +337,7 @@ rnnoise = RNNoiseDenoiserProvider(sample_rate=24000)
 | Provider | Library | Notes |
 |----------|---------|-------|
 | `WebRTCNoiseSuppressorProvider` | aec-audio-processing (pip) | Continuous WebRTC NS; 10 ms internal frames |
-| `RNNoiseDenoiserProvider` | librnnoise (system) | Mono PCM16 at 16, 24, or 48 kHz |
+| `RNNoiseDenoiserProvider` | librnnoise (system, or `roomkit[rnnoise]`) | Mono PCM16 at 16, 24, or 48 kHz |
 | `SherpaOnnxDenoiserProvider` | sherpa-onnx (pip) | ONNX models, configurable context and silence threshold |
 | `AICousticsDenoiserProvider` | aic-sdk (pip) | Quail neural enhancement, Voice Focus, ~2 ms/frame |
 

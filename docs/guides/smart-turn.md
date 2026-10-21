@@ -36,7 +36,19 @@ This gives faster and more natural conversational turn-taking without requiring 
 
 ## Download the model
 
-The ONNX model files are hosted on HuggingFace. No auto-download — you must download manually:
+The CPU model is a [local model](local-models.md): download it once, pinned and
+SHA-256 checked, and build the config by its name with no network:
+
+```bash
+python -m roomkit.local_models download smart-turn-v3.2-cpu
+```
+
+```python
+detector = SmartTurnDetector(SmartTurnConfig.from_local_model("smart-turn-v3.2-cpu"))
+```
+
+The ONNX files are hosted on HuggingFace, for a manual download (and the GPU
+build):
 
 ```bash
 # CPU (int8 quantized, ~8MB — recommended for most setups)

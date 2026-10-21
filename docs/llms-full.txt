@@ -119,6 +119,7 @@ pip install roomkit[webtransport] # WebTransport backend
 ```bash
 pip install roomkit[webrtc-aec]   # WebRTC echo cancellation
 pip install roomkit[aicoustics]   # ai|coustics denoiser
+pip install roomkit[rnnoise]      # librnnoise for RNNoise, when the system has none
 pip install roomkit[smart-turn]   # ML-based turn detection
 ```
 
@@ -3653,7 +3654,7 @@ from roomkit.voice.pipeline import WebRTCNoiseSuppressorProvider
 
 denoiser = WebRTCNoiseSuppressorProvider(sample_rate=24000)
 
-# RNNoise (local, CPU-based)
+# RNNoise (local, CPU-based): the system librnnoise, else pip install roomkit[rnnoise]
 from roomkit.voice import get_rnnoise_denoiser_provider
 
 RNNoise = get_rnnoise_denoiser_provider()
@@ -3772,6 +3773,47 @@ Custom audio transformations on outbound TTS audio:
 ```python
 from roomkit.voice.pipeline.postprocessor.base import AudioPostProcessor
 ```
+
+## Local Models
+
+The sherpa-onnx STT, TTS, VAD and denoiser models and Smart Turn are known by
+name, each pinned to its URLs and SHA-256. Download them once, while online
+(checked, atomic, skipped when already there):
+
+```bash
+python -m roomkit.local_models list
+python -m roomkit.local_models download zipformer-en-2023-06-26 kokoro-int8-multi-lang-v1_0 ten-vad smart-turn-v3.2-cpu
+```
+
+then build each config by the model's name. `from_local_model()` never touches
+the network; a model that is not downloaded raises `ModelNotDownloadedError`,
+whose message is the download command. Other keywords override the model's
+settings:
+
+```python
+from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline.turn import SmartTurnConfig, SmartTurnDetector
+from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
+from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+
+stt = SherpaOnnxSTTProvider(SherpaOnnxSTTConfig.from_local_model("zipformer-en-2023-06-26"))
+tts = SherpaOnnxTTSProvider(
+    SherpaOnnxTTSConfig.from_local_model("kokoro-int8-multi-lang-v1_0", voice="af_heart")
+)
+pipeline = AudioPipelineConfig(
+    vad=SherpaOnnxVADProvider(SherpaOnnxVADConfig.from_local_model("ten-vad")),
+    turn_detector=SmartTurnDetector(SmartTurnConfig.from_local_model("smart-turn-v3.2-cpu")),
+)
+```
+
+Models: `zipformer-en-2023-06-26`, `zipformer-en-kroko-2025-08-06`,
+`zipformer-fr-kroko-2025-08-06` (STT); `kokoro-int8-multi-lang-v1_0` (54 named
+voices), `vits-piper-en_US-amy-low` (TTS); `ten-vad`, `silero-vad` (VAD);
+`gtcrn-simple` (denoiser); `smart-turn-v3.2-cpu`. They live in
+`$ROOMKIT_MODELS_DIR`, else `~/.cache/roomkit/models`; `--models-dir` /
+`models_dir=` picks another directory. A Kokoro voice is named wherever a
+speaker id is taken (`voice="ff_siwis"`, per synthesis too).
 
 ## Interruption Handling
 
