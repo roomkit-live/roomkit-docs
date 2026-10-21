@@ -79,8 +79,17 @@ audio: a turn's last words follow its `turn.end` by up to that delay, and even t
 next `turn.start` (measured: "What is the capital of Italy?" had its last two words
 arrive after the next turn had started). So a turn's final waits the delay plus
 100 ms (`final_wait_ms`, 0.58 s by default), and the text arriving until then is
-that turn's; a new turn's speech start is reported at once. Words later than the
-wait are dropped with a warning naming `final_wait_ms`.
+that turn's; a new turn's speech start is reported at once. When the next turn
+starts during that wait, the final comes at most three quarters of the delay
+later: the new turn's own words trail its start by the delay, while the ending
+turn's last ones came at most 0.09 s after it. Words later than the wait are
+dropped with a warning naming `final_wait_ms`.
+
+With turn detection the provider reports `keeps_stream_across_turns`, so the
+`VoiceChannel` keeps one realtime session for the whole conversation instead of
+reconnecting after each turn. On a session per turn, a turn started within the
+wait was sent half to the session being closed and reached the room in pieces
+("What is the capital of Italy?", "Answer", "in one word.").
 
 Measured on 2026-10-21, a spoken question fed in real time through a `VoiceChannel`:
 

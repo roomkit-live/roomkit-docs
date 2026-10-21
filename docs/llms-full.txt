@@ -3203,8 +3203,9 @@ stt = DeepgramSTTProvider(DeepgramConfig(
 ### STT language per session
 
 A streaming STT fixes its language when the stream opens. RoomKit opens one
-stream per utterance (VAD mode) or per turn (continuous mode), so the
-language can change between them: `VoiceChannel.set_stt_language(session,
+stream per utterance (VAD mode) or per turn (continuous mode; a provider that
+diarizes or reports `keeps_stream_across_turns` keeps one stream across turns,
+ended for a new language), so the language can change between them: `VoiceChannel.set_stt_language(session,
 "fr-CA")` applies from the session's next stream, `None` returns to the
 provider's configuration, `get_stt_language(session)` reads it back. Only
 providers with `supports_language_override` (Deepgram, the mock) are handed

@@ -25,6 +25,10 @@ class STTProvider(ABC):
     def supports_diarization(self) -> bool: ...
         """Whether final results say who spoke (TranscriptionResult.segments)."""
 
+    @property
+    def keeps_stream_across_turns(self) -> bool: ...
+        """Whether one stream carries turn after turn, a final for each."""
+
     async def transcribe(self, audio, *, language=None) -> TranscriptionResult:
         """Batch transcription — send all audio, get full text."""
 
@@ -45,6 +49,14 @@ call only. A provider that cannot honour it answers `False` to
 `supports_language_override`, and `VoiceChannel` never passes a language to
 such a provider — an implementation written against the older signature
 keeps working unchanged.
+
+In continuous mode (no pipeline VAD) `VoiceChannel` opens a stream per turn,
+unless the provider diarizes or reports `keeps_stream_across_turns`: its model
+cuts the turns within one stream, so the channel keeps that stream open across
+turns (a new one only when the provider ends it, on an error or on a language
+change) and routes its finals in the order they were said. A provider whose
+text trails its turn events needs it — Voxtral Realtime, whose turns would
+otherwise reach the room in pieces when a person starts one soon after another.
 
 ### TranscriptionResult
 
