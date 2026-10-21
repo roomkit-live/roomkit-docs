@@ -199,8 +199,11 @@ HTTP providers. What the service answers:
 
 [`examples/voice_voxtral.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_voxtral.py)
 runs the agent on the local microphone: Voxtral hears you, Mistral Small answers,
-Voxtral Speech speaks. `TURNS=aggressive STREAMING_DELAY_MS=240` makes it answer
-sooner; `VOICE=voice_3137 VOICE_LANGUAGE=fr` makes it French.
+Voxtral Speech speaks. It runs the faster turn settings, `aggressive()` with a
+240 ms delay; `TURNS=default STREAMING_DELAY_MS=480` gives the service's defaults.
+`VOICE=voice_3137 VOICE_LANGUAGE=fr` makes it French. The model adds emoji to its
+answers despite the prompt: `tts_filter=StripEmoji()` drops them before Voxtral
+Speech.
 
 ```bash
 MISTRAL_API_KEY=... uv run --extra mistral-voice --extra mistral \
