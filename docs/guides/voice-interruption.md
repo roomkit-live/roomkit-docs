@@ -235,6 +235,15 @@ turn ("um", "euh", "well"), and polite refusals ("that's okay", "c'est
 correct"). Punctuation, case and held letters ("hmmm", "ouiii") do not matter;
 a hummed "no" ("mm-mm", "uh-uh") still cuts in.
 
+A streaming STT writes its partials word by word, or in pieces of words:
+Voxtral wrote "Ou" before "Ouais", "Je" before "Je vois", "D" before
+"D'accord". A partial that may still become an acknowledgement gets no verdict
+yet (`pending`): the assistant keeps talking, and the next words decide. "Je"
+then "Je vois" lets it through; "Je" then "Je voudrais" cuts in, one partial
+later than before (0.06 to 0.35 s on Voxtral). A first word that opens no
+acknowledgement ("non", "stop", "attends", "wait") still cuts at once, and a
+final is judged as it is: "No" might have been "noted", its final "No." cuts.
+
 ```python
 from __future__ import annotations
 
@@ -320,6 +329,13 @@ The detector receives rich context for classification:
 | `bot_speech_progress` | `float` | How far into the bot's utterance (0.0-1.0) |
 | `session_id` | `str` | Voice session ID |
 | `metadata` | `dict` | Additional context |
+| `is_final` | `bool` | `False` for a partial transcript of speech under way: its last word may be a piece of the word being said |
+
+A detector may answer a partial with `BackchannelDecision(is_backchannel=False,
+pending=True)` when its words may still become a backchannel: the speech neither
+cuts the assistant nor counts as a backchannel, and is judged again on its next
+words. A final is never pending; when the last partial was, the final is judged
+as a whole utterance.
 
 ## Pipeline Integration
 
