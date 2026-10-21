@@ -180,6 +180,30 @@ may be lost:
 OpenTelemetryProvider(tracer_provider=provider, shutdown_flush_timeout=4.0)
 ```
 
+#### One trace across processes
+
+A turn that an executor runs in another process (a [Redis turn
+backend](turn-backend-redis.md)) shows in the owner's trace: its request
+carries the trace context of the span it runs under, and the executor's spans
+(its generations, its tool calls, its hooks) continue it (RFC §10.6.9). Give
+each process its provider: the kit's to `RoomKit(telemetry=...)`, the
+executor's to `TurnExecutor(telemetry=...)`.
+
+```python
+executor = TurnExecutor(
+    build_agent,
+    hosts={"meteo"},
+    store=store,
+    telemetry=OpenTelemetryProvider(tracer_provider=provider),
+)
+```
+
+The fields are the application's propagator's (W3C `traceparent` and
+`tracestate` by default, as `OTEL_PROPAGATORS` configures). A provider that
+writes none (the default `NoopTelemetryProvider`, `ConsoleTelemetryProvider`)
+names the span by its id only, which another process cannot resolve: there the
+executor's spans start their own trace.
+
 ### PyroscopeProfiler
 
 Continuous CPU profiling with [Pyroscope](https://pyroscope.io/) / Grafana Pyroscope. Unlike span-based telemetry, Pyroscope captures **CPU flamegraphs** showing where your application spends time. This is essential for identifying performance bottlenecks in voice pipelines, audio processing, and bridge mixing.
@@ -436,6 +460,12 @@ class LangfuseProvider(TelemetryProvider):
     def record_metric(self, name: str, value: float, **kwargs) -> None:
         langfuse.score(name=name, value=value)
 ```
+
+For its spans to continue across processes, a provider also overrides
+`inject_context(span_id)`, the fields that name a span to another process,
+and `extract_context(carrier)`, the backend context those fields name, which
+RoomKit sets as the parent of the spans that follow (both optional: `{}` and
+`None` by default).
 
 ## Pipeline Metrics
 

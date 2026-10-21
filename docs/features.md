@@ -4305,6 +4305,7 @@ Built-in providers:
 - **ConsoleTelemetryProvider** -- Logs span summaries via Python logging
 - **MockTelemetryProvider** -- Records spans/metrics for test assertions
 - **OpenTelemetryProvider** -- Bridges to the OTel SDK (`pip install 'roomkit[opentelemetry]'`); exports run off the event loop (`flush()` on a thread, `close()` bounded by `shutdown_flush_timeout`, 4.0 s by default)
+- **One trace across processes** -- A turn an executor runs in another process carries the W3C trace context of the span it runs under; with an `OpenTelemetryProvider` on each side (`TurnExecutor(telemetry=...)`), the executor's spans continue the owner's trace. See `examples/telemetry_otel_turns.py`
 - **PyroscopeProfiler** -- Continuous CPU profiling with per-session tagging (`pip install 'roomkit[pyroscope]'`)
 
 14 span kinds cover the full stack: `STT_TRANSCRIBE`, `TTS_SYNTHESIZE`, `LLM_GENERATE`, `LLM_TOOL_CALL`, `HOOK_SYNC`, `HOOK_ASYNC`, `INBOUND_PIPELINE`, `REALTIME_SESSION`, `REALTIME_TURN`, `REALTIME_TOOL_CALL`, and more.

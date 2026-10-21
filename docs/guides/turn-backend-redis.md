@@ -52,7 +52,9 @@ await backend.serve(executor)
 
 Both processes share the store (the executor reads the rooms there) and the
 Redis server. Run as many executor processes as you need: a room's turns stay
-on one of them, new rooms spread over them.
+on one of them, new rooms spread over them. With an `OpenTelemetryProvider`
+in each process (`TurnExecutor(telemetry=...)` on the executor's side), a
+turn shows as one trace across both ([Telemetry](telemetry.md#one-trace-across-processes)).
 
 ## What an executor declares
 
