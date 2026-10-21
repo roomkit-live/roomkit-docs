@@ -4535,8 +4535,8 @@ await kit.cancel_task(task.id)
   (`post_status=False`) is the strategy's to follow. A task of the room the
   call may not cancel (an inline delegation, a strategy's unposted run) is
   answered `running`, with why; one that ended, with its status, even before
-  the bus shows that end; another room's, or another kit's on a shared bus,
-  is `unknown`.
+  the bus shows that end; another room's running task, or another kit's on a
+  shared bus, is `unknown`; a line listed ended is answered as it is listed.
 - The tools strategies and `setup_*` set up (handoff, `delegate_workers`,
   `delegate_to_<id>`, `submit_result`, `work_in_background`, `task_status`,
   `cancel_task`, `delegate_task`) are the kit's, kept per channel and room

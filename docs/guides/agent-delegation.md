@@ -486,8 +486,9 @@ a strategy runs without posting it (`post_status=False`) is the strategy's to
 follow; the host still cancels one that runs in the background with
 `kit.cancel_task()`. A task of the room that ended is answered with its status
 even before the bus shows that end. A task another kit runs for the room, on a
-status bus both share, is not this kit's to answer for: its `cancel_task` says
-`unknown`, and the task is cancelled where it runs.
+status bus both share, is not this kit's to answer for while it runs: its
+`cancel_task` says `unknown`, and the task is cancelled where it runs. A task
+the bus lists ended is answered as `task_status` lists it, whoever ran it.
 
 A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
 say). That cancellation is the host's, so the agent the result was going to is
