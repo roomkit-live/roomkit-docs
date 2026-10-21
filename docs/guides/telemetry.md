@@ -198,11 +198,14 @@ executor = TurnExecutor(
 )
 ```
 
-The fields are the application's propagator's (W3C `traceparent` and
-`tracestate` by default, as `OTEL_PROPAGATORS` configures). A provider that
-writes none (the default `NoopTelemetryProvider`, `ConsoleTelemetryProvider`)
-names the span by its id only, which another process cannot resolve: there the
-executor's spans start their own trace.
+The fields are the application's propagator's, as `OTEL_PROPAGATORS`
+configures: by default the W3C trace context (`traceparent`, `tracestate`) and
+the ambient `baggage`, which then crosses to the executor's process too
+(`OTEL_PROPAGATORS=tracecontext` keeps it in its process). The executor follows
+the owner's sampling decision. A provider that writes none (the default
+`NoopTelemetryProvider`, `ConsoleTelemetryProvider`) names the span by its id
+only, which another process cannot resolve: there the executor's spans start
+their own trace.
 
 ### PyroscopeProfiler
 
@@ -463,9 +466,11 @@ class LangfuseProvider(TelemetryProvider):
 
 For its spans to continue across processes, a provider also overrides
 `inject_context(span_id)`, the fields that name a span to another process,
-and `extract_context(carrier)`, the backend context those fields name, which
-RoomKit sets as the parent of the spans that follow (both optional: `{}` and
-`None` by default).
+and `extract_context(carrier)`, the backend context those fields name. RoomKit
+sets that context as the current one (`set_current_span(span_id,
+telemetry_ctx=...)`); the provider's `start_span` reads it back with
+`roomkit.telemetry.context.get_current_telemetry_ctx()`. Both are optional:
+`{}` and `None` by default.
 
 ## Pipeline Metrics
 
