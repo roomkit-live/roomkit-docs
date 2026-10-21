@@ -145,6 +145,36 @@ for why it needs a pipeline VAD and the limits.
 
 Install with: `pip install roomkit[azure-speech]`
 
+### Mistral Voxtral STT (streaming + batch)
+
+::: roomkit.voice.stt.voxtral.VoxtralSTTProvider
+
+::: roomkit.voice.stt.voxtral.VoxtralSTTConfig
+
+::: roomkit.voice.stt.voxtral.VoxtralTurnDetection
+
+::: roomkit.voice.stt.voxtral.VoxtralSTTError
+
+#### Usage
+
+```python
+from roomkit.voice.stt.voxtral import VoxtralSTTConfig, VoxtralSTTProvider
+
+# No pipeline VAD: the model finds where each turn ends
+stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="your-mistral-api-key"))
+
+# Behind a pipeline VAD: one final per utterance
+stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="...", turn_detection=None))
+
+# A recording, on the most accurate model
+stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="...", model="voxtral-small-transcribe-3"))
+result = await stt.transcribe(audio_content)
+```
+
+See the [Voxtral guide](../guides/voxtral.md) for the turn timing and the latency.
+
+Install with: `pip install roomkit[mistral-voice]`
+
 ## TTS (Text-to-Speech)
 
 ::: roomkit.voice.tts.base.TTSProvider
@@ -235,6 +265,18 @@ Install with: `pip install roomkit[pocket-tts]` (CPU or CUDA GPU).
 See the [Phonon guide](../guides/phonon.md) for models, voices and measured speed.
 
 Install with: `pip install roomkit[phonon]` (CPU).
+
+### Voxtral Speech TTS (Mistral)
+
+::: roomkit.voice.tts.voxtral.VoxtralTTSProvider
+
+::: roomkit.voice.tts.voxtral.VoxtralTTSConfig
+
+::: roomkit.voice.tts.voxtral.VoxtralTTSError
+
+See the [Voxtral guide](../guides/voxtral.md) for the voices and the tags.
+
+Install with: `pip install roomkit[mistral-voice]`
 
 ### Sherpa-ONNX TTS
 

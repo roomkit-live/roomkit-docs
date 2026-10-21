@@ -889,6 +889,30 @@ after the end of speech.
 
 ---
 
+## Mistral Voxtral (Cloud API, streaming + batch)
+
+Voxtral 3 transcribes a file on Voxtral Mini or Small Transcribe 3, and live on
+Voxtral Mini Transcribe Realtime 3 with the model's own turn detection: in
+continuous mode (no pipeline VAD) each turn is a final and its start a speech
+start; behind a VAD, set `turn_detection=None` for one final per utterance.
+Install with `pip install roomkit[mistral-voice]`.
+
+```python
+from roomkit.voice.stt.voxtral import VoxtralSTTConfig, VoxtralSTTProvider, VoxtralTurnDetection
+
+stt = VoxtralSTTProvider(VoxtralSTTConfig(
+    api_key="...",
+    language="fr",                               # None: detected
+    turn_detection=VoxtralTurnDetection.aggressive(),
+    streaming_delay_ms=240,                      # final ~0.7 s after speech (1.7 s by default)
+))
+```
+
+See the [Voxtral guide](voxtral.md) for the turn timing, the measured latency and
+the errors.
+
+---
+
 ## TTS Provider ABC
 
 ```python
@@ -1933,6 +1957,22 @@ renders a plain line, a directed one, sentences fed one by one and a dialogue.
 
 ---
 
+## Voxtral Speech (Cloud API, Mistral)
+
+Voxtral Speech 3 renders each text whole and streams it back as 24 kHz PCM, first
+audio about 0.4–0.5 s; 36 Voxtral 3 presets offline (four French), inline emotion
+and pace tags. Install with `pip install roomkit[mistral-voice]`.
+
+```python
+from roomkit.voice.tts.voxtral import VoxtralTTSConfig, VoxtralTTSProvider
+
+tts = VoxtralTTSProvider(VoxtralTTSConfig(api_key="...", voice="voice_3137"))  # Manon, French
+```
+
+See the [Voxtral guide](voxtral.md) for the voices and the tags.
+
+---
+
 ## TTS Filters
 
 Filters clean AI-generated text before it reaches the TTS provider. Essential for removing reasoning markers, annotations, or bracketed instructions.
@@ -2161,6 +2201,7 @@ four, and what the room keeps of it.
 | **SherpaOnnx** | Local STT | Transducer only | Medium | Free | Privacy, offline, edge |
 | **Qwen3 ASR** | Local STT | vLLM only | Medium | Free | GPU-accelerated, multilingual |
 | **MAI-Transcribe** | Cloud STT | Yes (behind a VAD) | Low (final ~0.13 s after speech) | Per-hour | 57 languages, preview |
+| **Voxtral** | Cloud STT | Yes, model turn detection | Medium (final ~0.7 s after speech, fast settings; 1.7 s default) | Per-minute | Files and live on one key, Mistral end to end, preview |
 | **ElevenLabs** | Cloud TTS | Yes + input | Low | Per-character | Highest voice quality |
 | **Grok** | Cloud TTS | Yes + input | Low | Per-character | Expressive tags, 20 languages |
 | **Gradium** | Cloud TTS | Yes + input | Low | Per-character | Real-time with voice control |
@@ -2173,6 +2214,7 @@ four, and what the room keeps of it.
 | **Fish Audio** | Cloud TTS | Yes + input | Low (Drama 3 ~0.23 s to first audio) | Per-byte | Directed speech (Drama 3), dialogue, preview |
 | **Pocket TTS** | Local TTS | Yes | Low (CPU or GPU) | Free | Seven languages incl. French, no GPU needed |
 | **Phonon** | Local TTS | Yes | Low (CPU, ~50 ms to first audio) | Free | Five languages incl. French, no torch, ~10x real time on two threads |
+| **Voxtral Speech** | Cloud TTS | Yes | Medium (~0.45 s to first audio) | Per-character | 36 presets in 21 languages incl. French, emotion tags, preview |
 
 ## Using with VoiceChannel
 
