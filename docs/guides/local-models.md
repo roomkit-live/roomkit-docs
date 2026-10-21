@@ -36,14 +36,27 @@ The complete agent, with a local LLM through llama.cpp and RNNoise, is
 | Name | Config | Download | What it is |
 |---|---|---|---|
 | `zipformer-en-2023-06-26` | `SherpaOnnxSTTConfig` | 73 MB | Streaming STT, English, zipformer transducer (int8) |
+| `zipformer-en-20M-2023-02-17` | `SherpaOnnxSTTConfig` | 44 MB | Streaming STT, English, small (20M params); drops the first word of audio resampled from 48 kHz |
 | `zipformer-en-kroko-2025-08-06` | `SherpaOnnxSTTConfig` | 57 MB | Streaming STT, English, Kroko |
 | `zipformer-fr-kroko-2025-08-06` | `SherpaOnnxSTTConfig` | 57 MB | Streaming STT, French, Kroko (1.5 s tail padding) |
+| `parakeet-tdt-0.6b-v3-int8` | `SherpaOnnxSTTConfig` | 487 MB | Offline STT, 25 European languages, Parakeet TDT v3 |
+| `whisper-tiny.en-int8` | `SherpaOnnxSTTConfig` | 104 MB | Offline STT, English, Whisper tiny.en |
+| `whisper-base-int8` | `SherpaOnnxSTTConfig` | 161 MB | Offline STT, multilingual, Whisper base; detects the language, `language="fr"` fixes it |
 | `kokoro-int8-multi-lang-v1_0` | `SherpaOnnxTTSConfig` | 132 MB | Kokoro v1.0, 54 named voices, 24 kHz |
 | `vits-piper-en_US-amy-low` | `SherpaOnnxTTSConfig` | 67 MB | Piper "amy", American English, 16 kHz |
+| `vits-piper-fr_FR-siwis-medium` | `SherpaOnnxTTSConfig` | 67 MB | Piper "siwis", French, 22 kHz |
 | `ten-vad` | `SherpaOnnxVADConfig` | < 1 MB | TEN-VAD |
 | `silero-vad` | `SherpaOnnxVADConfig` | < 1 MB | Silero VAD |
 | `gtcrn-simple` | `SherpaOnnxDenoiserConfig` | < 1 MB | GTCRN speech enhancement |
-| `smart-turn-v3.2-cpu` | `SmartTurnConfig` | 9 MB | Smart Turn v3.2, CPU build |
+| `dpdfnet2` | `SherpaOnnxDenoiserConfig` | 11 MB | DPDFNet2, streaming, for a 16 kHz pipeline |
+| `dpdfnet2-48khz-hr` | `SherpaOnnxDenoiserConfig` | 11 MB | DPDFNet2, streaming, for a 48 kHz pipeline |
+| `smart-turn-v3.2-cpu` | `SmartTurnConfig` | 9 MB | Smart Turn v3.2, CPU build (int8) |
+| `smart-turn-v3.2-gpu` | `SmartTurnConfig` | 32 MB | Smart Turn v3.2, fp32 build for `provider="cuda"` |
+
+The offline STT models (Parakeet, Whisper) transcribe each utterance once it
+ends, behind a VAD; the streaming ones write partials as the person speaks.
+Each entry was run once before it went in: the French Piper voice, for
+instance, is transcribed word for word by Parakeet and Kroko.
 
 `python -m roomkit.local_models list` prints the same table and marks the
 models already downloaded; `--kind sherpa-onnx-tts` narrows it to one config.
@@ -140,4 +153,5 @@ on macOS 15, pip installs 0.4.3, the last release built for it.
   you already hold.
 - **Models without an entry.** Any sherpa-onnx or Smart Turn model still works
   through the config's path fields; the list holds the models RoomKit has
-  checked end to end.
+  checked end to end. Nemotron 3.5 streaming, Kitten TTS and Moonshine STT
+  need provider support first.

@@ -214,6 +214,10 @@ Measured on one core of an i7-13700KF, 20 ms frames, SI-SDR on four 5 s clips mi
 
 ### Download the models
 
+`gtcrn-simple`, `dpdfnet2` and `dpdfnet2-48khz-hr` are [local models](local-models.md):
+`python -m roomkit.local_models download dpdfnet2`, then
+`SherpaOnnxDenoiserConfig.from_local_model("dpdfnet2")`. Or by hand, the other exports included:
+
 ```bash
 BASE=https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models
 wget $BASE/gtcrn_simple.onnx
