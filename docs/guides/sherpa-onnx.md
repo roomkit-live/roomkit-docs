@@ -458,7 +458,7 @@ stt = SherpaOnnxSTTProvider(
 
 | Parameter | Default | Description |
 |---|---|---|
-| `mode` | `"transducer"` | Recognition mode: `"transducer"` or `"whisper"`. |
+| `mode` | `"transducer"` | Recognition mode: `"transducer"`, `"whisper"` or `"moonshine"`. |
 | `tokens` | `""` | Path to `tokens.txt`. |
 | `encoder` | `""` | Path to encoder `.onnx` model. |
 | `decoder` | `""` | Path to decoder `.onnx` model. |
@@ -481,6 +481,7 @@ stt = SherpaOnnxSTTProvider(
 | `transducer` (no `model_type`) | Yes | Yes | Real-time partial results (Zipformer, etc.) |
 | `transducer` + `model_type` | No | Yes | High-accuracy offline models (NeMo TDT, Parakeet) |
 | `whisper` | No | Yes | Whisper-family models |
+| `moonshine` | No | Yes | Moonshine v2 (`encoder_model.ort`, `decoder_model_merged.ort`): small and fast English models |
 
 When streaming is not supported, VoiceChannel uses VAD to segment speech and calls `transcribe()` on each complete utterance.
 

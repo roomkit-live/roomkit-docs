@@ -42,6 +42,8 @@ The complete agent, with a local LLM through llama.cpp and RNNoise, is
 | `parakeet-tdt-0.6b-v3-int8` | `SherpaOnnxSTTConfig` | 487 MB | Offline STT, 25 European languages, Parakeet TDT v3 |
 | `whisper-tiny.en-int8` | `SherpaOnnxSTTConfig` | 104 MB | Offline STT, English, Whisper tiny.en |
 | `whisper-base-int8` | `SherpaOnnxSTTConfig` | 161 MB | Offline STT, multilingual, Whisper base; detects the language, `language="fr"` fixes it |
+| `moonshine-tiny-en-2026-02-27` | `SherpaOnnxSTTConfig` | 30 MB | Offline STT, English, Moonshine v2 tiny; about 0.05 s per sentence on a CPU |
+| `moonshine-base-en-2026-02-27` | `SherpaOnnxSTTConfig` | 111 MB | Offline STT, English, Moonshine v2 base |
 | `kokoro-int8-multi-lang-v1_0` | `SherpaOnnxTTSConfig` | 132 MB | Kokoro v1.0, 54 named voices, 24 kHz |
 | `vits-piper-en_US-amy-low` | `SherpaOnnxTTSConfig` | 67 MB | Piper "amy", American English, 16 kHz |
 | `vits-piper-fr_FR-siwis-medium` | `SherpaOnnxTTSConfig` | 67 MB | Piper "siwis", French, 22 kHz |
@@ -55,7 +57,7 @@ The complete agent, with a local LLM through llama.cpp and RNNoise, is
 | `smart-turn-v3.2-cpu` | `SmartTurnConfig` | 9 MB | Smart Turn v3.2, CPU build (int8) |
 | `smart-turn-v3.2-gpu` | `SmartTurnConfig` | 32 MB | Smart Turn v3.2, fp32 build for `provider="cuda"` |
 
-The offline STT models (Parakeet, Whisper) transcribe each utterance once it
+The offline STT models (Parakeet, Whisper, Moonshine) transcribe each utterance once it
 ends, behind a VAD; the streaming ones write partials as the person speaks.
 Each entry was run once before it went in: the French Piper voice, for
 instance, is transcribed word for word by Parakeet and Kroko.
@@ -156,5 +158,4 @@ on macOS 15, pip installs 0.4.3, the last release built for it.
   you already hold.
 - **Models without an entry.** Any sherpa-onnx or Smart Turn model still works
   through the config's path fields; the list holds the models RoomKit has
-  checked end to end. Nemotron 3.5 streaming and Moonshine STT need provider
-  support first.
+  checked end to end. Nemotron 3.5 streaming needs provider support first.

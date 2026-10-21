@@ -3810,7 +3810,8 @@ pipeline = AudioPipelineConfig(
 Models: streaming STT `zipformer-en-2023-06-26`, `zipformer-en-20M-2023-02-17`,
 `zipformer-en-kroko-2025-08-06`, `zipformer-fr-kroko-2025-08-06`; offline STT
 `parakeet-tdt-0.6b-v3-int8` (25 European languages), `whisper-tiny.en-int8`,
-`whisper-base-int8` (multilingual, `language="fr"` to fix the language); TTS
+`whisper-base-int8` (multilingual, `language="fr"` to fix the language),
+`moonshine-tiny-en-2026-02-27`, `moonshine-base-en-2026-02-27` (`mode="moonshine"`); TTS
 `kokoro-int8-multi-lang-v1_0` (54 named voices), `vits-piper-en_US-amy-low`,
 `vits-piper-fr_FR-siwis-medium`, `kitten-nano-en-v0_8-int8`, `kitten-mini-en-v0_8`
 (Kitten, English, 8 named voices, `model_type="kitten"`); VAD `ten-vad`, `silero-vad`; denoiser
