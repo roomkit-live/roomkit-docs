@@ -254,7 +254,7 @@ def install(self, kit, agents, *, voice_channel_id=None, ...):
         # Traditional mode (existing behavior)
         self._wire_handoff(agents, handler)
         if voice_channel_id:
-            self._wire_voice_map(kit, agents, voice_channel_id)
+            wire_voice_map(kit, agents, voice_channel_id)
 ```
 
 In speech-to-speech mode, `_wire_realtime()`:

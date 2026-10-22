@@ -56,9 +56,9 @@ kit = RoomKit(
 )
 ```
 
-- A `RealtimeVoiceChannel` runs each room's active agent in its sessions (live agents only, refused otherwise) and reconfigures a room's sessions on a handoff. One wiring serves every room the strategy is installed in.
-- Another voice channel takes the agents' `voice` fields as its voice map.
+- The channel takes the agents' `voice` fields as its voice map.
 - `greet_on_handoff` cues the agent a handoff made active to introduce itself (`greeting_prompt`), after `farewell_prompt` is spoken when given. Its hooks are the room's: a handoff in another room greets nobody. It requires `voice_channel_id`, and the strategy is refused without it.
+- A `RealtimeVoiceChannel` is refused at the install: its sessions' configuration and the handoff it serves are the channel's, for every room at once. Wire one with `ConversationPipeline.install(kit, agents, voice_channel_id=...)` (see [Realtime orchestration](realtime-orchestration.md)).
 
 For pipelines with loops (e.g., `can_return_to`) or custom stage definitions, use `ConversationPipeline` directly — see [ConversationPipeline](#conversationpipeline).
 
