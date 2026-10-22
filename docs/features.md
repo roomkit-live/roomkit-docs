@@ -913,14 +913,23 @@ cancelled = await kit.cancel_delivery("task-42", reason="lead_cancelled")
 cancelled: 0 once they are over, for a key never sent, or when they were
 already cancelled. Several messages may share a key, and one call cancels
 them all. It returns at once, without waiting for their cleanup; each call's
-caller reads `cancellation_reason` on its result. The key is never stored, and
-it grants nothing: check who may cancel before calling, and pass
+caller reads `cancellation_reason` on its result. The key names the delivery
+from the start of `process_inbound`: a message cancelled before its commit
+(while it is routed, parsed, or its sender resolved) is committed and
+delivered all the same, and its turns never start. The key is never stored,
+and it grants nothing: check who may cancel before calling, and pass
 `organization_id=` when rooms belong to tenants, so a key two tenants both
 chose only reaches the caller's rooms:
 
 ```python
+result = await kit.process_inbound(message, room_id="r1", organization_id=tenant_id)
+# elsewhere:
 await kit.cancel_delivery("task-42", organization_id=tenant_id)
 ```
+
+Pass the organization to `process_inbound` as well: a call without it has no
+room known before its commit, so a scoped cancel that reaches it then is
+applied at the commit, if the room is the tenant's, and is not counted.
 
 It reaches the deliveries this process runs. What it does not stop: a channel
 that is not an intelligence one still receives the message (a realtime voice
