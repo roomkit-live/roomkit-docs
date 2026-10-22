@@ -903,9 +903,10 @@ resolved) is committed and delivered all the same, and its turns never start.
 Several messages may share a key. The key is never stored and grants
 nothing: check who may cancel before calling, and pass `organization_id=` so a
 key two tenants both chose only reaches the caller's rooms. Pass it to
-`process_inbound` as well: a call without it has no room known before its
-commit, and a scoped cancel reaching it then is applied at the commit,
-uncounted. A `kit.steer(Cancel(), ...)` reaches only
+`process_inbound` as well: a call without it belongs to no organization until
+it reads its room (right after routing), and a scoped cancel reaching it
+before is applied then, uncounted. A call refused before its commit reports
+its refusal, not the cancellation. A `kit.steer(Cancel(), ...)` reaches only
 turns that have started; use the delivery to stop one message's turns.
 External effects already committed and tasks detached by application handlers
 are outside this cancellation contract. See `examples/cancel_delivery.py`.
@@ -6685,7 +6686,7 @@ kit = RoomKit(
 
 | Method | Description |
 |--------|-------------|
-| `process_inbound(message, room_id?, defer_delivery=False)` | Process an inbound message; deferred results are backfilled by `DeliveryHandle.wait()` |
+| `process_inbound(message, room_id?, defer_delivery=False, organization_id=None)` | Process an inbound message; deferred results are backfilled by `DeliveryHandle.wait()` |
 | `cancel_delivery(key, *, reason="caller_cancelled", organization_id=None)` | Stop the turns of the deliveries in flight of the messages sent with `delivery_key=key`, from the start of `process_inbound` (of the organization's rooms when given); the messages are still delivered; returns how many it cancelled |
 | `regenerate_response(room_id, *, trigger_id=None)` | Re-run the intelligence channel on the newest accepted transport message; `InboundResult(blocked=True, reason="room_closed")` on a closed or archived room; with `trigger_id`, `reason="trigger_moved"` when the selection under the lock is no longer that event |
 | `regenerate_target(room_id)` | The event `regenerate_response` would replay, or `None`; raises `RoomClosedError` when the room refuses events |

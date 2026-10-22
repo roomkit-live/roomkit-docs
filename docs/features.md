@@ -927,9 +927,11 @@ result = await kit.process_inbound(message, room_id="r1", organization_id=tenant
 await kit.cancel_delivery("task-42", organization_id=tenant_id)
 ```
 
-Pass the organization to `process_inbound` as well: a call without it has no
-room known before its commit, so a scoped cancel that reaches it then is
-applied at the commit, if the room is the tenant's, and is not counted.
+Pass the organization to `process_inbound` as well: a call without it belongs
+to no organization until it reads its room (right after routing), so a scoped
+cancel that reaches it before is applied then, if the room is the tenant's,
+and is not counted. A call refused before its commit (a pre-commit timeout, an
+identity block) reports its refusal, not the cancellation.
 
 It reaches the deliveries this process runs. What it does not stop: a channel
 that is not an intelligence one still receives the message (a realtime voice
