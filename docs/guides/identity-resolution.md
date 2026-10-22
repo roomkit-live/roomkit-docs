@@ -218,7 +218,7 @@ Two senders carry no such question, and the framework does not ask
 
 | Case | What it means |
 |------|---------------|
-| The room has already identified the sender | The event's `participant_id` names a `Participant` of the room whose `identification` is `IDENTIFIED`. The answer is on the roster; `identity_id` already carries it |
+| The room has already identified the sender | The event's `participant_id` names, on the event's channel, a `Participant` of the room whose `identification` is `IDENTIFIED`. The answer is on the roster; `identity_id` already carries it. The same id arriving through a channel the participant was never reached through (`connected_via`) answers nothing: it is resolved, and carries no verification |
 | The channel names its own senders | The channel sets `sender_is_participant = True`, declaring its `sender_id` is a room `Participant.id` rather than an address. `ConferenceChannel` does — see below |
 
 Skipping matters beyond the saved lookup. Re-resolving a sender the room already

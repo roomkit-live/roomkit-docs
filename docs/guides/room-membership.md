@@ -109,6 +109,32 @@ channel it replaced in `connected_via`, logging the move. Recording a channel is
 bookkeeping, not presentation: it emits no `PARTICIPANT_UPDATED` and fires no
 `ON_PARTICIPANT_UPDATED`.
 
+## Who a sender is
+
+An inbound message's sender id names a participant only on a channel in their
+`connected_via` (RFC §5.5). An id one transport gives says nothing of
+another's, so the same id arriving through a channel the participant was never
+reached through is another sender. It carries none of the participant's name
+(its turns read `@web`), role (their tool policy override), administrative
+authority (an ADMIN delete), authorship (editing or deleting their messages),
+identification (it is resolved like any sender) or verification:
+
+```python
+await kit.add_member("team", "console", "u-1", role=ParticipantRole.OWNER)
+
+# A message on "web" from sender id "u-1" is not the owner's: no role,
+# no ADMIN delete, no edit of the owner's messages.
+await kit.add_member("team", "web", "u-1")  # records "web"; the role stays OWNER
+# The same message on "web" is now the owner's.
+```
+
+A channel is reached by a deliberate join (`add_member`, `join`,
+`ensure_participant`) or by the identity pipeline, which records the channel it
+resolved a sender on. Those are the two ways to link one person's channels;
+two transports' ids that happen to be equal never do. A sender the pipeline
+could not identify (a pending participant) whose id names a record reached
+through other channels gets a record of its own rather than adopting it.
+
 ## Leaving
 
 `remove_member` is a **soft** leave: it flips `status` to `LEFT` (or pass

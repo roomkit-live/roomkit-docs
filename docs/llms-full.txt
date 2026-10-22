@@ -867,6 +867,20 @@ record, not per-channel presence. When two channel memberships have independent
 connect/disconnect lifecycles, give them distinct participant ids and correlate
 them through `identity_id`.
 
+An inbound sender id names its participant only on a channel in their
+`connected_via` (RFC §5.5): the same id arriving through another channel is
+another sender, with none of the participant's name, role, administrative
+authority, authorship, identification or verification. Link one person's
+channels with `add_member` (or `join`) on each, or let the identity pipeline
+resolve them, which records the channel it resolved them on:
+
+```python
+await kit.add_member("room-id", "console", "u-1", role=ParticipantRole.OWNER)
+# A message on "web" from sender id "u-1": labelled "@web", no role, no ADMIN delete.
+await kit.add_member("room-id", "web", "u-1")  # records "web"; the role stays OWNER
+# Now the same message on "web" is the owner's.
+```
+
 ## Cancelling a turn
 
 Cancelling a message's delivery stops its agents' turns and only those: a turn
@@ -1229,7 +1243,7 @@ member management API.
 |---------|-----------|-----------|-------------|
 | `ON_SPEECH_START` | ASYNC | `(VoiceSession, ctx) -> None` | VAD detected speech start (VoiceChannel, RealtimeVoiceChannel). Conference lanes fire it per track with a synthetic system event. |
 | `ON_SPEECH_END` | ASYNC | `(VoiceSession, ctx) -> None` | VAD detected speech end. Same per-lane conference behavior. |
-| `ON_TRANSCRIPTION` | SYNC | `(event, ctx) -> HookResult` | STT produced a final transcript. Can block/modify; **fails closed** — a hook that raises/times out blocks publication. Payload: `TranscriptionEvent` (VoiceChannel), `RealtimeTranscriptionEvent` (RealtimeVoiceChannel), `ConferenceTranscription` (ConferenceChannel). Modify by returning the same type (voice/realtime also accept a plain `str`) with the new text. |
+| `ON_TRANSCRIPTION` | SYNC | `(event, ctx) -> HookResult` | STT produced a final transcript. Can block/modify; **fails closed** — a hook that raises/times out blocks publication. Payload: `TranscriptionEvent` (VoiceChannel), `RealtimeTranscriptionEvent` (RealtimeVoiceChannel), `ConferenceTranscription` (ConferenceChannel). Modify by returning the same type with the new text; any other payload is an unusable result (a plain `str` included), which blocks since the trigger fails closed. |
 | `ON_PARTIAL_TRANSCRIPTION` | ASYNC | `(PartialTranscriptionEvent, ctx) -> None` | Streaming interim STT result. Hot path — skipped entirely when no hooks are registered. |
 | `BEFORE_TTS` | SYNC | `(text: str, ctx) -> HookResult` | Before text is synthesized. Payload is the text `str`; modify with a `str`. Can block; **fails closed**. On a streamed response it runs once per sentence: a block drops that sentence. |
 | `AFTER_TTS` | ASYNC | `(text: str, ctx) -> None` | After TTS audio was sent. Payload is the final synthesized text. |

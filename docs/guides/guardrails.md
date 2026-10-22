@@ -199,6 +199,8 @@ ai = AIChannel(
 )
 ```
 
+The role an override is chosen by is the role of the participant who sent the message the turn answers, as the room reached them on that message's channel (RFC §5.5): the same sender id arriving through a channel the participant was never reached through has no role, and the base policy applies.
+
 **Resolution rules:**
 
 | Order | Rule | Result |

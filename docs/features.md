@@ -2674,6 +2674,12 @@ another channel also drives. Only a deliberate `add_member` moves the primary
 channel, and it keeps the one it replaced. See
 [Room Membership](guides/room-membership.md#one-record-several-channels).
 
+An inbound sender id names its participant only on a channel in their
+`connected_via`: the same id arriving through another channel is another
+sender, with none of the participant's name, role, administrative authority,
+authorship, identification or verification. See
+[Who a sender is](guides/room-membership.md#who-a-sender-is).
+
 ---
 
 ## Channel Support
