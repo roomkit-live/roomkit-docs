@@ -725,9 +725,9 @@ artifacts = ["*.md", "*.txt"]
 | `make lint` | `uv run ruff check src/ tests/` |
 | `make format` | `uv run ruff format src/ tests/` |
 | `make typecheck` | `uv run ty check src/roomkit/` |
-| `make test` | `uv run pytest -n auto` (one worker per core) |
-| `make test-changed` | `uv run pytest -n auto --testmon --testmon-forceselect` (only the tests whose code changed since the last run) |
-| `make coverage` | `uv run pytest -n auto --cov=roomkit --cov-report=term-missing` |
+| `make test` | `uv run pytest -n auto --dist worksteal` (one worker per core) |
+| `make test-changed` | `uv run pytest -n auto --dist worksteal --testmon --testmon-forceselect` (only the tests whose code changed since the last run) |
+| `make coverage` | `uv run pytest -n auto --dist worksteal --cov=roomkit --cov-report=term-missing` |
 | `make all` | `lint + typecheck + test` |
 | `make clean` | Remove build artifacts, caches |
 
