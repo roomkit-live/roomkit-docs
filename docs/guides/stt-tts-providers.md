@@ -111,7 +111,8 @@ STT and no VAD in the pipeline:
   a stream whose audio falls behind real time (1008 after ~15 s). An echo
   transcript it discards does not end the stream either.
 - **Each segment is its own room message.** The sender stays the session's
-  participant, the owner of the audio stream; the speaker is metadata:
+  participant, the owner of the audio stream, unless a hook matched the voice
+  to a participant (below); the speaker is metadata:
   `speaker_label` (`"A"`), `speaker_epoch` and `sender_name`, which the AI
   channel uses to attribute turns (see [Multi-Speaker Rooms](multi-speaker-rooms.md)).
   `sender_name` is `"Speaker A"`, `"Speaker A#1"` once a new stream (epoch)
@@ -127,6 +128,22 @@ STT and no VAD in the pipeline:
       if event.speaker == "A" and event.speaker_epoch == 0:
           return HookResult.modify(dataclasses.replace(event, sender_name="Sylvain"))
       return HookResult.allow()
+  ```
+
+  A hook that knows the person behind a voice can also name the room
+  participant it is, with `participant_id`: the segment's message is then
+  theirs rather than the stream owner's, so it reads under their name and
+  rank, and their role applies to it. The id names its participant only on a
+  channel they are reached through: add them to the room on the voice
+  channel (`kit.add_member(room_id, "voice", "p-sylvain", display_name="Sylvain")`).
+  A voice is never matched to a participant by its name alone: one named
+  like a registered person without being matched to them reads as another
+  person (`Sylvain (2)`):
+
+  ```python
+  return HookResult.modify(
+      dataclasses.replace(event, sender_name="Sylvain", participant_id="p-sylvain")
+  )
   ```
 
 - `ON_SPEAKER_CHANGE` fires with `source="stt"` when a segment's label differs
@@ -179,8 +196,8 @@ voice = VoiceChannel(
   a verdict sherpa-onnx gives over 2 s of speech outweighs one over a short
   tail. The room message carries `speaker_label`, `speaker_epoch` (always `0`:
   the stage keeps its labels for the session) and `sender_name`, and
-  `ON_TRANSCRIPTION` carries the speaker, so the hook above renames it the
-  same way.
+  `ON_TRANSCRIPTION` carries the speaker, so the hook above renames it, or
+  matches it to its participant, the same way.
 - A voice the stage matched to nobody (sherpa-onnx says `"unknown"` below its
   `search_threshold`) is `"Unknown speaker"`. An utterance the stage gave no
   result for carries no speaker, as without the option.

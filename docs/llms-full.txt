@@ -2425,7 +2425,16 @@ Rules that follow from the definition:
 - The note joins the turn's notes once per turn; the channel's own `system_prompt` stays the same.
 - A single-speaker room — a 1:1 DM — builds a byte-identical prompt: no prefixes, no note. Attribution is decided per turn from the window the memory provider returns, so it switches on the moment a second speaker (a name, or a nameless channel) appears in it and off when the window no longer holds one.
 
-There is nothing to configure. See `examples/ai_multi_speaker.py`.
+**Who takes part, silent people included.** The threshold also counts the room's roster: its active participants who are neither agents nor bots nor on the agent's own channel. When two people or more take part, every turn is labelled from the first, by every reader alike (the conversation, an ACP agent's request, a `<task>` block's asker, a summarizer's lines), and the turn's notes name them, each as their turns are labelled:
+
+```text
+[People taking part besides you, from the runtime: Alice, Bob. Each is present
+whether or not they have spoken yet, named as their messages are labelled.]
+```
+
+So an agent that joins a meeting where Alice speaks while Bob listens reads `Alice: "Who is here?"` from her first turn and knows Bob is there. A `ConferenceChannel` keeps the roster; an integration that bridges a meeting into one stream writes it with `kit.add_member(room_id, channel_id, participant_id, display_name=...)`, takes people off with `kit.remove_member`, and matches each voice to its person in an `ON_TRANSCRIPTION` hook (`dataclasses.replace(event, sender_name=..., participant_id=...)`): a voice only named like a participant reads as another person (`Alice (2)`). A one-to-one conversation reads as before; a standalone instruction carries no list. A speak policy's `SpeakTurn.people` is the same list.
+
+There is nothing to configure. See `examples/ai_multi_speaker.py` and `examples/ai_people_taking_part.py`.
 
 ## Agentic Features
 
