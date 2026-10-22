@@ -465,8 +465,10 @@ async def my_handler(name: str, arguments: dict) -> str:
 ```
 
 The author need not be human, either: in a multi-agent room the waking event may
-be another agent's, and its participant id reads back the same way — compare
-`participant.role` against `ParticipantRole.AGENT` when that matters.
+be another agent's. An AI agent speaks through an intelligence channel, and an
+AI participant the host records in the room takes `ParticipantRole.BOT` —
+compare `participant.role` against it when that matters.
+`ParticipantRole.AGENT` is a human advisor, a person.
 
 !!! warning
     `None` is an answer, not a missing value. A system injection, a webhook or a

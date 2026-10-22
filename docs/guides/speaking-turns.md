@@ -41,10 +41,11 @@ A runnable version, with two people and the three modes, is
   context has them, so an event whose visibility withholds it from the channel
   never reaches the policy, nor a classifier the policy calls;
 - `people` — who takes part besides the agent, by name: one name is a
-  conversation between the agent and one person. These are the room's active
-  participants that are neither agents nor bots, or the distinct speakers of the
-  recent events when there are more (one microphone may carry several diarized
-  voices);
+  conversation between the agent and one person. These are the people who
+  take part, as [multi-speaker rooms](multi-speaker-rooms.md) reads them from
+  the roster (neither bots nor observers; a human agent takes part), or the
+  distinct speakers of the recent events when there are more (one microphone
+  may carry several diarized voices);
 - `speakers` — who said `event` and each of `recent`, by event id, by the label
   the AI context gives them: the sender's name, the channel for a sender with
   none (`@sms1`), and the rank of a sender whose name reads like an earlier

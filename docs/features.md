@@ -2110,7 +2110,7 @@ await kit.process_inbound(
 # plus the attribution note in the turn's notes.
 ```
 
-Who takes part is read from the room's roster, silent people included: its active participants who are neither agents, bots nor observers, nor on the agent's channel, and whose messages reach the agent. When two people or more take part (a `ConferenceChannel` keeps the roster; an integration bridging a meeting into one stream writes it with `kit.add_member`), every turn is labelled from the first, by every reader of the room alike, and the turn's notes name them, each quoted (`[People taking part besides you, from the runtime: “Alice”, “Bob”. ...]`), so an agent that joins a meeting knows who is there before each has spoken and can address someone who has not said a word.
+Who takes part is read from the room's roster, silent people included: its active participants who are neither bots nor observers (a human agent, `ParticipantRole.AGENT`, takes part), nor on the agent's channel, and whose messages reach the agent. When two people or more take part (a `ConferenceChannel` keeps the roster; an integration bridging a meeting into one stream writes it with `kit.add_member`), every turn is labelled from the first, by every reader of the room alike, and the turn's notes name them, each quoted (`[People taking part besides you, from the runtime: “Alice”, “Bob”. ...]`), so an agent that joins a meeting knows who is there before each has spoken and can address someone who has not said a word.
 
 Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-rooms.md), `examples/ai_multi_speaker.py` and `examples/ai_people_taking_part.py`.
 
