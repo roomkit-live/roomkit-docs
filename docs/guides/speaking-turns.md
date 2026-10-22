@@ -448,14 +448,38 @@ no participant, from a channel bound to the room as voice. Metadata is anyone's
 to write; a message that claims to be a cut record is ignored.
 
 **The context marks the answer.** In the context the agent's next turn reads,
-the cut answer ends with:
+the cut answer ends with when it was cut and how far the person heard it:
 
 ```
-[You were interrupted while saying this: the person may not have heard the end of it.]
+[The person cut you off during this answer, 5.7 s in: they heard it up to “Bien sûr ! Il y a longtemps, Québec était un village amérindien nommé” and not the rest.]
 ```
 
-so the model does not take for heard what was cut, and does not refer to it as
-said. This holds for every AI channel, with or without a speak policy.
+so the model does not take for heard what was cut, says it was cut off when
+asked, and picks up from where the person stopped hearing. While the history
+holds a cut answer, the turn's notes also say how one reads, and that an answer
+without the mark was heard to its end. This holds for every AI channel, with or
+without a speak policy.
+
+The quote is an estimate. No TTS word is timed, so the words are taken by their
+letters: at the share of the answer's audio that played, less two words, once
+its synthesis had ended before the cut; at 11 letters a second otherwise. It
+ends early rather than late on purpose: a model told the person heard words
+they did not goes on past them, where a quote that ends early costs a few words
+said again. With too little played to quote, the mark says they heard little or
+none of it. The words are quoted on one line between quotes they cannot close,
+since a participant may have led the agent to say them.
+
+Measured with four models (Mistral Small and Large, Claude Haiku, GPT-6 Luna) on
+eight answers cut at 40% of their Voxtral render, 160 tries each:
+
+| The model reads | "Did I cut you off?" yes | Resumes where the person stopped hearing | "This time, did I cut you off?" no, after an answer heard whole |
+|---|---|---|---|
+| The answer and this mark, with the turn's note | 156 | 119 | 114 |
+| The answer and `[You were interrupted while saying this: the person may not have heard the end of it.]` (before 0.108) | 105 | 9 | 131 |
+| The words heard alone, no mark (LiveKit Agents, Pipecat) | 33 | 79 | 120 |
+
+The last column is where smaller models slip: Mistral Small answered "yes" for
+the earlier cut 32 times in 40.
 
 **The policy reads the cut.** When the event came after the cut and the agent
 has not answered since, `SpeakTurn.cut` is a `CutReply(text, played_ms, at)`.
@@ -471,7 +495,8 @@ cut`, and its notes ask it to go on from where it was cut, with a short link
 back, without repeating what was heard. Otherwise the turn decides as without a
 cut: "Wait, and for Montreal?" over a forecast is answered as a question.
 
-Which part of the answer was heard is not guessed: the record keeps the text
-handed to speech and how long it played, and the model judges from those.
+The record itself does not guess which part was heard: it keeps the text handed
+to speech, how long it played, and the share of its audio when that is known.
+The quote above is estimated where the model reads it.
 
 A runnable version, without audio, is `examples/resume_after_cut.py`.

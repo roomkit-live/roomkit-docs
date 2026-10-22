@@ -69,13 +69,15 @@ room actually heard as an `internal`-visibility event:
     "interrupted": True,
     "played_ms": 1840,
     "voice_session_id": "...",
-    # "played_percentage": 46.0   — only when the utterance's duration is known
+    # "played_percentage": 46.0   — only when its synthesis ended before the cut
 }
 ```
 
 The full text is stored rather than a truncated guess: `played_ms` says how far
 playback got, and cutting the string at the same proportion would invent a word
-boundary that TTS timing does not guarantee.
+boundary that TTS timing does not guarantee. The AI channel estimates the heard
+part where the model reads it, ending early rather than late (see
+[Speaking turns](speaking-turns.md#a-cut-answer)).
 
 ## Strategy Details
 
