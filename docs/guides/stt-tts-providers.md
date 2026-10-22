@@ -133,7 +133,9 @@ STT and no VAD in the pipeline:
   A hook that knows the person behind a voice can also name the room
   participant it is, with `participant_id`: the segment's message is then
   theirs rather than the stream owner's, so it reads under their name and
-  rank, and their role applies to it. The id names its participant only on a
+  rank (their record's name, unless the hook also gives `sender_name`), and
+  their role applies to it. A turn detector never joins two participants'
+  words into one turn, even under one label. The id names its participant only on a
   channel they are reached through: add them to the room on the voice
   channel (`kit.add_member(room_id, "voice", "p-sylvain", display_name="Sylvain")`).
   A voice is never matched to a participant by its name alone: one named

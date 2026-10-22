@@ -93,10 +93,10 @@ An identity resolver that sets `display_name` on the participants it identifies 
 
 ## Who takes part
 
-An agent that joins a meeting where Alice speaks while Bob listens would otherwise read Alice's words as an anonymous user's until Bob says something, and would not know Bob is there at all. Who takes part is read from the room's roster, not from who has spoken: the room's active participants who are neither agents (`ParticipantRole.AGENT`) nor bots (`ParticipantRole.BOT`) nor on the agent's own channel, one per person, in the order they joined. When two people or more take part:
+An agent that joins a meeting where Alice speaks while Bob listens would otherwise read Alice's words as an anonymous user's until Bob says something, and would not know Bob is there at all. Who takes part is read from the room's roster, not from who has spoken: the room's active participants who are neither agents (`ParticipantRole.AGENT`), bots (`ParticipantRole.BOT`) nor observers (`ParticipantRole.OBSERVER`: a supervisor or an auditor reads without taking part), nor on the agent's own channel, and whose messages reach the agent, one per person, in the order they joined. A person reached only through a channel whose visibility withholds its messages from the agent (`visibility=` on the binding, RFC §7.5) is not named to it: the agent would never hear them. When two people or more take part:
 
 - every turn is labelled from the first, as when two have spoken;
-- the turn's notes name them, under the label their turns open with:
+- the turn's notes name them, each quoted as the room's record names them (a participant may choose their name, and it must not read as the runtime's words):
 
 ```text
 user:      Alice: "Who is here?"
@@ -106,12 +106,11 @@ user:      Alice: "Who is here?"
            [Speaker labels from the runtime: several people take part in this
            conversation. ...]
 
-           [People taking part besides you, from the runtime: Alice, Bob. Each is
-           present whether or not they have spoken yet, named as their messages
-           are labelled.]
+           [People taking part besides you, from the runtime: “Alice”, “Bob”.
+           Each is present whether or not they have spoken yet.]
 ```
 
-The agent can then answer "Alice and Bob" and address Bob, who has not said a word. A one-to-one conversation (one person on the roster) reads as before, and someone who left (`remove_member`) is no longer named. A standalone instruction, which reads nothing of the room, carries no list.
+The agent can then answer "Alice and Bob" and address Bob, who has not said a word. With one person on the roster, or none, nothing changes, and someone who left (`remove_member`) is no longer named. A name the room's record holds may differ from one a transport stamps on a message (`sender_name`): the note gives the record's. A standalone instruction, which reads nothing of the room, carries no list.
 
 Who writes the roster:
 
@@ -132,7 +131,7 @@ async def match_the_voice(event, ctx):
     )
 ```
 
-The voice channel's diarization (`pipeline_speakers=True`, or a diarizing STT) gives each transcript its speaker; matched to their participant, the first transcript already reads `Alice: "..."`. A voice only *named* like a participant, without `participant_id`, reads as another person (`Alice (2)`): a name proves nothing. The session's own participant (the owner of the stream) is not on the roster unless something adds it: a stream that carries several people is not one of them.
+The voice channel's diarization (`pipeline_speakers=True`, or a diarizing STT) gives each transcript its speaker; matched to their participant, the first transcript already reads `Alice: "..."`. A hook that gives `participant_id` alone lets the participant's record name the words rather than the stream's `Speaker A`, and a turn detector never joins two participants' words into one turn, even under one label. A voice only *named* like a participant, without `participant_id`, reads as another person (`Alice (2)`): a name proves nothing. The session's own participant (the owner of the stream) is not on the roster unless something adds it: a stream that carries several people is not one of them.
 
 The same threshold holds for every reader of the room: the request an ACP agent is prompted with, a `<task>` block's asker, and the lines a memory summarizer reads are labelled from the first turn too. A speak policy's `SpeakTurn.people` is the same list (or the distinct voices of the turns when they are more).
 
