@@ -465,6 +465,7 @@ stt = SherpaOnnxSTTProvider(
 | `joiner` | `""` | Path to joiner `.onnx` model (transducer only). |
 | `model_type` | `""` | Model type hint (e.g. `"nemo_transducer"` for NeMo models). When set, the model is offline-only. |
 | `language` | `"en"` | Language code (Whisper only). |
+| `stream_language` | `""` | Language a multilingual streaming transducer is told on each stream (Nemotron 3.5: `"fr"`, `"en"`, `"auto"`). Set, the provider also takes a per-call `language`. |
 | `sample_rate` | `16000` | Expected audio sample rate. |
 | `num_threads` | `2` | CPU threads for inference. |
 | `provider` | `"cpu"` | ONNX execution provider (`"cpu"` or `"cuda"`). |

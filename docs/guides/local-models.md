@@ -39,6 +39,7 @@ The complete agent, with a local LLM through llama.cpp and RNNoise, is
 | `zipformer-en-20M-2023-02-17` | `SherpaOnnxSTTConfig` | 44 MB | Streaming STT, English, small (20M params); drops the first word of audio resampled from 48 kHz |
 | `zipformer-en-kroko-2025-08-06` | `SherpaOnnxSTTConfig` | 57 MB | Streaming STT, English, Kroko |
 | `zipformer-fr-kroko-2025-08-06` | `SherpaOnnxSTTConfig` | 57 MB | Streaming STT, French, Kroko (1.5 s tail padding) |
+| `nemotron-3.5-asr-streaming-0.6b-560ms-int8` | `SherpaOnnxSTTConfig` | 475 MB | Streaming STT, multilingual, Nemotron 3.5; detects the language, `stream_language="fr"` fixes it |
 | `parakeet-tdt-0.6b-v3-int8` | `SherpaOnnxSTTConfig` | 487 MB | Offline STT, 25 European languages, Parakeet TDT v3 |
 | `whisper-tiny.en-int8` | `SherpaOnnxSTTConfig` | 104 MB | Offline STT, English, Whisper tiny.en |
 | `whisper-base-int8` | `SherpaOnnxSTTConfig` | 161 MB | Offline STT, multilingual, Whisper base; detects the language, `language="fr"` fixes it |
@@ -158,4 +159,4 @@ on macOS 15, pip installs 0.4.3, the last release built for it.
   you already hold.
 - **Models without an entry.** Any sherpa-onnx or Smart Turn model still works
   through the config's path fields; the list holds the models RoomKit has
-  checked end to end. Nemotron 3.5 streaming needs provider support first.
+  checked end to end.

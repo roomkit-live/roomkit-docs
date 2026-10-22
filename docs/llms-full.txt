@@ -3808,7 +3808,9 @@ pipeline = AudioPipelineConfig(
 ```
 
 Models: streaming STT `zipformer-en-2023-06-26`, `zipformer-en-20M-2023-02-17`,
-`zipformer-en-kroko-2025-08-06`, `zipformer-fr-kroko-2025-08-06`; offline STT
+`zipformer-en-kroko-2025-08-06`, `zipformer-fr-kroko-2025-08-06`,
+`nemotron-3.5-asr-streaming-0.6b-560ms-int8` (multilingual, detects the language;
+`stream_language="fr"` fixes it); offline STT
 `parakeet-tdt-0.6b-v3-int8` (25 European languages), `whisper-tiny.en-int8`,
 `whisper-base-int8` (multilingual, `language="fr"` to fix the language),
 `moonshine-tiny-en-2026-02-27`, `moonshine-base-en-2026-02-27` (`mode="moonshine"`); TTS
