@@ -3785,6 +3785,10 @@ python -m roomkit.local_models list
 python -m roomkit.local_models download zipformer-en-2023-06-26 kokoro-int8-multi-lang-v1_0 ten-vad smart-turn-v3.2-cpu
 ```
 
+From Python, `list_local_models(kind=None)` returns the known models
+(`list_local_models("sherpa-onnx-tts")` keeps one config's) and
+`is_downloaded(model)` says which are there.
+
 then build each config by the model's name. `from_local_model()` never touches
 the network; a model that is not downloaded raises `ModelNotDownloadedError`,
 whose message is the download command. Other keywords override the model's

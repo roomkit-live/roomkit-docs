@@ -65,6 +65,16 @@ instance, is transcribed word for word by Parakeet and Kroko.
 
 `python -m roomkit.local_models list` prints the same table and marks the
 models already downloaded; `--kind sherpa-onnx-tts` narrows it to one config.
+From Python, `list_local_models()` returns them as `LocalModel`s (name,
+kind, description, size, files, voices), and `is_downloaded()` says which are
+there:
+
+```python
+from roomkit.local_models import SHERPA_ONNX_TTS, is_downloaded, list_local_models
+
+for model in list_local_models(SHERPA_ONNX_TTS):
+    print(model.name, model.size_mb, is_downloaded(model), model.voices[:3])
+```
 
 ## Downloading
 

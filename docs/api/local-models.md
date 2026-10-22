@@ -4,7 +4,9 @@ Download the files of a local model once, pinned to their SHA-256, then build a
 provider config by the model's name with no network. Narrative guide:
 [Local Models](../guides/local-models.md).
 
-## Downloading and locating
+## Listing, downloading and locating
+
+::: roomkit.local_models.list_local_models
 
 ::: roomkit.local_models.download_local_model
 
