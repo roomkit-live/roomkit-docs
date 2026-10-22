@@ -494,6 +494,14 @@ A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
 say). That cancellation is the host's, so the agent the result was going to is
 told the task was cancelled.
 
+Calls that cancel one task at once, the host's and agents' together, cancel it
+once: each is answered that it was cancelled, and none of the agents that made
+them is handed the cancellation back. That holds for a call made while the
+task's cancelled end is still being completed (its `ON_TASK_COMPLETED` hooks
+running), until the end decides whom it hands the cancellation back to; a call
+made after that, or on a task that ended otherwise, is answered that the task
+ended.
+
 Without `cancel_task`, the task the person dropped runs to its end and its
 result is handed back and said anyway. Runnable: `examples/cancel_background_task.py`.
 
