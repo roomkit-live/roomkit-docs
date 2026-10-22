@@ -549,8 +549,10 @@ answer a human-input request a turn opened, held 60 seconds when it comes
 before the request (see [human in the loop](guides/human-in-the-loop.md)).
 
 **A channel's per-room verbs are channel calls.** Attaching an intelligence
-channel to a room, and detaching it, reaches every executor that declares the
-channel (`RoomAttached`, `RoomDetached`): the executor calls the channel's
+channel to a room, and detaching it, reaches the executors that may run the
+channel's turns (`RoomAttached`, `RoomDetached`): the kit's own executor alone
+for an agent the kit holds live, so a host executor builds no copy of it, else
+every executor that declares the channel. The executor calls the channel's
 `on_room_attached` / `on_room_detached` and logs what they raise, which no
 longer cancels the attachment. A verb a channel keeps per room runs on the
 executor holding the room's state, through the kit, for a channel attached

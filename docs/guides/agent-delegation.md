@@ -738,6 +738,12 @@ class RedisTaskRunner(TaskRunner):
 kit = RoomKit(task_runner=RedisTaskRunner(redis_url="..."))
 ```
 
+A runner ends each task exactly once, through the `on_complete` it was handed:
+completed or failed once its work ran (failed when the run raised outside its
+turn), cancelled when `cancel` or `close` cut it. A `submit` that raises must
+not have taken the task: the delegation ends it failed itself, and a runner
+that also ends it would fire `ON_TASK_COMPLETED` twice.
+
 
 When a background result follows a realtime tool's spoken acknowledgement, use
 `strategy="wait_for_idle"` with that explicit channel ID. Realtime idle detection
