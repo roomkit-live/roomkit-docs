@@ -1098,13 +1098,13 @@ async def pii_redactor(event: RoomEvent, ctx: RoomContext) -> HookResult:
 Filter hooks by channel type, channel ID, or direction:
 
 ```python
-from roomkit.models.enums import ChannelType, ChannelDirection
+from roomkit.models.enums import ChannelType, EventDirection
 
 @kit.hook(
     HookTrigger.AFTER_BROADCAST,
     execution=HookExecution.ASYNC,
     channel_types={ChannelType.SMS},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
     priority=10,
 )
 async def sms_audit(event: RoomEvent, ctx: RoomContext) -> None:
