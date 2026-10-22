@@ -725,8 +725,9 @@ artifacts = ["*.md", "*.txt"]
 | `make lint` | `uv run ruff check src/ tests/` |
 | `make format` | `uv run ruff format src/ tests/` |
 | `make typecheck` | `uv run ty check src/roomkit/` |
-| `make test` | `uv run pytest` |
-| `make coverage` | `uv run pytest --cov=roomkit --cov-report=term-missing` |
+| `make test` | `uv run pytest -n auto` (one worker per core) |
+| `make test-changed` | `uv run pytest -n auto --testmon --testmon-forceselect` (only the tests whose code changed since the last run) |
+| `make coverage` | `uv run pytest -n auto --cov=roomkit --cov-report=term-missing` |
 | `make all` | `lint + typecheck + test` |
 | `make clean` | Remove build artifacts, caches |
 
@@ -738,7 +739,7 @@ The CI pipeline runs on push to `main` and on pull requests:
 jobs:
   lint:        # Ruff check + format check (Python 3.12)
   typecheck:   # mypy strict (Python 3.12)
-  test:        # pytest with coverage (Python 3.12 + 3.13 matrix)
+  test:        # pytest with coverage, one worker per core (Python 3.12 + 3.13 matrix)
 ```
 
 Coverage reports are uploaded as artifacts for the Python 3.12 run.
