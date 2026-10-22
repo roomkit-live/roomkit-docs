@@ -108,6 +108,8 @@ roomkit/
 
 All models inherit from `pydantic.BaseModel` with Pydantic v2 validation.
 
+A record's timestamps (`created_at`, `updated_at`, `closed_at`, a delivery status's `timestamp`) hold their instant in UTC: a value given with an offset is converted, one without an offset is read as UTC. Compare them with timezone-aware datetimes (`datetime.now(UTC)`); a naive `datetime` raises.
+
 ### Room
 
 ```python
@@ -121,27 +123,27 @@ class Room(BaseModel):
     timers: RoomTimers
     metadata: dict[str, Any]
     event_count: int
-    latest_index: int
+    latest_index: int | None    # None while the room has no event
 ```
 
 ### RoomEvent
 
 ```python
 class RoomEvent(BaseModel):
-    id: str                     # UUID hex
+    id: str                     # UUID hex; the pipeline gives each committed event a fresh one
     room_id: str
     type: EventType             # MESSAGE, SYSTEM, TYPING, etc.
     source: EventSource
     content: EventContent       # Discriminated union (see below)
     status: EventStatus         # PENDING | DELIVERED | READ | FAILED | BLOCKED
     blocked_by: str | None
-    visibility: str             # "all" or channel-specific filter
+    visibility: str             # "all", "none", "internal", "transport", "intelligence" or channel ids
     index: int
     chain_depth: int            # Reentry depth for loop prevention
     parent_event_id: str | None
     correlation_id: str | None
-    idempotency_key: str | None
-    created_at: datetime
+    idempotency_key: str | None  # unique per room and source channel
+    created_at: datetime        # UTC
     metadata: dict[str, Any]
     channel_data: ChannelData
     delivery_results: dict[str, Any]
@@ -172,7 +174,7 @@ class ChannelBinding(BaseModel):
     room_id: str
     channel_type: ChannelType
     category: ChannelCategory   # TRANSPORT | INTELLIGENCE
-    direction: ChannelDirection  # INBOUND | OUTBOUND | BIDIRECTIONAL
+    direction: ChannelDirection  # INBOUND | OUTBOUND | BIDIRECTIONAL: whether deliver() is called
     access: Access              # READ_WRITE | READ_ONLY | WRITE_ONLY | NONE
     muted: bool
     visibility: str
@@ -220,7 +222,7 @@ class DeliveryStatus(BaseModel):
     sender: str                 # Phone number/address sent from
     error_code: str | None      # Provider-specific error code
     error_message: str | None   # Human-readable error message
-    timestamp: str | None       # When the status was reported
+    timestamp: datetime | None  # When the status was reported (UTC)
     raw: dict[str, Any]         # Original webhook payload
 ```
 
@@ -317,6 +319,7 @@ class TTSCancelledEvent:
 | `ChannelType` | `sms`, `mms`, `rcs`, `email`, `whatsapp`, `websocket`, `ai`, `voice`, `push`, `messenger`, `webhook`, `system` |
 | `ChannelCategory` | `transport`, `intelligence` |
 | `ChannelDirection` | `inbound`, `outbound`, `bidirectional` |
+| `EventDirection` | `inbound`, `outbound` (an event's `source.direction`; never both ways) |
 | `ChannelMediaType` | `text`, `rich`, `media`, `audio`, `video`, `location`, `template` |
 | `EventType` | `message`, `system`, `typing`, `read_receipt`, `delivery_receipt`, `presence`, `reaction`, `edit`, `delete`, `participant_joined`, `participant_left`, `participant_identified`, `channel_attached`, `channel_detached`, `channel_muted`, `channel_unmuted`, `channel_updated`, `task_created`, `observation` |
 | `EventStatus` | `pending`, `delivered`, `read`, `failed`, `blocked` |
@@ -349,10 +352,10 @@ class Channel(ABC):
 
     @abstractmethod
     async def deliver(self, event: RoomEvent, binding: ChannelBinding, context: RoomContext) -> ChannelOutput:
-        """Push an event to the external system."""
+        """Push an event to the external system (a transport whose binding sends)."""
 
     async def on_event(self, event: RoomEvent, binding: ChannelBinding, context: RoomContext) -> ChannelOutput:
-        """React to an event (default: no-op for transport channels)."""
+        """React to an event; every receiver gets it (default: no-op)."""
 
     def capabilities(self) -> ChannelCapabilities:
         """Declare supported media types and features."""
@@ -508,14 +511,14 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     async def unsubscribe_room(self, subscription_id) -> bool
 
     # --- Hook registration ---
-    def hook(self, trigger, execution=SYNC, priority=0, name="", timeout=30.0,
+    def hook(self, trigger, execution=SYNC, priority=0, name="", timeout=30.0,  # name unique per scope
              channel_types=None, channel_ids=None, directions=None,
              event_types=None) -> decorator
     def on(self, event_type: str) -> decorator      # Framework event handler
     def identity_hook(self, trigger, channel_types=None, channel_ids=None,
                        directions=None) -> decorator    # Identity resolution hook
     def on_delivery_status(self, fn) -> decorator   # Delivery status handler
-    def add_room_hook(self, room_id, trigger, execution, fn, priority=0, name="") -> None
+    def add_room_hook(self, room_id, trigger, execution, fn, priority=0, name="") -> HookRegistration
     def remove_room_hook(self, room_id, name) -> bool
 
     # --- Session lifecycle (voice / video) ---
@@ -549,6 +552,8 @@ The storage interface defines 30 abstract methods across 8 categories:
 | **Tasks** | `add_task`, `get_task`, `list_tasks`, `update_task` |
 | **Observations** | `add_observation`, `list_observations` |
 | **Read Tracking** | `mark_read`, `mark_all_read`, `get_unread_count` |
+
+An idempotency key is unique per room and per source channel: `check_idempotency(room_id, key, *, channel_id)` and `get_event_by_idempotency_key(room_id, key, *, channel_id)` take the channel as a keyword-only argument, which a custom store must accept.
 
 ---
 
@@ -785,7 +790,7 @@ fail_under = 90                 # 90% minimum coverage required
 - Rate limiter token refill behavior and wait semantics
 - Idempotency key deduplication (checked inside room lock)
 - Muted channel behavior (events received, responses suppressed, tasks/observations preserved)
-- Visibility filtering (all, none, transport, intelligence, specific channel IDs)
+- Visibility filtering (all, none, internal, transport, intelligence, specific channel IDs)
 - Framework event emission for observability
 - RCS provider functionality and SMS fallback
 - MMS aggregation (VoiceMeUp split webhooks)
@@ -940,7 +945,7 @@ Each content type has a `type` literal field (e.g., `type: Literal["text"] = "te
 
 Hooks and intelligence channels can produce three types of side effects:
 
-- **InjectedEvent** -- Synthetic events delivered to specific channels (e.g., challenge messages)
+- **InjectedEvent** -- Events a hook adds for specific channels (e.g., challenge messages), each committed after its cause as a pass of its own and delivered to its transport targets
 - **Task** -- Work items with status tracking for human follow-up
 - **Observation** -- Intelligence findings with category and confidence score
 

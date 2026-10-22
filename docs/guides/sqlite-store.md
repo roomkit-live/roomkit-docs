@@ -39,8 +39,8 @@ indexed columns.
 
 Event indexes use a durable per-room high-water mark. Deleting history never
 reuses an old index, and database constraints reject duplicate room indexes or
-idempotency keys. These invariants are enforced by SQLite transactions, not by
-application timing.
+idempotency keys (a key is unique per room and per source channel). These
+invariants are enforced by SQLite transactions, not by application timing.
 
 ## Full-Text Search
 

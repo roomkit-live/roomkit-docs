@@ -1032,6 +1032,52 @@ modified = event.model_copy(update={"content": TextContent(body="[REDACTED]")})
 HookResult.modify(modified)
 ```
 
+### Injected events
+
+A `BEFORE_BROADCAST` hook can inject events whatever it decides about the
+event it reads: a notice to a moderator when it blocks a message, say.
+
+```python
+from roomkit import ChannelType, EventSource, HookResult, InjectedEvent, RoomEvent, TextContent
+
+@kit.hook(HookTrigger.BEFORE_BROADCAST)
+async def moderate(event, ctx):
+    if event.source.channel_id == "moderation":
+        return HookResult.allow()  # its own notice runs this hook too
+    if not looks_like_spam(event):
+        return HookResult.allow()
+    notice = RoomEvent(
+        room_id=event.room_id,
+        source=EventSource(channel_id="moderation", channel_type=ChannelType.SYSTEM),
+        content=TextContent(body="A message was held for review."),
+    )
+    return HookResult.block(
+        "spam", injected=[InjectedEvent(event=notice, target_channel_ids=["ws-moderator"])]
+    )
+```
+
+Each injected event is committed after the event that caused it, as a pass
+of its own (RFC §9.4):
+
+- It runs the `BEFORE_BROADCAST` hooks, the one that injected it included, so
+  a hook that blocks or injects on every event must let its own injections
+  through. A hook may block it (stored `BLOCKED`), and what its hooks inject
+  is committed after it the same way.
+- It counts against the reentry budget (`10 × max_chain_depth` per inbound
+  message). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and its
+  hooks do not run.
+- It keeps its cause's chain depth and carries no idempotency key. Its
+  visibility names the targets the room binds (`none` when it has none), and
+  a hook may narrow it, never widen it.
+- It takes no source check: it is the hook's, not a channel's.
+- It is delivered to its transport targets only, transcoded like any
+  delivery, never to its own source. An agent among the targets is not
+  called: it reads the event in its history at its next turn. To have an
+  agent answer, send the event with `kit.send_event()`.
+
+An identity challenge (`IdentityHookResult.challenge(inject=...)`) is
+committed the same way.
+
 ### What happens when a hook fails
 
 A hook that does not produce a usable result — it raises, it exceeds its

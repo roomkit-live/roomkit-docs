@@ -6,6 +6,8 @@
 
 ::: roomkit.models.enums.ChannelDirection
 
+::: roomkit.models.enums.EventDirection
+
 ::: roomkit.models.enums.ChannelMediaType
 
 ::: roomkit.ChannelType

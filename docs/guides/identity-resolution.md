@@ -167,8 +167,14 @@ async def challenge_unknown(event, context, id_result):
 When `CHALLENGE_SENT` is returned:
 
 1. The original inbound message is **blocked** (not broadcast)
-2. The injected event is delivered to the sender's channel
+2. The injected event is committed as a pass of its own, as any event a hook
+   injects is ([Injected events](../features.md#injected-events)): under the
+   room lock, through the `BEFORE_BROADCAST` hooks (which may block it), then
+   delivered to the sender's channel, transcoded for it
 3. The sender's next message goes through identity resolution again
+
+A `BEFORE_BROADCAST` hook that blocks or rewrites every event also reads the
+challenge: let it through by its source (`"system"` above) or its content.
 
 Nothing is kept between the two: the challenge has no state or expiry, and
 the reply is an ordinary message. Recognising it (reading the account

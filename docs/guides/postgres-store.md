@@ -112,7 +112,7 @@ PostgresStore creates 11 tables on first `init()`:
 | Table | Purpose | Key Columns | Indexes |
 |-------|---------|-------------|---------|
 | `rooms` | Room state and metadata | `id`, `organization_id`, `status`, `event_count`, `metadata` (JSONB) | status, org_id, updated_at |
-| `events` | Conversation events | `type`, `source_channel_id`, `source_channel_type`, `index`, `correlation_id`, `visibility`, `content` (JSONB) | room+index, room+type, room+created_at, correlation_id, source, idempotency |
+| `events` | Conversation events | `type`, `source_channel_id`, `source_channel_type`, `index`, `correlation_id`, `visibility`, `content` (JSONB) | room+index, room+type, room+created_at, correlation_id, source, idempotency (room+source channel+key, unique) |
 | `event_sequences` | Monotonic index high-water marks | `room_id`, `next_index` | room_id PK |
 | `bindings` | Channel attachments | `channel_type`, `category`, `direction`, `access`, `muted`, `participant_id`, `is_group` | channel_id, channel_id+participant_id |
 | `participants` | Room participants | `channel_id`, `role`, `status`, `identification`, `identity_id` | room+channel_id, id |
@@ -129,7 +129,10 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 ### Schema Initialization
 
-`store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, and bounded repairs that populate newly added columns without discarding existing values. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
+`store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, bounded repairs that populate newly added columns without discarding existing values, and one-time rewrites a rule change needs, each recorded in `schema_version` so it runs once. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
+
+!!! warning "Upgrade every worker before one starts"
+    The version that makes `latest_index` `None` for an empty room, scopes idempotency keys per source channel and stores each event's committed visibility changes the schema at its first `init()`: it drops the `NOT NULL` and default of `rooms.latest_index` and clears the `0` of empty rooms, replaces the unique index `idx_events_idempotency` (room, key) with `idx_events_idempotency_channel` (room, source channel, key), and rewrites once, as `schema_version` 3, the events stored `all` under a narrowed binding with that binding's visibility, so their readers stay the same. An older worker cannot read a room without an index and recreates the per-room index, so every worker sharing the database must run this version before one of them starts against it.
 
 !!! danger "Legacy v1 → v2 migration is explicit and destructive"
     A very early (v1) release stored rooms as a JSONB blob. Migrating that schema to the current relational layout requires **dropping every table** — irreversible data loss. `init()` will **not** do this for you: if it detects a v1 schema it raises `PostgresSchemaError` and refuses to touch your data.
@@ -220,8 +223,9 @@ events = await store.list_events("room-1", visibility_filter="all")
 # Cursor-based pagination (efficient for large rooms)
 events = await store.list_events("room-1", after_index=42, limit=20)
 
-# Idempotency check (prevent duplicate processing)
-exists = await store.check_idempotency("room-1", "msg-unique-key")
+# Idempotency check (prevent duplicate processing): a key is unique per room
+# and per source channel
+exists = await store.check_idempotency("room-1", "msg-unique-key", channel_id="sms-main")
 
 # Event count
 count = await store.get_event_count("room-1")

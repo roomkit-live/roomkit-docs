@@ -723,6 +723,8 @@ async def test_hook_injects_event() -> None:
 
     @kit.hook(HookTrigger.BEFORE_BROADCAST)
     async def auto_reply(event, ctx):
+        if event.source.channel_id == "system":
+            return HookResult.allow()  # the injected reply runs this hook too
         reply = RoomEvent(
             room_id=event.room_id,
             source=EventSource(channel_id="system", channel_type=ChannelType.SYSTEM),
@@ -731,8 +733,14 @@ async def test_hook_injects_event() -> None:
         return HookResult.allow(injected=[InjectedEvent(event=reply, target_channel_ids=["sms1"])])
 
     # ... process message ...
-    # Original message is broadcast, plus the injected auto-reply
+    # Original message is broadcast; the auto-reply is then committed as a
+    # pass of its own and delivered to sms1 (a transport) only
 ```
+
+An injected event runs the `BEFORE_BROADCAST` hooks too. A hook that injects
+on every event without letting its own injections through injects again on
+each, until the reentry budget stores the rest `BLOCKED` with
+`reentry_loop_cap`. See [Injected events](../features.md#injected-events).
 
 ---
 
@@ -819,6 +827,12 @@ def make_event(
         ),
     )
 ```
+
+The id it sets holds for an event a test hands a hook or a transcoder directly.
+An event that goes through the pipeline (one a channel's `handle_inbound`
+returns, a channel's response, a hook's injection) is committed under a fresh
+id the pipeline gives it: read the committed id from `InboundResult.event` or
+from the hooks.
 
 ---
 

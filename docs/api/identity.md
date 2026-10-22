@@ -48,13 +48,13 @@ Identity hooks support filtering by `channel_types`, `channel_ids`, and `directi
 
 ```python
 from roomkit import ChannelType, HookTrigger
-from roomkit.models.enums import ChannelDirection
+from roomkit.models.enums import EventDirection
 
 # Only run for SMS inbound messages
 @kit.identity_hook(
     HookTrigger.ON_IDENTITY_AMBIGUOUS,
     channel_types={ChannelType.SMS},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )
 async def resolve_sms_identity(event, ctx, id_result):
     # Only called for SMS inbound events
@@ -79,7 +79,7 @@ async def handle_unknown_support(event, ctx, id_result):
 |-----------|------|-------------|
 | `channel_types` | `set[ChannelType] \| None` | Only run for events from these channel types (None = all) |
 | `channel_ids` | `set[str] \| None` | Only run for events from these channel IDs (None = all) |
-| `directions` | `set[ChannelDirection] \| None` | Only run for events with these directions (None = all) |
+| `directions` | `set[EventDirection] \| None` | Only run for events with these directions (None = all) |
 
 All specified filters must match for the hook to be invoked. If a filter is `None`, it matches all values.
 
@@ -90,7 +90,7 @@ All specified filters must match for the hook to be invoked. If a filter is `Non
 @kit.identity_hook(
     HookTrigger.ON_IDENTITY_AMBIGUOUS,
     channel_types={ChannelType.SMS, ChannelType.EMAIL},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )
 async def resolve_transport_identity(event, ctx, id_result):
     # Identity resolution for transport channels only

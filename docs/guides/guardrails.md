@@ -543,7 +543,7 @@ await kit.attach_channel("room-1", "ws-audit", access=Access.WRITE_ONLY)
 | `WRITE_ONLY` | Yes | No |
 | `NONE` | No | No |
 
-A source whose binding cannot write -- `READ_ONLY`, `NONE`, or a `muted` channel -- does not inject a delivered message. Its inbound event is stored with status `BLOCKED` (`blocked_by: "source_read_only"` or `"source_muted"`) for audit and is never broadcast. Tasks and observations produced by hooks are still collected -- muting silences the voice, not the brain. A `BLOCKED` event is also absent from the history any channel is handed on later turns (RFC §7.5 rule 8), the source's own included: nobody received it, so no model continues from it. A default `list_events` read skips it as well; pass `EventFilter(include_blocked=True)` to audit it.
+A source whose binding cannot write -- `READ_ONLY`, `NONE`, or a `muted` channel -- does not inject a delivered message, and neither does a channel with no binding in the room (one detached, say). Its inbound event is stored with status `BLOCKED` (`blocked_by: "source_read_only"`, `"source_muted"` or `"source_unbound"`) for audit and is never broadcast; a source both read-only and muted is refused as `source_read_only`, the lasting cause. Tasks and observations produced by hooks are still collected -- muting silences the voice, not the brain. A `BLOCKED` event is also absent from the history any channel is handed on later turns (RFC §7.5 rule 8), the source's own included: nobody received it, so no model continues from it. A default `list_events` read skips it as well; pass `EventFilter(include_blocked=True)` to audit it.
 
 ### Visibility
 
@@ -562,9 +562,13 @@ await kit.attach_channel("room-1", "ai-reasoner", visibility="intelligence")
 # User messages visible to all
 await kit.attach_channel("room-1", "ws-user", visibility="all")
 
-# Audit channel sees only specific channels
-await kit.attach_channel("room-1", "ws-audit", visibility="ws-user,ai-assistant")
+# The audit channel's own events reach only these two channels
+await kit.attach_channel("room-1", "ws-audit", visibility="ai-assistant,ws-user")
 ```
+
+A binding's visibility scopes the events its channel produces. Each event is
+stored with its own visibility intersected with its source binding's, so a
+later `set_visibility` changes what new events reach, never past ones.
 
 See the [Response Visibility guide](response-visibility.md) for details.
 
@@ -778,7 +782,7 @@ Apply guardrails only to inbound messages (from users) or outbound messages (fro
 from __future__ import annotations
 
 from roomkit import HookResult, HookTrigger, RoomContext, RoomEvent, RoomKit
-from roomkit.models.enums import ChannelDirection
+from roomkit.models.enums import EventDirection
 
 
 kit = RoomKit()
@@ -788,7 +792,7 @@ kit = RoomKit()
 @kit.hook(
     HookTrigger.BEFORE_BROADCAST,
     name="inbound_only_filter",
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )
 async def inbound_filter(event: RoomEvent, ctx: RoomContext) -> HookResult:
     # ... check user input ...

@@ -52,6 +52,8 @@ RoomEvent(visibility="ai", response_visibility="ws-ui")
 
 The mechanism works by transferring `response_visibility` from the trigger event to the AI's response event as `visibility`. Once stamped, the existing `_check_visibility()` in the broadcast pipeline handles all the filtering -- no special cases needed downstream.
 
+The response is then committed as any event is: its visibility intersected with its source binding's, here the AI channel's. `response_visibility` can narrow where a reply goes, never widen it past what the agent's binding allows, and a live stream reaches no transport that binding excludes. An AI channel bound `visibility="transport"` and answering with `response_visibility="ws-ui,ai-critic"` stores its reply as `"ws-ui"` when `ai-critic` is an intelligence channel.
+
 ## Value vocabulary
 
 `response_visibility` accepts the same values as `visibility`:

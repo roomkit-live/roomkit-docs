@@ -170,7 +170,7 @@ from roomkit import (
     RoomKit, HookTrigger, HookResult, RoomEvent, RoomContext,
     ChannelType, TextContent,
 )
-from roomkit.models.enums import ChannelDirection
+from roomkit.models.enums import EventDirection
 from roomkit.models.event import MediaContent, CompositeContent
 
 # Domains that need re-hosting
@@ -219,7 +219,7 @@ kit.hook(
     HookTrigger.BEFORE_BROADCAST,
     name="rehost_media",
     channel_types={ChannelType.SMS, ChannelType.MMS},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )(rehost_media_hook)
 ```
 

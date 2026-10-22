@@ -244,18 +244,22 @@ backend apply unchanged. The hooks see an event of type `INSTRUCTION`.
 
 ### Text idempotency and retries
 
-A key identifies one publication within a room, even if a later call supplies
-a different body or address. Concurrent calls with that key return the original
-`event_id`; replays set `duplicate=True` and do not run the agent again. The
-existing locked inbound pipeline owns this decision. Different keys, rooms, or
-calls without a key remain distinct. Empty keys are refused.
+A key identifies one publication within a room and its source channel (the
+transport the call is attributed to), even if a later call supplies a different
+body or address. Concurrent calls with that key return the original
+`event_id`; replays set `duplicate=True` and do not run the agent again. A
+replay of a publication the room blocked is `blocked` again, with the reason
+it was blocked for. The existing locked inbound pipeline owns this decision.
+Different keys, rooms, source channels, or calls without a key remain
+distinct. Empty keys are refused.
 
 Keys last as long as the configured `ConversationStore` retains them. The memory
 store loses them on restart; SQLite and Postgres preserve committed keys across
 restart until the corresponding event/key is removed. Distributed deployments
 need a shared store and an appropriate shared lock manager. Custom stores must
-implement the same idempotency contract; an older store that cannot resolve a
-seen key may return a duplicate refusal without an event id.
+implement the same idempotency contract (`check_idempotency` and
+`get_event_by_idempotency_key` take a keyword-only `channel_id`); a store that
+cannot resolve a seen key may return a duplicate refusal without an event id.
 
 A stored event does not prove its turn completed. If a process crashes after
 commit, replaying the key avoids a second trigger but does not resume the lost

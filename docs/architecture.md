@@ -309,7 +309,7 @@ sequenceDiagram
 
     rect rgb(240, 248, 255)
         Note over IR,Store: Per-room lock acquired
-        IR->>IR: Idempotency check
+        IR->>IR: Idempotency check (per room and source channel)
         IR->>Store: Assign event index
 
         IR->>HE: Run sync hooks (BEFORE_BROADCAST)
@@ -325,8 +325,8 @@ sequenceDiagram
             ER->>ER: For each target binding
             Note over ER: 1. Transcode content
             Note over ER: 2. Enforce max_length
-            Note over ER: 3. on_event() for all channels
-            Note over ER: 4. deliver() for transport channels
+            Note over ER: 3. on_event() for every receiver
+            Note over ER: 4. deliver() for transports whose binding sends
             Note over ER: 5. Circuit breaker + rate limiter + retry
 
             ER-->>IR: BroadcastResult
@@ -346,10 +346,12 @@ For each target channel binding, the EventRouter applies this logic:
 
 ```mermaid
 flowchart TD
-    A[Event received] --> B{Source has write access?}
-    B -- No --> Z[Skip: no write permission]
+    A[Event received] --> B0{Source bound in the room?}
+    B0 -- No --> Z00["Store BLOCKED: source_unbound"]
+    B0 -- Yes --> B{Source has write access?}
+    B -- No --> Z["Store BLOCKED: source_read_only"]
     B -- Yes --> B2{Source is muted?}
-    B2 -- Yes --> Z0[Skip: source muted]
+    B2 -- Yes --> Z0["Store BLOCKED: source_muted"]
     B2 -- No --> C{Target is source?}
     C -- Yes --> Z2[Skip: don't echo to sender]
     C -- No --> D{Target has read access?}
@@ -361,7 +363,9 @@ flowchart TD
     G --> H["on_event() — all channels react"]
     H --> I{Channel category?}
     I -- Intelligence --> J[Collect response events]
-    I -- Transport --> K{Circuit breaker open?}
+    I -- Transport --> I2{Binding sends? OUTBOUND or BIDIRECTIONAL}
+    I2 -- No --> Z6["Done: on_event() only"]
+    I2 -- Yes --> K{Circuit breaker open?}
     K -- Yes --> Z5[Skip delivery: circuit open]
     K -- No --> L{Rate limit?}
     L -- Yes --> L2[Wait for token]
@@ -377,7 +381,9 @@ flowchart TD
     S -- No --> U[Queue reentry events]
 ```
 
-Note: muted channels **do** receive events via `on_event()` and can produce side effects (tasks, observations). Only their `response_events` are suppressed. The RFC principle is: "muting silences the voice, not the brain."
+Note: the three source checks run when the event is committed, before any target is considered: a refused event is stored `BLOCKED` with the reason in `blocked_by` and delivered to nobody. A source both read-only and muted is refused as `source_read_only`, the lasting cause.
+
+Muted channels **do** receive events via `on_event()` and can produce side effects (tasks, observations). Only their `response_events` are suppressed. The RFC principle is: "muting silences the voice, not the brain."
 
 ### Reentry Drain Loop
 
@@ -388,7 +394,8 @@ flowchart TD
     A[Broadcast returns reentry events] --> B{Queue empty?}
     B -- Yes --> C[Done]
     B -- No --> D[Dequeue next reentry event]
-    D --> E[Store event]
+    D --> D2["Write its source: the responder, OUTBOUND, depth + 1, responds_to"]
+    D2 --> E[Store event]
     E --> F[Broadcast to all channels]
     F --> G[Store any blocked events]
     G --> H[Enqueue nested reentry events]
@@ -396,6 +403,10 @@ flowchart TD
 ```
 
 This ensures AI-to-AI conversations complete atomically within a single inbound pipeline call, bounded by the `max_chain_depth` limit.
+
+The pipeline, not the channel, writes who a response comes from: its responder's channel id and type, direction `OUTBOUND`, the trigger's room, the trigger's chain depth plus one, `responds_to` the trigger (unless the response names the event it answers), and no idempotency key. A response that claims another source is committed as its responder's, with a warning. Every committed event gets a fresh id from the pipeline.
+
+An event a hook injects (`InjectedEvent`) is not part of this loop's agent turns: it is committed after the event that caused it as a pass of its own (the room lock, the `BEFORE_BROADCAST` hooks, the reentry budget), delivered to its transport targets only, and asks no agent. See [Injected events](features.md#injected-events).
 
 ### Voice Pipeline
 
@@ -545,7 +556,7 @@ graph LR
 | **Rate Limiting** | `TokenBucketRateLimiter` | Per-channel token bucket; configurable per-second/minute/hour limits with wait-based backpressure |
 | **Retry with Backoff** | `retry_with_backoff` | Exponential backoff (`base * exponential_base^attempt`, capped at `max_delay_seconds`) for transient failures |
 | **Chain Depth Limit** | `max_chain_depth` (default 5) | Prevent infinite event loops from AI reentry, streamed or buffered: an agent whose answer would reach the limit is not asked, and a BLOCKED record with an observation stands in for it |
-| **Idempotency** | `idempotency_key` on events | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races); a redelivery returns the original event |
+| **Idempotency** | `idempotency_key` on events, unique per room and source channel | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races); a redelivery returns the original event, blocked again when the room blocked it |
 | **Process Timeout** | `process_timeout` (default 30s) | One budget for the whole pre-commit phase — context build, `handle_inbound`, identity, the wait for the room lock, and the gates inside it. Routing and the commit sit outside it |
 | **Identity Timeout** | `identity_timeout` (default 10s) | Prevent slow identity resolvers from blocking the pipeline |
 
@@ -588,14 +599,17 @@ RoomKit operates at the **library level** and delegates authentication to the ho
 2. **Visibility Filtering** -- Events can be scoped via the `visibility` field:
    - `"all"` -- Visible to all channels
    - `"none"` -- Visible to no channels
+   - `"internal"` -- Visible to no channels, as `"none"`; marks a record the framework wrote
    - `"transport"` -- Only visible to transport channels
    - `"intelligence"` -- Only visible to intelligence channels
    - `"channel-a,channel-b"` -- Comma-separated list of specific channel IDs
    - `"channel-a"` -- Single channel ID
 
+   A value is written back in its normal form (ids sorted, each once); an empty value, an empty item or a keyword inside a list raises `ValueError`, and `register_channel` refuses a channel id a visibility cannot name (a keyword, an id holding a comma, or one with surrounding whitespace). An event is committed with its own visibility intersected with its source binding's, and the stored value is the whole answer: a binding changed later changes no past event.
+
 3. **Muting** -- Channels can be muted per-room, suppressing their response events without detaching. Muted channels still receive events and produce side effects (tasks, observations).
 
-4. **Direction Control** -- Channels declare their direction (`INBOUND`, `OUTBOUND`, `BIDIRECTIONAL`), enforced during target filtering.
+4. **Direction Control** -- A binding's direction (`INBOUND`, `OUTBOUND`, `BIDIRECTIONAL`; its channel's unless the attachment names one) decides delivery, not reception: every receiver gets `on_event()`, and only a transport whose binding sends (`OUTBOUND` or `BIDIRECTIONAL`) also gets `deliver()` and live streams. Direction never filters an intelligence channel. An event's own direction (`EventSource.direction`) is `INBOUND` or `OUTBOUND`, never both.
 
 ### Data Protection
 

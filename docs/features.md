@@ -333,13 +333,13 @@ Every message passes through a deterministic processing pipeline:
 3. **Channel conversion** -- `handle_inbound()` converts the raw message to a `RoomEvent`
 4. **Identity resolution** -- Identify the sender (optional, with timeout and channel filtering)
 5. **Room lock** -- Acquire per-room lock for atomic processing
-6. **Idempotency check** -- A repeated `idempotency_key` skips processing and returns the event the first delivery committed
+6. **Idempotency check** -- A key its source channel already committed in the room skips processing and returns the event the first delivery committed (blocked again when the room blocked it)
 7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST), before any persistence
-8. **Write-permission gate** -- A source whose binding cannot write (`READ_ONLY`/`NONE`, or muted) is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected. An agent's response meets the same two gates in the same order, whichever path commits it (a buffered answer, a streamed row, a regenerated answer): a read-only or muted agent's answer is seen by the `BEFORE_BROADCAST` hooks, keeps the tasks and observations they file, and is then stored `BLOCKED`. A read-only agent's streamed answer is generated, stored row by row as `BLOCKED`, and piped live to no channel; a muted agent's stream is closed before generation
+8. **Write-permission gate** -- A source with no binding in the room (`source_unbound`), or whose binding cannot write (`READ_ONLY`/`NONE` as `source_read_only`, or muted as `source_muted`; read-only wins when both apply), is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected. An agent's response meets the same two gates in the same order, whichever path commits it (a buffered answer, a streamed row, a regenerated answer): a read-only or muted agent's answer is seen by the `BEFORE_BROADCAST` hooks, keeps the tasks and observations they file, and is then stored `BLOCKED`. A read-only agent's streamed answer is generated, stored row by row as `BLOCKED`, and piped live to no channel; a muted agent's stream is closed before generation
 9. **Edit/delete mutation** -- For `EDIT`/`DELETE` events, the target message is mutated only here -- after hooks allow the event -- so a moderation hook that blocks the edit leaves the target untouched
-10. **Event storage** -- Persist the allowed event as `DELIVERED`
-11. **Broadcast** -- Deliver to all eligible channels via the EventRouter
-12. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`)
+10. **Event storage** -- Persist the allowed event as `DELIVERED`, under a fresh id the pipeline gives it and with its own visibility intersected with its source binding's
+11. **Broadcast** -- Every eligible channel gets `on_event()`; a transport whose binding sends (`OUTBOUND` or `BIDIRECTIONAL`) also gets `deliver()`
+12. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`), each committed as its responder's: direction `OUTBOUND`, the trigger's depth plus one, `responds_to` the trigger. Events the hooks injected are committed after their cause, each as a pass of its own ([Injected events](#injected-events))
 13. **Side effects** -- Persist tasks and observations
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
@@ -379,8 +379,8 @@ reaches the lane as a live object.
   Data that heavy, stored on every answer, is better kept in a store of your
   own and referenced from the event by an id.
 - **The stream is pulled.** The executor advances the channel's stream only
-  as the lane reads it: a muted agent, or an event a hook injected for an
-  agent, closes the stream unread and never calls the provider. Each read
+  as the lane reads it: a muted agent closes the stream unread and never
+  calls the provider (an event a hook injects asks no agent at all). Each read
   grants a window of items, so text and reasoning deltas are read ahead of
   the lane, never past a call's start, a segment break or a round's end
   until the lane asks for what follows: a tool call or a round starts only
@@ -1081,7 +1081,8 @@ Hook features:
 - **Global hooks** -- Apply to all rooms via the `@kit.hook()` decorator
 - **Timeout protection** -- Configurable timeout per hook (default 30s)
 - **Error isolation** -- Hook failures are logged and collected as `hook_errors` but don't crash the pipeline
-- **Event injection** -- Hooks can inject synthetic events via `HookResult.injected_events`
+- **Event injection** -- Hooks can inject events via `HookResult.injected_events`, each committed after its cause as a pass of its own (see [Injected events](#injected-events))
+- **Unique names** -- A hook's name is unique within its scope, the kit's or one room's (see [Hook names and results](#hook-names-and-results))
 - **Task/observation creation** -- Hooks can create side-effect tasks and observations
 - **Event filtering** -- Hooks can be filtered by channel type, channel ID, and direction
 - **Fail-closed hooks** -- `fail_closed=True` blocks the payload when that hook times out, raises or returns something unusable (see below)
@@ -1171,8 +1172,9 @@ Streamed AI message segments also run `BEFORE_BROADCAST`. Tasks, observations
 and injected events returned by these hooks are collected even when the hook
 blocks the segment. For allowed segments, tasks and observations are persisted
 after delivery and before `AFTER_BROADCAST`; each successfully stored task
-fires `ON_TASK_CREATED`. Injected events follow the segment and reach their
-specified targets, including when the segment itself is blocked. These hooks
+fires `ON_TASK_CREATED`. Injected events are committed after the segment, each
+as a pass of its own ([Injected events](#injected-events)), including when the
+segment itself is blocked. These hooks
 operate on assembled segments: text chunks already sent to a streaming
 transport cannot be changed or withdrawn by the hook.
 
@@ -1180,14 +1182,14 @@ transport cannot be changed or withdrawn by the hook.
 
 ```python
 from roomkit import ChannelType
-from roomkit.models.enums import ChannelDirection
+from roomkit.models.enums import EventDirection
 
 # Only run for inbound SMS/MMS events
 @kit.hook(
     HookTrigger.BEFORE_BROADCAST,
     name="rehost_media",
     channel_types={ChannelType.SMS, ChannelType.MMS},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )
 async def rehost_media(event: RoomEvent, ctx: RoomContext) -> HookResult:
     # Only called for inbound SMS/MMS — no need to check inside
@@ -1207,7 +1209,7 @@ async def voicemeup_hook(event: RoomEvent, ctx: RoomContext) -> HookResult:
 Filter options:
 - `channel_types: set[ChannelType]` -- Only run for these channel types (e.g., `{ChannelType.SMS}`)
 - `channel_ids: set[str]` -- Only run for these channel IDs (e.g., `{"sms-voicemeup"}`)
-- `directions: set[ChannelDirection]` -- Only run for these directions (e.g., `{ChannelDirection.INBOUND}`)
+- `directions: set[EventDirection]` -- Only run for these directions (e.g., `{EventDirection.INBOUND}`)
 
 **Hook triggers:**
 
@@ -1254,6 +1256,86 @@ Filter options:
 | `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. `loop_end_reason` names which of the tool loop's rules ended the turn — `completed`, or `max_rounds` / `timeout` / `budget_exceeded` / `cancelled` / `force_stopped` / `truncated` / `empty_response` / `unfinished` / `error` for a turn that was cut (`error`: the provider interrupted it after a tool round; its rounds are kept, no message is added to say so, the report carries their usage and `ON_ERROR` fires after it; a stored `[Response interrupted]` message, marked `interruption_marker`, is no answer: no agent answers it and no strategy or delegation takes it for one); infer that from `tool_calls_count` and a healthy multi-round answer reads as a cut-off. `thinking` is the turn's reasoning, each round's. The loop also records `loop_end_reason` and `ai_usage` on the turn's last message, a turn without tools included, whatever the provider streams. A turn whose loop did not reach its end (a barge-in, a stream the transport stopped reading, a task cancelled from outside, an error raised before any round ended) fires nothing; its `llm.generate` span carries what its rounds used. `declared_tools` is the union, over every round of the turn, of the tools the provider received (name, description, `parameters` as declared), each with the reason Tool Search let it through (`always`, `pinned`, `sticky`, `revealed`; a tool Tool Search never gates, such as one orchestration injected or one of the channel's own like `plan_tasks`, is `always`, after its first use too); `BEFORE_AI_GENERATION` sees the turn's catalogue, not the rounds' declarations, so a tool `find_tools` revealed shows up here and nowhere else. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included (whose `declared_tools` stays empty: the toolset is the agent's) |
 | `ON_PLAN_UPDATED` | Async | An agent rewrote its structured task plan. Carries a `PlanUpdatedEvent` with the plan as the agent wrote it |
 | `ON_STATUS_POSTED` | Async | A status reached the inter-agent StatusBus. Fires for the room named in the entry's `metadata["room_id"]` — the bus itself is global |
+
+#### Injected events
+
+A `BEFORE_BROADCAST` hook can inject events whatever it decides about the
+event it reads (`allow`, `block` and `modify` all take `injected=[...]`): a
+notice to a moderator when it blocks a message, say.
+
+```python
+from roomkit import (
+    ChannelType, EventSource, HookResult, HookTrigger, InjectedEvent, RoomEvent, TextContent,
+)
+
+@kit.hook(HookTrigger.BEFORE_BROADCAST, name="moderate")
+async def moderate(event, ctx):
+    if event.source.channel_id == "moderation":
+        return HookResult.allow()  # its own notice runs this hook too
+    if not looks_like_spam(event):
+        return HookResult.allow()
+    notice = RoomEvent(
+        room_id=event.room_id,
+        source=EventSource(channel_id="moderation", channel_type=ChannelType.SYSTEM),
+        content=TextContent(body="A message was held for review."),
+    )
+    return HookResult.block(
+        "spam", injected=[InjectedEvent(event=notice, target_channel_ids=["ws-moderator"])]
+    )
+```
+
+Each injected event is committed after the event that caused it, as a pass
+of its own (RFC §9.4), whichever way that event ended:
+
+- It takes the room lock and runs the `BEFORE_BROADCAST` hooks, the one that
+  injected it included, so a hook that blocks or injects on every event must
+  let its own injections through (by their source or their content). A hook
+  may block it (stored `BLOCKED`), and what its hooks inject is committed
+  after it the same way.
+- It counts against the reentry budget (`10 × max_chain_depth` per inbound
+  message). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and its
+  hooks do not run.
+- It keeps its cause's chain depth and carries no idempotency key. Its
+  visibility names the targets the room binds, whatever visibility it came
+  with: `none` when the room binds none of them, or when
+  `target_channel_ids=None` stores it only. A hook may narrow it, never
+  widen it.
+- It takes no source check: it is the hook's, not a channel's.
+- It is delivered to its transport targets only, transcoded like any
+  delivery, never to its own source. An agent among the targets is not
+  called: it reads the event in its history at its next turn. To have an
+  agent answer, send the event with `kit.send_event()`.
+
+An identity challenge (`IdentityHookResult.challenge(inject=...)`) is
+committed the same way.
+
+#### Hook names and results
+
+A hook's name is unique within its scope: the kit's hooks (the ones its own
+turn executor runs included) or one room's. Registering an explicit name the
+scope already holds raises `ValueError`, and so does a name the framework
+writes in `blocked_by` (`source_read_only`, `source_muted`, `source_unbound`,
+`event_chain_depth_limit`, `reentry_loop_cap`). A hook given no name takes its
+function's, made unique and without a leading `_` (`audit`, then `audit#2`),
+so hooks registered in a loop keep registering. `kit.add_room_hook()` returns
+the registration it holds, under that name.
+
+A `MODIFY` that carries no payload, or a payload of another type than the
+trigger passed in, is an unusable result: it replaces nothing, blocks a
+fail-closed hook (`hook_invalid_result:<name>`), and its injected events are
+dropped while its tasks and observations are kept. On `ON_TRANSCRIPTION`,
+modify with the trigger's own event type; a plain `str` is unusable there.
+
+A `BEFORE_BROADCAST` replacement changes what the event says and whom it
+asks, never which event it is. It may change `content`, `addressed_to`,
+`visibility` (still narrowed by the source binding at commit),
+`parent_event_id`, `correlation_id`, `metadata` and `channel_data`; the
+event's `id`, `room_id`, `type`, `source`, `index`, `chain_depth`,
+`responds_to`, `idempotency_key`, `created_at`, `status`, `blocked_by` and
+`delivery_results` are put back from the event it replaces, and so are the
+event an EDIT or a DELETE targets and an INSTRUCTION's visibility and
+address. A hook cannot commit an event under another source or into another
+room.
 
 ### AI Intelligence Layer
 
@@ -2038,9 +2120,10 @@ Nothing to configure. See the [Multi-Speaker Rooms guide](guides/multi-speaker-r
 newest message a transport wrote and the room accepted (a message a hook
 blocked is never replayed), without ingesting anything: the user's
 message keeps its id, index and timestamp, and only the agent reacts (the
-re-broadcast is scoped to `visibility="intelligence"`, so no transport sees
-the message twice). It generates; removing the answer it replaces is the
-caller's job, and `regenerate_target(room_id)` names the message it would
+re-broadcast is scoped to the message's stored visibility intersected with
+`"intelligence"`, so no transport sees the message twice and no agent the
+message could not reach is asked). It generates; removing the answer it
+replaces is the caller's job, and `regenerate_target(room_id)` names the message it would
 re-run on, so that removal, or a refusal of the host's own (a runner's prompt
 that must not be replayed), is keyed on the primitive's choice rather than on a
 copy of its selection:
@@ -2596,12 +2679,12 @@ Identity hooks also support filtering:
 
 ```python
 from roomkit import ChannelType, EventSource, HookTrigger, RoomEvent, TextContent
-from roomkit.models import ChannelDirection, IdentityHookResult, InjectedEvent
+from roomkit.models import EventDirection, IdentityHookResult, InjectedEvent
 
 @kit.identity_hook(
     HookTrigger.ON_IDENTITY_UNKNOWN,
     channel_types={ChannelType.SMS},
-    directions={ChannelDirection.INBOUND},
+    directions={EventDirection.INBOUND},
 )
 async def challenge_unknown_sms(event, ctx, id_result):
     # Only runs for unknown SMS senders: ask who they are, hold the message
@@ -4083,6 +4166,8 @@ result = await kit.process_inbound(InboundMessage(
 ```
 
 The idempotency check is performed inside the room lock to prevent TOCTOU races.
+A key is unique per room and per source channel: the same key sent by two
+channels of one room names two messages, and both are processed.
 
 A redelivery is not reprocessed, and it is not refused either: it comes back
 carrying the event the *first* delivery committed, so the caller can read the
@@ -4090,20 +4175,26 @@ outcome it missed.
 
 ```python
 first = await kit.process_inbound(message)
-again = await kit.process_inbound(message)   # same idempotency_key
+again = await kit.process_inbound(message)   # same idempotency_key, same channel
 
 assert again.event.id == first.event.id      # the same event, not a new one
+assert again.duplicate                       # a replay, not a new turn
 assert not again.blocked                     # the message was accepted, once
 ```
 
 That matters for the case idempotency keys exist to serve: a provider retries
 because it never saw the first response, and the retry is how it asks what
 happened. Reporting the redelivery as blocked would answer a question it did
-not ask.
+not ask. For the same reason, a redelivery of a message the room blocked is
+answered as its first delivery was: `blocked=True`, the record stored
+`BLOCKED` as its `event`, that record's `blocked_by` as the `reason`, and
+`duplicate=True`.
 
-A `ConversationStore` resolves the original through
-`get_event_by_idempotency_key`. It is not abstract and returns `None` by
-default, so a store that only records keys without being able to read them back
+A `ConversationStore` checks a key with `check_idempotency(room_id, key, *,
+channel_id)` and resolves the original through
+`get_event_by_idempotency_key(room_id, key, *, channel_id)`; a custom store
+must accept the keyword-only `channel_id`. The second is not abstract and
+returns `None` by default, so a store that only records keys without being able to read them back
 still conforms — a duplicate then comes back as `blocked=True` with
 `reason="duplicate"`, and nothing is reprocessed either way.
 
@@ -4193,7 +4284,8 @@ await kit.set_visibility("room-1", "ai-channel", "intelligence")
 was not allowed to see is not handed back to it later as reconstructed history
 either — an AI channel's prompt is built from *its* view of the room, never the
 whole timeline (`visible_events(context, channel_id)` is that view, exported
-for host code that rebuilds history itself). Two things this deliberately does
+for host code that rebuilds history itself; a channel with no binding in the
+room is handed nothing). Two things this deliberately does
 not cover: a channel always keeps its own accepted events (or an assistant
 bound `visibility="advisor-ws"` would lose its own answers from its own
 context), and hooks receive the full timeline (they are your code, running in
@@ -4211,11 +4303,30 @@ same rule: a refused reply is not counted, and so does a filtered
 serve, while the count without a filter stays the timeline's size, refused
 rows included.
 
-Because a source's visibility is resolved from its binding when the history is
-read, visibility is a **live** policy: widening a binding widens its past too.
-If you need a scope that cannot be revoked retroactively, set it on the event
-(`visibility=` on the inbound message or `send_event`) rather than on the
-binding — an event's own scope travels with it.
+**An event's visibility is fixed when it is committed.** The event is stored
+with its own visibility (`visibility=` on the inbound message or `send_event`,
+or a hook's rewrite) intersected with its source binding's, and that stored
+value is the whole answer, at delivery and whenever history is rebuilt. An
+event's own scope can narrow what its binding allows, never widen it, and a
+binding changed later does not change what past events reached:
+
+```python
+await kit.attach_channel("room-1", "sms", visibility="transport")
+# A message from sms sent with visibility="ai-bot,ws-agent" is stored
+# visibility="ws-agent": ai-bot is an intelligence channel, outside "transport".
+await kit.set_visibility("room-1", "sms", "all")
+# Earlier sms messages still reach only what they were stored with.
+```
+
+A visibility is a keyword (`all`, `none`, `internal`, `transport`,
+`intelligence`, lowercase) or a list of channel ids separated by commas, written
+back in its normal form (`" ws , sms "` is stored `"sms,ws"`: ids sorted, each
+once). An empty value, an empty item (`"sms,,ws"`) or a keyword inside a list
+raises `ValueError` from `attach_channel`, `set_visibility`, `send_event` and
+`InboundMessage`; `register_channel` refuses a channel id a visibility could
+not name (a keyword, an id holding a comma, or one with surrounding
+whitespace). `internal` reaches no channel, as `none` does, and marks a record
+the framework wrote.
 
 ### Response Visibility
 

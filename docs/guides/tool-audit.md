@@ -21,10 +21,12 @@ auditor.attach(kit)
 # ... set up channels, rooms, sessions ...
 
 # Tool calls are recorded manually from your handler:
+from datetime import UTC, datetime
+
 from roomkit.orchestration.tool_audit import ToolAuditEntry
 
 auditor.record_tool(ToolAuditEntry(
-    ts=datetime.now().isoformat(),
+    ts=datetime.now(UTC).isoformat(),  # entries hold UTC, as the auditor writes them
     agent_id="my-agent",
     tool_name="search",
     arguments={"q": "roomkit"},
@@ -65,6 +67,9 @@ Session Audit (/tmp/session.jsonl)
   Tool calls: 1 (5886ms) | Vision: 1 | Interruptions: 1
   Tools: describe_screen(1)
 ```
+
+The JSONL entries carry their `ts` in UTC (ISO 8601, with its offset); the
+transcript shows each one in local time.
 
 ### ToolAuditor compatibility
 
@@ -134,7 +139,7 @@ Every tool call produces a `ToolAuditEntry`:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ts` | str | ISO timestamp |
+| `ts` | str | ISO timestamp, in UTC |
 | `agent_id` | str | Which agent made the call |
 | `tool_name` | str | Tool function name |
 | `arguments` | dict | Input arguments |

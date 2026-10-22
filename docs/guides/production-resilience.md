@@ -181,38 +181,24 @@ The token bucket algorithm allows short bursts up to `burst_size` while enforcin
 
 ## Delivery Status Tracking
 
-Track message delivery through three modes:
+Providers report what became of an outbound message (sent, delivered, failed) through status webhooks. `kit.process_webhook()` hands each one to `kit.process_delivery_status()`, which runs the `ON_DELIVERY_STATUS` hooks with the room's context. A status is reported, not acted on: RoomKit does not wait for it, and a `failed` status does not resend the message.
 
-```python
-from __future__ import annotations
-
-from roomkit import HookTrigger, RoomKit
-from roomkit.models.delivery import DeliveryMode
-
-kit = RoomKit()
-
-# Configure delivery mode per channel binding
-await kit.attach_channel("room-1", "sms-main", metadata={
-    "delivery_mode": DeliveryMode.REQUIRE_DELIVERY,
-})
-```
-
-| Mode | Behavior |
-|------|----------|
-| `FIRE_AND_FORGET` | Send and don't wait for confirmation |
-| `REQUIRE_DELIVERY` | Track delivery status, retry on failure |
-| `REQUIRE_ACK` | Require acknowledgement from recipient |
+!!! note "Delivery guarantees per binding are not available yet"
+    A binding cannot require a delivery confirmation or an acknowledgement
+    from the recipient; that is a planned feature. Retries today cover the
+    send itself (a binding's `retry_policy`, with the backoff above). React
+    to a failed status in the hook below.
 
 ### Delivery Status Hook
 
 ```python
 @kit.hook(HookTrigger.ON_DELIVERY_STATUS)
 async def on_delivery(event, ctx):
-    # event contains DeliveryStatus with provider_id, status, timestamp
+    # event is a DeliveryStatus: provider, message_id, status, recipient, timestamp
     if event.status == "failed":
-        logger.error(f"Delivery failed to {event.channel_id}: {event.error}")
+        logger.error("Delivery to %s failed: %s", event.recipient, event.error_message)
     elif event.status == "delivered":
-        logger.info(f"Delivered to {event.channel_id}")
+        logger.info("Delivered to %s on %s", event.recipient, event.channel_id)
 ```
 
 ## Room Lifecycle Timers

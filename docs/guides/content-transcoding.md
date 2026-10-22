@@ -29,7 +29,7 @@ The `DefaultContentTranscoder` applies intelligent fallbacks:
 | `MediaContent` | `MEDIA` | `[Media: {caption or filename or url}]`, the URL only when a link (`http`, `https`), else the media type: never a `data:` URI or a reference |
 | `AudioContent` | `AUDIO` | `transcript` field, or `[Voice message: {url}]`, the URL only when a link, else the media type |
 | `VideoContent` | `VIDEO` | `[Video: {url}]`, the URL only when a link, else the media type |
-| `LocationContent` | `LOCATION` | `[Location: {label} ({lat}, {lon})]` |
+| `LocationContent` | `LOCATION` | `[Location: {label or address} ({lat}, {lon})]`, or `[Location: ({lat}, {lon})]` with neither |
 | `CompositeContent` | varies | Recursive transcode; flatten if all parts become text |
 | `TemplateContent` | `TEMPLATE` | `body` field or `[Template: {id}]` |
 | `EditContent` | `supports_edit` | Transcode `new_content` + "Correction:" prefix |
@@ -97,10 +97,13 @@ message = CompositeContent(parts=[
 
 ## max_length Enforcement
 
-After transcoding, the `EventRouter` enforces `max_length` from channel capabilities. This is applied **after** transcoding, so a rich message that falls back to text is truncated if needed:
+After transcoding, the `EventRouter` enforces `max_length` from channel capabilities, counted in Unicode code points. This is applied **after** transcoding, so a rich message that falls back to text is truncated if needed. It cuts a text, and each text part of a composite the channel keeps whole (a long caption beside a photo); other parts are left as they are. A cut text ends with `...` within the limit, except below four code points, where it is cut with no marker:
 
 ```
-RichContent (500 chars body) → SMS (max_length=160) → TextContent truncated to 160 chars
+RichContent (500 chars body) → SMS (max_length=160) → TextContent: first 157 chars + "..."
+CompositeContent [TextContent (300 chars), MediaContent] → max_length=200, MEDIA supported
+    → TextContent: first 197 chars + "...", MediaContent unchanged
+TextContent("Hello") → max_length=3 → "Hel"
 ```
 
 ## Custom Transcoder

@@ -347,6 +347,14 @@ class RedisLockManager(RoomLockManager):
             yield
 ```
 
+A release that fails (the Redis lock above expired, its connection dropped)
+undoes nothing the locked section did: an event it committed stays committed
+and delivered, and a refusal stays a refusal. RoomKit logs the failure as a
+warning on `roomkit.locks`, and `process_inbound` and `regenerate_response`
+return it as `InboundResult.error` when no earlier error was met; the next
+section asks your lock manager for the lock again. Recovering whatever the
+failed release left behind is your lock manager's job.
+
 See the [Horizontal Scaling guide](guides/scaling.md) for pool sizing and the
 startup warning.
 
