@@ -128,12 +128,22 @@ await kit.add_member("team", "web", "u-1")  # records "web"; the role stays OWNE
 # The same message on "web" is now the owner's.
 ```
 
-A channel is reached by a deliberate join (`add_member`, `join`,
-`ensure_participant`) or by the identity pipeline, which records the channel it
-resolved a sender on. Those are the two ways to link one person's channels;
-two transports' ids that happen to be equal never do. A sender the pipeline
-could not identify (a pending participant) whose id names a record reached
-through other channels gets a record of its own rather than adopting it.
+A channel is reached by a deliberate join (`add_member`, `join`, or the host's
+own `ensure_participant`) or by the identity pipeline, which records the
+channel it resolved a sender on. Those are the two ways to link one person's
+channels; two transports' ids that happen to be equal never do. The same rule
+decides:
+
+- **routing**: a message without a room id lands in a room found through a
+  participant record only when that participant joined it through the
+  message's channel, so the stranger above gets a room of their own instead of
+  the owner's conversation on `web`;
+- **the tool actor**: `current_tool_actor_id()` is `None` for that stranger,
+  so a handler resolving it never acts for the owner;
+- **pending senders**: a sender the pipeline could not identify whose id names
+  a record reached through other channels gets a record of its own, one per
+  sender and channel, and writes under its id, rather than adopting the other
+  record.
 
 ## Leaving
 

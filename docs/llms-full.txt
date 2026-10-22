@@ -870,7 +870,9 @@ them through `identity_id`.
 An inbound sender id names its participant only on a channel in their
 `connected_via` (RFC §5.5): the same id arriving through another channel is
 another sender, with none of the participant's name, role, administrative
-authority, authorship, identification or verification. Link one person's
+authority, authorship, identification or verification: routed without a room
+id it gets a room of its own, not the participant's, and
+`current_tool_actor_id()` reads `None` for it. Link one person's
 channels with `add_member` (or `join`) on each, or let the identity pipeline
 resolve them, which records the channel it resolved them on:
 
