@@ -127,6 +127,11 @@ Semantics that differ from the in-memory backend:
 - Pub/sub notifications published while a process is disconnected are lost,
   but the shared history stays consistent — consumers can resync with
   `recent()`.
+- A connection a NAT or a load balancer forgot (half-open) is never silent
+  for long: every call gives up after 5 s, and the reader pings its connection
+  after 5 s with nothing heard, then drops it when no answer comes within 5 s
+  more, reconnects and subscribes again, with a warning. The notifications of
+  those 11 s or so are lost, as for any disconnection.
 
 For another transport (NATS, ...), implement the `StatusBackend` ABC:
 `publish()`, `recent()`, `subscribe()`, `unsubscribe()`, and optionally

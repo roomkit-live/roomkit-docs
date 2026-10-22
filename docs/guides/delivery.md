@@ -488,7 +488,7 @@ Features:
 ```python
 import redis.asyncio as redis
 
-pool = redis.ConnectionPool.from_url("redis://localhost:6379")
+pool = redis.ConnectionPool.from_url("redis://localhost:6379", socket_timeout=6.0)
 client = redis.Redis(connection_pool=pool)
 
 backend = RedisDeliveryBackend(
@@ -498,6 +498,16 @@ backend = RedisDeliveryBackend(
     max_dead_letter_size=10_000,
 )
 ```
+
+Every call of the backend's own client gives up after 6 s on a connection a NAT
+or a load balancer forgot (half-open): 5 s, and the second a read for new work
+waits at most (`dequeue()` waits in such slices until its timeout). The worker
+loop's next pass, or the next lease renewal, then uses a new connection, so a
+live worker keeps its leases while `claim_idle_seconds` stays above three times
+that bound (18 s; 60 s by default). A client you pass keeps its own options:
+redis-py before 8.0 bounds no call, so give it a `socket_timeout` over a second,
+as above. Options in the URL's query (`?socket_timeout=...`) take precedence
+over the backend's.
 
 ### Available backends
 

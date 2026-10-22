@@ -301,6 +301,11 @@ Behavior to know:
   worker is disconnected are lost. That matches the ephemeral contract
   (typing and presence are safe to drop); on connection loss the backend
   retries and re-subscribes automatically.
+- **Half-open connections** — a connection a NAT or a load balancer forgot
+  answers nothing and raises nothing: every call gives up after 5 s, and the
+  reader pings its connection after 5 s with nothing heard, then drops it when
+  no answer comes within 5 s more, reconnects and re-subscribes, with a
+  warning. The events of those 11 s or so are lost.
 - **Asynchronous local delivery** — subscribers in the publishing process
   receive events through the Redis round-trip, not synchronously during
   `publish()` as with `InMemoryRealtime`.
