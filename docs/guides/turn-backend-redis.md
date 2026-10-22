@@ -198,6 +198,11 @@ fails each of its idle reads.
 ## Prerequisites
 
 - **Redis 6.2 or later.**
+- **redis-py 8.0.1 or later on a unix socket.** redis-py 8.0.0's sync client
+  fails on a `unix://` URL at its first call (`ValueError: Cannot enable
+  maintenance notifications...`): the process's beat thread, which uses it,
+  never beats, and the other processes take it for lost. 5.0.2 to 7.4 work
+  too; over TCP every version from 5.0.2 does.
 - **A shared store**: `PostgresStore` (or `SQLiteStore` on one machine). An
   executor that takes turns from other processes without one logs a warning.
 - **Several owner processes** need the distributed lock manager as well (see
