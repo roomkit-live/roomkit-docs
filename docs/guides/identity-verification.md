@@ -185,6 +185,8 @@ await kit.cancel_delivery("task-42", reason="user_stopped")   # 1
 When the last released message was cancelled, no agent answers the release,
 and the earlier ones are not answered in its place: their answer would read
 the cancelled message as context. A cancel during the answer cuts it. The
+delivery's handle (`defer_delivery=True`) cancels it only while its delivery
+set runs, which the handle follows; past it, the key is what names it. The
 cancellation is written on the held event, so a release that another process
 runs honours it; `cancel_delivery` itself reaches the messages its own process
 received.

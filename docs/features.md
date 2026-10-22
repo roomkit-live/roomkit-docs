@@ -911,7 +911,7 @@ result = await kit.process_inbound(message, room_id="r1")   # awaited elsewhere
 cancelled = await kit.cancel_delivery("task-42", reason="lead_cancelled")
 ```
 
-`cancel_delivery()` answers how many deliveries in flight the key named and
+`cancel_delivery()` answers how many deliveries the key named and
 cancelled: 0 once they are over, for a key never sent, or when they were
 already cancelled. Several messages may share a key, and one call cancels
 them all. It returns at once, without waiting for their cleanup; each call's
