@@ -42,6 +42,24 @@ room = await kit.create_room()
 
 Internally, `Pipeline` builds `PipelineStage` objects from the agent list, creates a `ConversationRouter` and `HandoffHandler`, installs room-scoped hooks, and sets the initial `ConversationState`. Each agent gets a constrained `handoff_conversation` tool whose `target` enum only includes reachable agents.
 
+On a voice channel, name it with `voice_channel_id`, as `ConversationPipeline.install` takes it:
+
+```python
+kit = RoomKit(
+    orchestration=Pipeline(
+        agents=[triage, advisor],
+        voice_channel_id="voice",
+        greet_on_handoff=True,
+        greeting_prompt="[You were just handed the call: introduce yourself briefly]",
+        farewell_prompt="Let me transfer you.",
+    ),
+)
+```
+
+- A `RealtimeVoiceChannel` runs each room's active agent in its sessions (live agents only, refused otherwise) and reconfigures a room's sessions on a handoff. One wiring serves every room the strategy is installed in.
+- Another voice channel takes the agents' `voice` fields as its voice map.
+- `greet_on_handoff` cues the agent a handoff made active to introduce itself (`greeting_prompt`), after `farewell_prompt` is spoken when given. Its hooks are the room's: a handoff in another room greets nobody. It requires `voice_channel_id`, and the strategy is refused without it.
+
 For pipelines with loops (e.g., `can_return_to`) or custom stage definitions, use `ConversationPipeline` directly — see [ConversationPipeline](#conversationpipeline).
 
 ### Swarm
