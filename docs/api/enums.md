@@ -10,8 +10,6 @@
 
 ::: roomkit.ChannelType
 
-::: roomkit.models.enums.DeliveryMode
-
 ::: roomkit.EventStatus
 
 ::: roomkit.EventType

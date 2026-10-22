@@ -206,7 +206,6 @@ class ChannelCapabilities(BaseModel):
     max_media_size_bytes: int | None
     supports_audio: bool
     supports_video: bool
-    delivery_mode: DeliveryMode  # BROADCAST | DIRECT | ROUND_ROBIN
 ```
 
 ### DeliveryStatus
@@ -327,7 +326,6 @@ class TTSCancelledEvent:
 | `ParticipantRole` | `owner`, `agent`, `member`, `observer`, `bot` |
 | `ParticipantStatus` | `active`, `inactive`, `left`, `banned` |
 | `TaskStatus` | `pending`, `in_progress`, `completed`, `failed`, `cancelled` |
-| `DeliveryMode` | `broadcast`, `direct`, `round_robin` |
 | `HookTrigger` | `before_broadcast`, `after_broadcast`, `on_channel_attached`, `on_channel_detached`, `on_channel_muted`, `on_channel_unmuted`, `on_room_created`, `on_room_paused`, `on_room_closed`, `on_identity_ambiguous`, `on_identity_unknown`, `on_participant_identified`, `on_task_created`, `on_error`, `on_delivery_status`, `on_speech_start`, `on_speech_end`, `on_transcription`, `before_tts`, `after_tts`, `on_barge_in`, `on_tts_cancelled`, `on_partial_transcription`, `on_vad_silence`, `on_vad_audio_level` |
 | `HookExecution` | `sync`, `async` |
 
