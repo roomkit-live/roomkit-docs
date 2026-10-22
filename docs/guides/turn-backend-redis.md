@@ -113,6 +113,7 @@ never stalls more than a few milliseconds.
 | Redis refuses a write during a turn | That turn fails within the heartbeat window, never waits for good |
 | Redis goes silent without closing a connection (a NAT or a load balancer forgot it) | The process stays among the living and its turns go on while `heartbeat_interval` is under half of `heartbeat_timeout`: the beat and the inbox's read give up within that half and try again at once on a new connection; a turn's message whose write was cut fails that turn |
 | The room owner goes away | The executor cuts the turn as `owner_lost` |
+| The room owner closes mid-answer (the kit's `close()`) | The turn fails on the owner with `backend_closed`: its backend closed, its executor is not lost (never `executor_lost`); the executor cuts the turn as `owner_lost` |
 
 In every case the room goes on: the next message is delivered, and its turn
 goes to an executor alive.
