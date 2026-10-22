@@ -168,6 +168,27 @@ failed, before a verification was revoked — may not be the verified person's,
 and stays held. Only what the pipeline held is released: the held mark is the
 runtime's, and the pipeline removes one a sender's metadata carries.
 
+A held message whose delivery was cancelled is released with no answer. Its
+`delivery_key` names it until its release is answered (RFC §10.1, §11.7.6), so
+the person can still stop what they asked while they have not verified:
+
+```python
+result = await kit.process_inbound(
+    InboundMessage(channel_id="sms", sender_id=phone, content=TextContent(body="Wire 500 to Bob"),
+                   delivery_key="task-42"),
+)
+# The message is held. Later, the person taps "Cancel" in your app:
+await kit.cancel_delivery("task-42", reason="user_stopped")   # 1
+# When they verify, the message comes back to the conversation; no agent answers it.
+```
+
+When the last released message was cancelled, no agent answers the release,
+and the earlier ones are not answered in its place: their answer would read
+the cancelled message as context. A cancel during the answer cuts it. The
+cancellation is written on the held event, so a release that another process
+runs honours it; `cancel_delivery` itself reaches the messages its own process
+received.
+
 ## The End
 
 | Hook (async) | Fires when | `event.content.data` |

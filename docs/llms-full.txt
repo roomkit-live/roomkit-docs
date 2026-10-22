@@ -900,6 +900,8 @@ returns at once, and each call's caller reads `cancellation_reason` on its
 result. The key names the delivery from the start of `process_inbound`: a
 message cancelled before its commit (while it is routed, parsed, or its sender
 resolved) is committed and delivered all the same, and its turns never start.
+A message held for verification stays named until its release is answered: a
+cancel while it waits counts 1, and its release gets no answer.
 Several messages may share a key. The key is never stored and grants
 nothing: check who may cancel before calling, and pass `organization_id=` so a
 key two tenants both chose only reaches the caller's rooms. Pass it to
@@ -5643,7 +5645,11 @@ await kit.revoke_verification(identity_id, reason="advisor")
 ```
 
 On completion the held messages of the request's window are released to the
-agents as the author's own turns. `ON_VERIFICATION_COMPLETED` and
+agents as the author's own turns. A held message whose delivery was cancelled
+(`kit.cancel_delivery(key)`, its handle) is released with no answer: when it
+is the last released, no agent answers, and the earlier ones are not answered
+in its place. The cancellation is written on the held event, so a release in
+another process honours it. `ON_VERIFICATION_COMPLETED` and
 `ON_VERIFICATION_ENDED` (ASYNC; `ended` is `"verification"` or `"request"`)
 fire when it happens; a timer ends a verification at its expiry, and a
 request left unanswered at its own (the identity then has none open, so the
@@ -6698,7 +6704,7 @@ kit = RoomKit(
 | Method | Description |
 |--------|-------------|
 | `process_inbound(message, room_id?, defer_delivery=False, organization_id=None)` | Process an inbound message; deferred results are backfilled by `DeliveryHandle.wait()` |
-| `cancel_delivery(key, *, reason="caller_cancelled", organization_id=None)` | Stop the turns of the deliveries in flight of the messages sent with `delivery_key=key`, from the start of `process_inbound` (of the organization's rooms when given); the messages are still delivered; returns how many it cancelled |
+| `cancel_delivery(key, *, reason="caller_cancelled", organization_id=None)` | Stop the turns of the deliveries in flight of the messages sent with `delivery_key=key`, from the start of `process_inbound`, and a message held for verification until its release is answered (of the organization's rooms when given); the messages are still delivered; returns how many it cancelled |
 | `regenerate_response(room_id, *, trigger_id=None)` | Re-run the intelligence channel on the newest accepted transport message; `InboundResult(blocked=True, reason="room_closed")` on a closed or archived room; with `trigger_id`, `reason="trigger_moved"` when the selection under the lock is no longer that event |
 | `regenerate_target(room_id)` | The event `regenerate_response` would replay, or `None`; raises `RoomClosedError` when the room refuses events |
 

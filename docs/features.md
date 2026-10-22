@@ -918,7 +918,9 @@ them all. It returns at once, without waiting for their cleanup; each call's
 caller reads `cancellation_reason` on its result. The key names the delivery
 from the start of `process_inbound`: a message cancelled before its commit
 (while it is routed, parsed, or its sender resolved) is committed and
-delivered all the same, and its turns never start. The key is never stored,
+delivered all the same, and its turns never start. A message held for
+verification stays named until its release is answered: a cancel while it
+waits counts 1, and its release gets no answer. The key is never stored,
 and it grants nothing: check who may cancel before calling, and pass
 `organization_id=` when rooms belong to tenants, so a key two tenants both
 chose only reaches the caller's rooms:
@@ -2648,7 +2650,9 @@ await kit.complete_verification(request_id, secret)  # or record_failed_attempt(
   allows `max_attempts` (wrong secrets and the integrator's failed checks).
 - A code request's reply is consumed: never stored nor broadcast.
 - On completion, what the sender wrote while the request was open is released
-  to the agents as their own turns, within the request's window.
+  to the agents as their own turns, within the request's window. A held
+  message whose delivery was cancelled (`cancel_delivery(key)`, which names
+  it until its release is answered) is released with no answer.
 - `ON_VERIFICATION_COMPLETED` and `ON_VERIFICATION_ENDED` fire when it happens:
   a timer ends a verification at its expiry; `revoke_verification()` ends it
   before; `async with RoomKit(...)` re-arms the timers from the store.
