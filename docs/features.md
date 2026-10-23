@@ -81,7 +81,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 - Audio flows directly between the user and the AI provider -- no intermediate STT/TTS
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
-- Text from other channels enters the AI session as content someone else wrote, quoted after its author's name (`Marie: “…”`) with the `user` intent, never as the application's instruction, whatever the event's metadata says (on a full-duplex provider such as GPT-Live the model relays it aloud in its own words); the application directs the model with `kit.deliver(..., instruction=True)` or `inject_text(..., role="system")` (RFC §12.4). A recovered call's result arrives fenced in `<tool_result>`, an `assistant` line phrased as an instruction is quoted, and a provider that joins injected text to its own instructions (Gemini after a resumption, Deepgram's silent prompt append) keeps the two apart
+- Text from other channels enters the AI session as content someone else wrote, quoted after its author's name (`Marie: “…”`) with the `user` intent, never as the application's instruction, whatever the event's metadata says (on a full-duplex provider such as GPT-Live the model relays it aloud in its own words); the application directs the model with `kit.deliver(..., instruction=True)` or `inject_text(..., role="system")` (RFC §12.4). An event a hook injected enters silently: the model takes it in and does not answer it (RFC §9.4). A recovered call's result arrives fenced in `<tool_result>`, an `assistant` line phrased as an instruction is quoted, and a provider that joins injected text to its own instructions (Gemini after a resumption, Deepgram's silent prompt append) keeps the two apart
 - Tool/function calling with pluggable `ToolHandler` (supports MCP)
 - Tool Search keeps large catalogues behind discovery. On Anthropic the hidden catalogue is declared deferred (`defer_loading`) and a reveal references its tools, so the prompt cache survives it, into the next turns too: a tool opened earlier stays held and is reopened by reference. Reconfigurable providers receive native tool declarations; fixed-declaration providers use `list_tools(name=...)` for complete schemas and `call_tool` for execution through the same gates and hooks. The tools orchestration injects (handoff, delegation, a delegation's `submit_result`, a strategy's tools) stay declared on text and realtime channels alike, and do not count toward the catalogue that switches Tool Search on.
 - One pre-execution gate for every tool call — declared catalogue, the tool policy, skill gating, argument schema and `BEFORE_TOOL_USE`, in that order — whatever serves it: a handler, an `ON_TOOL_CALL` hook, or the channel's own infrastructure tools; a refusal reads the same text for the same cause on every door (text turn, reasoning backend, realtime session, conference), and a denied tool never has its arguments read
@@ -266,6 +266,10 @@ framework event with one `data` shape whichever path refused (RFC §8.2):
 `regenerate`) and `event_type` (the refused event's type; `None` when a
 regenerate had nothing to replay). `event_id` is the refused event; for a
 regenerate, the message it would have replayed (`None` when nothing qualified).
+`reentry` names the framework's own re-injection: an agent's answer, a hook's
+injected event, and the record the room would store in place of a turn or an
+answer it refuses (an agent not asked at the chain-depth limit, an answer past
+the reentry budget), each turned away alike.
 
 Timer-based automation:
 
@@ -1129,13 +1133,21 @@ kit.enable_room_hook("vip-room", "audit")
 kit.disable_room_hook("vip-room", "audit")
 ```
 
+On an executor a name carries one hook per trigger: `room_hook()` called again
+with a name and a trigger it carries replaces the first, so every executor can
+run the host's one setup function. The name a room enables joins the room's
+hooks, where a name is unique: `enable_room_hook()` raises `ValueError` for a
+name a room hook the kit registered for that room holds, and `add_room_hook()`
+for a name the room enables; enabling a name again, or in another room, is
+fine.
+
 Hook features:
 - **Priority ordering** -- Hooks execute in priority order (lower numbers first)
 - **Per-room hooks** -- Attach hooks to specific rooms dynamically via `add_room_hook()`; a trigger a turn fires is a named hook enabled per room (`enable_room_hook()`)
 - **Global hooks** -- Apply to all rooms via the `@kit.hook()` decorator
 - **Timeout protection** -- Configurable timeout per hook (default 30s)
-- **Error isolation** -- Hook failures are logged and collected as `hook_errors` but don't crash the pipeline
-- **Event injection** -- Hooks can inject events via `HookResult.injected_events`, each committed after its cause as a pass of its own (see [Injected events](#injected-events))
+- **Error isolation** -- Hook failures are logged and reported (`hook_error`, `hook_timeout`) but don't crash the pipeline
+- **Event injection** -- `BEFORE_BROADCAST` hooks can inject events via `HookResult.injected_events`, each committed after its cause, once the cause's section has released the room lock, as a pass of its own (see [Injected events](#injected-events))
 - **Unique names** -- A hook's name is unique within its scope, the kit's or one room's (see [Hook names and results](#hook-names-and-results))
 - **Task/observation creation** -- Hooks can create side-effect tasks and observations
 - **Event filtering** -- Hooks can be filtered by channel type, channel ID, and direction
@@ -1213,7 +1225,11 @@ async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
   a hook that reads the room's state rather than the event must keep the
   lock. An event sent from inside the check (a "scan in progress" notice),
   or from a locked hook, commits right away, ahead of the message being
-  processed. Reentry passes,
+  processed. A check that fails (raises, times out, returns something
+  unusable) is reported as it fails, before the lock (`hook_error`,
+  `hook_timeout`), whatever the gates under the lock then decide: a
+  duplicate or a message to a room closed meanwhile still reports it.
+  Reentry passes,
   streamed segments and regeneration still run the hook, under the lock.
 - Off-lock hooks run first, so registration refuses a locked hook with a
   lower priority than an off-lock one (`ValueError` naming both): a consent
@@ -1341,11 +1357,17 @@ async def moderate(event, ctx):
 Each injected event is committed after the event that caused it, as a pass
 of its own (RFC §9.4), whichever way that event ended:
 
-- It takes the room lock and runs the `BEFORE_BROADCAST` hooks, the one that
-  injected it included, so a hook that blocks or injects on every event must
-  let its own injections through (by their source or their content). A hook
-  may block it (stored `BLOCKED`), and what its hooks inject is committed
-  after it the same way.
+- It commits once its cause's locked section has released the room lock, in
+  a section of its own, so another event may commit between them: a message
+  that was waiting for the lock, an agent's answer to the cause. It still
+  commits before `process_inbound()` or `send_event()` returns, in the order
+  the hooks ran. An event code under the lock sends with `kit.send_event()`
+  is another path: it commits at once, ahead of the event being processed.
+- Its pass runs the `BEFORE_BROADCAST` hooks, the one that injected it
+  included, so a hook that blocks or injects on every event must let its own
+  injections through (by their source or their content). A hook may block it
+  (stored `BLOCKED`), and what its hooks inject is committed after it the
+  same way, before the next event its cause's hooks injected.
 - It counts against the reentry budget (`10 × max_chain_depth` per inbound
   message). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and its
   hooks do not run.
@@ -1357,15 +1379,22 @@ of its own (RFC §9.4), whichever way that event ended:
 - It takes no source check: it is the hook's, not a channel's.
 - It is delivered to its transport targets only, transcoded like any
   delivery, never to its own source. An agent among the targets is not
-  called: it reads the event in its history at its next turn. To have an
-  agent answer, send the event with `kit.send_event()`.
+  called: it reads the event in its history at its next turn. A transport
+  hosting a model is an agent too: a realtime voice channel, or a conference
+  with a realtime model, takes its text into the model's context silently
+  and asks no answer. To have an agent answer, send the event with
+  `kit.send_event()`.
+- Its delivery set fires `AFTER_BROADCAST` like any other event's, an empty
+  one when it is stored only: an audit hook sees every notice hooks inject.
 - An injected `INSTRUCTION` is dropped with a warning before any pass: no
   hook runs on it, nothing of it is stored or delivered, and the rest of the
   result stands. Only the application issues instructions; a hook directs an
   agent with `kit.send_event(..., event_type=EventType.INSTRUCTION)`.
 
 An identity challenge (`IdentityHookResult.challenge(inject=...)`) is
-committed the same way.
+committed the same way. No other trigger commits injected events: a SYNC hook
+on `BEFORE_DELIVER`, `ON_VERIFICATION_REQUIRED` or any other trigger that
+returns some has them dropped, with a warning naming the hook and the trigger.
 
 #### Hook names and results
 
@@ -1393,8 +1422,9 @@ event's `id`, `room_id`, `type`, `source`, `index`, `chain_depth`,
 `delivery_results` are put back from the event it replaces, and so are the
 event an EDIT or a DELETE targets, an INSTRUCTION's visibility, address and
 `standalone` word, and the instruction fingerprint the pipeline wrote on a
-response (`metadata["instruction"]`), or its absence. A hook cannot commit an
-event under another source or into another room.
+response (`metadata["instruction"]`), or its absence. A visibility of
+`internal`, which only the framework writes, is put back too. A hook cannot
+commit an event under another source or into another room.
 
 ### AI Intelligence Layer
 
@@ -4400,7 +4430,15 @@ raises `ValueError` from `attach_channel`, `set_visibility`, `send_event` and
 `InboundMessage`; `register_channel` refuses a channel id a visibility could
 not name (a keyword, an id holding a comma, or one with surrounding
 whitespace). `internal` reaches no channel, as `none` does, and marks a record
-the framework wrote.
+the framework wrote (a voice channel's interruption record, which an agent
+reads as the cut it was), so only the framework writes it: `attach_channel`,
+`set_visibility`, `send_event` and `InboundMessage` raise `ValueError` for it,
+before anything is read or written; a hook's modify that writes it has the
+event's visibility put back; and an agent's answer, or a row of its stream,
+that carries it (the agent's own, or the trigger's `response_visibility`) is
+stored `none`, with a warning. Store an event for no channel with `none`;
+`kit.commit_event()`, a record outside the pipeline, keeps the visibility it is
+given.
 
 ### Response Visibility
 

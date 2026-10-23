@@ -948,7 +948,7 @@ Each content type has a `type` literal field (e.g., `type: Literal["text"] = "te
 
 Hooks and intelligence channels can produce three types of side effects:
 
-- **InjectedEvent** -- Events a hook adds for specific channels (e.g., challenge messages), each committed after its cause as a pass of its own and delivered to its transport targets
+- **InjectedEvent** -- Events a `BEFORE_BROADCAST` hook adds for specific channels (e.g., challenge messages), each committed after its cause, once the cause's section has released the room lock, as a pass of its own, and delivered to its transport targets; any other trigger drops them with a warning
 - **Task** -- Work items with status tracking for human follow-up
 - **Observation** -- Intelligence findings with category and confidence score
 

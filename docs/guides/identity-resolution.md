@@ -168,9 +168,9 @@ When `CHALLENGE_SENT` is returned:
 
 1. The original inbound message is **blocked** (not broadcast)
 2. The injected event is committed as a pass of its own, as any event a hook
-   injects is ([Injected events](../features.md#injected-events)): under the
-   room lock, through the `BEFORE_BROADCAST` hooks (which may block it), then
-   delivered to the sender's channel, transcoded for it
+   injects is ([Injected events](../features.md#injected-events)): in a
+   locked section of its own, through the `BEFORE_BROADCAST` hooks (which may
+   block it), then delivered to the sender's channel, transcoded for it
 3. The sender's next message goes through identity resolution again
 
 A `BEFORE_BROADCAST` hook that blocks or rewrites every event also reads the

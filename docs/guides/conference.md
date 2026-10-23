@@ -457,7 +457,8 @@ reads only that the tool failed.
 
 The conference keeps the other contracts a realtime voice channel keeps with
 the same provider. Under a `muted` or `output_muted` binding, a text event is
-injected silently: the model hears it and does not answer. Under
+injected silently: the model hears it and does not answer, and so is an event
+a hook injected, which asks no agent. Under
 `output_muted`, the provider's audio does not reach the bot track. A call the
 provider issues while its session is still connecting waits for it and is
 served once the session is up; a start that fails or is cancelled reports such

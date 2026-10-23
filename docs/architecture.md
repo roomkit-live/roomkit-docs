@@ -406,7 +406,7 @@ This ensures AI-to-AI conversations complete atomically within a single inbound 
 
 The pipeline, not the channel, writes who a response comes from: its responder's channel id and type, direction `OUTBOUND`, the trigger's room, the trigger's chain depth plus one, `responds_to` the trigger (unless the response names the event it answers), and no idempotency key. A response that claims another source is committed as its responder's, with a warning. Every committed event gets a fresh id from the pipeline.
 
-An event a hook injects (`InjectedEvent`) is not part of this loop's agent turns: it is committed after the event that caused it as a pass of its own (the room lock, the `BEFORE_BROADCAST` hooks, the reentry budget), delivered to its transport targets only, and asks no agent. See [Injected events](features.md#injected-events).
+An event a hook injects (`InjectedEvent`) is not part of this loop's agent turns: it is committed after the event that caused it as a pass of its own, once the cause's locked section has released the room lock (a section of its own, the `BEFORE_BROADCAST` hooks, the reentry budget), so another event may commit between them; it is delivered to its transport targets only, fires `AFTER_BROADCAST`, and asks no agent, a realtime model among its targets taking it silently. See [Injected events](features.md#injected-events).
 
 ### Voice Pipeline
 
@@ -599,7 +599,7 @@ RoomKit operates at the **library level** and delegates authentication to the ho
 2. **Visibility Filtering** -- Events can be scoped via the `visibility` field:
    - `"all"` -- Visible to all channels
    - `"none"` -- Visible to no channels
-   - `"internal"` -- Visible to no channels, as `"none"`; marks a record the framework wrote
+   - `"internal"` -- Visible to no channels, as `"none"`; marks a record the framework wrote, so only the framework writes it (refused at every door, put back after a hook's modify, a channel's answer carrying it stored `"none"`)
    - `"transport"` -- Only visible to transport channels
    - `"intelligence"` -- Only visible to intelligence channels
    - `"channel-a,channel-b"` -- Comma-separated list of specific channel IDs

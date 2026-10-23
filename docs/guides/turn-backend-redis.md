@@ -68,6 +68,9 @@ itself: always pass the set.
 Room hooks are part of the declaration: an executor that does not define a
 hook a room enabled (`executor.room_hook("audit", ...)`,
 `kit.enable_room_hook(room_id, "audit")`) is never given that room's turns.
+On an executor a name carries one hook per trigger, a redefinition replacing
+it, and the name a room enables joins the room's hooks: a room hook of the
+room under that name refuses it (`ValueError`).
 
 ## Where a turn goes
 
