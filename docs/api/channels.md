@@ -53,6 +53,14 @@ The discovery tools a channel serves itself under Tool Search.
 
 ::: roomkit.TransportChannel
 
+## Addressing
+
+::: roomkit.channels.addressing.Addressing
+
+::: roomkit.channels.addressing.ChannelAddressing
+
+::: roomkit.channels.addressing.addressing_of
+
 ## WebSocket Streaming
 
 ::: roomkit.channels.websocket.StreamStart
