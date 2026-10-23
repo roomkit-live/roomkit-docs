@@ -216,6 +216,8 @@ await kit.attach_channel("support-123", "ai-bot", category=ChannelCategory.INTEL
 
 When a message arrives on any channel, it is automatically broadcast to all other attached channels, with content transcoded as needed for each target's capabilities.
 
+A room is created once (RFC §14.3): `create_room()` with an id the store already holds raises `RoomAlreadyExistsError` and keeps the room it holds, in every store (the in-memory and SQLite stores used to replace it, re-homing its conversation). Room ids are global, across organizations: the refusal comes whichever organization holds the id and says only that it is taken. A host that lets its tenants choose room ids namespaces them (`f"{tenant}:{name}"`) or lets RoomKit generate them, since a refused id is one another tenant may hold. A message whose named room another call created meanwhile reads that room again, for the caller's organization.
+
 #### Attachment is a channel contract, not just a store write
 
 Some channels have outside-world work to do when they are attached: `ConferenceChannel` creates the SFU room (RFC §12.10.4 step 1). That work runs through two `Channel` methods the framework awaits itself — no-ops on the base class, so an ordinary channel needs neither:
@@ -336,7 +338,7 @@ Every message passes through a deterministic processing pipeline:
 6. **Idempotency check** -- A key its source channel already committed in the room skips processing and returns the event the first delivery committed (blocked again when the room blocked it)
 7. **Sync hooks** -- Content filtering, modification, or blocking (BEFORE_BROADCAST), before any persistence
 8. **Write-permission gate** -- A source with no binding in the room (`source_unbound`), or whose binding cannot write (`READ_ONLY`/`NONE` as `source_read_only`, or muted as `source_muted`; read-only wins when both apply), is stored `BLOCKED`, never `DELIVERED`; hook side effects are still collected. An agent's response meets the same two gates in the same order, whichever path commits it (a buffered answer, a streamed row, a regenerated answer): a read-only or muted agent's answer is seen by the `BEFORE_BROADCAST` hooks, keeps the tasks and observations they file, and is then stored `BLOCKED`. A read-only agent's streamed answer is generated, stored row by row as `BLOCKED`, and piped live to no channel; a muted agent's stream is closed before generation
-9. **Edit/delete mutation** -- For `EDIT`/`DELETE` events, the target message is mutated only here -- after hooks allow the event -- so a moderation hook that blocks the edit leaves the target untouched
+9. **Edit/delete mutation** -- An `EDIT` or a `DELETE` is checked before its hooks (its target, its author or authority, see [Edits and Deletes](#edits-and-deletes)) and again after hooks that ran under the lock; its target is written only here -- after hooks allow the event, in the commit's own transaction -- so a moderation hook that blocks the edit leaves the target untouched
 10. **Event storage** -- Persist the allowed event as `DELIVERED`, under a fresh id the pipeline gives it and with its own visibility intersected with its source binding's
 11. **Broadcast** -- Every eligible channel gets `on_event()`; a transport whose binding sends (`OUTBOUND` or `BIDIRECTIONAL`) also gets `deliver()`
 12. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`), each committed as its responder's: direction `OUTBOUND`, the trigger's depth plus one, `responds_to` the trigger. Events the hooks injected are committed after their cause, each as a pass of its own ([Injected events](#injected-events))
@@ -992,6 +994,39 @@ summaries = await kit.store.get_thread_summaries("r1", [root_id])
 
 Distinct from `ChannelData.thread_id` (the provider-native reference). See the
 [Message Threading guide](guides/message-threading.md).
+
+### Edits and Deletes
+
+An event is an edit when its type is `EDIT` and its content an `EditContent`, a delete when `DELETE` and `DeleteContent` (RFC §10.3). The pipeline checks it under the room lock on every pass that commits an event: an inbound message, an agent's response, a hook's injected event, a `send_event()`. Nothing of a refused change is stored: the inbound path returns `InboundResult(blocked=True, reason=...)`, `send_event()` raises `ChangeRefusedError` (its `reason`), and a refused response or injected change is logged at warning level.
+
+| Rule | Refused with |
+|------|--------------|
+| A type and a content that disagree, or a change held elsewhere (a composite's part, an edit's new content), which a channel would otherwise apply natively | `target_event_not_found` |
+| A target that is not an event of the room, is `BLOCKED`, deleted, or itself an edit or a delete (an edited event may be edited again; a retried delete carries its idempotency key and is answered as the first) | `target_event_not_found` |
+| A sender's change (`edit_source` `"sender"` or none, `DeleteType.SENDER`) of an event they did not author | `not_original_author`, or `identity_required_for_edit` when either has no author |
+| `DeleteType.ADMIN` from anyone but an OWNER or an AGENT, neither LEFT nor BANNED, as the participant they are on their channel | `not_authorized`, or `identity_required_for_edit` from a sender who names no one |
+| A SYSTEM change (`DeleteType.SYSTEM`, `edit_source="system"`) from anything but a SYSTEM channel or a hook | `not_authorized` |
+| A change a hook injects that is not a SYSTEM change: a hook never edits or deletes in a participant's name | `not_authorized` |
+
+An event that travelled outbound (a channel's own output, an agent's response) is its channel's, whatever participant it names: an agent edits its own responses and no one else's, and holds no participant's authority. An `edit_source` outside `"sender"`/`"system"` is checked as the sender's. A hook's `modify` keeps the target, the `edit_source` or `delete_type` and the kind of content (a replacement hiding a change leaves the original's); once a hook ran under the lock the target is read and checked again, so a delete committed during an edit's hooks refuses the edit rather than be undone by it.
+
+An accepted change and its target's update are one store transaction (`ConversationStore.commit_event(..., target=...)`): an edit writes its new content and `metadata.edited=True` on the target, a delete `metadata.deleted=True`, and a target the room no longer holds fails the whole commit (`EventNotFoundError`). The change reaches no one who could not see its target -- its visibility, narrowed by its source binding's, is narrowed again to the target's, so a correction of a message only an advisor saw never reaches the customer -- it is delivered with its target as the commit left it, and `ON_EVENT_UPDATED` / `ON_EVENT_DELETED` fire once the room lock is released, before its `AFTER_BROADCAST` hooks.
+
+```python
+# The author edits their message; a moderator (an active OWNER or AGENT) deletes another.
+await kit.process_inbound(InboundMessage(
+    channel_id="ws-alice", sender_id="alice", event_type=EventType.EDIT,
+    content=EditContent(target_event_id=msg.id, new_content=TextContent(body="I need 50000$")),
+))
+await kit.process_inbound(InboundMessage(
+    channel_id="ws-advisor", sender_id="advisor-1", event_type=EventType.DELETE,
+    content=DeleteContent(target_event_id=spam.id, delete_type=DeleteType.ADMIN),
+))
+```
+
+**What a channel is handed of a deleted event.** A soft-deleted event stays in every history a channel is handed (RFC §7.5 rule 8), its content withheld: an empty text in place of what was said and no `source.raw_payload`, its id, index, type, source with the provider's message id, thread, metadata (`metadata.deleted`) and `channel_data` kept, so the delete that follows names an event the reader holds and a channel that deletes natively still finds the provider's references. An edit of a deleted event has its new content withheld alike. It holds for `visible_events()`, the AI context and its memory, ACP catch-up, delegation and discussion briefings, a discussion's dispatch turn, a rebuilt tool memory, cut records, the media an application keeps beside a message, and the contexts a channel parses a message with and is delivered with. The stored record keeps its content, and so do the contexts hooks receive: the store and the hooks are the host's.
+
+**The host's own calls.** `kit.update_event()` rewrites an event's content, source or metadata wholesale, with no `edited` mark; `kit.delete_event(room_id, event_id, cascade_replies=True)` is a hard delete of the event, its thread replies unless told not to, and the edits and deletes of every event it removes (an edit holds the corrected text), in one transaction, their idempotency keys released. It returns the removed ids and fires `ON_EVENT_DELETED` once per removed event, each as it was stored. Neither runs the checks above: the host owns their authorization.
 
 ### Response Tracking
 

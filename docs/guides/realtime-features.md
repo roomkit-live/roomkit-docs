@@ -150,7 +150,7 @@ await kit.process_inbound(InboundMessage(
 ))
 ```
 
-The `new_content` field accepts any `EventContent` type — you can change a text message to rich content or vice versa.
+The `new_content` field accepts any `EventContent` type — you can change a text message to rich content or vice versa — but never another edit or a delete, nor a composite holding one. The event's type and content must agree (`EDIT` with `EditContent`), the target must be a message of the room that is not blocked, not deleted and not itself an edit, and a sender edits only what they wrote; otherwise the edit is refused and nothing is stored (see [Edits and Deletes](../features.md#edits-and-deletes)). An accepted edit reaches only the channels that could see its target.
 
 ## Message Deletion
 
@@ -177,11 +177,17 @@ await kit.process_inbound(InboundMessage(
 ))
 ```
 
-| DeleteType | Meaning |
-|-----------|---------|
-| `SENDER` | Original sender deletes their message |
-| `SYSTEM` | System-initiated (e.g., content policy) |
-| `ADMIN` | Admin/moderator removal |
+| DeleteType | Meaning | Who may |
+|-----------|---------|---------|
+| `SENDER` | Original sender deletes their message | Its author, on the channel they write on |
+| `SYSTEM` | System-initiated (e.g., content policy) | A SYSTEM channel, or a hook's injected event |
+| `ADMIN` | Admin/moderator removal | An OWNER or an AGENT, neither LEFT nor BANNED |
+
+A deleted message is marked `metadata.deleted` and stays in the timeline. Every
+history a channel is handed afterwards (an agent's context, its memory, a
+briefing) holds it with an empty text and no raw payload; the store and the
+hooks keep what was said. `kit.delete_event()` removes a message for good, with
+its replies and its edits.
 
 ---
 
