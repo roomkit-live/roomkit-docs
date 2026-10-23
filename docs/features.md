@@ -1684,6 +1684,14 @@ have no value that states off: a room can replace the channel's, never lift it.
 `max_tokens`, `thinking_budget`, `enable_thinking`, `reasoning_effort`,
 `response_schema`, `turn_budget_tokens` and `turn_budget_usd`.
 
+A callback can also return `tool_handler` with `tools`: the host's calls then
+use that turn's handler throughout the tool loop, independently of other rooms
+using the channel. `None` keeps the channel default. The handler is never written
+back to the channel; Tool Search, skills, orchestration, sandbox and human-input
+tools retain their own dispatch, and the turn's toolset still gates every call.
+The runnable `examples/turn_tool_handler.py` demonstrates two rooms resolving
+the same tool name to their own backend.
+
 #### Function Calling / Tools
 
 AI channels support function calling via the `tools` binding metadata:
