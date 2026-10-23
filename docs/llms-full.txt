@@ -6257,7 +6257,11 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   transaction writes; a target the room no longer holds fails the whole commit
   with `EventNotFoundError`. A delete's commit also marks every edit of its
   target `metadata.deleted`, in the same transaction: an edit holds a version
-  of the deleted text.
+  of the deleted text. A host that soft-deletes a message itself, writing
+  `metadata.deleted` with `kit.update_event()`, marks no edit: an edit the
+  history holds without its message stays readable. Delete through the
+  pipeline (a DELETE event, `send_event()`) or `kit.delete_event()`, or mark
+  the message's edits too.
 - `delete_event(room_id, event_id, cascade_replies=True)` is a hard delete: the
   event, its thread replies unless told not to, and the edits and deletes of
   every event it removes, in one transaction, their idempotency keys released.
