@@ -6325,8 +6325,12 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
 - `create_room()` refuses an id it holds with `RoomAlreadyExistsError`, nothing
   written: replacing the room would re-home its conversation, another
   organization's included.
-- `commit_event(room_id, event, *, target=None)` stores the event and bumps the
-  room's counters in one transaction. For a DELIVERED edit or delete the
+- `commit_event(room_id, event, *, target=None, activity=True)` stores the
+  event and bumps the room's counters in one transaction. An activity commit
+  (an event the pipeline stores DELIVERED) also moves `last_activity_at` and
+  resumes a PAUSED room, in the same transaction (RFC §5.1); the framework
+  passes `activity=False` for a lifecycle record, a BLOCKED record and a
+  `commit_event()` record, which leave both. For a DELIVERED edit or delete the
   framework passes `target`, the target as the change writes it, which the same
   transaction writes; a target the room no longer holds fails the whole commit
   with `EventNotFoundError`. A delete's commit also marks every edit of its
@@ -6336,6 +6340,13 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   history holds without its message stays readable. Delete through the
   pipeline (a DELETE event, `send_event()`) or `kit.delete_event()`, or mark
   the message's edits too.
+- `update_room_if(room, *, status, paused_at, last_activity_at)` writes the
+  room as `update_room()` does only if the stored room still holds that
+  status, `paused_at` and `last_activity_at`, else writes nothing and returns
+  `None`: a timer transition's compare-and-set, so a streamed row or a greeting
+  committed off the room lock is never overwritten by a stale close or pause.
+  The shipped stores hold the room's row from the comparison to the write;
+  the default reads, compares and writes, and is not atomic.
 - `write_change_target(room_id, target)` writes the target of an edit or a
   delete the persistence policy keeps out of the timeline: the target's row
   alone, no row of the change, and when the target is now deleted every edit
