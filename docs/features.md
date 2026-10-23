@@ -4220,6 +4220,12 @@ a failure is the one someone comes back to hours later, when the live
 `delivery_failed` event is long gone — so that one is written, and written
 whole, successes included: which channels *did* receive it is half the answer.
 
+It is written on the event as stored, the field alone
+(`ConversationStore.record_delivery_results()`), under the room lock: an edit or
+a delete committed while the delivery ran stands. Every shipped store keeps it,
+Postgres in an `events.delivery_results` column that `init()` adds to an
+existing schema.
+
 ### Idempotency
 
 Duplicate message detection via idempotency keys:

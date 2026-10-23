@@ -6258,6 +6258,11 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   every event it removes, in one transaction, their idempotency keys released.
   It returns the removed events as stored: the root, its replies, then the
   changes, each in index order.
+- `record_delivery_results(room_id, event_id, results)` writes a delivery set's
+  outcome on the event as stored, that field alone, so an edit or a delete
+  committed while the delivery ran stands. Its default reads the event and
+  writes it back (the framework calls it under the room lock); a store that can
+  update the field in place overrides it.
 ---
 
 RoomKit provides mock implementations for every pluggable component: AI providers, voice backends, pipeline stages, identity resolvers, and telemetry.
