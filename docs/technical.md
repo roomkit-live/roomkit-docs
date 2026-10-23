@@ -485,7 +485,7 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     async def resolve_participant(self, room_id, participant_id, identity_id,
                                   resolved_by="manual") -> Participant
 
-    # --- Room timers (RoomTimersMixin, RFC §5.1) ---
+    # Room timers (RFC §5.1), applied by every locked operation too
     async def check_room_timers(self, room_id) -> Room
     async def check_all_timers(self) -> list[Room]
 
