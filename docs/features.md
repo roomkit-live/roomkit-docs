@@ -716,7 +716,15 @@ await kit.attach_channel("team", "sms-team", group=True)
 
 The sender is recorded when the message is routed, under the room lock, so
 two first messages arriving together land apart, and a message a hook refuses
-has been routed all the same. A sender is known by their address and by the
+has been routed all the same. Under that lock the room is checked again as the
+lock finds it, whichever router chose it: a room closed or archived since, a
+paused room that is not the sender's (its binding names them, or they are a
+participant reached through the channel, or the binding is `group`), a binding
+naming someone else, or a room that heard or gained someone else on the
+channel since the router read it, is no longer the message's. Nothing is
+written, and the message is routed once more; a second answer that is not the
+message's gives it a new room, so a routed message is never refused
+`room_closed` at that point. A sender is known by their address and by the
 identity the store resolves it to (`link_address`); what the host sends with
 `deliver()` does not close a room to its customer's reply, and a message routed
 under the framework's own sender (`system`) is never recorded on a binding
@@ -793,6 +801,17 @@ provider's spelling. An identity address linked under another spelling
 The email channel does the same for addresses: lower-case, without a display
 name (`Alice Martin <Alice@Example.com>` is `alice@example.com`), so one
 mailbox written two ways is one room.
+
+#### Organizations
+
+`process_inbound(..., organization_id="acme")` routes within that
+organization (RFC §17.2): the sender's identity is resolved within it, and
+the default router searches its rooms only, every room when the call names
+none. A newer room of another tenant neither wins over the organization's own
+nor makes its one room on the channel ambiguous; a sender with no room in the
+organization gets a room created under it. An address linked within the
+organization (`link_address(..., organization_id="acme")`) finds its person's
+room.
 
 Pass `room_id` to `process_inbound()` to route explicitly, or install a custom
 `InboundRoomRouter`. Example: `examples/shared_sms_number.py`.
@@ -4770,12 +4789,30 @@ Override the default room routing strategy:
 
 ```python
 class TenantRouter(InboundRoomRouter):
-    async def route(self, channel_id, channel_type, participant_id) -> str | None:
+    async def route(
+        self,
+        channel_id,
+        channel_type,
+        participant_id=None,
+        channel_data=None,
+        *,
+        organization_id=None,
+        identity=None,
+    ) -> str | None:
         # Route to room based on tenant-specific logic
-        return await self.lookup_tenant_room(participant_id)
+        return await self.lookup_tenant_room(organization_id, participant_id)
 
 kit = RoomKit(inbound_router=TenantRouter())
 ```
+
+The framework passes every keyword: `channel_data` is the message's metadata,
+`organization_id` the organization `process_inbound` acts for, and `identity`
+the sender's, resolved once per message within that organization. The answer
+is held to the rules of a room the caller names: a room of another
+organization raises `RoomNotFoundError`, and a room id the store lacks is
+created under that id. The room is then checked again under its lock, as
+above: a router that sends several senders to one room declares its binding
+`group`.
 
 ---
 

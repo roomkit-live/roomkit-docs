@@ -555,6 +555,8 @@ The storage interface defines 30 abstract methods across 8 categories:
 
 An idempotency key is unique per room and per source channel: `check_idempotency(room_id, key, *, channel_id)` and `get_event_by_idempotency_key(room_id, key, *, channel_id)` take the channel as a keyword-only argument, which a custom store must accept.
 
+The routing lookups `find_room_ids_by_channel`, `find_room_id_by_binding` and `find_room_id_by_participant` take a keyword-only `organization_id` that keeps the rooms of that organization only (`None` reads every room), which a custom store overriding them must accept. An address belongs to one identity per organization and channel type: `link_address` and `create_identity` refuse an address another identity of the organization holds with `AddressLinkedError`, and `link_address` refuses an unknown identity, or one of another organization, with `IdentityNotFoundError`.
+
 ---
 
 ## Configuration Management

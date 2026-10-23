@@ -307,7 +307,13 @@ identity = await store.resolve_identity("sms", "+1234567890")
 await store.link_address("user-1", "whatsapp", "+1234567890")
 ```
 
-Address uniqueness is enforced by a `(channel_type, address)` unique constraint — one address can only belong to one identity.
+An address belongs to one identity per organization and channel type: the
+key is `(channel_type, address, organization_id)`. Linking an address another
+identity of the organization holds, or creating an identity with one, raises
+`AddressLinkedError` and writes nothing; linking to an unknown identity, or to
+an identity of another organization than the call's `organization_id`, raises
+`IdentityNotFoundError`. A lookup without an organization resolves the
+identities of no organization only.
 
 ## Read Tracking
 

@@ -182,6 +182,30 @@ number, linking the address with `link_address`) is your resolver's or
 hook's, and once the sender is identified the reply is stored and broadcast
 like any message, sensitive content included.
 
+## Linking addresses
+
+`store.link_address(identity_id, channel_type, address, organization_id)`
+links an address to an identity of that organization, in the channel's form
+(E.164 on a phone channel). An address belongs to one identity per
+organization and channel type, so a lookup never has to choose:
+
+```python
+# id-alice and id-bob are identities of acme, id-carol one of globex
+await store.link_address("id-alice", "sms", "+15550000001", "acme")
+await store.link_address("id-bob", "sms", "+15550000001", "acme")
+# AddressLinkedError: the number is alice's at acme, and stays hers
+await store.link_address("id-carol", "sms", "+15550000001", "globex")
+# fine: each organization has its own space
+```
+
+Linking to an unknown identity, or to an identity of another organization
+than `organization_id`, raises `IdentityNotFoundError`; linking an address
+the identity already holds changes nothing. `organization_id=None` stands
+for the identities of no organization, and an unscoped lookup never resolves
+an organization's. Routing resolves the sender's identity within the
+organization `process_inbound` acts for, so an address linked within it finds
+the room of the person it belongs to.
+
 ## Configuration
 
 ```python
