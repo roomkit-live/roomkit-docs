@@ -557,7 +557,8 @@ graph LR
 | **Retry with Backoff** | `retry_with_backoff` | Exponential backoff (`base * exponential_base^attempt`, capped at `max_delay_seconds`) for transient failures |
 | **Chain Depth Limit** | `max_chain_depth` (default 5) | Prevent infinite event loops from AI reentry, streamed or buffered: an agent whose answer would reach the limit is not asked, and a BLOCKED record with an observation stands in for it |
 | **Idempotency** | `idempotency_key` on events, unique per room and source channel | Prevent duplicate processing (checked inside room lock to avoid TOCTOU races); a redelivery returns the original event, blocked again when the room blocked it |
-| **Process Timeout** | `process_timeout` (default 30s) | One budget for the whole pre-commit phase — context build, `handle_inbound`, identity, the wait for the room lock, and the gates inside it. Routing and the commit sit outside it |
+| **Process Timeout** | `process_timeout` (default 30s) | One deadline from the call's start to its decision — routing (the identity read, the router, step 2's lock waits), context build, `handle_inbound`, identity, the off-lock checks, the wait for the room lock and the gates inside it. A room step 2 creates, and the commit, sit outside it |
+| **Reentry Budget** | `10 × max_chain_depth` passes per cascade | Bound what one event sets off: its answers, its hooks' injected events, and what the room's own work (a hook, a parse, a delivery, a turn) sends into the room; past it a `BLOCKED` `reentry_loop_cap` record, or a refused message |
 | **Identity Timeout** | `identity_timeout` (default 10s) | Prevent slow identity resolvers from blocking the pipeline |
 
 ### Horizontal Scaling

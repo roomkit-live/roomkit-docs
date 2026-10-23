@@ -636,28 +636,35 @@ kit = RoomKit(
 
 #### What `process_timeout` bounds
 
-One budget for the whole pre-commit phase (RFC Section 13.6) — the context
-build, the channel's `handle_inbound`, identity resolution, the wait for the
-room lock, and the gates inside it. It is a single deadline, not a duration
-re-applied per region: 30 seconds means the caller waits 30 seconds, not 30
-before the lock and 30 after.
+One deadline from the call's start to its decision (RFC Section 13.6):
+routing, with the sender's identity it reads, the router and step 2's waits
+for the room lock (the record of a routed sender, the attach of an unbound
+channel), then the context build, the channel's `handle_inbound`, identity
+resolution, the off-lock checks, the wait for the room lock and the gates
+inside it. It is a single deadline, not a duration re-applied per region: 30
+seconds means the caller waits 30 seconds, not 30 to route and 30 after. A
+router or a lock that hangs holds the caller no longer than the bound.
 
 Two boundaries are deliberate:
 
-- **Routing sits outside it.** Finding or creating the room is Section 10.1
-  steps 1-2, before the phase this bounds — and it is the only part that
-  writes a room, so a timeout there would leave one behind for a message that
-  was then refused.
+- **A room step 2 creates is completed whatever the deadline.** Its creation,
+  its `ON_ROOM_CREATED` hooks (each within its own timeout) and its attach are
+  the room's state, not the event's: the room stays when the event times out
+  next. Step 2's attach or record of a sender in a room that exists is bounded
+  on its wait for the lock only; past it the message is refused, never let in
+  unrecorded or unattached.
 - **The commit sits outside it.** Once the gates pass, the commit and the
   delivery set it hands to the lane run to completion. A timeout landing
   mid-commit would report a committed event as blocked, which Section 13.6
   forbids.
 
 Expiry returns `InboundResult(blocked=True, reason="process_timeout")` and
-emits the `process_timeout` framework event. Nothing durable has been written.
-`send_event()`, whose result is the committed event, has no blocked result to
-return: the same expiry, the wait for the room lock included, emits the event
-and raises `ProcessTimeoutError`.
+emits the `process_timeout` framework event, whose `room_id` is `None` when the
+deadline passed while the message was routed. Nothing of the event has been
+written: the injected events, tasks and observations of the hooks that ran are
+dropped with it. `send_event()`, whose result is the committed event, has no
+blocked result to return: the same expiry, its read of the room and its wait
+for the room lock included, emits the event and raises `ProcessTimeoutError`.
 
 A regeneration (`regenerate_response()`) has no commit of its own: its event
 is already in the timeline. `process_timeout` bounds its wait for the room

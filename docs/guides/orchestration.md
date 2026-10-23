@@ -596,6 +596,9 @@ a replay reproduces the same solicitation.
 Direct injection has a sender too, so `send_event()` addresses the same way.
 The `[]` case is what an application needs when it stores a message and
 triggers the answer itself: the stored event must not *also* wake the agent.
+An event an agent's turn sends (from its tools, its channel's code, or its
+`TurnHost`) is at least as deep as the turn's answer, so agents waking each
+other through injected events stop at `max_chain_depth` as their answers do.
 
 ```python
 # Stored, and asking nobody — the caller runs the turn on its own terms.

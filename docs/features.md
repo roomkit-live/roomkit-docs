@@ -765,8 +765,11 @@ message's gives it a new room, so a routed message is never refused
 identity the store resolves it to (`link_address`); what the host sends with
 `deliver()` does not close a room to its customer's reply, and a message routed
 under the framework's own sender (`system`) is never recorded on a binding
-nor let into an existing room that is not a group. A message whose room lock stays taken past `process_timeout` while it is
-being recorded is refused as a process timeout. A member added
+nor let into an existing room that is not a group. Routing spends the
+message's `process_timeout`, one deadline from the call's start: the identity
+it reads, the router and the wait for the room lock to record the sender. A
+message whose room lock stays taken past it while it is being recorded is
+refused as a process timeout, never let in unrecorded. A member added
 under an id that is neither closes the room to routing, unless the binding's
 recipient names them (below): route their messages with `room_id`, or link the
 address (`link_address`), after which they are found by it whatever the number
@@ -1304,7 +1307,8 @@ async def pii_scan(event: RoomEvent, ctx: RoomContext) -> HookResult:
   a hook that reads the room's state rather than the event must keep the
   lock. An event sent from inside the check (a "scan in progress" notice),
   or from a locked hook, commits right away, ahead of the message being
-  processed. A check that fails (raises, times out, returns something
+  processed, and draws on that message's reentry budget (see
+  [Calling into the room from its own work](#calling-into-the-room-from-its-own-work)). A check that fails (raises, times out, returns something
   unusable) is reported as it fails, before the lock (`hook_error`,
   `hook_timeout`), whatever the gates under the lock then decide: a
   duplicate or a message to a room closed meanwhile still reports it.
@@ -1445,15 +1449,18 @@ of its own (RFC §9.4), whichever way that event ended:
   after the decision, loses none of it; a task the kit holds commits it once
   the lock frees, and `kit.close()` cancels that task with its other
   background work. An event code under the lock sends with `kit.send_event()`
-  is another path: it commits at once, ahead of the event being processed.
+  is another path: it commits at once, ahead of the event being processed,
+  and what its own hooks inject joins the queue of the section holding the
+  lock, committed once that section has released it.
 - Its pass runs the `BEFORE_BROADCAST` hooks, the one that injected it
   included, so a hook that blocks or injects on every event must let its own
   injections through (by their source or their content). A hook may block it
   (stored `BLOCKED`), and what its hooks inject is committed after it the
   same way, before the next event its cause's hooks injected.
 - It counts against the reentry budget (`10 × max_chain_depth` per inbound
-  message). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and its
-  hooks do not run.
+  message or direct injection, shared with what the room's own work sends
+  into the room). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and
+  its hooks do not run.
 - It keeps its cause's chain depth and carries no idempotency key. Its
   visibility names the targets the room binds, whatever visibility it came
   with: `none` when the room binds none of them, or when
@@ -1494,7 +1501,11 @@ A `MODIFY` that carries no payload, or a payload of another type than the
 trigger passed in, is an unusable result: it replaces nothing, blocks a
 fail-closed hook (`hook_invalid_result:<name>`), and its injected events are
 dropped while its tasks and observations are kept. On `ON_TRANSCRIPTION`,
-modify with the trigger's own event type; a plain `str` is unusable there.
+modify with the trigger's own event type; a plain `str` is unusable there. A
+result whose replacement, or an event it injects, holds more than five
+composite levels (assembled with `model_copy`, which skips validation) is
+unusable too: nothing of it is applied or collected, and it blocks a
+fail-closed hook (RFC §5.3).
 
 A `BEFORE_BROADCAST` replacement changes what the event says and whom it
 asks, never which event it is. It may change `content`, `addressed_to`,
@@ -4300,7 +4311,9 @@ kit = RoomKit(max_chain_depth=5)  # Default: 5
 
 An agent whose answer would reach the limit is not asked at all: no model call runs and no tool, whether it streams or not. One record stands in for its answer, stored with `status=BLOCKED` and `blocked_by="event_chain_depth_limit"` (the agent as its source, empty text, the depth the answer would have had). An `Observation` documents the exceeded depth, and a framework event `chain_depth_exceeded` is emitted.
 
-Every path that produces an agent's answer carries the depth: a streamed segment (each one wakes the other agents, as each segment of a buffered answer does), a realtime model's transcription (one deeper than what it last heard), a `Loop` or `Supervisor` result, and a delegation's result delivered back to the room, which continues the chain of the turn that delegated. A cycle of delegation, result and delegation again therefore stops at the limit. Content a host delivers for a turn can do the same with `kit.deliver(..., chain_depth=...)`.
+Every path that produces an agent's answer carries the depth: a streamed segment (each one wakes the other agents, as each segment of a buffered answer does), a realtime model's transcription (one deeper than what it last heard), a `Loop` or `Supervisor` result, and a delegation's result delivered back to the room, which continues the chain of the turn that delegated. A cycle of delegation, result and delegation again therefore stops at the limit. Content a host delivers for a turn can do the same with `kit.deliver(..., chain_depth=...)`. What a turn sends into a room itself, `send_event()` or `process_inbound()` from its channel's code, a tool handler or a `TurnHost` verb, is at least as deep as the turn's response, so an agent that injects through another channel at each turn stops at the limit as its answers do.
+
+Beside the depth, a cascade (an inbound message or a direct injection) runs at most `10 × max_chain_depth` passes: its answers, its hooks' injected events, and the calls its own work makes into the room ([Calling into the room from its own work](#calling-into-the-room-from-its-own-work)). Past it, an answer or an injected event is stored `BLOCKED` with `reentry_loop_cap`, and a message the room's work sends is refused with that reason.
 
 ### Delivery outcomes
 
@@ -4504,7 +4517,12 @@ with its own visibility (`visibility=` on the inbound message or `send_event`,
 or a hook's rewrite) intersected with its source binding's, and that stored
 value is the whole answer, at delivery and whenever history is rebuilt. An
 event's own scope can narrow what its binding allows, never widen it, and a
-binding changed later does not change what past events reached:
+binding changed later does not change what past events reached. A record
+stored `BLOCKED` in an event's place (a hook's block, a source that cannot
+write, an agent not asked at the depth limit, an answer past the reentry
+budget) takes the same intersection, so a host shown it later sees no more of
+it than the room's channels would have seen of the event; an event a hook
+injects keeps the visibility of its targets:
 
 ```python
 await kit.attach_channel("room-1", "sms", visibility="transport")
@@ -4892,6 +4910,29 @@ event = await kit.send_event(
     channel_id="system-channel",
     content=TextContent(body="System maintenance in 5 minutes"),
 )
+```
+
+The event's source is the channel it names, travelling `INBOUND` from a transport, whose event stands for a message coming in, and `OUTBOUND` from an intelligence channel, whose event is its own words going out, as its answers are: an agent edits or deletes its own injected message as its channel, naming no participant. Content holding more than five composite levels raises `ValueError` before anything is read, as `process_inbound()` does for such a message or for the event its channel parses (RFC §5.3).
+
+#### Calling into the room from its own work
+
+A call into a room made by the room's own work is part of that work (RFC §9.5.1):
+
+| Called from | What the call is |
+|---|---|
+| A locked hook, or code under the room lock | Nested: no admission ticket, every hook under the lock, committed ahead of the event being processed; what its own hooks inject joins the queue of the section holding the lock |
+| An off-lock hook's body, a channel's `handle_inbound()` | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
+| A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
+
+Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made within a turn is at least as deep as the turn's response, so an agent that injects at each turn stops at `max_chain_depth`. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
+
+```python
+class Echo(WebSocketChannel):
+    async def deliver(self, event, binding, context):
+        # A new arrival on the budget of the cascade delivering `event`:
+        # an echo of every message stops at the cap.
+        await kit.process_inbound(echo_of(event), room_id=event.room_id)
+        return ChannelOutput.empty()
 ```
 
 A record no member receives (a trace, a display snapshot, the copy a branched conversation starts from) is committed outside the pipeline with `kit.commit_event(room_id, event, organization_id=...)` (RFC §10.5). The room is read under its lock, scoped to the tenant, and a room that refuses events raises `RoomClosedError`; the record takes the next index, which the room's delivery lane counts as delivered at once, so the next event never waits on it. No hook and no broadcast follow, and it is stored as given.

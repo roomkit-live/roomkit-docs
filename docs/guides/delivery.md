@@ -135,7 +135,14 @@ await kit.send_event(
 
 The message stays in the room's history, where the agents read it on their
 next turn; restrict its `visibility` to the transports that should carry it to
-keep it from them.
+keep it from them. Sent from a transport channel, it travels `INBOUND`, as a
+message coming in; sent from an agent's channel, `OUTBOUND`, as its own words.
+
+Sent from the room's own work (a transport's `deliver()`, an agent's turn, a
+tool handler), the message is a new arrival that draws on the reentry budget
+of the cascade being delivered: a channel that sends into its room on every
+delivery stops after `10 × max_chain_depth` messages, the next one refused
+`reentry_loop_cap`. From a turn it is at least as deep as the turn's answer.
 
 ## Framework default
 

@@ -649,6 +649,12 @@ await kit.attach_channel("room", "channel", access=Access.WRITE_ONLY)
 await kit.set_access("room", "channel", Access.NONE)
 ```
 
+A message from a channel that cannot write (read-only, `NONE`, muted) is
+stored `BLOCKED`, as is one a hook blocks, with the visibility it would have
+been delivered with: its own intersected with its channel's binding (RFC
+§7.3). A host reading the room's refused records sees no more of one than
+its channels would have seen of the message.
+
 ## Muting Channels
 
 Muting suppresses a channel's output (AI responses) without detaching it. Side effects (tasks, observations) still fire.
@@ -718,7 +724,7 @@ Events carry typed content. RoomKit supports 11 content types, all discriminated
 | `AudioContent` | `"audio"` | `url`, `mime_type`, `duration_seconds`, `transcript` | Voice messages |
 | `VideoContent` | `"video"` | `url`, `mime_type`, `duration_seconds`, `thumbnail_url` | Video messages |
 | `LocationContent` | `"location"` | `latitude`, `longitude`, `label`, `address` | Geographic coordinates |
-| `CompositeContent` | `"composite"` | `parts` (list of EventContent, max depth 5) | Multi-part messages |
+| `CompositeContent` | `"composite"` | `parts` (list of EventContent, max depth 5, a sixth level refused wherever content enters the kit) | Multi-part messages |
 | `TemplateContent` | `"template"` | `template_id`, `language`, `parameters`, `body` | WhatsApp Business / RCS templates |
 | `SystemContent` | `"system"` | `body`, `code`, `data` (dict) | System-generated events |
 | `EditContent` | `"edit"` | `target_event_id`, `new_content`, `edit_source` | Message edits |
@@ -743,7 +749,8 @@ AudioContent(url="https://example.com/voice.ogg", mime_type="audio/ogg", transcr
 LocationContent(latitude=40.7128, longitude=-74.0060, label="NYC Office")
 TemplateContent(template_id="order_confirm", language="en", parameters={"1": "ORD-123"})
 
-# Multi-part (max depth 5)
+# Multi-part (max depth 5: a message, a parsed event, a hook's result, an
+# answer or a send_event() holding a sixth level is refused, nothing stored)
 CompositeContent(parts=[
     TextContent(body="Here's the photo:"),
     MediaContent(url="https://example.com/photo.jpg", mime_type="image/jpeg"),
@@ -1236,8 +1243,9 @@ of its own (RFC §9.4):
   through. A hook may block it (stored `BLOCKED`), and what its hooks inject
   is committed after it the same way.
 - It counts against the reentry budget (`10 × max_chain_depth` per inbound
-  message). Past it, it is stored `BLOCKED` with `reentry_loop_cap` and its
-  hooks do not run.
+  message or direct injection, shared with what the room's own work sends
+  into the room, below). Past it, it is stored `BLOCKED` with
+  `reentry_loop_cap` and its hooks do not run.
 - It keeps its cause's chain depth and carries no idempotency key. Its
   visibility names the targets the room binds (`none` when it has none), and
   a hook may narrow it, never widen it.
@@ -1261,6 +1269,48 @@ committed the same way. No other trigger commits injected events: a SYNC hook
 on `BEFORE_DELIVER`, `ON_VERIFICATION_REQUIRED` or any other trigger that
 returns some has them dropped, with a warning naming the hook and the trigger.
 
+### Calling into the room from a hook
+
+A hook may call `kit.send_event()` or `kit.process_inbound()` into the room of
+the event it runs for. The call is part of that event's work (RFC §9.5.1):
+
+- From a locked hook (or any code under the room lock), it is **nested**: it
+  takes no admission ticket, runs every `BEFORE_BROADCAST` hook under the lock
+  and commits ahead of the event being processed. What its own hooks inject
+  joins the queue of the section holding the lock, committed once that
+  section has released it, after the event being processed.
+- From an off-lock hook's body (`needs_lock=False`), it is **adopted beside**
+  the event: no ticket, every hook under the lock, its own section for its
+  commit, still ahead of the event.
+- Either way it draws on the event's reentry budget, one pass as it starts: a
+  hook that injects on every event stops at the cap. Past it, `send_event()`
+  stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
+  that record; `process_inbound()` returns `blocked=True,
+  reason="reentry_loop_cap"` with no event.
+- A message routed back into the room (`process_inbound()` with no
+  `room_id`) raises `ReentrantCallError` before anything is written: its room
+  is known only once routed, so it cannot be adopted. Name the room instead.
+
+A channel's `handle_inbound()` stands in its message's admission order the
+same way: what it sends into its room is adopted beside the message, on its
+budget, and a message it routes back into that room raises
+`ReentrantCallError`. A call from a delivery set's work (a transport's
+`deliver()`, an agent's turn, a tool handler) is a new arrival with its own
+ticket and `process_timeout`, but it draws on the budget of the cascade that
+delivers, and a call made within a turn is at least as deep as the turn's
+response, so a transport or an agent that sends into its room every time it
+is reached stops at the cap or at `max_chain_depth`.
+
+```python
+@kit.hook(HookTrigger.BEFORE_BROADCAST)
+async def acknowledge(event, ctx):
+    if event.source.channel_id == "receipts":
+        return HookResult.allow()  # its own receipt runs this hook too
+    # Nested: committed ahead of the event, within this event's budget.
+    await kit.send_event(event.room_id, "receipts", TextContent(body="Received."))
+    return HookResult.allow()
+```
+
 The visibility `internal` marks a record the framework wrote, and only the
 framework writes it: a `BEFORE_BROADCAST` modify that writes it, or that changes
 it on a record that holds it (a voice channel's interruption record), has the
@@ -1269,9 +1319,10 @@ event's visibility put back.
 ### What happens when a hook fails
 
 A hook that does not produce a usable result — it raises, it exceeds its
-timeout, it returns something that is not a `HookResult`, or it returns a
-`modify` whose payload is the wrong type for the trigger — is treated as
-**allow**, and the error is logged. A broken hook must not be able to take a
+timeout, it returns something that is not a `HookResult`, it returns a
+`modify` whose payload is the wrong type for the trigger, or its replacement
+or an event it injects holds more than five composite levels (RFC §5.3) — is
+treated as **allow**, and the error is logged. A broken hook must not be able to take a
 room down, so the event goes through.
 
 **Three triggers invert that**, because their payload is content a hook may
@@ -6129,6 +6180,32 @@ kit = RoomKit(max_chain_depth=3)  # Stricter limit
 
 When an AI response triggers another AI response, chain depth increments. Processing stops when the limit is reached.
 
+What a turn sends into a room itself (`send_event()` or `process_inbound()`
+from its channel, a tool handler or a `TurnHost` verb) is at least as deep as
+the turn's response, so an agent that injects through another channel at each
+turn stops at the limit too. Besides the depth, each cascade (an inbound
+message or a direct injection) has a reentry budget of `10 ×
+max_chain_depth` passes: its responses, its hooks' injected events, and what
+the room's own work sends into the room (a hook, a parse, a delivery, a
+turn). Past it, an answer or an injected event is stored `BLOCKED` with
+`reentry_loop_cap`, and a message the room's work sends is refused
+`reentry_loop_cap`, so a transport whose `deliver()` sends into its own room
+stops too.
+
+## Processing Timeout
+
+`process_timeout` (seconds, default 30) is one deadline from the call's start
+to its decision (RFC §13.6): routing, with the identity it reads, the router
+and step 2's waits for the room lock, then the context build, the parse, the
+off-lock checks and the locked gates. Past it, `process_inbound()` returns
+`blocked=True, reason="process_timeout"` and `send_event()` raises
+`ProcessTimeoutError`, nothing of the event written; the `process_timeout`
+framework event names no room when the deadline passed while the message was
+routed. A room step 2 creates is completed whatever the deadline, and step 2's
+attach or record of a routed sender in a room that exists is bounded on its
+wait for the lock only. The commit and everything after it (delivery,
+answers, side effects) carry no deadline.
+
 ## Room Lifecycle Timers
 
 Auto-transition rooms based on inactivity (RFC §5.1):
@@ -6996,6 +7073,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `RoomNotFoundError` | Room does not exist |
 | `RoomAlreadyExistsError` | A room created under an id the store holds (RFC §14.3) |
 | `RoomClosedError` | Room's status refuses new events (RFC §5.1) |
+| `ReentrantCallError` | A message routed back into the room whose lock the caller holds, or from an off-lock hook's body or a parse; nothing written (RFC §9.5.1) |
 | `TransitionRefusedError` | A lifecycle transition from a status it does not leave, such as `close_room()` on an ARCHIVED room; nothing written (RFC §5.1) |
 | `ChangeRefusedError` | `send_event()` of an edit or a delete step 8a refused; `reason` says why (RFC §10.3) |
 | `EventNotFoundError` | A store's `commit_event()` of a change whose target the room no longer holds (RFC §14.3) |
@@ -7034,7 +7112,7 @@ kit = RoomKit(
     realtime=None,                 # RealtimeBackend for ephemeral events (default: InMemoryRealtime)
     max_chain_depth=5,             # Max reentry chain depth — AI-to-AI loop prevention
     identity_timeout=10.0,         # Identity resolution timeout (seconds)
-    process_timeout=30.0,          # Locked inbound processing timeout (seconds)
+    process_timeout=30.0,          # One deadline from a call's start to its decision (seconds)
     stt=None,                      # STTProvider for transcription
     tts=None,                      # TTSProvider for synthesis
     voice=None,                    # VoiceBackend for real-time audio transport
@@ -7134,7 +7212,7 @@ kit = RoomKit(
 | `setup_task_tools(agent)` | Give an agent (or the id of one the kit holds) `task_status` and `cancel_task`, served by the room's owner: the room's own tasks only (RFC §23.4) |
 | `await start_task(room_id, agent_id, task, hand_back?)` | Start an agent's background task from the host, for any agent of the room |
 | `send_greeting(room_id, channel_id?, greeting?, ...)` | Send greeting |
-| `send_event(room_id, channel_id, content, ...)` | Send event directly |
+| `send_event(room_id, channel_id, content, ...)` | Send event directly: `INBOUND` from a transport, `OUTBOUND` from an intelligence channel; from the room's own work (a hook, a parse, a delivery, a turn) it draws on that work's reentry budget (RFC §10.5, §9.5.1) |
 | `await steer(directive, channel_id, *, room_id=None, turn_id=None)` | Steer the running turns of an intelligence channel the kit started, wherever they run; answers the loops reached (RFC §21.3, §10.6.8) |
 | `await channel_call(channel_id, room_id, verb, *, organization_id=None, **arguments)` | Run a per-room verb of a channel attached to the room, on the executor holding the room's state (an ACP agent's `set_config_option`, `close_session`, `session_config`, `config_options`); what the room keeps for the channel is stored in its metadata, written by this call alone (RFC §10.6.3, §6.4) |
 | `await answer_input(request_id, value)` / `await reject_input(request_id, reason)` | Answer or reject a turn's human-input request, wherever its tool runs; an early answer is held 60 s, a second one returns `False` (RFC §10.6.5) |
