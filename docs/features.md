@@ -244,17 +244,24 @@ Rooms follow a state machine with four statuses:
 ```mermaid
 stateDiagram-v2
     [*] --> ACTIVE: create_room()
-    ACTIVE --> PAUSED: pause (timer or manual)
-    PAUSED --> ACTIVE: resume (app-driven)
-    ACTIVE --> CLOSED: close_room() / leave() or timer
-    PAUSED --> CLOSED: close_room() / leave() or timer
-    CLOSED --> ARCHIVED: (archive)
+    ACTIVE --> PAUSED: inactivity timer
+    PAUSED --> ACTIVE: a delivered event
+    ACTIVE --> CLOSED: close_room() / leave()
+    PAUSED --> CLOSED: close_room() / leave() or close timer
+    ACTIVE --> ARCHIVED: archive_room()
+    PAUSED --> ARCHIVED: archive_room()
+    CLOSED --> ARCHIVED: archive_room()
 ```
 
 - **ACTIVE** -- Messages flow normally between all attached channels
-- **PAUSED** -- Room is temporarily suspended; closed timer continues
+- **PAUSED** -- No activity for `inactive_after_seconds`; still accepts events, and a delivered one resumes it; `paused_at` records when it paused, and the close timer counts from it
 - **CLOSED** -- Conversation is ended; no new messages accepted
-- **ARCHIVED** -- Final state for long-term storage
+- **ARCHIVED** -- Final state for long-term storage; no call takes a room out of it
+
+A transition the room has already made does nothing: `close_room()` on a
+`CLOSED` room and `archive_room()` on an `ARCHIVED` one return it as stored,
+writing nothing and firing nothing. `close_room()` on an `ARCHIVED` room raises
+`TransitionRefusedError`, nothing written.
 
 A `CLOSED` or `ARCHIVED` room refuses every write, at every entry (RFC §5.1):
 `process_inbound()` returns `InboundResult(blocked=True, reason="room_closed")`,
@@ -279,17 +286,31 @@ from roomkit import RoomTimers
 room = await kit.create_room(
     room_id="support-123",
     timers=RoomTimers(
-        inactive_after_seconds=300,    # Auto-pause after 5min inactivity
-        closed_after_seconds=3600,     # Auto-close after 1hr inactivity
+        inactive_after_seconds=300,    # Auto-pause after 5min without activity
+        closed_after_seconds=3600,     # Auto-close after 1hr paused
     ),
 )
 
 # Adjust timers on an existing room (no model_copy needed)
 await kit.set_room_timers("support-123", RoomTimers(closed_after_seconds=7200))
 
-# No internal scheduler — sweep periodically to apply timer transitions
+# A room nobody writes to transitions when its timers are checked
 transitioned = await kit.check_all_timers()
 ```
+
+The timers follow RFC §5.1. A room's activity is the events the pipeline stores
+delivered; a record stored `BLOCKED`, a lifecycle record (a mute does not
+restart the timer), a `commit_event()` record and an instruction are not.
+Inactivity counts from `last_activity_at`, or from `created_at` while the room
+has had none. Every operation that reads the room's status under its lock (a
+message, `send_event()`, an agent's answer, an attach or a binding change, a
+direct mutation, a close) applies the transitions due at its instant first, so
+a message after a due close is refused as if the timer had run on time: its
+`room_paused` and `room_closed` (`reason = timer`) come before its
+`room_refused_event`, and `ON_ROOM_PAUSED` / `ON_ROOM_CLOSED` fire once the room
+lock is released. A transition takes the instant it fell due, however late it
+is applied: a room idle long past both thresholds pauses at the first instant
+and closes at the second, in one write.
 
 See the [Room Lifecycle & Timers guide](guides/room-lifecycle.md) for statuses, the activity model, and resuming paused rooms.
 
@@ -1288,12 +1309,12 @@ Filter options:
 | `BEFORE_BROADCAST` | Sync | Content filtering, modification, blocking |
 | `AFTER_BROADCAST` | Async | Logging, analytics, notifications |
 | `ON_ROOM_CREATED` | Async | Room initialization |
-| `ON_ROOM_PAUSED` | Async | Inactivity alerts |
-| `ON_ROOM_CLOSED` | Async | Cleanup, archival |
+| `ON_ROOM_PAUSED` | Async | Inactivity alerts (fires once the room lock is released) |
+| `ON_ROOM_CLOSED` | Async | Cleanup, archival (a timer's close fires once the room lock is released) |
 | `ON_CHANNEL_ATTACHED` | Async | Welcome messages — runs after the channel's own `on_room_attached` ([above](#attachment-is-a-channel-contract-not-just-a-store-write)) |
 | `ON_CHANNEL_DETACHED` | Async | Farewell messages — runs after the channel's own `on_room_detached` |
-| `ON_CHANNEL_MUTED` | Async | State tracking |
-| `ON_CHANNEL_UNMUTED` | Async | State tracking |
+| `ON_CHANNEL_MUTED` | Async | State tracking — fires when `muted` changes to true, and only then |
+| `ON_CHANNEL_UNMUTED` | Async | State tracking — fires when `muted` changes to false, and only then |
 | `ON_IDENTITY_AMBIGUOUS` | Both | Multi-candidate disambiguation |
 | `ON_IDENTITY_UNKNOWN` | Both | Unknown sender handling |
 | `ON_PARTICIPANT_IDENTIFIED` | Async | Post-identification actions |
@@ -4488,6 +4509,18 @@ await kit.unmute("room-1", "ai-bot")   # AI resumes responding
 
 Muted channels still receive events via `on_event()` and can produce tasks and observations. Only their `response_events` are suppressed. This enables "silent observer" patterns where AI monitors without participating.
 
+A binding change that changes nothing writes nothing and fires nothing (RFC
+§7.2): muting a muted channel, or `set_visibility()`, `set_access()`,
+`update_binding_metadata()`, `mute_output()` and their counterparts with the
+values the binding holds, add no record and fire no `ON_CHANNEL_MUTED` /
+`ON_CHANNEL_UNMUTED`, so a retried call duplicates nothing. A gate change
+(`mute()`, `unmute()`, `mute_output()`, `unmute_output()`, `set_access()`)
+still tells the channel the binding as stored (`Channel.update_binding()`), so
+a session-based channel whose cached state drifted is set right. The record a
+binding change writes (`CHANNEL_MUTED`, `CHANNEL_UPDATED`, ...) is internal,
+never delivered, and no activity: a mute does not restart the room's
+inactivity timer.
+
 ---
 
 ## Observability
@@ -4513,7 +4546,12 @@ Framework event types:
 **Delivery** — `delivery_succeeded`, `delivery_failed`,
 `broadcast_partial_failure`. These are *live*: they reach whoever is
 subscribed when the broadcast runs. For the outcome after the fact, see
-[Delivery outcomes](#delivery-outcomes).
+[Delivery outcomes](#delivery-outcomes). An intelligence channel the event
+solicits whose channel is no longer registered (its binding outlives it) is
+reported `delivery_failed` with the error `channel_not_registered`, not
+retryable, and fires no `ON_ERROR`, since no turn ran; a transport not
+registered in this process is skipped without a report, its client possibly
+connected to another.
 
 **Channels and sources** — `channel_registered`, `channel_unregistered`
 (the registry itself changing), `channel_connected`, `channel_disconnected`
@@ -4917,7 +4955,7 @@ above: a router that sends several senders to one room declares its binding
 - **Limited WhatsApp support** -- Mock provider only; no production WhatsApp Business API integration
 - **No push notification channel** -- `ChannelType.PUSH` is defined but not implemented
 - **Voice store-and-forward not implemented** -- `VoiceChannel` only supports streaming mode; store-and-forward mode requires a `MediaStore` not yet built
-- **No pause_room() method** -- Rooms can only be paused via timers (`check_room_timers`), not directly
+- **No pause_room() method** -- Rooms are paused by their inactivity timer, applied by every locked operation and by `check_room_timers()`, not directly
 
 ---
 

@@ -17,20 +17,23 @@ Room timers give a conversation a **time-to-live**: pause it after a short idle 
 | Status | Meaning |
 |--------|---------|
 | `ACTIVE` | Normal operation. The default inbound router only routes messages to active rooms. |
-| `PAUSED` | Soft-idle. The room stopped receiving new traffic but is not yet closed. Reached via `inactive_after_seconds`. |
-| `CLOSED` | Terminal. The room is finished and `closed_at` is set. Reached via `closed_after_seconds` or `close_room()`. |
-| `ARCHIVED` | Terminal storage state, reached with `archive_room()` — never by timers. |
+| `PAUSED` | Soft-idle: no activity for `inactive_after_seconds`. It still accepts events, and a delivered one resumes it. `paused_at` records when it paused. |
+| `CLOSED` | The room is finished and `closed_at` is set. Reached via `closed_after_seconds` once paused, or `close_room()`. Refuses new events. |
+| `ARCHIVED` | Terminal storage state, reached with `archive_room()` — never by timers. Refuses new events. |
 
 ```
-                inactive_after_seconds idle
-   ACTIVE ───────────────────────────────────▶ PAUSED
-      │                                            │
-      │ closed_after_seconds idle                  │ closed_after_seconds idle
-      ▼                                            ▼
-   CLOSED ◀──────────────────────────────────────
+            inactive_after_seconds without activity
+   ACTIVE ─────────────────────────────────────────▶ PAUSED
+      ▲                                                │
+      └──────────── a delivered event ─────────────────┤
+                                                       │ closed_after_seconds
+                                                       ▼ from paused_at
+                                                    CLOSED
 ```
 
-The close timer **supersedes** the pause timer: once the close threshold is crossed, the room goes straight to `CLOSED` whether it was `ACTIVE` or already `PAUSED`.
+A room closes by timer only once it has paused: the close timer counts from
+`paused_at`. To close a room N seconds after its last activity with no pause
+between, set `inactive_after_seconds=N, closed_after_seconds=0`.
 
 ## Quick start
 
@@ -46,8 +49,8 @@ kit = RoomKit()
 room = await kit.create_room(
     room_id="support-123",
     timers=RoomTimers(
-        inactive_after_seconds=300,    # pause after 5 min idle
-        closed_after_seconds=3600,     # close after 1 h idle
+        inactive_after_seconds=300,    # pause after 5 min without activity
+        closed_after_seconds=3600,     # close after 1 h paused
     ),
 )
 ```
@@ -63,25 +66,50 @@ await kit.set_room_timers(
 
 | Field | Type | Default | Effect |
 |-------|------|---------|--------|
-| `inactive_after_seconds` | `int \| None` | `None` | Pauses an `ACTIVE` room after N seconds of inactivity. `None` disables. |
-| `closed_after_seconds` | `int \| None` | `None` | Closes the room after N seconds of inactivity. Takes priority over the pause timer. `None` disables. |
-| `last_activity_at` | `datetime \| None` | `None` | Timestamp the idle clock measures from. Updated automatically on every processed inbound event. |
+| `inactive_after_seconds` | `int \| None` | `None` | Pauses an `ACTIVE` room after N seconds without activity. `None` disables. |
+| `closed_after_seconds` | `int \| None` | `None` | Closes a `PAUSED` room N seconds after `paused_at`. `None` disables. |
+| `last_activity_at` | `datetime \| None` | `None` | The instant of the room's last activity, `None` while it has had none. Moved by every event the pipeline stores delivered. |
 
-!!! note "The idle clock starts automatically"
-    Both `create_room(timers=...)` and `set_room_timers()` fill in `last_activity_at` for you when you omit it, so the countdown begins immediately. `set_room_timers()` also **preserves** an existing activity timestamp when you only change thresholds, so adjusting a window mid-conversation never resets the idle clock. Timers stay inert only if you build a `Room` by hand and leave `last_activity_at` as `None`.
+!!! note "Before any activity, the clock counts from the room's creation"
+    `create_room(timers=...)` and `set_room_timers()` leave `last_activity_at`
+    as it is: `None` for a room that has had no activity, whose inactivity
+    then counts from its `created_at`. `set_room_timers()` keeps an existing
+    activity timestamp when you only change thresholds, so adjusting a window
+    mid-conversation never resets the idle clock.
 
 ## How it works
 
-### Activity tracking
+### Activity
 
-Every inbound message that is processed for a room updates `last_activity_at` to the current time. An active back-and-forth keeps resetting the idle clock, so timers only fire once the conversation actually goes quiet — you do not need to bump the timestamp yourself.
+A room's **activity** is the events the pipeline stores delivered: a message,
+an event sent with `send_event()`, an agent's answer, an event a hook injected.
+Each moves `last_activity_at` to its commit's instant, in the commit's
+transaction. What nobody receives is no activity: a record stored `BLOCKED`
+(a hook refused it, or its source is muted), the framework's lifecycle records
+(an attach, a mute, a timer's transition), a record committed with
+`commit_event()`, and an instruction, which is never stored. A mute does not
+restart a room's inactivity timer.
+
+### When transitions apply
+
+Every operation that reads the room's status under its lock applies the
+transitions due at its instant first: an inbound message and `send_event()`, an
+agent's answer, an attach, a detach or a binding change, `commit_event()`,
+`update_event()`, `delete_event()`, `close_room()`, `archive_room()`,
+`start_room_recording()` and a regeneration. A message that arrives after its
+room fell due is refused as if the timer had run on time.
+
+A transition takes the instant it fell due, however late it is applied: a room
+idle long past both thresholds pauses at the first instant and closes at the
+second, in one write (`paused_at`, `closed_at`).
 
 ### Checking timers
 
-There is **no background scheduler inside RoomKit**. Timer thresholds are only evaluated when you ask for them:
+A room nobody writes to transitions when you check its timers. There is no
+background scheduler inside RoomKit:
 
 ```python
-# Evaluate one room — returns it, possibly transitioned
+# Evaluate one room — returns it, its due transitions applied
 room = await kit.check_room_timers("support-123")
 
 # Evaluate every ACTIVE / PAUSED room — returns the ones that transitioned
@@ -90,8 +118,6 @@ transitioned = await kit.check_all_timers()
 # Multi-tenant scheduler: never sweep another organization's rooms
 transitioned = await kit.check_all_timers(organization_id="acme")
 ```
-
-`check_room_timers()` computes `elapsed = now - last_activity_at`, applies the close threshold first, then the pause threshold, and persists any status change. `check_all_timers()` sweeps all active and paused rooms and returns just the list that changed.
 
 ### Driving the sweep
 
@@ -114,18 +140,24 @@ async def timer_sweep(kit: RoomKit, interval: float = 60.0) -> None:
 sweep_task = asyncio.create_task(timer_sweep(kit))
 ```
 
-Pick an interval shorter than your tightest threshold — a 60-second sweep is fine for minute-scale idle timeouts.
+A late sweep closes a room at the instant it fell due, not at the sweep's, so
+the interval only decides how soon a room nobody writes to is seen closed.
 
 ## Lifecycle hooks
 
-Each timer transition fires a lifecycle hook so you can run side effects — notify participants, archive the transcript, generate a summary, release resources:
+Each timer transition emits its framework event, `room_paused` or `room_closed`
+with `reason = timer`, as soon as it is stored and before anything the
+operation decides next: a message a due close refuses reports `room_closed`
+before its `room_refused_event`. Its hook fires once the room lock is released
+(`check_room_timers()` waits for it before returning), with the room as the
+transition left it:
 
 ```python
 from roomkit import HookExecution, HookTrigger
 
 @kit.hook(HookTrigger.ON_ROOM_PAUSED, execution=HookExecution.ASYNC)
 async def on_paused(event, ctx):
-    logger.info("Room %s paused due to inactivity", ctx.room.id)
+    logger.info("Room %s paused at %s", ctx.room.id, ctx.room.paused_at)
 
 @kit.hook(HookTrigger.ON_ROOM_CLOSED, execution=HookExecution.ASYNC)
 async def on_closed(event, ctx):
@@ -133,13 +165,25 @@ async def on_closed(event, ctx):
     ...
 ```
 
-Alongside the hooks, the transition emits a system event into the room — `room_paused_by_timer` or `room_closed_by_timer` — carrying `elapsed_seconds` and the `threshold` that fired, useful for auditing why a room closed.
+The transition also writes a lifecycle record into the room —
+`room_paused_by_timer` or `room_closed_by_timer`, `internal`, never delivered —
+whose `data` carries the `threshold` that elapsed and the instant (`at`) it
+fell due, useful for auditing why a room closed. The hook's event carries the
+same.
 
 ## Resuming a paused room
 
-`PAUSED` is a soft state, not a dead end — but RoomKit does **not** auto-resume it. The default inbound router only routes to `ACTIVE` rooms, so a paused room receives no new traffic and its idle clock keeps running toward the close threshold. If your application decides a paused conversation should continue, set its status back to `ACTIVE`:
+`PAUSED` is a soft state, not a dead end: an event the pipeline stores
+delivered into a paused room resumes it, in the same transaction — `ACTIVE`
+again, `paused_at` cleared, its idle clock restarted. A resume fires no hook
+and emits no framework event. What is no activity resumes nothing.
+
+To resume a paused room without a message, set its status back to `ACTIVE`
+and restart its idle clock:
 
 ```python
+from datetime import UTC, datetime
+
 from roomkit.models.enums import RoomStatus
 
 # Under the room's lock: a whole-room write from a room read earlier would
@@ -147,10 +191,11 @@ from roomkit.models.enums import RoomStatus
 # register of authors).
 async with kit.lock_manager.locked("support-123"):
     room = await kit.get_room("support-123")
-    await kit.store.update_room(room.model_copy(update={"status": RoomStatus.ACTIVE}))
+    timers = room.timers.model_copy(update={"last_activity_at": datetime.now(UTC)})
+    await kit.store.update_room(
+        room.model_copy(update={"status": RoomStatus.ACTIVE, "paused_at": None, "timers": timers})
+    )
 ```
-
-Once active again, inbound traffic resumes and each new message refreshes `last_activity_at`. To restart the idle clock immediately without waiting for a message, call `set_room_timers()` with a fresh `last_activity_at`.
 
 ## Manual close
 
@@ -159,6 +204,11 @@ Timers are optional. You can always end a room directly, which sets `closed_at` 
 ```python
 await kit.close_room("support-123")
 ```
+
+A transition the room has already made does nothing: closing a `CLOSED` room
+returns it as stored, writing nothing and firing nothing. No call takes a room
+out of `ARCHIVED`: closing an archived room raises `TransitionRefusedError`
+(its `room_id`, `status` and `transition`), nothing written.
 
 ## Archiving
 
@@ -178,7 +228,8 @@ agent runs: it returns `InboundResult(blocked=True, reason="room_closed")`, and
 `regenerate_target()` raises `RoomClosedError`, so a host learns the room is
 closed before it acts on a trigger.
 
-The call is idempotent, stops any room-level media recorder, and emits the
+Archiving an `ARCHIVED` room returns it as stored, writing and emitting
+nothing; otherwise the call stops any room-level media recorder and emits the
 `room_archived` framework event:
 
 ```python

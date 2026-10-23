@@ -215,18 +215,18 @@ kit = RoomKit()
 room = await kit.create_room(
     room_id="support-123",
     timers=RoomTimers(
-        inactive_after_seconds=300,    # Pause after 5 min idle
-        closed_after_seconds=3600,     # Close after 1 hour idle
+        inactive_after_seconds=300,    # Pause after 5 min without activity
+        closed_after_seconds=3600,     # Close after 1 hour paused
     ),
 )
 ```
 
 | Timer | Effect |
 |-------|--------|
-| `inactive_after_seconds` | Pauses the room after N seconds without activity |
-| `closed_after_seconds` | Closes the room after N seconds without activity (takes priority over pause) |
+| `inactive_after_seconds` | Pauses an ACTIVE room after N seconds without activity (from `last_activity_at`, or `created_at` before any) |
+| `closed_after_seconds` | Closes a PAUSED room N seconds after its `paused_at` |
 
-Transitions are evaluated on demand via `kit.check_room_timers(room_id)` or `kit.check_all_timers()` — RoomKit has no internal scheduler, so run the sweep from a background task. Each transition fires the `ON_ROOM_PAUSED` / `ON_ROOM_CLOSED` lifecycle hooks.
+Every operation that reads the room's status under its lock applies the transitions due at its instant first, and a delivered message resumes a paused room. A room nobody writes to transitions when `kit.check_room_timers(room_id)` or `kit.check_all_timers()` runs — RoomKit has no internal scheduler, so run the sweep from a background task. Each transition takes the instant it fell due, emits `room_paused` / `room_closed` (`reason = timer`), and fires the `ON_ROOM_PAUSED` / `ON_ROOM_CLOSED` lifecycle hooks once the room lock is released.
 
 See the [Room Lifecycle & Timers guide](room-lifecycle.md) for statuses, the activity-tracking model, driving the sweep, and resuming paused rooms.
 

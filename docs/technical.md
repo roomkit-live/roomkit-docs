@@ -119,6 +119,7 @@ class Room(BaseModel):
     status: RoomStatus          # ACTIVE | PAUSED | CLOSED | ARCHIVED
     created_at: datetime
     updated_at: datetime
+    paused_at: datetime | None  # when it paused; None unless PAUSED
     closed_at: datetime | None
     timers: RoomTimers
     metadata: dict[str, Any]
@@ -476,14 +477,17 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     # --- Room lifecycle (RoomLifecycleMixin) ---
     async def create_room(self, room_id=None, metadata=None) -> Room
     async def get_room(self, room_id) -> Room
-    async def close_room(self, room_id) -> Room
-    async def check_room_timers(self, room_id) -> Room
-    async def check_all_timers(self) -> list[Room]
+    async def close_room(self, room_id) -> Room    # CLOSED: as stored; ARCHIVED: raises
+    async def archive_room(self, room_id) -> Room
     async def update_room_metadata(self, room_id, metadata) -> Room
     async def ensure_participant(self, room_id, channel_id, participant_id,
                                  display_name=None) -> Participant
     async def resolve_participant(self, room_id, participant_id, identity_id,
                                   resolved_by="manual") -> Participant
+
+    # --- Room timers (RoomTimersMixin, RFC §5.1) ---
+    async def check_room_timers(self, room_id) -> Room
+    async def check_all_timers(self) -> list[Room]
 
     # --- Direct send ---
     async def send_event(self, room_id, channel_id, content,
