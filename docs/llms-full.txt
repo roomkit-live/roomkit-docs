@@ -6262,6 +6262,12 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   history holds without its message stays readable. Delete through the
   pipeline (a DELETE event, `send_event()`) or `kit.delete_event()`, or mark
   the message's edits too.
+- `write_change_target(room_id, target)` writes the target of an edit or a
+  delete the persistence policy keeps out of the timeline: the target's row
+  alone, no row of the change, and when the target is now deleted every edit
+  of it marked deleted, in one transaction. A target the room no longer holds
+  raises `EventNotFoundError`. Its default writes through `update_event()` and
+  is not atomic.
 - `delete_event(room_id, event_id, cascade_replies=True)` is a hard delete: the
   event, its thread replies unless told not to, and the edits and deletes of
   every event it removes, in one transaction, their idempotency keys released.
