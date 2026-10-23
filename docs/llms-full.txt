@@ -1173,9 +1173,10 @@ committed the same way. No other trigger commits injected events: a SYNC hook
 on `BEFORE_DELIVER`, `ON_VERIFICATION_REQUIRED` or any other trigger that
 returns some has them dropped, with a warning naming the hook and the trigger.
 
-A `BEFORE_BROADCAST` modify that writes the visibility `internal`, which only
-the framework writes (the mark of its own records), has the event's
-visibility put back.
+The visibility `internal` marks a record the framework wrote, and only the
+framework writes it: a `BEFORE_BROADCAST` modify that writes it, or that changes
+it on a record that holds it (a voice channel's interruption record), has the
+event's visibility put back.
 
 ### What happens when a hook fails
 

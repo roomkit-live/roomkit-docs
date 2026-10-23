@@ -1361,7 +1361,11 @@ of its own (RFC §9.4), whichever way that event ended:
   a section of its own, so another event may commit between them: a message
   that was waiting for the lock, an agent's answer to the cause. It still
   commits before `process_inbound()` or `send_event()` returns, in the order
-  the hooks ran. An event code under the lock sends with `kit.send_event()`
+  the hooks ran. Once its cause is decided it no longer depends on the
+  caller: a caller cancelled while another event holds the lock, or failing
+  after the decision, loses none of it; a task the kit holds commits it once
+  the lock frees, and `kit.close()` cancels that task with its other
+  background work. An event code under the lock sends with `kit.send_event()`
   is another path: it commits at once, ahead of the event being processed.
 - Its pass runs the `BEFORE_BROADCAST` hooks, the one that injected it
   included, so a hook that blocks or injects on every event must let its own
@@ -1422,9 +1426,11 @@ event's `id`, `room_id`, `type`, `source`, `index`, `chain_depth`,
 `delivery_results` are put back from the event it replaces, and so are the
 event an EDIT or a DELETE targets, an INSTRUCTION's visibility, address and
 `standalone` word, and the instruction fingerprint the pipeline wrote on a
-response (`metadata["instruction"]`), or its absence. A visibility of
-`internal`, which only the framework writes, is put back too. A hook cannot
-commit an event under another source or into another room.
+response (`metadata["instruction"]`), or its absence. The visibility
+`internal`, which only the framework writes, is put back whenever either side
+holds it: a hook can neither give an event the framework's mark nor widen a
+framework record that has it (a voice channel's interruption record). A hook
+cannot commit an event under another source or into another room.
 
 ### AI Intelligence Layer
 
@@ -4433,10 +4439,11 @@ whitespace). `internal` reaches no channel, as `none` does, and marks a record
 the framework wrote (a voice channel's interruption record, which an agent
 reads as the cut it was), so only the framework writes it: `attach_channel`,
 `set_visibility`, `send_event` and `InboundMessage` raise `ValueError` for it,
-before anything is read or written; a hook's modify that writes it has the
-event's visibility put back; and an agent's answer, or a row of its stream,
-that carries it (the agent's own, or the trigger's `response_visibility`) is
-stored `none`, with a warning. Store an event for no channel with `none`;
+before anything is read or written; a hook's modify that writes it, or that
+changes it on a record that holds it, has the event's visibility put back; and
+an agent's answer, a row of its stream, or the record stored in place of an
+answer at the chain-depth limit, that carries it (the agent's own, or the
+trigger's `response_visibility`) is stored `none`, with a warning. Store an event for no channel with `none`;
 `kit.commit_event()`, a record outside the pipeline, keeps the visibility it is
 given.
 
