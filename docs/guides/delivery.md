@@ -236,8 +236,9 @@ result = await kit.deliver(
 Through the text pipeline it is an `INSTRUCTION` event (see
 [Directing an agent](orchestration.md#directing-an-agent-instructions)): the
 addressed agent takes it as its input for one turn and answers, and nothing is
-stored. It needs `addressed_to` and no `idempotency_key`; otherwise the outcome
-is `blocked` (`instruction_unaddressed`, `instruction_not_idempotent`). Sent to a
+stored. It needs an `addressed_to` naming an agent the kit registers and no
+`idempotency_key`; otherwise the outcome is `blocked`
+(`instruction_unaddressed`, `instruction_not_idempotent`). Sent to a
 realtime channel (`channel_id=` without `addressed_to`), it is injected with the
 `system` intent instead of `user`. The strategy, the delivery hooks and a delivery
 backend apply unchanged. The hooks see an event of type `INSTRUCTION`.

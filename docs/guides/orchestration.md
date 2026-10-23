@@ -636,18 +636,40 @@ await kit.process_inbound(
 
 It goes through the same pipeline — hooks, the room's order, addressing — and:
 
-- **is never stored**, blocked or not, and consumes no index;
-- **reaches only the agents it addresses** (an unaddressed one is refused,
-  `reason="instruction_unaddressed"`), never a transport, so no voice channel
-  speaks it;
-- **is the agent's input for one turn**, marked as the application's, never as
-  a participant's line, and absent from later turns' history;
-- **is recorded on the reply** as a fingerprint:
-  `metadata["instruction"] == {"sha256": "…", "length": 51}` (length in code
-  points) says an
-  instruction made the agent speak, and which one, without copying its text
-  onto every reply (an application that shows the text keeps it and matches it
-  by the digest).
+- **names an agent the kit registers**: one naming no registered intelligence
+  channel (unaddressed, or only unknown ids and transports) is refused before
+  anything is read, `reason="instruction_unaddressed"`, and no room is
+  created for it; `send_event()` raises `ValueError`. Its other names ask
+  nobody: an agent the room does not bind is reported in
+  `unavailable_targets`;
+- **is never stored**, blocked or not, consumes no index, and is no activity:
+  it moves neither `last_activity_at` nor a paused room's status;
+- **reaches only the agents it addresses**, never a transport, so no voice
+  channel speaks it;
+- **is the agent's input for one turn**, the text its content reads as (a
+  rich text's plain text, a media's label), marked as the application's,
+  never as a participant's line, and absent from later turns' history;
+- **is recorded on the reply** by the pipeline, as a fingerprint of that
+  text: `metadata["instruction"] == {"sha256": "…", "length": 51}` (length in
+  code points) on every event the agent returns for it, tool rows included,
+  says an instruction made the agent speak, and which one, without copying
+  its text onto every reply (an application that shows the text keeps it and
+  matches it by the digest). The key is the pipeline's: whatever a channel
+  writes under it is replaced, and it is removed from every other event,
+  whoever wrote it (a parser, the caller's metadata, a hook).
+
+A `BEFORE_BROADCAST` hook reads the instruction and may block it or change
+its text, which is what the agent reads and the fingerprint is of; its
+visibility, its address and its `standalone` word are put back, and so is a
+reply's fingerprint. `InboundResult.event` is the instruction as the hooks
+left it.
+
+Only the application issues an instruction. A hook that wants an agent
+directed calls `kit.send_event(..., event_type=EventType.INSTRUCTION)`: an
+instruction it injects in its result is dropped with a warning, and an
+agent's response typed `INSTRUCTION` does not re-enter, so one agent never
+directs another in the application's name. An agent that wants another to
+act addresses its answer.
 
 A pass that must start from a blank page, such as a summary re-run that would
 otherwise read and copy its previous answer, sends a **standalone**

@@ -1324,6 +1324,10 @@ of its own (RFC §9.4), whichever way that event ended:
   delivery, never to its own source. An agent among the targets is not
   called: it reads the event in its history at its next turn. To have an
   agent answer, send the event with `kit.send_event()`.
+- An injected `INSTRUCTION` is dropped with a warning before any pass: no
+  hook runs on it, nothing of it is stored or delivered, and the rest of the
+  result stands. Only the application issues instructions; a hook directs an
+  agent with `kit.send_event(..., event_type=EventType.INSTRUCTION)`.
 
 An identity challenge (`IdentityHookResult.challenge(inject=...)`) is
 committed the same way.
@@ -1352,9 +1356,10 @@ asks, never which event it is. It may change `content`, `addressed_to`,
 event's `id`, `room_id`, `type`, `source`, `index`, `chain_depth`,
 `responds_to`, `idempotency_key`, `created_at`, `status`, `blocked_by` and
 `delivery_results` are put back from the event it replaces, and so are the
-event an EDIT or a DELETE targets and an INSTRUCTION's visibility and
-address. A hook cannot commit an event under another source or into another
-room.
+event an EDIT or a DELETE targets, an INSTRUCTION's visibility, address and
+`standalone` word, and the instruction fingerprint the pipeline wrote on a
+response (`metadata["instruction"]`), or its absence. A hook cannot commit an
+event under another source or into another room.
 
 ### AI Intelligence Layer
 
@@ -2327,7 +2332,7 @@ Key features:
 - **Not visibility** — addressing narrows who is *asked*, never who may *see*; the humans in the room still get the message
 - **Outranks the router** — a `ConversationRouter` cannot override what the sender asked for
 - **Stored on the event** — a transcript shows who was asked, and a replay reproduces the same solicitation
-- **Instructions** — `InboundMessage(event_type=EventType.INSTRUCTION, addressed_to=[agent])` directs an agent without a participant's line: never stored, never delivered to a transport, the agent's input for one turn, recorded on its reply as a fingerprint `metadata["instruction"] = {sha256, length}`; `standalone=True` makes that turn read nothing of the room (no history, no memory provider call) ([guide](guides/orchestration.md#directing-an-agent-instructions))
+- **Instructions** — `InboundMessage(event_type=EventType.INSTRUCTION, addressed_to=[agent])` directs an agent without a participant's line: addressed to an agent the kit registers (else refused before anything is read), never stored, never delivered to a transport, the agent's input for one turn, recorded by the pipeline on every reply as a fingerprint of its text `metadata["instruction"] = {sha256, length}`, a key no other event keeps; `standalone=True` makes that turn read nothing of the room (no history, no memory provider call). Only the application issues one: an agent's response typed `INSTRUCTION` and a hook's injected one are dropped ([guide](guides/orchestration.md#directing-an-agent-instructions))
 - **`AgentResponsePolicy` per room** — `AGENT_CHAIN` (default) or `ADDRESSED_ONLY`, settable at creation *and* on a live room with `set_agent_response_policy()`
 - **Unsolicited targets cost nothing** — a binding that is not asked to act is skipped before any work is done for it, so a roster can be attached lazily and rehydrated one agent at a time
 - **RoomKit takes the decision, never the syntax** — `@codex`, a `/agent` command, a picker or a Slack payload all live in your application, which passes channel ids

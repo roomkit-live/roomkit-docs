@@ -273,8 +273,12 @@ agent.
 ## Instructions and regenerated answers
 
 An `INSTRUCTION` addressed to agents queues each of them at the front for a
-turn of its own that takes the instruction as its input; one addressed to no
-agent of the discussion is reported in `unavailable_targets`.
+turn of its own that takes the instruction as its input. An agent the kit
+registers that is not one of the discussion's is reported in
+`unavailable_targets`; an instruction naming no agent the kit registers is
+refused with `instruction_unaddressed`. Only the application directs an
+agent: an agent's answer typed `INSTRUCTION`, and an instruction a hook
+injects, are dropped with a warning and give no turn.
 `kit.regenerate_response(room_id)` queues, at the front, a turn of its own for
 each agent that answered the last person's message (each agent the message
 asked for, when you removed the answers first), once per agent and message.

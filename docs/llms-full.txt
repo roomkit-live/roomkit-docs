@@ -1076,6 +1076,11 @@ of its own (RFC §9.4):
   delivery, never to its own source. An agent among the targets is not
   called: it reads the event in its history at its next turn. To have an
   agent answer, send the event with `kit.send_event()`.
+- An injected `INSTRUCTION` is dropped with a warning before any pass: no
+  hook runs on it, nothing of it is stored or delivered, and the rest of the
+  result stands. Only the application issues instructions; a hook that wants
+  an agent directed calls `kit.send_event(..., event_type=EventType.INSTRUCTION,
+  addressed_to=[agent_id])`.
 
 An identity challenge (`IdentityHookResult.challenge(inject=...)`) is
 committed the same way.
