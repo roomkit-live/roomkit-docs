@@ -470,15 +470,15 @@ kit = RoomKit(store=PostgresStore("postgresql://..."))
 ## Room Lifecycle
 
 ```
-ACTIVE -> PAUSED -> CLOSED -> ARCHIVED
-           ^          |
-           +----------+  (can close from paused)
+ACTIVE --inactivity--> PAUSED --close timer--> CLOSED --archive_room()--> ARCHIVED
+   ^                     |
+   +--delivered event----+        close_room(): ACTIVE or PAUSED -> CLOSED
 ```
 
 - **ACTIVE** — Accepting messages, all channels active.
-- **PAUSED** — Messages queued, channels paused. Auto-transition via `inactive_after_seconds`.
-- **CLOSED** — No new messages. Auto-transition via `closed_after_seconds`.
-- **ARCHIVED** — Terminal state, read-only.
+- **PAUSED** — Still accepting messages; a delivered one resumes it. Reached after `inactive_after_seconds` without activity; `paused_at` records when.
+- **CLOSED** — No new messages. Reached via `close_room()`, or `closed_after_seconds` after `paused_at`.
+- **ARCHIVED** — Terminal state, read-only; no call leaves it.
 
 ## Event Model
 
@@ -555,6 +555,14 @@ await kit.close_room("session-1")
 # Check timers (call periodically, e.g. every 60s)
 transitioned = await kit.check_all_timers()
 ```
+
+A transition the room has already made does nothing: `close_room()` on a
+CLOSED room, and `archive_room()` on an ARCHIVED one, return the room as
+stored, writing and firing nothing. No call takes a room out of ARCHIVED:
+`close_room()` on an archived room raises `TransitionRefusedError` (`room_id`,
+`status`, `transition`), nothing written. Timers (`RoomTimers`, `paused_at`)
+are described under Resilience: every operation on a room applies its due
+timer transitions first, and a delivered message resumes a PAUSED room.
 
 ## Channel Types
 
@@ -656,6 +664,18 @@ await kit.unmute("room", "ai-agent")
 await kit.mute_output("room", "ai-agent")
 await kit.unmute_output("room", "ai-agent")
 ```
+
+A binding change that changes nothing writes and fires nothing (RFC §7.2):
+muting a muted channel, or a setter given the values the binding holds,
+returns the binding as stored with no record and no `ON_CHANNEL_MUTED` /
+`ON_CHANNEL_UNMUTED`. A gate change (`mute`, `unmute`, `mute_output`,
+`unmute_output`, `set_access`) still calls `Channel.update_binding()` with the
+binding as stored, so a channel whose cached state drifted is set right.
+
+An intelligence channel unregistered while still bound is reported, when the
+event solicits it, as `delivery_failed` with the error
+`channel_not_registered` (not retryable, no `ON_ERROR`); a transport not
+registered in this process is skipped silently.
 
 ## Per-Room Channel Configuration
 
@@ -1332,16 +1352,16 @@ are not fired by any built-in code.
 |---------|-----------|-----------|-------------|
 | `ON_CHANNEL_ATTACHED` | ASYNC | `(event, ctx) -> None` | Channel was attached to a room |
 | `ON_CHANNEL_DETACHED` | ASYNC | `(event, ctx) -> None` | Channel was detached from a room |
-| `ON_CHANNEL_MUTED` | ASYNC | `(event, ctx) -> None` | Channel was muted in a room |
-| `ON_CHANNEL_UNMUTED` | ASYNC | `(event, ctx) -> None` | Channel was unmuted in a room |
+| `ON_CHANNEL_MUTED` | ASYNC | `(event, ctx) -> None` | Channel was muted in a room: its binding's `muted` changed to true, and only then (muting a muted channel fires nothing) |
+| `ON_CHANNEL_UNMUTED` | ASYNC | `(event, ctx) -> None` | Channel was unmuted in a room: its binding's `muted` changed to false, and only then |
 
 ### Room Lifecycle
 
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
 | `ON_ROOM_CREATED` | ASYNC | `(event, ctx) -> None` | Room was created |
-| `ON_ROOM_PAUSED` | ASYNC | `(event, ctx) -> None` | Room was paused |
-| `ON_ROOM_CLOSED` | ASYNC | `(event, ctx) -> None` | Room was closed |
+| `ON_ROOM_PAUSED` | ASYNC | `(event, ctx) -> None` | Room was paused by its inactivity timer; fires once the room lock is released, `ctx.room` as the transition left it |
+| `ON_ROOM_CLOSED` | ASYNC | `(event, ctx) -> None` | Room was closed, by `close_room()` or by its close timer (that one once the room lock is released); a close of a CLOSED room fires nothing |
 
 ### Identity
 
@@ -1560,7 +1580,7 @@ async def on_voice(event):
     print(f"Voice session: {event.data['session_id']}")
 ```
 
-Available framework event types: `room_created`, `room_closed`, `room_paused`, `room_channel_attached`, `room_channel_detached`, `channel_connected`, `channel_disconnected`, `voice_session_started`, `voice_session_ended`, `source_attached`, `source_detached`, `source_error`, `source_exhausted`.
+Available framework event types: `room_created`, `room_closed`, `room_paused` (both with `reason = timer` when a timer made the transition), `room_archived`, `room_refused_event`, `room_channel_attached`, `room_channel_detached`, `channel_connected`, `channel_disconnected`, `voice_session_started`, `voice_session_ended`, `source_attached`, `source_detached`, `source_error`, `source_exhausted`.
 ---
 
 AIChannel connects rooms to LLM providers. When a message is broadcast to an AI channel, it generates a response using conversation history and re-enters it through the inbound pipeline.
@@ -6043,24 +6063,53 @@ When an AI response triggers another AI response, chain depth increments. Proces
 
 ## Room Lifecycle Timers
 
-Auto-transition rooms based on inactivity:
+Auto-transition rooms based on inactivity (RFC §5.1):
 
 ```python
 from roomkit import RoomKit, RoomTimers
 
 kit = RoomKit()
 
-room = await kit.create_room(room_id="session-1")
-# Configure timers on the room:
-# inactive_after_seconds -> ACTIVE to PAUSED
-# closed_after_seconds -> to CLOSED
+room = await kit.create_room(
+    room_id="session-1",
+    timers=RoomTimers(
+        inactive_after_seconds=300,  # ACTIVE -> PAUSED after 5 min without activity
+        closed_after_seconds=3600,  # PAUSED -> CLOSED 1 h after paused_at
+    ),
+)
 
-# Check timers for one room
+# A room nobody writes to transitions when its timers are checked
 room = await kit.check_room_timers("session-1")
 
 # Batch check all rooms (call periodically)
 transitioned = await kit.check_all_timers()
 ```
+
+- **Activity** is the events the pipeline stores DELIVERED: each moves
+  `timers.last_activity_at` in its commit. A record stored BLOCKED, a
+  lifecycle record (an attach, a mute, a timer's transition), a
+  `commit_event()` record and an instruction are no activity: a mute does not
+  restart the inactivity timer. Inactivity counts from `last_activity_at`, or
+  from `created_at` while the room has had none.
+- **Pause and close.** An ACTIVE room pauses once `inactive_after_seconds`
+  passed without activity, `paused_at` recording when; a PAUSED room closes
+  once `closed_after_seconds` passed from `paused_at`. An ACTIVE room closes by
+  timer only once it paused: to close N seconds after the last activity, set
+  `inactive_after_seconds=N, closed_after_seconds=0`.
+- **Resume.** A delivered event resumes a PAUSED room in its commit (ACTIVE,
+  `paused_at` null), with no hook and no framework event.
+- **When.** Every operation that reads the room's status under its lock (a
+  message, `send_event()`, an agent's answer, an attach, a detach or a binding
+  change, `commit_event()`, `update_event()`, `delete_event()`, `close_room()`,
+  `archive_room()`) applies the transitions due at its instant first, so a
+  message after a due close is refused as if the timer had run on time. A
+  transition takes the instant it fell due, however late it is applied: a
+  check long after both pauses the room at the first instant and closes it at
+  the second, in one write. Each emits `room_paused` / `room_closed` (`reason =
+  timer`) once stored, before the operation's own refusal (`room_closed` comes
+  before the message's `room_refused_event`); its `ON_ROOM_PAUSED` /
+  `ON_ROOM_CLOSED` hook fires once the room lock is released, its event's
+  `SystemContent.data` the `threshold` and the instant (`at`).
 
 ## Delivery Status Tracking
 
@@ -6720,7 +6769,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `Room` | Room data model |
 | `RoomContext` | Context passed to hooks (room, bindings, participants, events) |
 | `RoomEvent` | Core event stored in the timeline |
-| `RoomTimers` | Timer configuration for room inactivity |
+| `RoomTimers` | Timer configuration for room inactivity: `inactive_after_seconds` (from `last_activity_at`, or `created_at` before any), `closed_after_seconds` (from `Room.paused_at`) |
 | `SessionStartedEvent` | Event fired when a voice session starts |
 | `TextContent` | Plain text content |
 | `get_current_voice_session` | Get the current voice session from context |
@@ -6848,6 +6897,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `RoomNotFoundError` | Room does not exist |
 | `RoomAlreadyExistsError` | A room created under an id the store holds (RFC §14.3) |
 | `RoomClosedError` | Room's status refuses new events (RFC §5.1) |
+| `TransitionRefusedError` | A lifecycle transition from a status it does not leave, such as `close_room()` on an ARCHIVED room; nothing written (RFC §5.1) |
 | `ChangeRefusedError` | `send_event()` of an edit or a delete step 8a refused; `reason` says why (RFC §10.3) |
 | `EventNotFoundError` | A store's `commit_event()` of a change whose target the room no longer holds (RFC §14.3) |
 | `RoomNotAttachedError` | Channel acted on a room it is no longer attached to |
@@ -6910,10 +6960,11 @@ kit = RoomKit(
 |--------|-------------|
 | `create_room(room_id?, metadata?, orchestration?)` | Create a room |
 | `get_room(room_id)` | Get room by ID |
-| `close_room(room_id)` | Close a room |
+| `close_room(room_id)` | Close a room; a CLOSED room is returned as stored, an ARCHIVED one raises `TransitionRefusedError` |
+| `archive_room(room_id)` | Archive a room, the terminal status; an ARCHIVED room is returned as stored |
 | `update_room_metadata(room_id, metadata)` | Update room metadata; a `roomkit:channel_state:` key raises `ValueError` (written by `channel_call` alone), and a turn's `TurnHost.update_room_metadata` refuses every `roomkit:` key |
-| `check_room_timers(room_id)` | Check timer transitions for one room |
-| `check_all_timers()` | Check all room timers |
+| `check_room_timers(room_id)` | Apply one room's due timer transitions, each at the instant it fell due (RFC §5.1) |
+| `check_all_timers()` | Check every ACTIVE and PAUSED room; returns those that transitioned |
 
 ### Channel Operations
 
