@@ -312,7 +312,8 @@ key is `(channel_type, address, organization_id)`. Linking an address another
 identity of the organization holds, or creating an identity with one, raises
 `AddressLinkedError` and writes nothing; linking to an unknown identity, or to
 an identity of another organization than the call's `organization_id`, raises
-`IdentityNotFoundError`. A lookup without an organization resolves the
+`IdentityNotFoundError`. `unlink_address` frees an address, so moving one is
+an unlink then a link. A lookup without an organization resolves the
 identities of no organization only.
 
 ## Read Tracking

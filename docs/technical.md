@@ -548,7 +548,7 @@ The storage interface defines 30 abstract methods across 8 categories:
 | **Events** | `add_event`, `get_event`, `list_events`, `check_idempotency`, `get_event_by_idempotency_key`, `get_event_count` |
 | **Bindings** | `add_binding`, `get_binding`, `update_binding`, `remove_binding`, `list_bindings` |
 | **Participants** | `add_participant`, `get_participant`, `update_participant`, `list_participants` |
-| **Identities** | `create_identity`, `get_identity`, `resolve_identity`, `link_address` |
+| **Identities** | `create_identity`, `get_identity`, `resolve_identity`, `link_address`, `unlink_address` (non-abstract) |
 | **Tasks** | `add_task`, `get_task`, `list_tasks`, `update_task` |
 | **Observations** | `add_observation`, `list_observations` |
 | **Read Tracking** | `mark_read`, `mark_all_read`, `get_unread_count` |

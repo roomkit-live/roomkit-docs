@@ -198,9 +198,21 @@ await store.link_address("id-carol", "sms", "+15550000001", "globex")
 # fine: each organization has its own space
 ```
 
-Linking to an unknown identity, or to an identity of another organization
-than `organization_id`, raises `IdentityNotFoundError`; linking an address
-the identity already holds changes nothing. `organization_id=None` stands
+Moving an address is an unlink from its holder, then a link:
+
+```python
+await store.unlink_address("id-alice", "sms", "+15550000001", "acme")
+await store.link_address("id-bob", "sms", "+15550000001", "acme")
+# the number now resolves to bob at acme
+```
+
+An unlink changes which identity a later message resolves to, never a stored
+conversation: the rooms, bindings and participants that named the address stay
+as they are. Unlinking an address the identity does not hold changes nothing.
+
+Linking or unlinking with an unknown identity, or an identity of another
+organization than `organization_id`, raises `IdentityNotFoundError`; linking
+an address the identity already holds changes nothing. `organization_id=None` stands
 for the identities of no organization, and an unscoped lookup never resolves
 an organization's. Routing resolves the sender's identity within the
 organization `process_inbound` acts for, so an address linked within it finds
