@@ -216,7 +216,9 @@ an address the identity already holds changes nothing. `organization_id=None` st
 for the identities of no organization, and an unscoped lookup never resolves
 an organization's. Routing resolves the sender's identity within the
 organization `process_inbound` acts for, so an address linked within it finds
-the room of the person it belongs to.
+the room of the person it belongs to: the router looks for a binding or a
+participant record named by the address or by that identity, and the newest
+room either name finds wins (RFC §10.4).
 
 ## Configuration
 

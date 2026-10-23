@@ -245,22 +245,35 @@ backend apply unchanged. The hooks see an event of type `INSTRUCTION`.
 
 ### Text idempotency and retries
 
-A key identifies one publication within a room and its source channel (the
-transport the call is attributed to), even if a later call supplies a different
-body or address. Concurrent calls with that key return the original
-`event_id`; replays set `duplicate=True` and do not run the agent again. A
-replay of a publication the room blocked is `blocked` again, with the reason
-it was blocked for. The existing locked inbound pipeline owns this decision.
-Different keys, rooms, source channels, or calls without a key remain
-distinct. Empty keys are refused.
+A key identifies one publication within its room, whatever transport carries
+it, even if a later call supplies a different body or address (RFC §22.1). It
+is looked up within the room before a transport is resolved, so a retry that
+would resolve another transport (one attached, or a voice host plugged in,
+since the first attempt), or none at all, is still that publication; the
+lookup, the transport's resolution and the publication's commit run in one
+section under the room lock, so concurrent calls with that key, on one
+transport or two, publish once and return the original `event_id`. Replays
+set `duplicate=True`, do not run the agent again, and carry no delivery handle
+(`outcome.inbound.delivery is None`). A replay of a publication the room
+blocked is `blocked` again, with the reason it was blocked for. Different
+keys, rooms, or calls without a key remain distinct. Empty keys are refused.
+
+The publication is stored under `roomkit:publication:<key>`, a namespace only
+the delivery path writes: a message whose key falls in it loses the key,
+`send_event()` refuses one, and a sender's message keyed like a coming
+publication (on a WebSocket or a webhook, whose clients choose their keys)
+neither blocks it nor is returned as its outcome. `AFTER_DELIVER` reports the
+key the application gave. A publication stored before RoomKit stored keys this
+way keeps its bare key: a replay across the upgrade publishes once more.
 
 Keys last as long as the configured `ConversationStore` retains them. The memory
 store loses them on restart; SQLite and Postgres preserve committed keys across
 restart until the corresponding event/key is removed. Distributed deployments
 need a shared store and an appropriate shared lock manager. Custom stores must
 implement the same idempotency contract (`check_idempotency` and
-`get_event_by_idempotency_key` take a keyword-only `channel_id`); a store that
-cannot resolve a seen key may return a duplicate refusal without an event id.
+`get_event_by_idempotency_key` take a keyword-only `channel_id`, `None` for any
+channel of the room, the lowest index first); a store that cannot resolve a
+seen key may return a duplicate refusal without an event id.
 
 A stored event does not prove its turn completed. If a process crashes after
 commit, replaying the key avoids a second trigger but does not resume the lost

@@ -6,7 +6,10 @@ When a room has multiple channel types (SMS, WhatsApp, Email, Voice), content mu
 
 During broadcast, the `EventRouter`:
 
-1. Checks if the target channel natively supports the content type
+1. Checks if the target channel natively supports the content type (a file
+   also needs a type and a size the target takes, RFC §5.8: otherwise it is
+   delivered as its text form, never dropped nor sent for the provider to
+   refuse)
 2. If not, calls `ContentTranscoder.transcode()` to adapt the content
 3. Applies `max_length` enforcement after transcoding
 4. If transcoding fails (returns `None`), the target channel is skipped
@@ -26,7 +29,7 @@ The `DefaultContentTranscoder` applies intelligent fallbacks:
 |---------------|----------------|----------|
 | `TextContent` | Always | N/A (universal) |
 | `RichContent` | `RICH` in media_types | `plain_text` field or `body` as TextContent |
-| `MediaContent` | `MEDIA` | `[Media: {caption or filename or url}]`, the URL only when a link (`http`, `https`), else the media type: never a `data:` URI or a reference |
+| `MediaContent` | `MEDIA`, and a file it takes: its type listed by a non-empty `supported_media_types` (compared without parameters, whatever the case), its known `size_bytes` within `max_media_size_bytes` | `[Media: {caption or filename or url}]`, the URL only when a link (`http`, `https`), else the media type: never a `data:` URI or a reference |
 | `AudioContent` | `AUDIO` | `transcript` field, or `[Voice message: {url}]`, the URL only when a link, else the media type |
 | `VideoContent` | `VIDEO` | `[Video: {url}]`, the URL only when a link, else the media type |
 | `LocationContent` | `LOCATION` | `[Location: {label or address} ({lat}, {lon})]`, or `[Location: ({lat}, {lon})]` with neither |

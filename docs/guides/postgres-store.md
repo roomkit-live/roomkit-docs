@@ -165,6 +165,7 @@ A host that reads events with a query of its own (a page filtered by a rule the 
 ```python
 from __future__ import annotations
 
+from roomkit import RoomFilter, RoomStatus
 from roomkit.models.room import Room
 
 # Create
@@ -197,7 +198,21 @@ room = await store.find_latest_room("user-123", channel_type="sms", status="acti
 
 # Reverse lookup: find room by channel
 room_id = await store.find_room_id_by_channel("sms-main", status="active")
+
+# The routing lookups (RFC §10.4): the newest ACTIVE or PAUSED room whose binding
+# of the channel names the address or its identity, or a participant reached
+# through the channel named by either
+open_rooms = RoomFilter(statuses=[RoomStatus.ACTIVE, RoomStatus.PAUSED])
+room_id = await store.find_room_id_by_binding(
+    "sms-main", "+15550000001", "id-alice", open_rooms, recipient_key="phone_number"
+)
+room_id = await store.find_room_id_by_participant(
+    "sms-main", "+15550000001", "id-alice", open_rooms
+)
 ```
+
+`init()` creates an index on `participants(identity_id)` for the participant
+lookup.
 
 ## Event Indexing
 

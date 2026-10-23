@@ -16,8 +16,8 @@ Room timers give a conversation a **time-to-live**: pause it after a short idle 
 
 | Status | Meaning |
 |--------|---------|
-| `ACTIVE` | Normal operation. The default inbound router only routes messages to active rooms. |
-| `PAUSED` | Soft-idle: no activity for `inactive_after_seconds`. It still accepts events, and a delivered one resumes it. `paused_at` records when it paused. |
+| `ACTIVE` | Normal operation. |
+| `PAUSED` | Soft-idle: no activity for `inactive_after_seconds`. It still accepts events, and a delivered one resumes it. `paused_at` records when it paused. The default inbound router routes the sender's next message to it as to an active room (RFC §10.4), so a paused conversation keeps its correspondent; a paused room whose binding of the channel is `group` stays its channel's room. |
 | `CLOSED` | The room is finished and `closed_at` is set. Reached via `closed_after_seconds` once paused, or `close_room()`. Refuses new events. |
 | `ARCHIVED` | Terminal storage state, reached with `archive_room()` — never by timers. Refuses new events. |
 
@@ -176,7 +176,14 @@ same.
 `PAUSED` is a soft state, not a dead end: an event the pipeline stores
 delivered into a paused room resumes it, in the same transaction — `ACTIVE`
 again, `paused_at` cleared, its idle clock restarted. A resume fires no hook
-and emits no framework event. What is no activity resumes nothing.
+and emits no framework event. What is no activity resumes nothing, a provider's
+delivery status included.
+
+The sender's next message finds their paused room: routing reads ACTIVE and
+PAUSED rooms alike when it looks for the sender's own room, and the newest
+wins whatever its status. A room whose close timer fell due is closed before
+the router's choice is checked under the room lock, so the message then gets a
+new room rather than a `room_closed` refusal.
 
 To resume a paused room without a message, set its status back to `ACTIVE`
 and restart its idle clock:

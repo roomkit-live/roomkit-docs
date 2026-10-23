@@ -702,14 +702,24 @@ mid-answer, then replaced).
 A message that arrives without a `room_id` is routed by the default
 `DefaultInboundRoomRouter` (RFC §10.4), which never guesses:
 
-1. **The sender's own room.** The room whose binding of the channel the
-   message came on names the sender, then the room where the sender is a
-   participant.
+1. **The sender's own room.** The newest ACTIVE or PAUSED room whose binding
+   of the channel the message came on names the sender, then the newest
+   ACTIVE or PAUSED room holding a participant who is the sender, reached
+   through that channel (`connected_via`, whatever the participant's
+   status). The sender is named by their address or by the identity the
+   store resolves it to, and the newest room either name finds wins, so an
+   older room found by the address never hides a newer one found by the
+   identity. A binding stored with a recipient and no correspondent names
+   its recipient. A paused conversation is the sender's as an active one is:
+   the message's delivered commit resumes it.
 2. **A channel dedicated to one conversation.** When the channel is bound to
-   exactly one ACTIVE room, that room is returned only if it is open to the
-   sender: its binding is declared `group`, or it names no one else, no other
-   participant joined the room through the channel, and the room received
-   nothing on the channel from another sender.
+   exactly one room step 3 reads (the ACTIVE rooms, and the PAUSED rooms
+   whose binding is declared `group`), that room is returned only if it is
+   open to the sender: its binding is declared `group`, or it names no one
+   else, no other participant joined the room through the channel, and the
+   room received nothing on the channel from another sender. Any other
+   PAUSED room is no one's to be admitted into, and CLOSED and ARCHIVED rooms
+   are never read.
 3. Otherwise **a new room**, whose binding names the sender.
 
 The first sender routed through a binding that names no one is recorded on it
@@ -760,8 +770,22 @@ being recorded is refused as a process timeout. A member added
 under an id that is neither closes the room to routing, unless the binding's
 recipient names them (below): route their messages with `room_id`, or link the
 address (`link_address`), after which they are found by it whatever the number
-of rooms on the channel. A provider's delivery status follows the same rule: the room whose
-binding names its recipient, never the oldest of several.
+of rooms on the channel. A provider's delivery status follows the same rule:
+the ACTIVE or PAUSED room whose binding names its recipient, read in the
+channel's form, else the one ACTIVE room bound to the channel, never the
+oldest of several; a status resumes no room.
+
+A message naming a room (`room_id`) that does not bind its channel has the
+channel attached under the room lock, once the room's due timers apply, at its
+default permissions; a CLOSED or ARCHIVED room gets no binding (the message is
+refused `room_closed`), a channel the host detached is not attached again, and
+a binding a creation hook made for a new room is kept as it is.
+
+The store answers these lookups (`find_room_id_by_binding(channel_id,
+participant_id, identity_id, room_filter, *, recipient_key=None)`,
+`find_room_id_by_participant(...)`, `find_room_ids_by_channel(channel_id,
+room_filter, limit, *, group=None)`), a `RoomFilter(statuses,
+organization_id)` naming the rooms they read.
 
 #### A room prepared for a correspondent
 
@@ -797,10 +821,35 @@ assert len(rooms) == 3  # alice's chat, the group, bob's chat
 The message's author stays its sender (`event.source.participant_id`). A room
 the host opens for a chat (`metadata={"telegram_chat_id": "1001"}`) is that
 chat's, as a room opened for a number is that number's: no one else is let in.
-On an HTTP webhook the recipient is a URL the host sets. A transport channel of your
-own declares its kind with `TransportChannel(..., replies_to_sender=True)`, or
-with `reply_metadata_key="..."` naming the inbound metadata that holds its chat
-(`channel.conversation_address(message)` is what the framework routes by).
+On Telegram, Teams, Discord and Buzz a message that does not carry its chat
+has no address: it is routed as a message from no one, records no one, and a
+room opened for it names neither correspondent nor recipient, so its
+deliveries are refused `no_recipient` until the host names one.
+On an HTTP webhook the recipient is a URL the host sets.
+
+#### Addresses by channel type
+
+A channel's type decides how its addresses are written and where its recipient
+and its chat are (RFC §5.7, Appendix A); `addressing_of(channel_type)` gives the
+defaults, which a `TransportChannel` built for the type takes:
+
+| Type | Address | Recipient key | Chat key |
+|---|---|---|---|
+| SMS, MMS, RCS, WHATSAPP | E.164 | `phone_number` | — |
+| WHATSAPP_PERSONAL | E.164 | `phone_number` | `group_jid` |
+| VOICE | E.164 | — | — |
+| EMAIL | lower-case, no display name | `email_address` | — |
+| MESSENGER | as written | `facebook_user_id` | — |
+| TELEGRAM | its chat | `telegram_chat_id` | `chat_id` |
+| TEAMS | its chat | `teams_conversation_id` | `conversation_id` |
+| any other | as written | — | — |
+
+A transport channel of your own declares its addressing with
+`TransportChannel(..., addressing=ChannelAddressing(Addressing.CHAT,
+recipient_key="room_key", chat_key="room"))` (`replies_to_sender=True` for one
+whose replies go to the address the sender writes from), and
+`country_code="1"` places a national number;
+`channel.conversation_address(message)` is what the framework routes by.
 
 #### Phone numbers in E.164
 
@@ -2392,7 +2441,7 @@ Key features:
 - **HandoffMemoryProvider** — Injects handoff context (summary, reason) into the receiving agent's prompt
 - **ConversationPipeline** — Lower-level API for complex workflows with loops (`can_return_to`) and custom stages
 - **Custom strategies** — Subclass `Orchestration` ABC to build your own
-- **Delivery service** — `kit.deliver()` with `WaitForIdle`, `Immediate`, `Queued` strategies, explicit intelligence addressing and voice session targets, room-scoped text idempotency, and observable `DeliveryOutcome` results ([guide](guides/delivery.md))
+- **Delivery service** — `kit.deliver()` with `WaitForIdle`, `Immediate`, `Queued` strategies, explicit intelligence addressing and voice session targets, room-scoped text idempotency (a key names one publication in its room whatever transport carries it, looked up before the transport is resolved and committed in one locked section, stored under `roomkit:publication:<key>` so no sender's message stands in for it), and observable `DeliveryOutcome` results ([guide](guides/delivery.md))
 - **Voice delivery idempotency** — atomic reservations per room/channel/session/key, durable SQLite/Postgres receipts, per-session outcomes and safe retries only when no submission occurred. Uncertain submissions remain `unknown` and are never automatically reinjected ([guide](guides/delivery.md#voice-idempotency-and-uncertainty), [runnable example](https://github.com/roomkit-live/roomkit/blob/main/examples/voice_delivery_idempotency.py)).
 - **Delivery hooks** — `BEFORE_DELIVER` / `AFTER_DELIVER` for observability
 
@@ -2738,13 +2787,20 @@ When a message is delivered to a channel that doesn't support the original conte
 | Source Content | Target Capability | Transcoded Output |
 |---|---|---|
 | `RichContent` (HTML) | Text only | Plain text fallback body |
-| `MediaContent` | Text only | Caption + URL as text |
+| `MediaContent` | Text only, or a type a non-empty `supported_media_types` does not list, or a known size over `max_media_size_bytes` | `"[Media: caption or filename or url]"` |
 | `LocationContent` | Text only | `"[Location: label (lat, lon)]"` |
 | `AudioContent` | Text only | Transcript text or `"[Voice message]"` |
 | `VideoContent` | Text only | `"[Video: url]"` |
 | `CompositeContent` | Text only | Recursively transcoded parts, flattened |
 | `TemplateContent` | Text only | Template body text |
 | `TextContent` | Any | Always passed through |
+
+A file the target does not take is delivered as its text form, alone or as
+a composite's part, never dropped nor sent for the provider to refuse (RFC
+§5.8, §6.6); an empty `supported_media_types` takes every type and a file of
+unknown size any size. The shipped declarations follow RFC Appendix A: SMS
+takes `image/jpeg`, `image/png` and `image/gif`, WhatsApp Personal any file,
+and Telegram audio and video natively.
 
 If a content type cannot be transcoded for the target, the delivery to that channel is skipped with a `transcoding_failed` warning.
 
