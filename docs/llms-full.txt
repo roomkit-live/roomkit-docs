@@ -803,7 +803,10 @@ room_filter)`, step 3 with `find_room_ids_by_channel(channel_id, room_filter,
 limit, *, group=None)`; `RoomFilter(statuses, organization_id)` names the
 rooms read. A delivery status that names no room goes to the ACTIVE or PAUSED
 room whose binding names its recipient (in the channel's form), else the one
-ACTIVE room, and resumes nothing.
+ACTIVE room unless its binding names another correspondent (its participant,
+else its recipient), and resumes nothing; `process_delivery_status(status, *,
+organization_id=None)` and `process_webhook(..., organization_id=...)` read
+that organization's rooms only.
 
 Step 2's attach of a room in hand that does not bind the channel runs under
 the room lock once the room's due timers apply, at the channel's defaults,
@@ -869,7 +872,7 @@ ws_caps = ChannelCapabilities(
 | `LocationContent` | LOCATION in media_types → pass | `TextContent("[Location: {label} ({lat}, {lon})]")` |
 | `CompositeContent` | Recursive transcode of all parts, none dropped | If all parts become text → flatten to single TextContent, joined by newlines |
 | `TemplateContent` | TEMPLATE in media_types → pass | `TextContent(body or "[Template: {id}]")` |
-| `EditContent` | `supports_edit` → pass | Transcode `new_content` + prefix "Correction:" |
+| `EditContent` | `supports_edit` → pass, a file in `new_content` the target does not take as its text form | Transcode `new_content` + prefix "Correction:" |
 | `DeleteContent` | `supports_delete` → pass | `TextContent("[Message deleted]")` |
 
 ### Multichannel Transcoding Example

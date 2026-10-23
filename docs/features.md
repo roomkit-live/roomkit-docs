@@ -772,8 +772,12 @@ recipient names them (below): route their messages with `room_id`, or link the
 address (`link_address`), after which they are found by it whatever the number
 of rooms on the channel. A provider's delivery status follows the same rule:
 the ACTIVE or PAUSED room whose binding names its recipient, read in the
-channel's form, else the one ACTIVE room bound to the channel, never the
-oldest of several; a status resumes no room.
+channel's form, else the one ACTIVE room bound to the channel unless its
+binding names another correspondent (its participant, else its recipient),
+never the oldest of several; a status resumes no room. A webhook acting for
+an organization (`process_webhook(..., organization_id="acme")`,
+`process_delivery_status(status, organization_id="acme")`) dispatches its
+status in that organization's rooms only.
 
 A message naming a room (`room_id`) that does not bind its channel has the
 channel attached under the room lock, once the room's due timers apply, at its

@@ -9,7 +9,8 @@ During broadcast, the `EventRouter`:
 1. Checks if the target channel natively supports the content type (a file
    also needs a type and a size the target takes, RFC §5.8: otherwise it is
    delivered as its text form, never dropped nor sent for the provider to
-   refuse)
+   refuse; an edit delivered natively carries its new content's files the
+   same way)
 2. If not, calls `ContentTranscoder.transcode()` to adapt the content
 3. Applies `max_length` enforcement after transcoding
 4. If transcoding fails (returns `None`), the target channel is skipped
