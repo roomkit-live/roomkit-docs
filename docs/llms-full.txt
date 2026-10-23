@@ -1400,8 +1400,31 @@ bot never triggers them.
 
 | Trigger | Execution | Signature | Description |
 |---------|-----------|-----------|-------------|
-| `ON_SPEAK_DECISION` | ASYNC | `(SpeakDecisionEvent, ctx) -> None` | An AI channel's speak policy decided whether the agent speaks, offers or stays silent on an event: the decision with its reason and judgments, `duration_ms`, `asked_again` when it decided again once the agent thought. |
+| `ON_SPEAK_DECISION` | SYNC | `(SpeakDecisionEvent, ctx) -> HookResult` | An AI channel's speak policy decided whether the agent speaks, offers or stays silent on an event: the decision with its reason and judgments, `duration_ms`, `asked_again` when it decided again once the agent thought, `thought` (what the agent had in mind, with a thinker), and `late` when that thought came back after the event was decided: no turn runs on a late decision, the hooks act on it. The channel acts on the decision the SYNC hooks leave: a MODIFY whose event carries another decision replaces it (only `event.decision` is read), a BLOCK leaves the agent silent (`blocked by <hook>`). Fail-open. ASYNC hooks observe the decision that stands. |
 | `ON_THOUGHT` | ASYNC | `(ThoughtEvent, ctx) -> None` | An AI channel's thinker came back with a new thought in a room, or speaking emptied what the agent wanted to say: the thought, the one it replaces, `duration_ms` of the thinker call. |
+
+A SYNC hook takes in code what the decision calls for, rather than leaving it
+to the model: here an offer becomes a raised hand, and the agent stays silent
+until someone gives it the floor (`examples/raise_hand_on_offer.py`).
+
+```python
+import dataclasses
+
+from roomkit import HookResult, HookTrigger, SpeakDecision, SpeakDecisionEvent
+
+@kit.hook(HookTrigger.ON_SPEAK_DECISION, name="raise_hand")
+async def raise_hand(event: SpeakDecisionEvent, ctx) -> HookResult:
+    mode = event.decision.mode
+    if mode == "silent" or (mode == "speak" and not event.late):
+        return HookResult.allow()
+    # An offer, or a late decision (no turn runs on it): the hand goes up.
+    await meeting.raise_hand()  # the application's own action
+    silent = SpeakDecision("silent", reason="hand raised")
+    return HookResult.modify(dataclasses.replace(event, decision=silent))
+```
+
+A SYNC hook on this trigger returns a `HookResult`; one that only watches the
+decisions is registered `execution=HookExecution.ASYNC`.
 
 ### Discussion
 

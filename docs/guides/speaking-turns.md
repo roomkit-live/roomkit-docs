@@ -90,12 +90,13 @@ agent speaks: the decision reported is `speak` with the reason `fallback`.
 
 ## Following the decisions
 
-Every decision fires `ON_SPEAK_DECISION` (async), with the room, the channel, the
-event and the decision, how long the policy took to decide (`duration_ms`: the
-channel's bound when it did not decide in time) and whether the policy was asked
-again once the agent thought (`asked_again`, see [thinking while
-listening](#thinking-while-listening)). A policy is measured from the hook, without
-wrapping it:
+Every decision fires `ON_SPEAK_DECISION`, with the room, the channel, the event
+and the decision, how long the policy took to decide (`duration_ms`: the
+channel's bound when it did not decide in time), whether the policy was asked
+again once the agent thought (`asked_again`), the thought it decided with
+(`thought`) and whether the decision is late (`late`, see [thinking while
+listening](#thinking-while-listening)). A policy is measured from an ASYNC hook,
+without wrapping it:
 
 ```python
 from roomkit import HookExecution, HookTrigger, SpeakDecisionEvent
@@ -117,6 +118,55 @@ async def on_decision(event: SpeakDecisionEvent, ctx) -> None:
 A channel without a policy answers every event, as before, and decides nothing.
 `AlwaysSpeak` answers every event and reports each decision: a baseline to
 measure another policy against.
+
+## Acting on a decision
+
+`ON_SPEAK_DECISION` is a SYNC trigger: its SYNC hooks run in order before the
+channel acts, and the channel acts on the decision they leave. An application
+so takes in code the action a decision calls for, rather than leaving it to the
+model: in a meeting, an offer becomes a raised hand and a silence, and the agent
+given the floor reads why its hand was up.
+
+```python
+import dataclasses
+
+from roomkit import HookResult, HookTrigger, SpeakDecision, SpeakDecisionEvent
+
+
+@kit.hook(HookTrigger.ON_SPEAK_DECISION, name="raise_hand")
+async def raise_hand(event: SpeakDecisionEvent, ctx) -> HookResult:
+    decision = event.decision
+    if decision.mode == "silent":
+        return HookResult.allow()
+    if decision.mode == "offer" or event.late:  # no turn runs on a late decision
+        await meeting.raise_hand()
+        silent = SpeakDecision("silent", reason="hand raised")
+        return HookResult.modify(dataclasses.replace(event, decision=silent))
+    if not meeting.hand_raised:
+        return HookResult.allow()
+    await meeting.lower_hand()
+    note = "You raised your hand and have the floor now: say what you raised it for."
+    spoken = dataclasses.replace(decision, notes=(*decision.notes, note))
+    return HookResult.modify(dataclasses.replace(event, decision=spoken))
+```
+
+- **MODIFY** replaces the decision with the one its event carries. Only
+  `event.decision` is read: the event decided on, the room and the channel stay
+  the channel's. A replaced decision's `notes` join the turn's notes, as the
+  policy's do.
+- **BLOCK** leaves the agent silent, with the reason `blocked by <hook>`.
+- **Fail-open.** A hook that raises, times out or returns something unusable
+  changes nothing. A hook registered `fail_closed=True` that fails leaves the
+  agent silent (`hook_error:<hook>`), and so does one on a room whose hook
+  context cannot be built.
+- **ASYNC hooks** observe the decision that stands, after the SYNC ones.
+- A silence a hook leaves is thought about as any other: the thinker runs, and
+  the policy may decide again with the thought.
+
+A SYNC hook on this trigger returns a `HookResult`: one that returns `None` is
+an unusable result, logged on every decision. A hook that only watches is
+registered `execution=HookExecution.ASYNC`. A runnable version is
+`examples/raise_hand_on_offer.py`.
 
 ## Testing
 
@@ -153,10 +203,10 @@ name. It answers these questions (`roomkit.speaking.classifier.QUESTIONS`):
 
 | Name | Asks |
 |------|------|
-| `directness` | how directly the turn brings the agent in: not mentioned (0), tentatively (1), indirectly (2), directly (3) |
+| `directness` | how directly the turn brings the agent in: not mentioned (0: a turn about it said to someone else, "explain it to her", is not), tentatively (1), indirectly (2: someone proposes asking it something it could answer now), directly (3) |
 | `deferred` | whether the speaker postpones or declines asking |
-| `unfinished` | whether the speaker stopped before saying what they want |
-| `hush` | whether the turn asks the agent not to answer, or only to listen |
+| `unfinished` | whether the turn ends cut off, or the speaker says they are not done ("wait", "let me think"): dots inside a turn whose last sentence is complete, or "I do not remember", do not count |
+| `hush` | whether the turn asks the agent not to answer, or only to listen from now on: "are you ready to listen?" expects an answer |
 | `request` | whether the turn asks the agent to answer or do something now |
 | `answered` | whether the turn answers a question the agent just asked |
 
@@ -210,6 +260,12 @@ no request.
   and the room goes on listening: answering one question does not lift the
   request. A speaker who has not finished, postpones it or asks for quiet is
   not answered: a listening room is never more eager than an open one.
+- With a thought that answers or corrects the turn (`answers` or `corrects` at
+  `proactivity` or above), the agent asks for the floor without taking it: an
+  offer (`listening, has something to add`), unless the speaker has not
+  finished, postpones it or asks for quiet, or a question put to someone else
+  waits for them (`waiting`). An application may show it as a raised hand
+  ([acting on a decision](#acting-on-a-decision)). The room goes on listening.
 - Anything else is silent (`listening`). One person talking with the agent does
   not make every request its own here: "what is the base URL?" said aside and
   put to the agent read alike without the address.
@@ -217,8 +273,10 @@ no request.
   is silent too, where an open room would let the agent speak. The channel's
   own bound (`speak_timeout`) still falls back to speaking.
 
-Every silence of a listening room is final, and every decision made while it
-listens carries `listening` (1.0) among its judgments. A cut answer is not
+Every silence of a listening room is final: the channel does not wait for the
+thought, and a thought back later with something to say is decided late (see
+[thinking while listening](#thinking-while-listening)). Every decision made
+while the room listens carries `listening` (1.0) among its judgments. A cut answer is not
 resumed. The three questions are replaceable by name with `questions=`, as the
 others are (`roomkit.speaking.listening`).
 
@@ -334,8 +392,19 @@ How the channel runs it:
    listened to. Each decision fires `ON_SPEAK_DECISION`. A final decision (a
    room that listens, a voice only listened to) waits for nothing: the thinker
    thinks, and the next turn is not held back.
+
+   **Late.** A thought that comes back after its event was decided (past
+   `think_wait`, or on a final decision) with something to say, while no later
+   event was given to the thinker, is decided late: the policy decides again on
+   that event with it, and `ON_SPEAK_DECISION` fires with `event.late` set. No
+   turn runs on a late decision, whatever it says: the event's turn is over.
+   Its hooks act on it, by raising a hand, or by delivering an instruction for
+   the agent to speak ([acting on a decision](#acting-on-a-decision)).
 4. **Speaking empties it.** When the agent speaks or offers on a decided event,
-   the turn's notes carry its thought, and what it wanted to say is emptied. An
+   the turn's notes carry its thought, and what it wanted to say is emptied. A
+   thought on a context taken while one of the agent's turns ran in the room
+   wants to say nothing either: what it would say is that answer, not in its
+   context yet. An
    instruction (a task's hand-back) carries no thought and empties nothing. The
    thought is a model's reading of what people said, so whatever they said can
    reach it: the notes quote it, bound it (600 characters for the text, 300 per
@@ -357,14 +426,18 @@ something to say, also asks:
 
 | Name | Asks |
 |------|------|
-| `answers` | whether what the agent wants to say answers what the turn asks |
+| `answers` | whether what the agent wants to say answers a question or a need still open at the turn: asked in it, or before it and answered by no one since |
 | `corrects` | whether it corrects, or warns about, what the turn says |
+| `waiting` | whether a question put to someone other than the agent still waits for that person's first try |
 
 Then `compose()`: only wondered about and knowing the answer, the agent speaks
 (`knows the answer`) rather than offers; not addressed, it offers (`has
 something to add`) when that judgment reaches `proactivity` (0.5, lower is more
 eager), half of it when the thought is urgent (`urgent`), never on urgency
-alone.
+alone. Unless the thought is urgent, a question put to someone else is theirs
+to answer first (`theirs_first()`): wondered about, the agent offers rather
+than speaks, and not addressed, it stays silent (`theirs to answer`). A
+question put to everyone ("does anyone know?") waits for no one.
 
 ### LLMThinker
 
