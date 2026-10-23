@@ -864,9 +864,14 @@ await kit.attach_channel("r1", "sms", metadata={"phone_number": "(555) 000-0001"
 # stored as "+15550000001"; an inbound "+15550000001" is the same correspondent
 ```
 
-Digits without `+` and with no country code configured are kept as they are,
-never given a country (`13800138000` is a national number in China, and
-`+13800138000` one in North America). The Sinch and WhatsApp Personal parsers
+A URI scheme, the separators people type and the trunk prefix written `(0)`
+after a country code are dropped (`+33 (0)6 12 34 56 78` is `+33612345678`);
+`+` or `00` means international; with a country code configured, six digits or
+fewer are a short code, kept as written; a result of more than 15 digits, or
+whose first digit is `0`, is kept as written. Digits without `+` and with no
+country code configured are kept as they are, never given a country
+(`13800138000` is a national number in China, and `+13800138000` one in North
+America). The Sinch and WhatsApp Personal parsers
 add the `+` their providers leave out. A WhatsApp Personal sender hidden behind
 an `@lid` id is named by the phone WhatsApp sends with it, or by the whole
 `<id>@lid`, never by digits a normalizer would read as a number. A channel's own form is
