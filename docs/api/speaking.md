@@ -19,11 +19,11 @@ Whether an AI channel's agent speaks, offers or stays silent on an event. See th
 
 ::: roomkit.speaking.ClassifierSpeakPolicy
 
-::: roomkit.speaking.classifier.compose
+::: roomkit.speaking.compose
 
-::: roomkit.speaking.classifier.addressed
+::: roomkit.speaking.addressed
 
-::: roomkit.speaking.classifier.judgments_of
+::: roomkit.speaking.judgments_of
 
 ::: roomkit.speaking.MockSpeakPolicy
 

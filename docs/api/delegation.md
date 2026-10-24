@@ -44,7 +44,7 @@ agent](../guides/agent-delegation.md#long-work-from-an-agent-work_in_background)
 
 ::: roomkit.tasks.CancelTaskTool
 
-::: roomkit.tasks.status.room_tasks
+::: roomkit.tasks.room_tasks
 
 ::: roomkit.tasks.post_task_progress
 

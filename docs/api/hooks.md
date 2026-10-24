@@ -1,5 +1,5 @@
 # Hooks
 
-::: roomkit.core.hooks.HookEngine
+::: roomkit.HookEngine
 
-::: roomkit.core.hooks.HookRegistration
+::: roomkit.HookRegistration
