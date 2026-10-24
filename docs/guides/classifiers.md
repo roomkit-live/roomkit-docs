@@ -136,8 +136,8 @@ an answer for every question, of its kind, or raise `ClassifierError`;
 your wait, and document how far your probabilities can be trusted.
 
 ```python
-from roomkit import Classifier
-from roomkit.classifiers.base import Answers, State, check_answers
+from roomkit import Answers, Classifier
+from roomkit.classifiers import State, check_answers
 
 
 class MyClassifier(Classifier):

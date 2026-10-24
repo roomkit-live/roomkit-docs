@@ -12,8 +12,8 @@ Enable video bridging by passing `bridge=True` to `VideoChannel` or
 
 ```python
 from roomkit import RoomKit, AudioVideoChannel
-from roomkit.video.bridge import VideoBridgeConfig
-from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video import VideoBridgeConfig
+from roomkit.video.backends import SIPVideoBackend
 from roomkit.voice.pipeline import AudioPipelineConfig
 
 backend = SIPVideoBackend(
@@ -62,7 +62,7 @@ Session B camera → Backend → Pipeline → VideoBridge.forward()
 ### VideoBridgeConfig
 
 ```python
-from roomkit.video.bridge import VideoBridgeConfig
+from roomkit.video import VideoBridgeConfig
 
 config = VideoBridgeConfig(
     max_participants=10,           # Max sessions per room (default: 10)
@@ -162,7 +162,7 @@ per-target frame transformation.  The processor receives the target
 session and the source frame, and returns a transformed `VideoFrame`:
 
 ```python
-from roomkit.video.video_frame import VideoFrame
+from roomkit.video import VideoFrame
 
 def downscale_for_mobile(target_session, frame):
     if target_session.metadata.get("client") == "mobile":

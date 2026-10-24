@@ -34,11 +34,10 @@ cd MuseTalk && pip install -r requirements.txt
 from __future__ import annotations
 
 import asyncio
-from roomkit import AudioVideoChannel, RoomKit, ChannelCategory
-from roomkit.channels.ai import AIChannel
-from roomkit.video.avatar.mock import MockAvatarProvider
-from roomkit.video.backends.sip import SIPVideoBackend
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit import AIChannel, AudioVideoChannel, ChannelCategory, RoomKit
+from roomkit.video.avatar import MockAvatarProvider
+from roomkit.video.backends import SIPVideoBackend
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
 
 async def main():
     kit = RoomKit()
@@ -88,7 +87,7 @@ async def main():
 Displays the reference image as a static frame. No GPU needed — useful for testing the video pipeline.
 
 ```python
-from roomkit.video.avatar.mock import MockAvatarProvider
+from roomkit.video.avatar import MockAvatarProvider
 
 avatar = MockAvatarProvider(
     fps=30,
@@ -103,7 +102,7 @@ await avatar.start(image_bytes, width=512, height=512)
 Real lip-sync using the [MuseTalk](https://github.com/TMElyralab/MuseTalk) model. Requires NVIDIA GPU with 4GB+ VRAM.
 
 ```python
-from roomkit.video.avatar.musetalk import MuseTalkAvatarProvider
+from roomkit.video.avatar import MuseTalkAvatarProvider
 
 avatar = MuseTalkAvatarProvider(
     musetalk_dir="/path/to/MuseTalk",   # local git clone
@@ -152,8 +151,8 @@ cd MuseTalk && pip install -r requirements.txt
 Implement the `AvatarProvider` ABC for any lip-sync model:
 
 ```python
-from roomkit.video.avatar.base import AvatarProvider
-from roomkit.video.video_frame import VideoFrame
+from roomkit.video.avatar import AvatarProvider
+from roomkit.video import VideoFrame
 
 class MyAvatarProvider(AvatarProvider):
     @property
@@ -241,7 +240,7 @@ When avatar audio plays through the caller's speaker and feeds back into their m
 
 ```python
 from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.aec.webrtc import WebRTCAECProvider
+from roomkit.voice.pipeline.aec import WebRTCAECProvider
 
 av = AudioVideoChannel(
     "voice",

@@ -5,7 +5,7 @@ A voice backend that sends and receives audio over RTP, for integration with PBX
 ## Quick start
 
 ```python
-from roomkit.voice.backends.rtp import RTPVoiceBackend
+from roomkit.voice.backends import RTPVoiceBackend
 from roomkit.voice.pipeline import AudioPipelineConfig, MockVADProvider
 from roomkit import VoiceChannel
 

@@ -54,7 +54,7 @@ Detailed instructions for the AI on how to use this skill...
 ```python
 from roomkit import AIChannel
 from roomkit.skills import SkillRegistry
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 # 1. Discover skills from a directory
 registry = SkillRegistry()

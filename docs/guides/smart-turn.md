@@ -68,9 +68,12 @@ wget https://huggingface.co/pipecat-ai/smart-turn-v3/resolve/main/smart-turn-v3.
 ## Quick start
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+)
 from roomkit.voice.pipeline.turn import SmartTurnConfig, SmartTurnDetector
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
 
 # VAD is required — it detects speech segments and provides audio to the turn detector
 vad = SherpaOnnxVADProvider(

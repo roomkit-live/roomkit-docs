@@ -141,7 +141,7 @@ from __future__ import annotations
 
 from roomkit.channels import AIChannel
 from roomkit.memory import CompactingMemory, SlidingWindowMemory
-from roomkit.providers.ai.anthropic import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider
 
 # Use a fast, cheap model for summarization
 summarizer = AnthropicAIProvider(model="claude-haiku-5-5", api_key="...")
@@ -192,10 +192,9 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 `SummarizingMemory` proactively manages context budget with two tiers. Unlike `CompactingMemory` (which only fires when the budget is exceeded), `SummarizingMemory` starts truncating early and summarizes before hitting the limit. Designed for agentic workloads where tool results can be very large.
 
 ```python
-from roomkit.channels.ai import AIChannel
+from roomkit.channels import AIChannel
 from roomkit.memory import SlidingWindowMemory, SummarizingMemory
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 # Lightweight model for summaries
 summarizer = AnthropicAIProvider(AnthropicConfig(
@@ -249,7 +248,7 @@ ai = AIChannel("ai-agent", provider=main_provider, memory=memory)
 `RetrievalMemory` enriches AI context with knowledge from external sources — vector stores, search engines, document indexes, or any system that can answer relevance queries.
 
 ```python
-from roomkit.channels.ai import AIChannel
+from roomkit.channels import AIChannel
 from roomkit.knowledge import KnowledgeSource, KnowledgeResult
 from roomkit.memory import RetrievalMemory, SlidingWindowMemory
 
@@ -318,7 +317,7 @@ Implement `MemoryProvider` for custom logic (e.g., vector store retrieval):
 from __future__ import annotations
 
 from roomkit.memory import MemoryProvider, MemoryResult
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 
 
 class VectorStoreMemory(MemoryProvider):
@@ -383,7 +382,7 @@ class PerChannelMemory(MemoryProvider):
 ## Token Estimation Utilities
 
 ```python
-from roomkit.memory.token_estimator import (
+from roomkit.memory import (
     estimate_context_tokens,
     estimate_message_tokens,
     estimate_tokens,
@@ -408,7 +407,7 @@ tokens = estimate_context_tokens(ai_context)
 from __future__ import annotations
 
 from roomkit.memory import MockMemoryProvider
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 
 mock = MockMemoryProvider(
     messages=[AIMessage(role="system", content="Previous conversation summary")],

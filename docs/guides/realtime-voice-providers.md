@@ -22,8 +22,8 @@ RoomKit's `RealtimeVoiceChannel` enables speech-to-speech AI conversations using
 from __future__ import annotations
 
 from roomkit import RealtimeVoiceChannel, RoomKit
-from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
+from roomkit.voice.backends import MockVoiceBackend
+from roomkit.providers.openai import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="sk-...",
@@ -431,7 +431,7 @@ WebSocket-based speech-to-speech with server-side VAD.
 ```python
 from __future__ import annotations
 
-from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
+from roomkit.providers.openai import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="sk-...",
@@ -626,7 +626,7 @@ the conversation continues (RFC §12.4.1).
 ```python
 from __future__ import annotations
 
-from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+from roomkit.providers.openai import HostedReasoning, OpenAILiveProvider
 
 provider = OpenAILiveProvider(
     api_key="sk-...",
@@ -745,7 +745,7 @@ Persistent streaming connection with session resumption and advanced features.
 ```python
 from __future__ import annotations
 
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
+from roomkit.providers.gemini import GeminiLiveProvider
 
 provider = GeminiLiveProvider(
     api_key="your-gemini-key",
@@ -946,8 +946,7 @@ WebSocket-based speech-to-speech using xAI's Grok models with server-side VAD, b
 ```python
 from __future__ import annotations
 
-from roomkit.providers.xai.config import XAIRealtimeConfig
-from roomkit.providers.xai.realtime import XAIRealtimeProvider
+from roomkit.providers.xai import XAIRealtimeConfig, XAIRealtimeProvider
 
 provider = XAIRealtimeProvider(
     XAIRealtimeConfig(
@@ -1042,8 +1041,10 @@ Server-orchestrated speech-to-speech using ElevenLabs agents. STT, LLM, TTS, VAD
 ```python
 from __future__ import annotations
 
-from roomkit.providers.elevenlabs.config import ElevenLabsRealtimeConfig
-from roomkit.providers.elevenlabs.realtime import ElevenLabsRealtimeProvider
+from roomkit.providers.elevenlabs import (
+    ElevenLabsRealtimeConfig,
+    ElevenLabsRealtimeProvider,
+)
 
 config = ElevenLabsRealtimeConfig(
     api_key="xi-...",
@@ -1408,7 +1409,7 @@ Realtime channels need a transport to carry audio between the client and server.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime.ws_transport import WebSocketRealtimeTransport
+from roomkit.voice.realtime import WebSocketRealtimeTransport
 
 transport = WebSocketRealtimeTransport(
     authenticate=my_auth_callback,             # Optional auth
@@ -1447,10 +1448,7 @@ Browser-based WebRTC with low latency:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 transport = FastRTCRealtimeTransport(
     input_sample_rate=16000,
@@ -1477,7 +1475,7 @@ Bridge SIP calls to realtime AI:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.realtime.sip_transport import SIPRealtimeTransport
+from roomkit.voice.realtime import SIPRealtimeTransport
 
 transport = SIPRealtimeTransport(backend=sip_backend)
 ```
@@ -1493,7 +1491,7 @@ Use system mic/speakers for testing:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.backends import LocalAudioBackend
 
 transport = LocalAudioBackend(
     input_sample_rate=24000,   # match the provider output rate for AEC
@@ -1598,8 +1596,7 @@ The unified `ON_TOOL_CALL` hook fires from both `AIChannel` and `RealtimeVoiceCh
 ```python
 from __future__ import annotations
 
-from roomkit import HookTrigger, RoomKit
-from roomkit.models.hook import HookResult
+from roomkit import HookResult, HookTrigger, RoomKit
 
 kit = RoomKit()
 
@@ -1809,11 +1806,8 @@ import json
 from fastapi import FastAPI
 
 from roomkit import RealtimeVoiceChannel, RoomKit, Tool
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 app = FastAPI()
 kit = RoomKit()
@@ -1873,7 +1867,7 @@ mount_fastrtc_realtime(app, transport, path="/rtc")
 from __future__ import annotations
 
 from roomkit import RealtimeVoiceChannel
-from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
+from roomkit.voice.realtime import MockRealtimeProvider, MockRealtimeTransport
 
 provider = MockRealtimeProvider()
 transport = MockRealtimeTransport()

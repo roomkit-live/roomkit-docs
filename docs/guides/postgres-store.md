@@ -16,7 +16,7 @@ This installs `asyncpg>=0.29` as an optional dependency.
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 store = PostgresStore("postgresql://user:pass@localhost/roomkit")
 await store.init(min_size=2, max_size=10)
@@ -144,7 +144,7 @@ The tables live in the session's schema, `current_schema()`, the first schema of
     To migrate deliberately, **back up your database first**, then call the opt-in migration. It defaults to a dry run:
 
     ```python
-    from roomkit.store.postgres import PostgresStore, PostgresSchemaError
+    from roomkit.store import PostgresSchemaError, PostgresStore
 
     store = PostgresStore(dsn="postgres://…")
     # Report what would happen, without executing anything:
@@ -169,8 +169,7 @@ A host that reads events with a query of its own (a page filtered by a rule the 
 ```python
 from __future__ import annotations
 
-from roomkit import RoomFilter, RoomStatus
-from roomkit.models.room import Room
+from roomkit import Room, RoomFilter, RoomStatus
 
 # Create
 room = await store.create_room(Room(id="room-1", organization_id="org-1"))
@@ -307,7 +306,7 @@ PostgresStore supports multi-channel identity resolution:
 ```python
 from __future__ import annotations
 
-from roomkit.identity.base import Identity
+from roomkit.models import Identity
 
 # Create identity with addresses (single transaction)
 await store.create_identity(Identity(
@@ -353,8 +352,7 @@ count = await store.get_unread_count("room-1", "ws-alice")
 ## Tasks and Observations
 
 ```python
-from roomkit.models import Observation, Task
-from roomkit.models.enums import TaskStatus
+from roomkit.models import Observation, Task, TaskStatus
 
 # Background tasks
 task = await store.add_task(Task(id="task-1", room_id="room-1", title="Call the customer back"))
@@ -381,7 +379,7 @@ All operations are instrumented with `SpanKind.STORE_QUERY` telemetry spans:
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 from roomkit.telemetry import OpenTelemetryProvider
 
 store = PostgresStore("postgresql://...")
@@ -425,7 +423,7 @@ Since all models are stored as JSONB, standard PostgreSQL backup tools (`pg_dump
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 # Before (development):
 kit = RoomKit()  # Uses InMemoryStore by default

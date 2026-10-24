@@ -50,7 +50,7 @@ thread and always names the thread's root (see
 
 ```python
 from roomkit import HookResult, HookTrigger, add_turn_note
-from roomkit.tools.fence import fence
+from roomkit.tools import fence
 
 @kit.hook(HookTrigger.BEFORE_AI_GENERATION)
 async def scope_the_turn(event, ctx) -> HookResult:
@@ -74,7 +74,7 @@ event.
 ## Finding the answers to a request
 
 ```python
-from roomkit.models.store_filter import EventFilter
+from roomkit.models import EventFilter
 
 answers = await kit.store.list_events(
     "room-1", event_filter=EventFilter(responds_to=question_id)

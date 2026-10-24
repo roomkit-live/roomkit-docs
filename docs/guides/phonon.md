@@ -18,7 +18,7 @@ The Linux and Windows x86_64 wheels need a CPU with AVX2 (x86-64-v3).
 ## Quick start
 
 ```python
-from roomkit.voice.tts.phonon import PhononTTSConfig, PhononTTSProvider
+from roomkit.voice.tts import PhononTTSConfig, PhononTTSProvider
 
 tts = PhononTTSProvider(PhononTTSConfig(
     model="hf://gradium/phonon-40m-fr",

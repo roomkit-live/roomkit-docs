@@ -22,7 +22,7 @@ CC BY-NC 4.0) run on vLLM, and are not what these providers call.
 ## Speech-to-text
 
 ```python
-from roomkit.voice.stt.voxtral import VoxtralSTTConfig, VoxtralSTTProvider
+from roomkit.voice.stt import VoxtralSTTConfig, VoxtralSTTProvider
 
 stt = VoxtralSTTProvider(VoxtralSTTConfig(
     api_key="...",
@@ -144,7 +144,7 @@ labels the voices around one microphone (`REFERENCES="Julie=julie.wav"`).
 ## Text-to-speech
 
 ```python
-from roomkit.voice.tts.voxtral import VoxtralTTSConfig, VoxtralTTSProvider
+from roomkit.voice.tts import VoxtralTTSConfig, VoxtralTTSProvider
 
 tts = VoxtralTTSProvider(VoxtralTTSConfig(
     api_key="...",

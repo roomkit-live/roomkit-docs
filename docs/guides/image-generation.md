@@ -111,7 +111,7 @@ Under the hood the vendors disagree — OpenAI routes to `images.edit` with a mu
 `ImageResult.data` is **always** a `data:<mime>;base64,<payload>` URI. Never bare base64, never a remote link. That removes the sniffing every consumer would otherwise have to do, and it makes the result immediately usable:
 
 ```python
-from roomkit.models.event import MediaContent
+from roomkit.models import MediaContent
 
 await kit.send_event(
     room_id="atelier",

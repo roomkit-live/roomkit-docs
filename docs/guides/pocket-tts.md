@@ -24,7 +24,7 @@ pip install roomkit[pocket-tts]
 ## Quick start
 
 ```python
-from roomkit.voice.tts.pocket import PocketTTSConfig, PocketTTSProvider
+from roomkit.voice.tts import PocketTTSConfig, PocketTTSProvider
 
 tts = PocketTTSProvider(PocketTTSConfig(
     language="french",

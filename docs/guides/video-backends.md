@@ -33,7 +33,7 @@ Direct RTP video transport with pre-configured endpoints. No SIP signaling â€” y
 ### Quick start
 
 ```python
-from roomkit.video.backends.rtp import RTPVideoBackend
+from roomkit.video.backends import RTPVideoBackend
 from roomkit import VoiceChannel
 from roomkit.voice.pipeline import AudioPipelineConfig
 
@@ -97,9 +97,9 @@ SIP-based video transport with full call signaling. Extends `SIPVoiceBackend` â€
 ### Quick start
 
 ```python
-from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video.backends import SIPVideoBackend
 from roomkit import VoiceChannel
-from roomkit.voice.base import VoiceSession
+from roomkit.voice import VoiceSession
 
 backend = SIPVideoBackend(
     local_sip_addr=("0.0.0.0", 5060),
@@ -179,7 +179,7 @@ async def on_call(session: VoiceSession):
 Register a callback to receive inbound video frames:
 
 ```python
-from roomkit.video.video_frame import VideoFrame
+from roomkit.video import VideoFrame
 
 def on_video(session, frame: VideoFrame):
     print(f"codec={frame.codec}, size={len(frame.data)}, "
@@ -208,7 +208,7 @@ Send video frames to the remote party:
 await backend.video.send_video(video_session, nal_bytes)
 
 # Send a stream of VideoChunks
-from roomkit.video.base import VideoChunk
+from roomkit.video import VideoChunk
 
 async def video_source():
     yield VideoChunk(data=nal_bytes, keyframe=True, timestamp_ms=0)

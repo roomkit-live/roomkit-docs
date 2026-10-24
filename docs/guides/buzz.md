@@ -48,7 +48,7 @@ Then copy the target channel's UUID from the Buzz app.
 ```python
 from roomkit import BuzzChannel, RoomKit
 from roomkit.providers.buzz import BuzzConfig, BuzzProvider
-from roomkit.sources.buzz import BuzzRelaySource
+from roomkit.sources import BuzzRelaySource
 
 config = BuzzConfig(
     relay_url="wss://your-community.communities.buzz.xyz",
@@ -150,8 +150,8 @@ Two pieces bridge huddles to RoomKit's realtime voice stack:
 ```python
 from roomkit import RealtimeVoiceChannel, RoomKit
 from roomkit.providers.buzz import BuzzConfig
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.backends.buzz_huddle import BuzzHuddleBackend, BuzzHuddleWatcher
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.backends import BuzzHuddleBackend, BuzzHuddleWatcher
 
 kit = RoomKit()
 voice = RealtimeVoiceChannel(

@@ -6,8 +6,7 @@ When an AI provider supports streaming and tools are configured, `AIChannel` use
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 
 class LookupOrderTool:
@@ -73,7 +72,12 @@ The streaming tool loop is built on three event types emitted by `AIProvider.gen
 These are Pydantic models exported from `roomkit`:
 
 ```python
-from roomkit.providers.ai.base import StreamTextDelta, StreamToolCall, StreamDone, StreamEvent
+from roomkit.providers.ai import (
+    StreamDone,
+    StreamEvent,
+    StreamTextDelta,
+    StreamToolCall,
+)
 
 # StreamEvent is the union type
 event: StreamEvent = StreamTextDelta(text="Hello")
@@ -99,10 +103,17 @@ A provider that only implements `generate()` works unchanged, but its text arriv
 ### Implementing for a custom provider
 
 ```python
-from roomkit.providers.ai import CallIds, call_garbled, call_partial, tool_arguments
-from roomkit.providers.ai.base import AIProvider, AIContext
-from roomkit.providers.ai.base import (
-    StreamTextDelta, StreamToolCall, StreamDone, StreamEvent,
+from roomkit.providers.ai import (
+    AIContext,
+    AIProvider,
+    CallIds,
+    StreamDone,
+    StreamEvent,
+    StreamTextDelta,
+    StreamToolCall,
+    call_garbled,
+    call_partial,
+    tool_arguments,
 )
 from collections.abc import AsyncIterator
 
@@ -198,8 +209,8 @@ Read it at the source, by subclassing `AIChannel` and wrapping
 `ChannelOutput.response_stream`:
 
 ```python
-from roomkit.channels.ai import AIChannel
-from roomkit.models.streaming import LoopEndMarker
+from roomkit.channels import AIChannel
+from roomkit.models import LoopEndMarker
 
 
 class ObservingAIChannel(AIChannel):
@@ -281,8 +292,7 @@ Use `MockAIProvider` with `ai_responses` and `streaming=True` to test the stream
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.providers.ai.base import AIResponse, AIToolCall
+from roomkit.providers.ai import AIResponse, AIToolCall, MockAIProvider
 
 responses = [
     # Round 1: tool call

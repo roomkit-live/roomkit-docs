@@ -431,7 +431,7 @@ Transforms outbound TTS audio before playback. Runs after TTS, before recorder a
 from __future__ import annotations
 
 from roomkit.voice.pipeline.postprocessor import AudioPostProcessor
-from roomkit.voice.base import AudioFrame
+from roomkit.voice import AudioFrame
 
 
 class VolumeNormalizer(AudioPostProcessor):
@@ -549,7 +549,7 @@ Backends declare capabilities via `VoiceCapability` flags:
 | `DTMF_SIGNALING` | DTMF sent and received via signaling (RFC 4733) |
 
 ```python
-from roomkit.voice.base import VoiceCapability
+from roomkit.voice import VoiceCapability
 
 # A backend that provides native AEC — pipeline auto-skips AEC stage
 backend._capabilities = VoiceCapability.INTERRUPTION | VoiceCapability.NATIVE_AEC
@@ -654,7 +654,7 @@ AEC error → frame passes through unprocessed → denoiser still runs → VAD s
 from __future__ import annotations
 
 from roomkit.channels import VoiceChannel
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 from roomkit.voice.pipeline import AudioPipelineConfig
 from roomkit.voice.pipeline.aec import SpeexAECProvider
 from roomkit.voice.pipeline.denoiser import RNNoiseDenoiserProvider

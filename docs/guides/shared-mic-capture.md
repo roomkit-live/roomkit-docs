@@ -48,7 +48,7 @@ and flushing in order once the provider handshake completes. There is no new
 control point on the inbound path and no direct call into the provider.
 
 ```python
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.backends import LocalAudioBackend
 
 transport = LocalAudioBackend(source=mic, output_sample_rate=24000)
 ```

@@ -8,9 +8,13 @@ Identity resolution maps inbound message senders to known participants. It runs 
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.identity.base import IdentityResolver, IdentityResult
-from roomkit.models import Identity, InboundMessage
-from roomkit.models.enums import IdentificationStatus
+from roomkit.identity import IdentityResolver
+from roomkit.models import (
+    IdentificationStatus,
+    Identity,
+    IdentityResult,
+    InboundMessage,
+)
 
 
 class CRMResolver(IdentityResolver):
@@ -53,7 +57,7 @@ The resolver returns one of 6 statuses:
 ## Identity Model
 
 ```python
-from roomkit.identity.base import Identity
+from roomkit.models import Identity
 
 identity = Identity(
     id="user-123",
@@ -92,7 +96,7 @@ Fires when the resolver returns multiple candidates:
 from __future__ import annotations
 
 from roomkit import HookTrigger, RoomKit
-from roomkit.models.identity import IdentityHookResult
+from roomkit.models import IdentityHookResult
 
 kit = RoomKit(identity_resolver=my_resolver)
 
@@ -225,8 +229,7 @@ room either name finds wins (RFC §10.4).
 ```python
 from __future__ import annotations
 
-from roomkit import RoomKit
-from roomkit.models.enums import ChannelType
+from roomkit import ChannelType, RoomKit
 
 kit = RoomKit(
     identity_resolver=my_resolver,
@@ -498,8 +501,8 @@ async def sms_only_handler(event, context, id_result):
 ```python
 from __future__ import annotations
 
-from roomkit.identity.base import Identity
-from roomkit.identity.mock import MockIdentityResolver
+from roomkit.models import Identity
+from roomkit.identity import MockIdentityResolver
 
 alice = Identity(id="alice", display_name="Alice")
 bob = Identity(id="bob", display_name="Bob")

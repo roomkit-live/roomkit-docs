@@ -191,7 +191,7 @@ and restart its idle clock:
 ```python
 from datetime import UTC, datetime
 
-from roomkit.models.enums import RoomStatus
+from roomkit.models import RoomStatus
 
 # Under the room's lock: a whole-room write from a room read earlier would
 # undo what a message committed meanwhile wrote (its counters, the room's

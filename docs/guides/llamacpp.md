@@ -65,7 +65,7 @@ Any GGUF repository works: `unsloth/…-GGUF`, `bartowski/…-GGUF`, `Qwen/…-G
 Nothing is specific to llama.cpp: define tools on the `AIChannel` as with any provider.
 
 ```python
-from roomkit.providers.ai.base import AITool
+from roomkit.providers.ai import AITool
 
 weather = AITool(
     name="get_weather",

@@ -33,7 +33,7 @@ every broadcast keep the reference alone, never the bytes.
 
 ```python
 from roomkit import InboundMessage, RoomKit
-from roomkit.models.event import MediaContent
+from roomkit.models import MediaContent
 
 
 async def resolve(media: MediaContent, room_id: str) -> bytes | None:
@@ -75,8 +75,8 @@ into a composite. The reader takes an event and returns the media it carries
 outside its content:
 
 ```python
-from roomkit import RoomKit
-from roomkit.models.event import MediaContent, RoomEvent
+from roomkit import RoomEvent, RoomKit
+from roomkit.models import MediaContent
 
 
 def attached(event: RoomEvent) -> list[MediaContent]:

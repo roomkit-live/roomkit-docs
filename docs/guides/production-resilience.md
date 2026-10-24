@@ -4,45 +4,40 @@ RoomKit provides built-in patterns for production deployments: circuit breakers,
 
 ## Circuit Breaker
 
-Prevents cascading failures by fast-failing requests to unhealthy providers:
-
-```python
-from __future__ import annotations
-
-from roomkit.models.delivery import CircuitBreaker
-
-breaker = CircuitBreaker(
-    failure_threshold=5,      # Open after 5 consecutive failures
-    recovery_timeout=30.0,    # Try again after 30 seconds
-    half_open_max=2,          # Allow 2 test requests in half-open state
-)
-```
-
-### States
+Prevents cascading failures by fast-failing deliveries to an unhealthy
+provider. RoomKit keeps one circuit breaker per transport channel, shared by
+every room the channel is attached to:
 
 ```
 CLOSED (normal)
-  │ failure_threshold consecutive failures
+  │ 5 consecutive failed deliveries
   ▼
 OPEN (fast-fail)
-  │ recovery_timeout elapsed
+  │ 60 seconds elapsed
   ▼
 HALF_OPEN (testing)
-  ├─ half_open_max successes → CLOSED
-  └─ any failure → OPEN
+  ├─ the probe delivery succeeds → CLOSED
+  └─ it fails → OPEN
 ```
 
 | State | Behavior |
 |-------|----------|
-| **CLOSED** | Normal operation. Failures increment the counter |
-| **OPEN** | All requests fail immediately without calling the provider |
-| **HALF_OPEN** | Limited test requests allowed. Success resets to CLOSED, failure reopens |
+| **CLOSED** | Normal operation. A failed delivery, once its binding's retries are spent, increments the counter; a success resets it |
+| **OPEN** | Deliveries to the channel are skipped without calling the provider |
+| **HALF_OPEN** | One probe delivery goes through. Success closes the breaker, failure reopens it |
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `failure_threshold` | `5` | Consecutive failures before opening |
-| `recovery_timeout` | `30.0` | Seconds before trying again |
-| `half_open_max` | `2` | Test requests allowed in half-open |
+A delivery refused for having no recipient does not count as a failure. The
+thresholds are fixed; each transition is a framework event:
+
+```python
+@kit.on("circuit_breaker_opened")
+async def breaker_opened(event):
+    logger.warning("Deliveries to %s suspended", event.data["channel_id"])
+
+@kit.on("circuit_breaker_closed")
+async def breaker_closed(event):
+    logger.info("Deliveries to %s resumed", event.data["channel_id"])
+```
 
 ## Retry Policy
 
@@ -51,7 +46,7 @@ Exponential backoff with configurable limits:
 ```python
 from __future__ import annotations
 
-from roomkit.models.channel import RetryPolicy
+from roomkit.models import RetryPolicy
 
 policy = RetryPolicy(
     max_retries=3,
@@ -150,25 +145,22 @@ Outside `roomkit.providers`, the same pair sits on `GrokTTSConfig`,
 
 ## Rate Limiting
 
-Token bucket rate limiting for inbound messages:
+A binding's `RateLimit` paces delivery to its channel (a burst waits, nothing
+is dropped), and `inbound_rate_limit` drops the inbound messages past its rate
+before any processing:
 
 ```python
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.channels import SMSChannel
-from roomkit.core.rate_limit import RateLimit, TokenBucketRateLimiter
+from roomkit.models import RateLimit
 
-limiter = TokenBucketRateLimiter()
-kit = RoomKit(rate_limiter=limiter)
+kit = RoomKit(inbound_rate_limit=RateLimit(max_per_second=50.0))
 
-sms = SMSChannel(
+await kit.attach_channel(
+    "room-1",
     "sms",
-    provider=twilio_provider,
-    rate_limit=RateLimit(
-        requests_per_second=10,
-        burst_size=20,
-    ),
+    rate_limit=RateLimit(max_per_second=10.0, max_per_minute=300.0),
 )
 ```
 
@@ -239,11 +231,10 @@ from __future__ import annotations
 
 from roomkit import RoomKit, RoomTimers
 from roomkit.channels import AIChannel, SMSChannel
-from roomkit.core.rate_limit import RateLimit, TokenBucketRateLimiter
-from roomkit.models.channel import RetryPolicy
-from roomkit.providers.ai.anthropic import AnthropicAIProvider
-from roomkit.providers.ai.openai import OpenAIAIProvider
-from roomkit.store.postgres import PostgresStore
+from roomkit.models import RateLimit, RetryPolicy
+from roomkit.providers.anthropic import AnthropicAIProvider
+from roomkit.providers.openai import OpenAIAIProvider
+from roomkit.store import PostgresStore
 from roomkit.telemetry import OpenTelemetryProvider
 
 # Production store + telemetry
@@ -252,7 +243,7 @@ telemetry = OpenTelemetryProvider(service_name="roomkit-prod")
 
 kit = RoomKit(
     store=store,
-    rate_limiter=TokenBucketRateLimiter(),
+    inbound_rate_limit=RateLimit(max_per_second=50.0),
     telemetry=telemetry,
 )
 
@@ -267,12 +258,7 @@ ai = AIChannel(
     retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=1.0),
 )
 
-# SMS with rate limiting
-sms = SMSChannel(
-    "sms-main",
-    provider=twilio_provider,
-    rate_limit=RateLimit(requests_per_second=10, burst_size=20),
-)
+sms = SMSChannel("sms-main", provider=twilio_provider)
 
 kit.register_channel(ai)
 kit.register_channel(sms)
@@ -281,6 +267,13 @@ kit.register_channel(sms)
 room = await kit.create_room(
     room_id="support-123",
     timers=RoomTimers(inactive_after_seconds=300, closed_after_seconds=3600),
+)
+
+# SMS delivery paced by the binding
+await kit.attach_channel(
+    "support-123",
+    "sms-main",
+    rate_limit=RateLimit(max_per_second=10.0),
 )
 ```
 

@@ -140,7 +140,7 @@ The same threshold holds for every reader of the room: the request an ACP agent 
 `MockAIProvider` records every `AIContext` it was asked to generate from, which is the simplest way to check the prompt a real provider would receive:
 
 ```python
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 provider = MockAIProvider(responses=["Noted.", "Alice proposed Tuesday, Bob Thursday."])
 ai = AIChannel("ai-assistant", provider=provider, system_prompt="You are the team's scheduling assistant.")

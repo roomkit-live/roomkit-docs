@@ -8,7 +8,7 @@ Ephemeral events are published to rooms and delivered to subscribers in real-tim
 
 ```python
 from roomkit import RoomKit
-from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
+from roomkit.realtime import EphemeralEvent, EphemeralEventType
 
 kit = RoomKit()
 
@@ -85,7 +85,7 @@ await kit.publish_read_receipt(
 Subscribe to receive ephemeral events for a room.
 
 ```python
-from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
+from roomkit.realtime import EphemeralEvent, EphemeralEventType
 
 async def handle_ephemeral(event: EphemeralEvent):
     match event.type:
@@ -116,7 +116,7 @@ Complete example forwarding ephemeral events to WebSocket clients:
 ```python
 from fastapi import FastAPI, WebSocket
 from roomkit import RoomKit
-from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
+from roomkit.realtime import EphemeralEvent, EphemeralEventType
 
 app = FastAPI()
 kit = RoomKit()

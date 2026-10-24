@@ -16,9 +16,8 @@ is the normative reference (conformance Level 3).
 Everything below runs against the mock backend — no SFU, no credentials:
 
 ```python
-from roomkit import MockConferenceBackend, RoomKit
-from roomkit.channels.conference import ConferenceChannel
-from roomkit.voice.stt.mock import MockSTTProvider
+from roomkit import ConferenceChannel, MockConferenceBackend, RoomKit
+from roomkit.voice.stt import MockSTTProvider
 
 kit = RoomKit()
 conference = ConferenceChannel("conf", backend=MockConferenceBackend(), stt=MockSTTProvider())
@@ -335,7 +334,7 @@ conference-specific exceptions, so attaching an `AIChannel` to the room *is*
 the STT → LLM → TTS loop:
 
 ```python
-from roomkit.channels.ai import AIChannel
+from roomkit.channels import AIChannel
 from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 conference = ConferenceChannel("conf", backend=backend, stt=stt, tts=tts)
@@ -395,7 +394,7 @@ a sub-second agent with native turn-taking instead, one realtime provider
 
 ```python
 from roomkit import ConferenceRealtimeConfig
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
+from roomkit.providers.gemini import GeminiLiveProvider
 
 conference = ConferenceChannel(
     "conf",
@@ -557,8 +556,7 @@ One trigger stands apart. `ON_TRANSCRIPTION` fires **synchronously**, with a
 `text`), *before* the text becomes a RoomEvent:
 
 ```python
-from roomkit import ConferenceTranscription, HookResult
-from roomkit.models.enums import HookTrigger
+from roomkit import ConferenceTranscription, HookResult, HookTrigger
 
 @kit.hook(HookTrigger.ON_TRANSCRIPTION)
 async def redact(payload: ConferenceTranscription, ctx) -> HookResult:

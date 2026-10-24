@@ -8,7 +8,7 @@ Unlike webhook-based providers that receive HTTP POST requests, **SourceProvider
 
 ```python
 from roomkit import RoomKit, InboundMessage
-from roomkit.sources.base import SourceProvider, SourceStatus
+from roomkit.sources import SourceProvider, SourceStatus
 
 # Attach an event-driven source
 await kit.attach_source("my-channel", my_source)
@@ -116,7 +116,7 @@ This will:
 Check the health of attached sources:
 
 ```python
-from roomkit.sources.base import SourceStatus
+from roomkit.sources import SourceStatus
 
 # Single source health
 health = await kit.source_health("websocket-events")
@@ -403,7 +403,7 @@ Connect a personal WhatsApp account and receive messages in real time:
 ```python
 from roomkit import RoomKit
 from roomkit.sources import WhatsAppPersonalSourceProvider
-from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.providers.whatsapp import WhatsAppPersonalProvider
 
 kit = RoomKit()
 
@@ -473,7 +473,7 @@ Pair the source with `WhatsAppPersonalProvider` for outbound delivery:
 ```python
 from roomkit import RoomKit, WhatsAppPersonalChannel
 from roomkit.sources import WhatsAppPersonalSourceProvider
-from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.providers.whatsapp import WhatsAppPersonalProvider
 
 kit = RoomKit()
 
@@ -575,7 +575,7 @@ Extend `SourceProvider` or `BaseSourceProvider` to create custom sources:
 
 ```python
 from roomkit import InboundMessage, TextContent
-from roomkit.sources.base import SourceProvider, SourceStatus, SourceHealth
+from roomkit.sources import SourceHealth, SourceProvider, SourceStatus
 
 class MySource(SourceProvider):
     def __init__(self, config: str):
@@ -623,7 +623,7 @@ For convenience, extend `BaseSourceProvider` which provides built-in status trac
 
 ```python
 from roomkit import InboundMessage, TextContent
-from roomkit.sources.base import BaseSourceProvider
+from roomkit.sources import BaseSourceProvider
 import asyncio
 
 class WebSocketSource(BaseSourceProvider):
@@ -682,7 +682,7 @@ class WebSocketSource(BaseSourceProvider):
 
 ```python
 from roomkit import RoomKit, InboundMessage, TextContent
-from roomkit.sources.base import BaseSourceProvider, SourceStatus
+from roomkit.sources import BaseSourceProvider, SourceStatus
 import json
 
 class NATSSource(BaseSourceProvider):
@@ -835,9 +835,8 @@ Browser ──WebSocket──► Your server ◄──WebSocket──► CLI gat
 ```python
 import json
 
-from roomkit import RoomEvent
-from roomkit.models.delivery import ProviderResult
-from roomkit.providers.http.base import HTTPProvider
+from roomkit import ProviderResult, RoomEvent
+from roomkit.providers.http import HTTPProvider
 from roomkit.sources import SourceStatus, WebSocketSource
 
 

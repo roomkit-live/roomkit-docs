@@ -7,7 +7,7 @@ Install with: `pip install roomkit[rtp]`
 ## Quick start
 
 ```python
-from roomkit.voice.backends.rtp import RTPVoiceBackend
+from roomkit.voice.backends import RTPVoiceBackend
 
 backend = RTPVoiceBackend(
     local_addr=("0.0.0.0", 10000),

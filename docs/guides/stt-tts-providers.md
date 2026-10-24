@@ -7,7 +7,8 @@ RoomKit's voice pipeline uses pluggable Speech-to-Text (STT) and Text-to-Speech 
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt import STTProvider, TranscriptionResult
+from roomkit.voice.stt import STTProvider
+from roomkit.voice import TranscriptionResult
 
 
 class STTProvider(ABC):
@@ -229,7 +230,7 @@ The most feature-rich cloud STT provider. Real-time streaming with interim resul
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.deepgram import DeepgramConfig, DeepgramSTTProvider
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider
 
 stt = DeepgramSTTProvider(
     config=DeepgramConfig(
@@ -384,7 +385,7 @@ Run STT locally without API calls using ONNX models. Supports transducer (stream
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
 
 # Streaming transducer mode
 stt = SherpaOnnxSTTProvider(
@@ -441,7 +442,7 @@ Cloud STT with built-in server-side VAD and pre-connect buffering to avoid lost 
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.gradium import GradiumSTTConfig, GradiumSTTProvider
+from roomkit.voice.stt import GradiumSTTConfig, GradiumSTTProvider
 
 stt = GradiumSTTProvider(
     config=GradiumSTTConfig(
@@ -472,7 +473,7 @@ HuggingFace-based ASR with optional vLLM backend for streaming.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.qwen3 import Qwen3ASRConfig, Qwen3ASRProvider
+from roomkit.voice.stt import Qwen3ASRConfig, Qwen3ASRProvider
 
 stt = Qwen3ASRProvider(
     config=Qwen3ASRConfig(
@@ -515,7 +516,7 @@ imported audio files.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.gemini import GeminiSTTConfig, GeminiSTTProvider
+from roomkit.voice.stt import GeminiSTTConfig, GeminiSTTProvider
 
 stt = GeminiSTTProvider(
     config=GeminiSTTConfig(
@@ -669,10 +670,7 @@ wants for live turn-taking, and the opposite of the batch provider above.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.gemini_transcribe import (
-    GeminiTranscribeConfig,
-    GeminiTranscribeProvider,
-)
+from roomkit.voice.stt import GeminiTranscribeConfig, GeminiTranscribeProvider
 
 stt = GeminiTranscribeProvider(
     GeminiTranscribeConfig(
@@ -732,7 +730,7 @@ turn ends by itself; and a REST endpoint for one finished clip.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.meta import MetaSTTConfig, MetaSTTProvider
+from roomkit.voice.stt import MetaSTTConfig, MetaSTTProvider
 
 stt = MetaSTTProvider(
     MetaSTTConfig(
@@ -840,9 +838,8 @@ from __future__ import annotations
 
 import os
 
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.energy import EnergyVADProvider
-from roomkit.voice.stt.azure_mai import AzureMAISTTConfig, AzureMAISTTProvider
+from roomkit.voice.pipeline import AudioPipelineConfig, EnergyVADProvider
+from roomkit.voice.stt import AzureMAISTTConfig, AzureMAISTTProvider
 
 stt = AzureMAISTTProvider(
     AzureMAISTTConfig(
@@ -931,7 +928,7 @@ start; behind a VAD, set `turn_detection=None` for one final per utterance.
 Install with `pip install roomkit[mistral-voice]`.
 
 ```python
-from roomkit.voice.stt.voxtral import VoxtralSTTConfig, VoxtralSTTProvider, VoxtralTurnDetection
+from roomkit.voice.stt import VoxtralSTTConfig, VoxtralSTTProvider, VoxtralTurnDetection
 
 stt = VoxtralSTTProvider(VoxtralSTTConfig(
     api_key="...",
@@ -951,7 +948,9 @@ the errors.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts import AudioChunk, AudioContent, TTSProvider
+from roomkit.voice import AudioChunk
+from roomkit.models import AudioContent
+from roomkit.voice.tts import TTSProvider
 
 
 class TTSProvider(ABC):
@@ -1002,7 +1001,7 @@ High-quality cloud TTS with streaming output, and request stitching from the con
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.elevenlabs import ElevenLabsConfig, ElevenLabsTTSProvider
+from roomkit.voice.tts import ElevenLabsConfig, ElevenLabsTTSProvider
 
 tts = ElevenLabsTTSProvider(
     config=ElevenLabsConfig(
@@ -1122,7 +1121,7 @@ Local TTS using VITS/Piper ONNX models. No API calls required.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 tts = SherpaOnnxTTSProvider(
     config=SherpaOnnxTTSConfig(
@@ -1149,7 +1148,11 @@ LLM-based TTS with zero-shot voice cloning from reference audio.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.qwen3 import Qwen3TTSConfig, Qwen3TTSProvider, VoiceCloneConfig
+from roomkit.voice.tts import (
+    Qwen3TTSConfig,
+    Qwen3TTSProvider,
+    Qwen3VoiceCloneConfig as VoiceCloneConfig,
+)
 
 tts = Qwen3TTSProvider(
     config=Qwen3TTSConfig(
@@ -1200,7 +1203,7 @@ xAI Grok TTS with REST and bidirectional WebSocket streaming. 5 voices, 20 langu
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.grok import GrokTTSConfig, GrokTTSProvider
+from roomkit.voice.tts import GrokTTSConfig, GrokTTSProvider
 
 tts = GrokTTSProvider(
     config=GrokTTSConfig(
@@ -1245,7 +1248,7 @@ Cloud TTS with streaming input support and fine-grained voice control.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.gradium import GradiumTTSConfig, GradiumTTSProvider
+from roomkit.voice.tts import GradiumTTSConfig, GradiumTTSProvider
 
 tts = GradiumTTSProvider(
     config=GradiumTTSConfig(
@@ -1273,7 +1276,7 @@ is for. 30 prebuilt voices and more than 70 documented languages.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
+from roomkit.voice.tts import GeminiTTSConfig, GeminiTTSProvider
 
 tts = GeminiTTSProvider(
     config=GeminiTTSConfig(
@@ -1371,7 +1374,7 @@ map does not name, is refused before any request. The 3.1 and 2.5 models voice
 no dialogue (`max_dialogue_speakers` is 0).
 
 ```python
-from roomkit.voice.voices import DialogueTurn
+from roomkit.voice import DialogueTurn
 
 audio = await tts.synthesize_dialogue(
     [
@@ -1406,7 +1409,7 @@ alternating speakers. See `examples/gemini_tts_voices.py`.
   days, which Google keeps nothing addressable for.
 
 ```python
-from roomkit.voice.tts.gemini_library import GeminiVoiceLibrary, GeminiVoiceLibraryConfig
+from roomkit.voice.tts import GeminiVoiceLibrary, GeminiVoiceLibraryConfig
 
 library = GeminiVoiceLibrary(GeminiVoiceLibraryConfig(api_key="..."))
 narrator = await library.design_voice("Une narratrice québécoise chaleureuse", name="Narratrice")
@@ -1545,7 +1548,7 @@ GGUF-quantized LLM-based TTS with native streaming and voice cloning.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.neutts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
+from roomkit.voice.tts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
 
 tts = NeuTTSProvider(
     config=NeuTTSConfig(
@@ -1577,7 +1580,7 @@ Italian, Spanish and Dutch (pocket-tts 3.3+), voice cloning from a clip.
 Install with `pip install roomkit[pocket-tts]`.
 
 ```python
-from roomkit.voice.tts.pocket import PocketTTSConfig, PocketTTSProvider
+from roomkit.voice.tts import PocketTTSConfig, PocketTTSProvider
 
 tts = PocketTTSProvider(PocketTTSConfig(
     language="french",               # one language per loaded model
@@ -1599,7 +1602,7 @@ on two CPU threads, English, French, German, Spanish and Portuguese, about a
 hundred catalog voices. Install with `pip install roomkit[phonon]`.
 
 ```python
-from roomkit.voice.tts.phonon import PhononTTSConfig, PhononTTSProvider
+from roomkit.voice.tts import PhononTTSConfig, PhononTTSProvider
 
 tts = PhononTTSProvider(PhononTTSConfig(
     model="hf://gradium/phonon-40m-fr",  # None: Phonon 31m English
@@ -1625,7 +1628,7 @@ step with the voice session ([TTS Conversation Context](tts-context.md)).
 from __future__ import annotations
 
 from roomkit import TTSContextConfig, VoiceChannel
-from roomkit.voice.tts.vui import VuiTTSConfig, VuiTTSProvider, VuiVoice
+from roomkit.voice.tts import VuiTTSConfig, VuiTTSProvider, VuiVoice
 
 tts = VuiTTSProvider(
     VuiTTSConfig(
@@ -1698,8 +1701,7 @@ filter what reaches Vui, keeping its own tags:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import StripBrackets, StripEmoji, TTSFilterChain
-from roomkit.voice.tts.vui import VUI_TAGS
+from roomkit.voice.tts import VUI_TAGS, StripBrackets, StripEmoji, TTSFilterChain
 
 voice = VoiceChannel(
     "voice", stt=stt, tts=tts, backend=backend,
@@ -1729,7 +1731,7 @@ from __future__ import annotations
 
 import os
 
-from roomkit.voice.tts.fluxions import FluxionsTTSConfig, FluxionsTTSProvider
+from roomkit.voice.tts import FluxionsTTSConfig, FluxionsTTSProvider
 
 tts = FluxionsTTSProvider(
     FluxionsTTSConfig(
@@ -1790,7 +1792,7 @@ from __future__ import annotations
 
 import os
 
-from roomkit.voice.tts.azure_speech import AzureSpeechTTSConfig, AzureSpeechTTSProvider
+from roomkit.voice.tts import AzureSpeechTTSConfig, AzureSpeechTTSProvider
 
 tts = AzureSpeechTTSProvider(
     AzureSpeechTTSConfig(
@@ -1868,7 +1870,7 @@ from __future__ import annotations
 
 import os
 
-from roomkit.voice.tts.fish_audio import FishAudioTTSConfig, FishAudioTTSProvider
+from roomkit.voice.tts import FishAudioTTSConfig, FishAudioTTSProvider
 
 tts = FishAudioTTSProvider(
     FishAudioTTSConfig(
@@ -1997,7 +1999,7 @@ audio about 0.4–0.5 s; 36 Voxtral 3 presets offline (four French), inline emot
 and pace tags. Install with `pip install roomkit[mistral-voice]`.
 
 ```python
-from roomkit.voice.tts.voxtral import VoxtralTTSConfig, VoxtralTTSProvider
+from roomkit.voice.tts import VoxtralTTSConfig, VoxtralTTSProvider
 
 tts = VoxtralTTSProvider(VoxtralTTSConfig(api_key="...", voice="voice_3137"))  # Manon, French
 ```
@@ -2017,7 +2019,7 @@ Removes `[internal]...[/internal]` and `[internal: ...]` blocks — useful when 
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import StripInternalTags
+from roomkit.voice.tts import StripInternalTags
 
 f = StripInternalTags()
 
@@ -2041,7 +2043,7 @@ Removes all `[...]` bracketed content — catches `[laughs]`, `[pause]`, `[Respo
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import StripBrackets
+from roomkit.voice.tts import StripBrackets
 
 f = StripBrackets()
 clean = f("Sure [laughs] I can help [pause] with that.")
@@ -2068,7 +2070,7 @@ response stored in the conversation keeps the model's text.
 from __future__ import annotations
 
 from roomkit import VoiceChannel
-from roomkit.voice.tts.filters import StripEmoji
+from roomkit.voice.tts import StripEmoji
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=StripEmoji())
 # "C'est rapide et super bon ! 😊" is spoken as "C'est rapide et super bon !"
@@ -2088,7 +2090,7 @@ from the voice does not make a call happen.
 from __future__ import annotations
 
 from roomkit import VoiceChannel
-from roomkit.voice.tts.filters import StripTechnicalText
+from roomkit.voice.tts import StripTechnicalText
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend, tts_filter=StripTechnicalText())
 # 'I'll check. {"name": "delegate", "arguments": {"task": "Weather. Today"}} Done.'
@@ -2128,7 +2130,7 @@ whole text and on a streamed reply alike:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import (
+from roomkit.voice.tts import (
     StripBrackets,
     StripEmoji,
     StripTechnicalText,
@@ -2143,7 +2145,7 @@ tts_filter = TTSFilterChain(StripTechnicalText(), StripEmoji(), StripBrackets(ke
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.filters import StripInternalTags, filtered_stream
+from roomkit.voice.tts import StripInternalTags, filtered_stream
 
 
 async def ai_token_stream():
@@ -2167,7 +2169,7 @@ Buffers streaming tokens and yields complete sentences — prevents unnatural pa
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.sentence_splitter import split_sentences
+from roomkit.voice.tts import split_sentences
 
 # Buffer tokens until sentence boundaries
 async for sentence in split_sentences(ai_token_stream(), min_chunk_chars=20):
@@ -2255,10 +2257,10 @@ four, and what the room keeps of it.
 from __future__ import annotations
 
 from roomkit.channels import VoiceChannel
-from roomkit.voice.backends.mock import MockVoiceBackend
+from roomkit.voice.backends import MockVoiceBackend
 from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.stt.deepgram import DeepgramConfig, DeepgramSTTProvider
-from roomkit.voice.tts.elevenlabs import ElevenLabsConfig, ElevenLabsTTSProvider
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider
+from roomkit.voice.tts import ElevenLabsConfig, ElevenLabsTTSProvider
 
 stt = DeepgramSTTProvider(config=DeepgramConfig(api_key="..."))
 tts = ElevenLabsTTSProvider(
@@ -2281,8 +2283,8 @@ kit.register_channel(voice)
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
 
 stt = MockSTTProvider(transcripts=["Hello", "How are you?"], streaming=False)
 tts = MockTTSProvider(voice="mock-voice")

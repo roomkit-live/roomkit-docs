@@ -23,7 +23,7 @@ working.
 
 ```python
 from roomkit import TTSContext, TTSContextLevel
-from roomkit.voice.tts.base import TTSProvider
+from roomkit.voice.tts import TTSProvider
 
 
 class MyTTS(TTSProvider):

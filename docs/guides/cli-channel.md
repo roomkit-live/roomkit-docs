@@ -7,8 +7,7 @@ an orchestration (swarm, supervisor, pipeline), or an external coding agent
 via `ACPChannel` — without a web frontend.
 
 ```python
-from roomkit import ChannelCategory, CLIChannel, RoomKit
-from roomkit.channels.ai import AIChannel
+from roomkit import AIChannel, CLIChannel, ChannelCategory, RoomKit
 
 kit = RoomKit()
 cli = CLIChannel("cli")

@@ -52,8 +52,14 @@ The greeting text is sent via `say()` (voice) or broadcast (text) — no LLM rou
 Register an `ON_SESSION_STARTED` hook and call `send_greeting()` yourself. This gives you control over timing and lets you add conditional logic.
 
 ```python
-from roomkit import Agent, HookExecution, HookTrigger, RoomKit, VoiceChannel
-from roomkit.models.session_event import SessionStartedEvent
+from roomkit import (
+    Agent,
+    HookExecution,
+    HookTrigger,
+    RoomKit,
+    SessionStartedEvent,
+    VoiceChannel,
+)
 
 agent = Agent(
     "agent",
@@ -90,8 +96,7 @@ Passing `session` and `channel_type` lets `send_greeting()` dispatch correctly �
 Use the hook to call `voice.say()` directly. This bypasses the Agent entirely — useful for non-agent greetings or pre-rendered audio.
 
 ```python
-from roomkit import HookExecution, HookTrigger, VoiceChannel
-from roomkit.models.session_event import SessionStartedEvent
+from roomkit import HookExecution, HookTrigger, SessionStartedEvent, VoiceChannel
 
 voice = VoiceChannel("voice", stt=stt, tts=tts, backend=backend)
 kit.register_channel(voice)
@@ -109,10 +114,16 @@ async def on_ready(event: SessionStartedEvent, context: object) -> None:
 Inject a synthetic user message via `process_inbound()` to trigger an LLM round-trip. The AI generates a contextual greeting instead of a static string.
 
 ```python
-from roomkit import Agent, HookExecution, HookTrigger, RoomKit, VoiceChannel
-from roomkit.models.delivery import InboundMessage
-from roomkit.models.event import TextContent
-from roomkit.models.session_event import SessionStartedEvent
+from roomkit import (
+    Agent,
+    HookExecution,
+    HookTrigger,
+    InboundMessage,
+    RoomKit,
+    SessionStartedEvent,
+    TextContent,
+    VoiceChannel,
+)
 
 agent = Agent(
     "agent",

@@ -44,12 +44,21 @@ A chat agent that can look through the user's webcam when asked. Just pass tool 
 import asyncio
 import os
 
-from roomkit import ChannelCategory, InboundMessage, RoomKit, TextContent, WebSocketChannel
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
-from roomkit.video.vision.webcam_tool import DescribeWebcamTool, ListWebcamsTool
-from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
-from roomkit.channels.ai import AIChannel
+from roomkit import (
+    AIChannel,
+    ChannelCategory,
+    InboundMessage,
+    RoomKit,
+    TextContent,
+    WebSocketChannel,
+)
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.video.vision import (
+    DescribeWebcamTool,
+    ListWebcamsTool,
+    OpenAIVisionConfig,
+    OpenAIVisionProvider,
+)
 
 async def main():
     vision = OpenAIVisionProvider(OpenAIVisionConfig(
@@ -92,8 +101,11 @@ asyncio.run(main())
 Captures a full-resolution screenshot and analyzes it with a `VisionProvider`.
 
 ```python
-from roomkit.video.vision.screen_tool import DescribeScreenTool
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.vision import (
+    DescribeScreenTool,
+    GeminiVisionConfig,
+    GeminiVisionProvider,
+)
 
 vision = GeminiVisionProvider(GeminiVisionConfig(api_key="AIza..."))
 screen_tool = DescribeScreenTool(vision, monitor=1)
@@ -132,7 +144,7 @@ voice = RealtimeVoiceChannel(
 description = await screen_tool.analyze("What browser tabs are open?")
 
 # Low-level: capture only
-from roomkit.video.vision.screen_tool import capture_screen_frame
+from roomkit.video.vision import capture_screen_frame
 frame = capture_screen_frame(monitor=1)  # returns VideoFrame or None
 ```
 
@@ -141,8 +153,11 @@ frame = capture_screen_frame(monitor=1)  # returns VideoFrame or None
 Captures a single frame from the local webcam and analyzes it. The camera opens, discards a few warmup frames (for auto-exposure), grabs one frame, and releases immediately.
 
 ```python
-from roomkit.video.vision.webcam_tool import DescribeWebcamTool
-from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
+from roomkit.video.vision import (
+    DescribeWebcamTool,
+    OpenAIVisionConfig,
+    OpenAIVisionProvider,
+)
 
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="sk-...",
@@ -188,7 +203,7 @@ description = await webcam_tool.analyze(
 Webcams need a few frames for auto-exposure to settle. Without warmup, the first frame is often dark or over-exposed. `capture_webcam_frame` discards 5 frames by default:
 
 ```python
-from roomkit.video.vision.webcam_tool import capture_webcam_frame
+from roomkit.video.vision import capture_webcam_frame
 
 # Default: 5 warmup frames
 frame = capture_webcam_frame(device=0)
@@ -205,7 +220,7 @@ frame = capture_webcam_frame(device=0, warmup_frames=15)
 Probes device indices and returns available cameras with their resolution.
 
 ```python
-from roomkit.video.vision.webcam_tool import ListWebcamsTool
+from roomkit.video.vision import ListWebcamsTool
 
 list_tool = ListWebcamsTool(max_devices=10)
 
@@ -223,7 +238,7 @@ No parameters — the agent calls it to discover cameras before choosing one.
 ### Low-level Function
 
 ```python
-from roomkit.video.vision.webcam_tool import list_webcams, WebcamInfo
+from roomkit.video.vision import WebcamInfo, list_webcams
 
 cameras: list[WebcamInfo] = list_webcams(max_devices=10)
 for cam in cameras:
@@ -235,7 +250,7 @@ for cam in cameras:
 Both `DescribeWebcamTool` and the low-level `save_frame` function save frames as JPEG:
 
 ```python
-from roomkit.video.vision.webcam_tool import capture_webcam_frame, save_frame
+from roomkit.video.vision import capture_webcam_frame, save_frame
 
 frame = capture_webcam_frame(device=0)
 if frame:
@@ -252,7 +267,7 @@ if frame:
 For screen assistants that need to interact with the UI — click buttons, type text, scroll, and press keys:
 
 ```python
-from roomkit.video.vision.screen_input import ScreenInputTools
+from roomkit.video.vision import ScreenInputTools
 
 input_tools = ScreenInputTools(vision=vision, monitor=1)
 ```
@@ -304,10 +319,14 @@ voice = RealtimeVoiceChannel(
 A full screen assistant with all vision tools:
 
 ```python
-from roomkit.video.vision.screen_tool import DescribeScreenTool
-from roomkit.video.vision.webcam_tool import DescribeWebcamTool, ListWebcamsTool
-from roomkit.video.vision.screen_input import ScreenInputTools
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.vision import (
+    DescribeScreenTool,
+    DescribeWebcamTool,
+    GeminiVisionConfig,
+    GeminiVisionProvider,
+    ListWebcamsTool,
+    ScreenInputTools,
+)
 
 vision = GeminiVisionProvider(GeminiVisionConfig(api_key="AIza..."))
 
@@ -333,11 +352,11 @@ All screen and webcam tools accept any `VisionProvider`. Pick one based on your 
 
 ```python
 # Gemini
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
 vision = GeminiVisionProvider(GeminiVisionConfig(api_key="AIza..."))
 
 # OpenAI GPT-4o
-from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
+from roomkit.video.vision import OpenAIVisionConfig, OpenAIVisionProvider
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="sk-...",
     base_url="https://api.openai.com/v1",
@@ -351,7 +370,7 @@ vision = OpenAIVisionProvider(OpenAIVisionConfig(
 ))
 
 # Mock (testing)
-from roomkit.video.vision.mock import MockVisionProvider
+from roomkit.video.vision import MockVisionProvider
 vision = MockVisionProvider(descriptions=["A document with text"])
 ```
 

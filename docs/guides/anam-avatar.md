@@ -54,11 +54,10 @@ pip install roomkit[anam,sip,video]
 ## Quick Start
 
 ```python
-from roomkit.providers.anam.config import AnamConfig
-from roomkit.providers.anam.realtime import AnamRealtimeProvider
-from roomkit.voice.realtime.bridge import RealtimeAVBridge
-from roomkit.video.backends.sip import SIPVideoBackend
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit.providers.anam import AnamConfig, AnamRealtimeProvider
+from roomkit.voice.realtime import RealtimeAVBridge
+from roomkit.video.backends import SIPVideoBackend
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
 
 sip = SIPVideoBackend(
     local_sip_addr=("0.0.0.0", 5060),
@@ -142,9 +141,9 @@ Generic bridge that wires any `VoiceBackend` to any `RealtimeAudioVideoProvider`
 - **Session lifecycle**: Auto-connect on SIP INVITE, auto-disconnect on BYE
 
 ```python
-from roomkit.voice.realtime.bridge import RealtimeAVBridge
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
-from roomkit.video.utils import make_text_frame
+from roomkit.voice.realtime import RealtimeAVBridge
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
+from roomkit.video import make_text_frame
 
 bridge = RealtimeAVBridge(
     provider,                            # Any RealtimeAudioVideoProvider
@@ -165,7 +164,7 @@ bridge = RealtimeAVBridge(
 Anam's WebRTC negotiation takes 3-5 seconds. During this time, the caller sees a black screen by default. Use `connecting_frame` to show a placeholder instead:
 
 ```python
-from roomkit.video.utils import make_text_frame
+from roomkit.video import make_text_frame
 
 bridge = RealtimeAVBridge(
     provider, sip,
@@ -195,8 +194,8 @@ make_text_frame(
 Insert processing stages between provider frames and the encoder:
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.pipeline.filter import WatermarkFilter
 
 bridge = RealtimeAVBridge(
     provider, sip,
@@ -221,7 +220,7 @@ The pipeline supports all standard stages: resizer, filters (watermark, YOLO, ce
 A filter that inspects frames (face touch, an object in view) emits detections. `on_video_detection` receives each one as a `VideoDetectionEvent` whose `session` is the call it was seen on; the callback may be sync or async, and a failure is logged without stopping the video. Without it the detections are dropped.
 
 ```python
-from roomkit.video.events import VideoDetectionEvent
+from roomkit.video import VideoDetectionEvent
 from roomkit.video.pipeline.filter import FaceTouchFilter
 
 async def on_detection(event: VideoDetectionEvent) -> None:
@@ -241,7 +240,7 @@ A `RealtimeAudioVideoChannel` fires the `ON_VIDEO_DETECTION` hook for the same d
 The encoder converts raw RGB frames to H.264 for SIP/RTP:
 
 ```python
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
 
 # Default: 2.5 Mbps, veryfast preset
 encoder = PyAVVideoEncoder(fps=25)
@@ -277,14 +276,13 @@ await bridge.disconnect(session.id)
 Bridge SIP phone calls to Anam — the caller talks to a photorealistic AI avatar:
 
 ```python
-from roomkit.providers.anam.config import AnamConfig
-from roomkit.providers.anam.realtime import AnamRealtimeProvider
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.backends.sip import SIPVideoBackend
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
-from roomkit.video.pipeline.filter.watermark import WatermarkFilter
-from roomkit.video.utils import make_text_frame
-from roomkit.voice.realtime.bridge import RealtimeAVBridge
+from roomkit.providers.anam import AnamConfig, AnamRealtimeProvider
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.backends import SIPVideoBackend
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
+from roomkit.video.pipeline.filter import WatermarkFilter
+from roomkit.video import make_text_frame
+from roomkit.voice.realtime import RealtimeAVBridge
 
 sip = SIPVideoBackend(
     local_sip_addr=("0.0.0.0", 5060),
@@ -330,9 +328,8 @@ For applications that need RoomKit's room model:
 
 ```python
 from roomkit import RealtimeAudioVideoChannel, RoomKit
-from roomkit.providers.anam.config import AnamConfig
-from roomkit.providers.anam.realtime import AnamRealtimeProvider
-from roomkit.voice.realtime.mock import MockRealtimeTransport
+from roomkit.providers.anam import AnamConfig, AnamRealtimeProvider
+from roomkit.voice.realtime import MockRealtimeTransport
 
 provider = AnamRealtimeProvider(AnamConfig(
     api_key="...", avatar_id="...", voice_id="...", llm_id="...",
@@ -392,11 +389,8 @@ async def on_video_ended(event, ctx):
 Use `MockRealtimeAudioVideoProvider` for testing without Anam credentials:
 
 ```python
-from roomkit.voice.realtime.mock import (
-    MockRealtimeAudioVideoProvider,
-    MockRealtimeTransport,
-)
-from roomkit.video.video_frame import VideoFrame
+from roomkit.voice.realtime import MockRealtimeAudioVideoProvider, MockRealtimeTransport
+from roomkit.video import VideoFrame
 
 provider = MockRealtimeAudioVideoProvider()
 transport = MockRealtimeTransport()

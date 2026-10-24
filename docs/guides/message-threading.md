@@ -80,7 +80,7 @@ configuration is required.
 Two [`EventFilter`](../api/store.md) fields drive thread-aware reads:
 
 ```python
-from roomkit.models.store_filter import EventFilter
+from roomkit.models import EventFilter
 
 # Main timeline: roots + standalone messages, replies excluded
 timeline = await kit.store.list_events("r1", event_filter=EventFilter(top_level_only=True))

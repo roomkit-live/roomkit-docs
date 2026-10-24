@@ -246,8 +246,7 @@ for tool_call in response.tool_calls:
 ### Usage
 
 ```python
-from roomkit.providers.gemini.ai import GeminiAIProvider
-from roomkit.providers.gemini.config import GeminiConfig
+from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
 
 config = GeminiConfig(api_key="your-api-key")
 provider = GeminiAIProvider(config)
@@ -288,7 +287,7 @@ Muse Spark cannot turn reasoning off: `reasoning_effort="none"` is sent as
 
 ```python
 from roomkit.providers.vllm import create_vllm_provider, VLLMConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.channels import AIChannel
 
 # Configure connection to a local vLLM server
 config = VLLMConfig(
@@ -341,9 +340,8 @@ the text the model reads is the same as on any other provider.
 ### Usage
 
 ```python
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.channels import AIChannel
 
 config = AnthropicConfig(api_key="your-api-key", model="claude-opus-5")
 provider = AnthropicAIProvider(config)
@@ -389,9 +387,8 @@ Install with: `pip install roomkit[anthropic]`
 ### Usage
 
 ```python
-from roomkit.providers.openai.ai import OpenAIAIProvider
-from roomkit.providers.openai.config import OpenAIConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
+from roomkit.channels import AIChannel
 
 config = OpenAIConfig(api_key="your-api-key", model="gpt-5.6-sol")
 provider = OpenAIAIProvider(config)
@@ -462,9 +459,8 @@ See `examples/cerebras_ai.py` for a complete conversation.
 ### Usage
 
 ```python
-from roomkit.providers.mistral.ai import MistralAIProvider
-from roomkit.providers.mistral.config import MistralConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.providers.mistral import MistralAIProvider, MistralConfig
+from roomkit.channels import AIChannel
 
 config = MistralConfig(api_key="your-api-key")
 provider = MistralAIProvider(config)
@@ -483,9 +479,8 @@ Install with: `pip install roomkit[mistral]`
 ### Usage
 
 ```python
-from roomkit.providers.azure.ai import AzureAIProvider
-from roomkit.providers.azure.config import AzureAIConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.providers.azure import AzureAIConfig, AzureAIProvider
+from roomkit.channels import AIChannel
 
 config = AzureAIConfig(
     azure_endpoint="https://your-resource.openai.azure.com/",
@@ -515,7 +510,7 @@ for thinking, authentication, and sampling options (`temperature`, `num_ctx`,
 
 ```python
 from roomkit.providers.ollama import OllamaAIProvider, OllamaConfig
-from roomkit.channels.ai import AIChannel
+from roomkit.channels import AIChannel
 
 config = OllamaConfig(host="http://localhost:11434", model="llama3.2")
 provider = OllamaAIProvider(config)

@@ -115,17 +115,15 @@ Set `provider="cuda"` on any sherpa-onnx config dataclass:
 ### Example
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.denoiser.sherpa_onnx import (
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
     SherpaOnnxDenoiserConfig,
     SherpaOnnxDenoiserProvider,
-)
-from roomkit.voice.pipeline.vad.sherpa_onnx import (
     SherpaOnnxVADConfig,
     SherpaOnnxVADProvider,
 )
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 # STT + TTS on GPU, VAD + denoiser on CPU (recommended)
 denoiser = SherpaOnnxDenoiserProvider(
@@ -163,8 +161,8 @@ Unlike `RNNoiseDenoiserProvider` (which requires `librnnoise` installed via apt/
 ### Quick start
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.denoiser.sherpa_onnx import (
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
     SherpaOnnxDenoiserConfig,
     SherpaOnnxDenoiserProvider,
 )
@@ -266,13 +264,13 @@ The denoiser is created lazily on the first call to `process()`, not at construc
 - A model that fails to load is logged once; the audio then passes through unchanged.
 - `sherpa-onnx` must be installed at construction time (the import check happens in `__init__`).
 
-### Lazy loader
+### Lazy loading
+
+`sherpa-onnx` is imported when the provider is constructed, not when the name is
+imported:
 
 ```python
-from roomkit.voice import get_sherpa_onnx_denoiser_provider, get_sherpa_onnx_denoiser_config
-
-SherpaOnnxDenoiserProvider = get_sherpa_onnx_denoiser_provider()
-SherpaOnnxDenoiserConfig = get_sherpa_onnx_denoiser_config()
+from roomkit.voice.pipeline import SherpaOnnxDenoiserConfig, SherpaOnnxDenoiserProvider
 
 denoiser = SherpaOnnxDenoiserProvider(
     SherpaOnnxDenoiserConfig(model="gtcrn_simple.onnx")
@@ -282,12 +280,10 @@ denoiser = SherpaOnnxDenoiserProvider(
 ### Denoiser + VAD together
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.denoiser.sherpa_onnx import (
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
     SherpaOnnxDenoiserConfig,
     SherpaOnnxDenoiserProvider,
-)
-from roomkit.voice.pipeline.vad.sherpa_onnx import (
     SherpaOnnxVADConfig,
     SherpaOnnxVADProvider,
 )
@@ -313,8 +309,11 @@ Unlike `EnergyVADProvider` (simple RMS thresholding), the neural VAD can disting
 ### Quick start
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+)
 
 vad = SherpaOnnxVADProvider(
     SherpaOnnxVADConfig(
@@ -396,15 +395,11 @@ Use neural VAD when available, fall back to energy-based:
 ```python
 import os
 
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.energy import EnergyVADProvider
+from roomkit.voice.pipeline import AudioPipelineConfig, EnergyVADProvider
 
 vad_model = os.environ.get("VAD_MODEL", "")
 if vad_model:
-    from roomkit.voice.pipeline.vad.sherpa_onnx import (
-        SherpaOnnxVADConfig,
-        SherpaOnnxVADProvider,
-    )
+    from roomkit.voice.pipeline import SherpaOnnxVADConfig, SherpaOnnxVADProvider
 
     vad = SherpaOnnxVADProvider(
         SherpaOnnxVADConfig(
@@ -419,15 +414,13 @@ else:
 config = AudioPipelineConfig(vad=vad)
 ```
 
-### Lazy loader
+### Lazy loading
 
-If you want to avoid importing sherpa-onnx at module level:
+`sherpa-onnx` is imported when the provider is constructed, not when the name is
+imported:
 
 ```python
-from roomkit.voice import get_sherpa_onnx_vad_provider, get_sherpa_onnx_vad_config
-
-SherpaOnnxVADProvider = get_sherpa_onnx_vad_provider()
-SherpaOnnxVADConfig = get_sherpa_onnx_vad_config()
+from roomkit.voice.pipeline import SherpaOnnxVADConfig, SherpaOnnxVADProvider
 
 vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="ten-vad.onnx"))
 ```
@@ -441,7 +434,7 @@ Speech-to-text using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Suppo
 ### Quick start
 
 ```python
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
 
 stt = SherpaOnnxSTTProvider(
     SherpaOnnxSTTConfig(
@@ -495,7 +488,7 @@ Text-to-speech using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), on th
 ### Piper (VITS)
 
 ```python
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 tts = SherpaOnnxTTSProvider(
     SherpaOnnxTTSConfig(
@@ -595,7 +588,7 @@ This contains:
 ### Quick start
 
 ```python
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
 
 stt = SherpaOnnxSTTProvider(
     SherpaOnnxSTTConfig(
@@ -615,10 +608,13 @@ The `model_type="nemo_transducer"` tells sherpa-onnx how to handle the NeMo mode
 
 ```python
 from roomkit import VoiceChannel
-from roomkit.voice.backends.local import LocalAudioBackend
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.backends import LocalAudioBackend
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+)
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
 
 vad = SherpaOnnxVADProvider(
     SherpaOnnxVADConfig(model="ten-vad.onnx")

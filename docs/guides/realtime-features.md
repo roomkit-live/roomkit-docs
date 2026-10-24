@@ -160,8 +160,7 @@ Deletions are also **persistent events**:
 from __future__ import annotations
 
 from roomkit import EventType, InboundMessage, RoomKit
-from roomkit.models.enums import DeleteType
-from roomkit.models import DeleteContent
+from roomkit.models import DeleteContent, DeleteType
 
 kit = RoomKit()
 

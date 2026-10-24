@@ -5,9 +5,7 @@ Delegate tasks to background agents while conversations continue. A voice agent 
 ## Quick start
 
 ```python
-from roomkit import RoomKit, ChannelCategory
-from roomkit.channels.agent import Agent
-from roomkit.channels.ai import AIChannel
+from roomkit import AIChannel, Agent, ChannelCategory, RoomKit
 
 kit = RoomKit()
 
@@ -272,7 +270,7 @@ For realtime voice agents (Gemini Live, OpenAI Realtime), use `setup_realtime_de
 
 ```python
 from roomkit.tasks import DelegateHandler, setup_realtime_delegation, build_delegate_tool
-from roomkit.channels.realtime_voice import RealtimeVoiceChannel
+from roomkit.channels import RealtimeVoiceChannel
 
 voice = RealtimeVoiceChannel("voice", provider=realtime_provider, transport=backend)
 

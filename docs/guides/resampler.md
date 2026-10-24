@@ -61,7 +61,7 @@ Implement `ResamplerProvider` to plug in a higher-quality algorithm:
 
 ```python
 from roomkit.voice.pipeline.resampler import ResamplerProvider
-from roomkit.voice.audio_frame import AudioFrame
+from roomkit.voice import AudioFrame
 
 
 class SoxrResamplerProvider(ResamplerProvider):

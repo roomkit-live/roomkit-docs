@@ -549,7 +549,7 @@ rooms that already exist (`strategy.install(kit, room_id)`), as
 Subclass `Orchestration` to build your own:
 
 ```python
-from roomkit.orchestration.base import Orchestration
+from roomkit.orchestration import Orchestration
 
 class MyStrategy(Orchestration):
     def agents(self) -> list[Agent]:

@@ -45,7 +45,7 @@ The `DefaultContentTranscoder` applies intelligent fallbacks:
 Channels declare which content types they support:
 
 ```python
-from roomkit.models.enums import ChannelMediaType
+from roomkit.models import ChannelMediaType
 
 # Values: TEXT, RICH, MEDIA, AUDIO, VIDEO, LOCATION, TEMPLATE
 ```
@@ -55,7 +55,7 @@ from roomkit.models.enums import ChannelMediaType
 Each channel binding declares its capabilities:
 
 ```python
-from roomkit.models.channel import ChannelCapabilities, ChannelMediaType
+from roomkit.models import ChannelCapabilities, ChannelMediaType
 
 sms_caps = ChannelCapabilities(
     media_types=[ChannelMediaType.TEXT],       # Text only

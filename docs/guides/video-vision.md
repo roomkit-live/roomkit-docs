@@ -31,9 +31,9 @@ pip install roomkit[openai]         # OpenAI GPT-4o / Ollama / vLLM
 ```python
 import asyncio
 from roomkit import RoomKit, VideoChannel, AIChannel, ChannelCategory
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.video.backends.local import LocalVideoBackend
+from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.providers.ai import MockAIProvider
+from roomkit.video.backends import LocalVideoBackend
 
 async def main():
     kit = RoomKit()
@@ -78,7 +78,7 @@ Transport abstraction for video sources. Two implementations:
 | `MockVideoBackend` | Unit tests | Built-in |
 
 ```python
-from roomkit.video.backends.local import LocalVideoBackend
+from roomkit.video.backends import LocalVideoBackend
 
 backend = LocalVideoBackend(
     device=0,       # Camera index
@@ -101,7 +101,7 @@ Analyzes video frames and returns structured descriptions. Three implementations
 #### Gemini (recommended for speed)
 
 ```python
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
 
 vision = GeminiVisionProvider(GeminiVisionConfig(
     api_key="AIza...",
@@ -112,7 +112,7 @@ vision = GeminiVisionProvider(GeminiVisionConfig(
 #### Ollama (local, free)
 
 ```python
-from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
+from roomkit.video.vision import OpenAIVisionConfig, OpenAIVisionProvider
 
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     base_url="http://localhost:11434/v1",
@@ -161,7 +161,7 @@ The description, the objects and the text read in the frame are data the vision 
 For `RealtimeVoiceChannel` (Gemini Live, OpenAI Realtime), use `setup_realtime_vision()`. It injects the same `<vision>` block, under `context_prefix`, via `inject_text(silent=True)` on active voice sessions:
 
 ```python
-from roomkit import setup_realtime_vision
+from roomkit.video import setup_realtime_vision
 
 setup_realtime_vision(
     kit,
@@ -190,9 +190,8 @@ Two recorder implementations are available:
 **PyAV (recommended for production)** — compressed H.264 MP4 via FFmpeg:
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.recorder.pyav import PyAVVideoRecorder
-from roomkit.video.recorder import VideoRecordingConfig
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.recorder import PyAVVideoRecorder, VideoRecordingConfig
 
 recorder = PyAVVideoRecorder()
 config = VideoRecordingConfig(storage="./recordings", codec="auto")
@@ -207,9 +206,8 @@ video = VideoChannel(
 **OpenCV** — quick path, larger files:
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.recorder.opencv import OpenCVVideoRecorder
-from roomkit.video.recorder import VideoRecordingConfig
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.recorder import OpenCVVideoRecorder, VideoRecordingConfig
 
 recorder = OpenCVVideoRecorder()
 config = VideoRecordingConfig(storage="./recordings")

@@ -5,7 +5,7 @@ A voice backend that handles the full SIP call lifecycle: listening for incoming
 ## Quick start
 
 ```python
-from roomkit.voice.backends.sip import SIPVoiceBackend
+from roomkit.voice.backends import SIPVoiceBackend
 from roomkit.voice import VoiceSession
 
 backend = SIPVoiceBackend(

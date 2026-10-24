@@ -145,8 +145,7 @@ Pair a `PostgresStore` with a `PostgresAdvisoryLockManager`:
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.store.postgres import PostgresStore
-from roomkit.store.postgres_lock import PostgresAdvisoryLockManager
+from roomkit.store import PostgresAdvisoryLockManager, PostgresStore
 
 store = PostgresStore(dsn="postgresql://user:pass@db/roomkit")
 await store.init()
@@ -251,8 +250,7 @@ never sees the other's events:
 
 ```python
 from roomkit import RoomKit
-from roomkit.orchestration import RedisStatusBackend
-from roomkit.orchestration.status_bus import StatusBus
+from roomkit.orchestration import RedisStatusBackend, StatusBus
 from roomkit.realtime import RedisRealtimeBackend
 
 kit = RoomKit(

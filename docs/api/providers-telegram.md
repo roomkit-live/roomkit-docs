@@ -16,7 +16,7 @@ Rich Message path first and falls back to entity formatting on any failure (and
 never re-sends content that already reached the chat):
 
 ```python
-from roomkit.providers.telegram.config import TelegramConfig
+from roomkit.providers.telegram import TelegramConfig
 
 config = TelegramConfig(
     bot_token="...",

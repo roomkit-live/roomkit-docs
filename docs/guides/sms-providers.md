@@ -66,7 +66,7 @@ Twilio sends **form-encoded** webhooks (unlike other providers which use JSON):
 ```python
 from __future__ import annotations
 
-from roomkit.providers.twilio.sms import parse_twilio_webhook
+from roomkit.providers.twilio import parse_twilio_webhook
 
 # In your web framework (e.g., FastAPI)
 @app.post("/webhook/twilio")
@@ -128,7 +128,7 @@ provider = TelnyxSMSProvider(
 ```python
 from __future__ import annotations
 
-from roomkit.providers.telnyx.sms import parse_telnyx_webhook
+from roomkit.providers.telnyx import parse_telnyx_webhook
 
 @app.post("/webhook/telnyx")
 async def telnyx_webhook(request: Request):
@@ -189,7 +189,7 @@ provider = SinchSMSProvider(
 ```python
 from __future__ import annotations
 
-from roomkit.providers.sinch.sms import parse_sinch_webhook
+from roomkit.providers.sinch import parse_sinch_webhook
 
 @app.post("/webhook/sinch")
 async def sinch_webhook(request: Request):
@@ -248,7 +248,7 @@ VoiceMeUp sends MMS as **two separate webhooks** — a text/metadata wrapper fir
 ```python
 from __future__ import annotations
 
-from roomkit.providers.voicemeup.sms import VoiceMeUpSMSProvider
+from roomkit.providers.voicemeup import VoiceMeUpSMSProvider
 
 # Configure MMS aggregation
 async def on_mms_timeout(msg):
@@ -288,7 +288,7 @@ RCS (Rich Communication Services) extends SMS with rich content support — butt
 from __future__ import annotations
 
 from roomkit.channels import RCSChannel
-from roomkit.providers.twilio.rcs import TwilioRCSConfig, TwilioRCSProvider
+from roomkit.providers.twilio import TwilioRCSConfig, TwilioRCSProvider
 
 provider = TwilioRCSProvider(
     TwilioRCSConfig(
@@ -308,7 +308,7 @@ kit.register_channel(rcs)
 ```python
 from __future__ import annotations
 
-from roomkit.providers.twilio.rcs import parse_twilio_rcs_webhook
+from roomkit.providers.twilio import parse_twilio_rcs_webhook
 
 @app.post("/webhook/twilio-rcs")
 async def rcs_webhook(request: Request):
@@ -327,7 +327,7 @@ Includes RCS capability checking — verify if a phone number supports RCS befor
 from __future__ import annotations
 
 from roomkit.channels import RCSChannel
-from roomkit.providers.telnyx.rcs import TelnyxRCSConfig, TelnyxRCSProvider
+from roomkit.providers.telnyx import TelnyxRCSConfig, TelnyxRCSProvider
 
 provider = TelnyxRCSProvider(
     TelnyxRCSConfig(

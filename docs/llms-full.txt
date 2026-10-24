@@ -180,18 +180,16 @@ at resolution naming the two extras rather than backtracking onto an older
 Provider-specific API keys are passed via configuration objects, not environment variables. Example:
 
 ```python
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicConfig
 
 config = AnthropicConfig(api_key="sk-ant-...", model="claude-opus-5")
 ```
 
-For voice providers, use lazy loaders to avoid import-time dependency checks:
+Voice providers are imported from their package; a provider's module, and the
+extra it needs, load on first use of its name:
 
 ```python
-from roomkit.voice import get_deepgram_provider, get_deepgram_config
-
-DeepgramSTTProvider = get_deepgram_provider()
-DeepgramConfig = get_deepgram_config()
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider
 
 stt = DeepgramSTTProvider(DeepgramConfig(api_key="..."))
 ```
@@ -214,6 +212,7 @@ from __future__ import annotations
 import asyncio
 
 from roomkit import (
+    AIChannel,
     ChannelCategory,
     HookResult,
     HookTrigger,
@@ -224,8 +223,7 @@ from roomkit import (
     TextContent,
     WebSocketChannel,
 )
-from roomkit.channels.ai import AIChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 
 async def main() -> None:
@@ -407,8 +405,7 @@ When you send a message from a transport channel, it flows to the AI and back au
 
 ```python
 from roomkit import RoomKit, AIChannel, WebSocketChannel, ChannelCategory, InboundMessage, TextContent
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 kit = RoomKit()
 
@@ -461,7 +458,7 @@ Replace any component at construction:
 
 ```python
 from roomkit import RoomKit, SQLiteStore
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 embedded = RoomKit(store=SQLiteStore("roomkit.db"))
 kit = RoomKit(store=PostgresStore("postgresql://..."))
@@ -601,12 +598,9 @@ The `ChannelType` enum defines 24 values: `SMS`, `MMS`, `RCS`, `EMAIL`, `WHATSAP
 Channels are registered globally, then attached to specific rooms:
 
 ```python
-from roomkit import RoomKit, SMSChannel, ChannelCategory
-from roomkit.channels.ai import AIChannel
-from roomkit.providers.twilio.sms import TwilioSMSProvider
-from roomkit.providers.twilio.config import TwilioConfig
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit import AIChannel, ChannelCategory, RoomKit, SMSChannel
+from roomkit.providers.twilio import TwilioConfig, TwilioSMSProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 kit = RoomKit()
 
@@ -815,10 +809,18 @@ Events carry typed content. RoomKit supports 11 content types, all discriminated
 | `DeleteContent` | `"delete"` | `target_event_id`, `delete_type`, `reason` | Message deletion |
 
 ```python
-from roomkit.models.event import (
-    TextContent, RichContent, MediaContent, AudioContent, VideoContent,
-    LocationContent, CompositeContent, TemplateContent, SystemContent,
-    EditContent, DeleteContent,
+from roomkit.models import (
+    AudioContent,
+    CompositeContent,
+    DeleteContent,
+    EditContent,
+    LocationContent,
+    MediaContent,
+    RichContent,
+    SystemContent,
+    TemplateContent,
+    TextContent,
+    VideoContent,
 )
 
 # Plain text
@@ -933,8 +935,7 @@ When broadcasting events, the EventRouter automatically **transcodes** content t
 Each channel binding declares what content types it supports via `ChannelCapabilities`:
 
 ```python
-from roomkit.models.channel import ChannelCapabilities
-from roomkit.models.enums import ChannelMediaType
+from roomkit.models import ChannelCapabilities, ChannelMediaType
 
 # SMS channel: text only, 160 char limit
 sms_caps = ChannelCapabilities(
@@ -984,44 +985,6 @@ content = CompositeContent(parts=[
 # WebSocket channel: receives CompositeContent as-is (supports RICH + MEDIA)
 # SMS channel: receives TextContent("Check this out!\n[Media: Sunset]")
 # Voice channel (TTS): receives TextContent("Check this out!\n[Media: Sunset]")
-```
-
-### Custom Content Transcoder
-
-Implement the `ContentTranscoder` ABC to customize how content is adapted:
-
-```python
-from roomkit.core.router import ContentTranscoder
-from roomkit.models.channel import ChannelBinding
-from roomkit.models.event import EventContent, TextContent, MediaContent
-from roomkit.models.enums import ChannelMediaType
-
-class MyTranscoder(ContentTranscoder):
-    async def transcode(
-        self,
-        content: EventContent,
-        source_binding: ChannelBinding,
-        target_binding: ChannelBinding,
-    ) -> EventContent | None:
-        target_types = target_binding.capabilities.media_types
-
-        # Custom: convert images to descriptive text for voice channels
-        if isinstance(content, MediaContent) and content.mime_type.startswith("image/"):
-            if ChannelMediaType.MEDIA not in target_types:
-                caption = content.caption or "an image"
-                return TextContent(body=f"[Image received: {caption}]")
-
-        # Custom: truncate long text for SMS
-        if isinstance(content, TextContent):
-            max_len = target_binding.capabilities.max_length
-            if max_len and len(content.body) > max_len:
-                return TextContent(body=content.body[: max_len - 3] + "...")
-
-        return content
-
-# Override the default transcoder on the RoomKit instance
-kit = RoomKit()
-kit._transcoder = MyTranscoder()
 ```
 
 ## Edits and Deletes
@@ -1541,7 +1504,7 @@ async def pii_redactor(event: RoomEvent, ctx: RoomContext) -> HookResult:
 Filter hooks by channel type, channel ID, or direction:
 
 ```python
-from roomkit.models.enums import ChannelType, EventDirection
+from roomkit.models import ChannelType, EventDirection
 
 @kit.hook(
     HookTrigger.AFTER_BROADCAST,
@@ -1846,10 +1809,8 @@ AIChannel connects rooms to LLM providers. When a message is broadcast to an AI 
 ## Basic Setup
 
 ```python
-from roomkit import RoomKit, ChannelCategory
-from roomkit.channels.ai import AIChannel
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit import AIChannel, ChannelCategory, RoomKit
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 kit = RoomKit()
 
@@ -1907,19 +1868,17 @@ Pick **Ollama** over the OpenAI-compat shim (`OpenAIAIProvider` pointed at `http
 
 ```python
 # OpenAI
-from roomkit.providers.openai.ai import OpenAIAIProvider
-from roomkit.providers.openai.config import OpenAIConfig
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
 
 provider = OpenAIAIProvider(OpenAIConfig(api_key="sk-...", model="gpt-4o"))
 
 # Gemini
-from roomkit.providers.gemini.ai import GeminiAIProvider
-from roomkit.providers.gemini.config import GeminiConfig
+from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
 
 provider = GeminiAIProvider(GeminiConfig(api_key="...", model="gemini-3.8-flash"))
 
 # Mock (for testing)
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 provider = MockAIProvider(responses=["Hello!", "How can I help?"])
 ```
@@ -1943,7 +1902,7 @@ current Grok usage after total input crosses the vendor's threshold.
 
 ```python
 from roomkit import Agent
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 agent = Agent(
     "support-agent",
@@ -2033,7 +1992,7 @@ channel object serves every room it is bound to, so a host acting for one
 room addresses that room:
 
 ```python
-from roomkit.models.steering import Cancel, InjectMessage
+from roomkit.models import Cancel, InjectMessage
 
 agent.steer(Cancel(reason="stop pressed"), room_id="room-a")   # every loop of room-a
 agent.steer(InjectMessage(content="Also check the logs."), room_id="room-a")  # its latest
@@ -2064,10 +2023,8 @@ reaches the loops of the process it is called in.
 Define tools as JSON schema and attach them to the AI channel:
 
 ```python
-from roomkit import ChannelCategory
-from roomkit.channels.ai import AIChannel
-from roomkit.providers.openai.ai import OpenAIAIProvider
-from roomkit.providers.openai.config import OpenAIConfig
+from roomkit import AIChannel, ChannelCategory
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
 
 ai = AIChannel(
     "ai-assistant",
@@ -2141,7 +2098,7 @@ result says `isError` raises it.
 For structured tool definitions, use the `Tool` base class:
 
 ```python
-from roomkit.tools.base import Tool
+from roomkit.tools import Tool
 
 class GetWeather(Tool):
     name = "get_weather"
@@ -2165,7 +2122,7 @@ ai = AIChannel("ai", provider=provider, tools=[GetWeather()])
 Integrate Model Context Protocol servers:
 
 ```python
-from roomkit.tools.mcp import MCPToolProvider
+from roomkit.tools import MCPToolProvider
 
 async with MCPToolProvider.from_command("uvx", ["mcp-server-sqlite", "--db", "data.db"]) as mcp:
     ai = AIChannel("ai", provider=provider, tools=mcp.get_tools(), tool_handler=mcp.as_tool_handler())
@@ -2585,8 +2542,8 @@ Read it at the source, by subclassing `AIChannel` and wrapping
 `ChannelOutput.response_stream`:
 
 ```python
-from roomkit.channels.ai import AIChannel
-from roomkit.models.streaming import LoopEndMarker
+from roomkit.channels import AIChannel
+from roomkit.models import LoopEndMarker
 
 
 class ObservingAIChannel(AIChannel):
@@ -2655,7 +2612,7 @@ the turn's deliveries are done (`ON_EVENT_UPDATED` fires), so read it from the
 store or the `InboundResult`, not from the frames a channel was streamed.
 
 ```python
-from roomkit.models.enums import EventType
+from roomkit.models import EventType
 
 result = await kit.process_inbound(message)
 reply = [e for e in result.response_events if e.type == EventType.MESSAGE][-1]
@@ -2777,7 +2734,7 @@ provider = create_vllm_provider(VLLMConfig(
 AI providers that support vision can process images sent as `MediaContent`:
 
 ```python
-from roomkit.models.event import MediaContent
+from roomkit.models import MediaContent
 
 await kit.process_inbound(
     InboundMessage(
@@ -3051,7 +3008,7 @@ ai = AIChannel(
 For production use without a vector database, use `PostgresKnowledgeSource`:
 
 ```python
-from roomkit.knowledge.postgres import PostgresKnowledgeSource
+from roomkit.knowledge import PostgresKnowledgeSource
 
 source = PostgresKnowledgeSource(dsn="postgresql://localhost/mydb")
 await source.init()
@@ -3558,7 +3515,7 @@ base64, never a remote URL. `MediaContent.url` accepts data URIs, so a
 generated image enters a room without conversion:
 
 ```python
-from roomkit.models.event import MediaContent
+from roomkit.models import MediaContent
 
 await kit.send_event(
     room_id=room_id,
@@ -3619,9 +3576,9 @@ VoiceChannel handles real-time audio conversations with speech-to-text, text-to-
 ```python
 from roomkit import RoomKit, VoiceChannel
 from roomkit.voice.pipeline import AudioPipelineConfig, MockVADProvider, VADEvent, VADEventType
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
-from roomkit.voice.backends.mock import MockVoiceBackend
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
+from roomkit.voice.backends import MockVoiceBackend
 
 kit = RoomKit()
 
@@ -3683,10 +3640,7 @@ reaches its recordings. Left unset, the read is unscoped.
 Use lazy loaders to avoid import-time dependency checks:
 
 ```python
-from roomkit.voice import get_deepgram_provider, get_deepgram_config
-
-DeepgramSTTProvider = get_deepgram_provider()
-DeepgramConfig = get_deepgram_config()
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider
 
 stt = DeepgramSTTProvider(DeepgramConfig(
     api_key="...",
@@ -3755,10 +3709,7 @@ async def pin_language(event, ctx):
 | Mock | `MockTTSProvider` | — | built-in |
 
 ```python
-from roomkit.voice import get_elevenlabs_provider, get_elevenlabs_config
-
-ElevenLabsTTSProvider = get_elevenlabs_provider()
-ElevenLabsConfig = get_elevenlabs_config()
+from roomkit.voice.tts import ElevenLabsConfig, ElevenLabsTTSProvider
 
 tts = ElevenLabsTTSProvider(ElevenLabsConfig(
     api_key="...",
@@ -3784,17 +3735,14 @@ stream it goes with the next sentence. Do not put `StripBrackets` in front of
 an expressive provider: it removes the directions.
 
 ```python
-from roomkit.voice import get_fish_audio_tts_config, get_fish_audio_tts_provider
-
-FishAudioTTSProvider = get_fish_audio_tts_provider()
-FishAudioTTSConfig = get_fish_audio_tts_config()
+from roomkit.voice.tts import FishAudioTTSConfig, FishAudioTTSProvider
 
 tts = FishAudioTTSProvider(FishAudioTTSConfig(api_key="...", voice="<voice id>", expressive=True))
 ```
 A voice is an index into `voices.bin` (`ff_siwis` is 30). It speaks 24 kHz.
 
 ```python
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 d = "kokoro-int8-multi-lang-v1_0"
 tts = SherpaOnnxTTSProvider(SherpaOnnxTTSConfig(
@@ -3815,8 +3763,8 @@ dialogue in one clip, and `GeminiVoiceLibrary` designs or replicates custom
 voices, replication requiring the person's recorded consent.
 
 ```python
-from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
-from roomkit.voice.voices import DialogueTurn
+from roomkit.voice.tts import GeminiTTSConfig, GeminiTTSProvider
+from roomkit.voice import DialogueTurn
 
 tts = GeminiTTSProvider(GeminiTTSConfig(api_key="..."))
 quebec = await tts.list_voices(language="fr-CA", gender="female")   # 37 voices
@@ -3840,9 +3788,8 @@ Backends handle audio transport between the framework and participants:
 | Mock | `MockVoiceBackend` | built-in | Testing |
 
 ```python
-from roomkit.voice import get_local_audio_backend
+from roomkit.voice.backends import LocalAudioBackend
 
-LocalAudioBackend = get_local_audio_backend()
 backend = LocalAudioBackend(sample_rate=16000, channels=1)
 ```
 
@@ -3860,7 +3807,7 @@ running, and the session becomes one subscriber among several.
 
 ```python
 from roomkit.voice.capture import LocalMicSource
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.backends import LocalAudioBackend
 
 mic = LocalMicSource(sample_rate=24000, backlog_seconds=10)
 mic.start()                                        # the device opens once
@@ -3895,7 +3842,7 @@ unchanged.
 Four strategies for handling user speech during TTS playback:
 
 ```python
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 
 voice = VoiceChannel(
     "voice",
@@ -4052,7 +3999,7 @@ voice = VoiceChannel(
 AEC and AGC stages automatically skip when the backend declares native capabilities:
 
 ```python
-from roomkit.voice.base import VoiceCapability
+from roomkit.voice import VoiceCapability
 
 # If backend has NATIVE_AEC, pipeline skips the AEC stage
 # If backend has NATIVE_AGC, pipeline skips the AGC stage
@@ -4086,11 +4033,9 @@ vad = MockVADProvider(events=[
 ])
 
 # Production: SherpaOnnx VAD (local, offline)
-from roomkit.voice import get_sherpa_onnx_vad_provider, get_sherpa_onnx_vad_config
+from roomkit.voice.pipeline import SherpaOnnxVADConfig, SherpaOnnxVADProvider
 
-SherpaVAD = get_sherpa_onnx_vad_provider()
-SherpaVADConfig = get_sherpa_onnx_vad_config()
-vad = SherpaVAD(SherpaVADConfig(threshold=0.5))
+vad = SherpaOnnxVADProvider(SherpaOnnxVADConfig(threshold=0.5))
 ```
 
 ### AEC (Acoustic Echo Cancellation)
@@ -4099,10 +4044,9 @@ Removes echo from the microphone signal caused by speaker output.
 
 ```python
 # Speex AEC
-from roomkit.voice import get_speex_aec_provider
+from roomkit.voice.pipeline import SpeexAECProvider
 
-SpeexAEC = get_speex_aec_provider()
-aec = SpeexAEC(sample_rate=16000, frame_size=160, filter_length=1024)
+aec = SpeexAECProvider(sample_rate=16000, frame_size=160, filter_length=1024)
 
 # WebRTC AEC
 # pip install roomkit[webrtc-aec]
@@ -4149,20 +4093,17 @@ from roomkit.voice.pipeline import WebRTCNoiseSuppressorProvider
 denoiser = WebRTCNoiseSuppressorProvider(sample_rate=24000)
 
 # RNNoise (local, CPU-based): the system librnnoise, else pip install roomkit[rnnoise]
-from roomkit.voice import get_rnnoise_denoiser_provider
+from roomkit.voice.pipeline import RNNoiseDenoiserProvider
 
-RNNoise = get_rnnoise_denoiser_provider()
-denoiser = RNNoise()
+denoiser = RNNoiseDenoiserProvider()
 
 # ai|coustics Quail (cloud API)
 # pip install roomkit[aicoustics]
 
 # SherpaOnnx denoiser (local ONNX model)
-from roomkit.voice import get_sherpa_onnx_denoiser_provider, get_sherpa_onnx_denoiser_config
+from roomkit.voice.pipeline import SherpaOnnxDenoiserConfig, SherpaOnnxDenoiserProvider
 
-SherpaDenoiser = get_sherpa_onnx_denoiser_provider()
-SherpaDenoiserConfig = get_sherpa_onnx_denoiser_config()
-denoiser = SherpaDenoiser(SherpaDenoiserConfig())
+denoiser = SherpaOnnxDenoiserProvider(SherpaOnnxDenoiserConfig())
 
 # DPDFNet through the same provider (sherpa-onnx 1.12.30+), streaming
 from roomkit.voice.pipeline import SherpaOnnxDenoiserConfig, SherpaOnnxDenoiserProvider
@@ -4200,7 +4141,7 @@ format before creating native state and keep model history isolated per stream.
 Identifies different speakers in multi-speaker audio.
 
 ```python
-from roomkit.voice.pipeline.diarization.mock import MockDiarizationProvider
+from roomkit.voice.pipeline.diarization import MockDiarizationProvider
 
 diarizer = MockDiarizationProvider()
 ```
@@ -4210,7 +4151,7 @@ diarizer = MockDiarizationProvider()
 Detects dual-tone multi-frequency signals (phone keypad tones).
 
 ```python
-from roomkit.voice.pipeline.dtmf.mock import MockDTMFDetector
+from roomkit.voice.pipeline.dtmf import MockDTMFDetector
 
 dtmf = MockDTMFDetector()
 ```
@@ -4222,8 +4163,7 @@ DTMF runs in parallel with other pipeline stages (before AEC/AGC/denoiser).
 Records inbound and outbound audio.
 
 ```python
-from roomkit.voice.pipeline.recorder.mock import MockAudioRecorder
-from roomkit.voice.pipeline.recorder import RecordingConfig
+from roomkit.voice.pipeline.recorder import MockAudioRecorder, RecordingConfig
 
 recorder = MockAudioRecorder()
 config = RecordingConfig(
@@ -4238,7 +4178,7 @@ config = RecordingConfig(
 Determines when a speaker's turn is complete (post-STT):
 
 ```python
-from roomkit.voice.pipeline.turn.mock import MockTurnDetector
+from roomkit.voice.pipeline.turn import MockTurnDetector
 
 turn = MockTurnDetector()
 
@@ -4253,7 +4193,7 @@ Turn detection accumulates transcription fragments until `is_complete=True`, the
 Classifies short utterances as backchannel (e.g., "uh-huh", "yeah") to prevent false interruptions:
 
 ```python
-from roomkit.voice.pipeline.backchannel.mock import MockBackchannelDetector
+from roomkit.voice.pipeline.backchannel import MockBackchannelDetector
 
 bc = MockBackchannelDetector()
 ```
@@ -4265,7 +4205,7 @@ Used with `InterruptionStrategy.SEMANTIC`.
 Custom audio transformations on outbound TTS audio:
 
 ```python
-from roomkit.voice.pipeline.postprocessor.base import AudioPostProcessor
+from roomkit.voice.pipeline.postprocessor import AudioPostProcessor
 ```
 
 ## Local Models
@@ -4289,11 +4229,14 @@ whose message is the download command. Other keywords override the model's
 settings:
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+)
 from roomkit.voice.pipeline.turn import SmartTurnConfig, SmartTurnDetector
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 stt = SherpaOnnxSTTProvider(SherpaOnnxSTTConfig.from_local_model("zipformer-en-2023-06-26"))
 tts = SherpaOnnxTTSProvider(
@@ -4326,7 +4269,7 @@ speaker id is taken (`voice="ff_siwis"`, per synthesis too).
 The `InterruptionHandler` manages what happens when the user speaks during TTS playback:
 
 ```python
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 
 config = InterruptionConfig(
     strategy=InterruptionStrategy.CONFIRMED,
@@ -4356,7 +4299,7 @@ audio path when immediate barge-in is more important.
 Inbound audio is represented as `AudioFrame`:
 
 ```python
-from roomkit.voice.audio_frame import AudioFrame
+from roomkit.voice import AudioFrame
 
 frame = AudioFrame(
     data=b"\x00" * 320,   # Raw PCM bytes
@@ -4405,15 +4348,12 @@ RealtimeVoiceChannel connects to speech-to-speech AI models that handle audio di
 ## Basic Setup
 
 ```python
-from roomkit import RoomKit, ChannelCategory
-from roomkit.channels.realtime_voice import RealtimeVoiceChannel
+from roomkit import ChannelCategory, RealtimeVoiceChannel, RoomKit
 
 kit = RoomKit()
 
 # Gemini Live example
-from roomkit.voice import get_gemini_live_provider
-
-GeminiLiveProvider = get_gemini_live_provider()
+from roomkit.providers.gemini import GeminiLiveProvider
 
 realtime = RealtimeVoiceChannel(
     "realtime-voice",
@@ -4442,13 +4382,12 @@ await kit.attach_channel("voice-room", "realtime-voice", category=ChannelCategor
 
 ```python
 # OpenAI Realtime
-from roomkit.voice import get_openai_realtime_provider
+from roomkit.providers.openai import OpenAIRealtimeProvider
 
-OpenAIRealtime = get_openai_realtime_provider()
-provider = OpenAIRealtime(api_key="sk-...")  # defaults to gpt-realtime-2.1
+provider = OpenAIRealtimeProvider(api_key="sk-...")  # defaults to gpt-realtime-2.1
 
 # OpenAI GPT-Live (full-duplex; the model listens and speaks at once)
-from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+from roomkit.providers.openai import HostedReasoning, OpenAILiveProvider
 
 provider = OpenAILiveProvider(
     api_key="sk-...",  # defaults to gpt-live-1
@@ -4458,11 +4397,9 @@ provider = OpenAILiveProvider(
 # RealtimeVoiceChannel(reasoning_backend=AIProviderReasoningBackend(...))
 
 # xAI Grok
-from roomkit.voice import get_xai_realtime_provider, get_xai_realtime_config
+from roomkit.providers.xai import XAIRealtimeConfig, XAIRealtimeProvider
 
-XAIRealtime = get_xai_realtime_provider()
-XAIConfig = get_xai_realtime_config()
-provider = XAIRealtime(XAIConfig(api_key="..."))
+provider = XAIRealtimeProvider(XAIRealtimeConfig(api_key="..."))
 ```
 
 ## Audio Transports
@@ -4477,10 +4414,9 @@ Transports handle the client-side audio (browser or device):
 | Mock | `MockRealtimeTransport` | built-in | Testing |
 
 ```python
-from roomkit.voice import get_websocket_realtime_transport
+from roomkit.voice.realtime import WebSocketRealtimeTransport
 
-WSTransport = get_websocket_realtime_transport()
-transport = WSTransport(host="0.0.0.0", port=8765)
+transport = WebSocketRealtimeTransport(host="0.0.0.0", port=8765)
 
 realtime = RealtimeVoiceChannel(
     "realtime-voice",
@@ -4522,7 +4458,8 @@ it or reaches its recordings. Left unset, `join()` reads the room unscoped and
 Realtime voice channels support tool calling during conversations:
 
 ```python
-from roomkit.channels.realtime_voice import RealtimeVoiceChannel, ToolHandler
+from roomkit.channels import RealtimeVoiceChannel
+from roomkit import ToolHandler
 
 async def handle_tool(name: str, arguments: dict) -> str:
     if name == "get_weather":
@@ -4620,9 +4557,8 @@ Real-time video channels with pluggable processing pipelines, vision AI, bridgin
 
 ```python
 from roomkit import RoomKit, VideoChannel
-from roomkit.video import VideoPipelineConfig
-from roomkit.video.backends.local import LocalVideoBackend
-from roomkit.video.vision.mock import MockVisionProvider
+from roomkit.video import MockVisionProvider, VideoPipelineConfig
+from roomkit.video.backends import LocalVideoBackend
 
 kit = RoomKit()
 video = VideoChannel(
@@ -4655,8 +4591,8 @@ Inbound frames are `VideoFrame` dataclasses: `data: bytes`, `codec="h264"`, `wid
 Inbound order: `[Decoder] -> [Resizer] -> [Transforms...] -> [Filters...] -> taps/bridge/vision`. All stages optional; decoder, resizer, and vision are singular, transforms and filters are chained lists. Vision runs async on its own throttled schedule; the rest is synchronous per-frame.
 
 ```python
-from roomkit.video.pipeline.decoder.pyav import PyAVVideoDecoder
-from roomkit.video.pipeline.resizer.pyav import PyAVVideoResizer
+from roomkit.video.pipeline.decoder import PyAVVideoDecoder
+from roomkit.video.pipeline.resizer import PyAVVideoResizer
 
 pipeline = VideoPipelineConfig(
     decoder=PyAVVideoDecoder(output_format="rgb24"),
@@ -4819,7 +4755,7 @@ SYSTEM lifecycle events; payload in `event.content.data` (always includes `chann
 | Mock | `MockConferenceBackend` | `capabilities=` kwarg | built-in |
 
 ```python
-from roomkit.conference.livekit import LiveKitConfig, LiveKitConferenceBackend
+from roomkit.conference import LiveKitConferenceBackend, LiveKitConfig
 
 backend = LiveKitConferenceBackend(LiveKitConfig(url="wss://my-project.livekit.cloud"))
 ```
@@ -4860,9 +4796,8 @@ await channel.set_bot_grants(ConferenceGrants.observer())  # None returns to der
 
 ```python
 import asyncio
-from roomkit import MockConferenceBackend, RoomKit
-from roomkit.channels.conference import ConferenceChannel
-from roomkit.voice.stt.mock import MockSTTProvider
+from roomkit import ConferenceChannel, MockConferenceBackend, RoomKit
+from roomkit.voice.stt import MockSTTProvider
 
 async def main() -> None:
     backend = MockConferenceBackend()
@@ -4899,7 +4834,7 @@ Linear agent chain: triage -> handler -> resolver. Each agent can only hand off 
 
 ```python
 from roomkit import Agent, Pipeline, RoomKit, WebSocketChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 triage = Agent(
     "triage",
@@ -5264,7 +5199,7 @@ Built-in phases: `ConversationPhase.INTAKE`, `QUALIFICATION`, `HANDLING`, `ESCAL
 ### Reading State
 
 ```python
-from roomkit.orchestration.state import get_conversation_state
+from roomkit.orchestration import get_conversation_state
 
 room = await kit.get_room("support")
 state = get_conversation_state(room)
@@ -5284,7 +5219,7 @@ for t in state.phase_history:
 Use `state.context` to store arbitrary data that survives across conversation turns:
 
 ```python
-from roomkit.orchestration.state import get_conversation_state, save_conversation_state
+from roomkit.orchestration import get_conversation_state, save_conversation_state
 
 room = await kit.get_room("support")
 state = get_conversation_state(room)
@@ -5318,7 +5253,7 @@ attempts = state.context.get("attempts", 0)
 Use `state.transition()` to change phase and record an audit entry:
 
 ```python
-from roomkit.orchestration.state import get_conversation_state, save_conversation_state
+from roomkit.orchestration import get_conversation_state, save_conversation_state
 
 room = await kit.get_room("support")
 state = get_conversation_state(room)
@@ -5350,8 +5285,15 @@ Each transition creates an immutable `PhaseTransition`:
 ### Using State in Hooks
 
 ```python
-from roomkit import HookTrigger, HookResult, RoomEvent, RoomContext, TextContent
-from roomkit.orchestration.state import get_conversation_state, save_conversation_state
+from roomkit import (
+    HookResult,
+    HookTrigger,
+    RoomContext,
+    RoomEvent,
+    TextContent,
+    get_conversation_state,
+    save_conversation_state,
+)
 
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
 async def track_sentiment(event: RoomEvent, ctx: RoomContext) -> HookResult:
@@ -5387,7 +5329,7 @@ All conditions are ANDed — every non-None field must match:
 ### Routing by Phase
 
 ```python
-from roomkit.orchestration.router import ConversationRouter, RoutingRule, RoutingConditions
+from roomkit.orchestration import ConversationRouter, RoutingConditions, RoutingRule
 
 router = ConversationRouter(
     rules=[
@@ -5401,7 +5343,7 @@ router = ConversationRouter(
 ### Routing by Channel Type (Origin)
 
 ```python
-from roomkit.models.enums import ChannelType
+from roomkit.models import ChannelType
 
 router = ConversationRouter(
     rules=[
@@ -5549,7 +5491,7 @@ RoomKit takes the decision, never the syntax: `@codex`, a `/agent` command or a 
 Define stages explicitly:
 
 ```python
-from roomkit.orchestration.pipeline import ConversationPipeline, PipelineStage
+from roomkit.orchestration import ConversationPipeline, PipelineStage
 
 pipeline = ConversationPipeline(stages=[
     PipelineStage(phase="triage", agent_id="triage", next="handling"),
@@ -5599,8 +5541,8 @@ the tenant from `current_tool_room().organization_id`, as in the parent, and
 Agents use memory providers to maintain conversation context across handoffs:
 
 ```python
-from roomkit.memory.sliding_window import SlidingWindowMemory
-from roomkit.orchestration.handoff import HandoffMemoryProvider
+from roomkit.memory import SlidingWindowMemory
+from roomkit.orchestration import HandoffMemoryProvider
 
 agent = Agent(
     "agent",
@@ -5620,8 +5562,7 @@ Transport providers handle sending and receiving messages over external protocol
 
 ```python
 from roomkit import RoomKit, SMSChannel
-from roomkit.providers.twilio.sms import TwilioSMSProvider
-from roomkit.providers.twilio.config import TwilioConfig
+from roomkit.providers.twilio import TwilioConfig, TwilioSMSProvider
 
 sms = SMSChannel("sms-twilio", provider=TwilioSMSProvider(TwilioConfig(
     account_sid="AC...",
@@ -5636,8 +5577,7 @@ kit.register_channel(sms)
 ### Telnyx
 
 ```python
-from roomkit.providers.telnyx.sms import TelnyxSMSProvider
-from roomkit.providers.telnyx.config import TelnyxConfig
+from roomkit.providers.telnyx import TelnyxConfig, TelnyxSMSProvider
 
 sms = SMSChannel("sms-telnyx", provider=TelnyxSMSProvider(TelnyxConfig(
     api_key="KEY...",
@@ -5648,8 +5588,7 @@ sms = SMSChannel("sms-telnyx", provider=TelnyxSMSProvider(TelnyxConfig(
 ### Sinch
 
 ```python
-from roomkit.providers.sinch.sms import SinchSMSProvider
-from roomkit.providers.sinch.config import SinchConfig
+from roomkit.providers.sinch import SinchConfig, SinchSMSProvider
 
 sms = SMSChannel("sms-sinch", provider=SinchSMSProvider(SinchConfig(
     service_plan_id="...",
@@ -5661,8 +5600,7 @@ sms = SMSChannel("sms-sinch", provider=SinchSMSProvider(SinchConfig(
 ### VoiceMeUp
 
 ```python
-from roomkit.providers.voicemeup.sms import VoiceMeUpSMSProvider
-from roomkit.providers.voicemeup.config import VoiceMeUpConfig
+from roomkit.providers.voicemeup import VoiceMeUpConfig, VoiceMeUpSMSProvider
 
 sms = SMSChannel("sms-vmu", provider=VoiceMeUpSMSProvider(VoiceMeUpConfig(
     username="...",
@@ -5676,10 +5614,10 @@ sms = SMSChannel("sms-vmu", provider=VoiceMeUpSMSProvider(VoiceMeUpConfig(
 Each SMS provider has a webhook parser:
 
 ```python
-from roomkit.providers.twilio.sms import parse_twilio_webhook
-from roomkit.providers.telnyx.sms import parse_telnyx_webhook
-from roomkit.providers.sinch.sms import parse_sinch_webhook
-from roomkit.providers.voicemeup.sms import VoiceMeUpSMSProvider  # use provider.parse_inbound()
+from roomkit.providers.twilio import parse_twilio_webhook
+from roomkit.providers.telnyx import parse_telnyx_webhook
+from roomkit.providers.sinch import parse_sinch_webhook
+from roomkit.providers.voicemeup import VoiceMeUpSMSProvider  # use provider.parse_inbound()
 
 # Or use the universal webhook parser
 message = await kit.process_webhook(meta=request_data, channel_id="sms-twilio")
@@ -5689,7 +5627,7 @@ message = await kit.process_webhook(meta=request_data, channel_id="sms-twilio")
 
 ```python
 from roomkit import RCSChannel
-from roomkit.providers.twilio.rcs import TwilioRCSProvider, TwilioRCSConfig
+from roomkit.providers.twilio import TwilioRCSConfig, TwilioRCSProvider
 
 rcs = RCSChannel("rcs-main", provider=TwilioRCSProvider(TwilioRCSConfig(
     account_sid="AC...",
@@ -5706,8 +5644,7 @@ Also available via Telnyx: `TelnyxRCSProvider`, `TelnyxRCSConfig`.
 
 ```python
 from roomkit import EmailChannel
-from roomkit.providers.elasticemail.email import ElasticEmailProvider
-from roomkit.providers.elasticemail.config import ElasticEmailConfig
+from roomkit.providers.elasticemail import ElasticEmailConfig, ElasticEmailProvider
 
 email = EmailChannel("email-main", provider=ElasticEmailProvider(ElasticEmailConfig(
     api_key="...",
@@ -5719,10 +5656,9 @@ email = EmailChannel("email-main", provider=ElasticEmailProvider(ElasticEmailCon
 ### SendGrid
 
 ```python
-from roomkit.providers.sendgrid.email import SendGridEmailProvider
-from roomkit.providers.sendgrid.config import SendGridConfig
+from roomkit.providers.sendgrid import SendGridConfig, SendGridProvider
 
-email = EmailChannel("email-sg", provider=SendGridEmailProvider(SendGridConfig(
+email = EmailChannel("email-sg", provider=SendGridProvider(SendGridConfig(
     api_key="SG...",
     from_email="support@example.com",
 )))
@@ -5734,7 +5670,7 @@ email = EmailChannel("email-sg", provider=SendGridEmailProvider(SendGridConfig(
 
 ```python
 from roomkit import WhatsAppChannel
-from roomkit.providers.whatsapp.base import WhatsAppProvider
+from roomkit.providers.whatsapp import WhatsAppProvider
 
 whatsapp = WhatsAppChannel("wa-business", provider=WhatsAppProvider(
     access_token="...",
@@ -5746,7 +5682,7 @@ whatsapp = WhatsAppChannel("wa-business", provider=WhatsAppProvider(
 
 ```python
 from roomkit import WhatsAppPersonalChannel
-from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.providers.whatsapp import WhatsAppPersonalProvider
 
 whatsapp = WhatsAppPersonalChannel("wa-personal", provider=WhatsAppPersonalProvider())
 ```
@@ -5757,8 +5693,7 @@ Requires `pip install roomkit[whatsapp-personal]`. Uses the neonize library for 
 
 ```python
 from roomkit import MessengerChannel
-from roomkit.providers.messenger.facebook import FacebookMessengerProvider
-from roomkit.providers.messenger.config import MessengerConfig
+from roomkit.providers.messenger import FacebookMessengerProvider, MessengerConfig
 
 messenger = MessengerChannel("messenger", provider=FacebookMessengerProvider(MessengerConfig(
     page_access_token="...",
@@ -5773,8 +5708,7 @@ Webhook parser: `parse_messenger_webhook(request_data, channel_id="messenger")` 
 
 ```python
 from roomkit import TelegramChannel
-from roomkit.providers.telegram.bot import TelegramBotProvider
-from roomkit.providers.telegram.config import TelegramConfig
+from roomkit.providers.telegram import TelegramBotProvider, TelegramConfig
 
 telegram = TelegramChannel("telegram", provider=TelegramBotProvider(TelegramConfig(
     bot_token="123456:ABC-DEF...",
@@ -5817,7 +5751,7 @@ Discord has no webhook parser — it is a source + provider pair sharing one per
 ```python
 from roomkit import DiscordChannel, RoomKit
 from roomkit.providers.discord import DiscordBotProvider, DiscordConfig
-from roomkit.sources.discord import DiscordGatewaySource
+from roomkit.sources import DiscordGatewaySource
 
 config = DiscordConfig(
     bot_token="...",               # SecretStr
@@ -5850,7 +5784,7 @@ Buzz (Block's Nostr-based team workspace) follows the same source + provider pai
 ```python
 from roomkit import BuzzChannel, RoomKit
 from roomkit.providers.buzz import BuzzConfig, BuzzProvider
-from roomkit.sources.buzz import BuzzRelaySource
+from roomkit.sources import BuzzRelaySource
 
 config = BuzzConfig(
     relay_url="wss://your-community.communities.buzz.xyz",
@@ -5903,8 +5837,7 @@ Buzz huddles (live voice calls in ephemeral channels) are handled by the voice s
 
 ```python
 from roomkit import TeamsChannel
-from roomkit.providers.teams.bot_framework import BotFrameworkTeamsProvider
-from roomkit.providers.teams.config import TeamsConfig
+from roomkit.providers.teams import BotFrameworkTeamsProvider, TeamsConfig
 
 teams = TeamsChannel("teams", provider=BotFrameworkTeamsProvider(TeamsConfig(
     app_id="...",
@@ -5915,7 +5848,7 @@ teams = TeamsChannel("teams", provider=BotFrameworkTeamsProvider(TeamsConfig(
 Features: proactive messaging, bot mention detection, reaction handling, conversation reference storage.
 
 ```python
-from roomkit.providers.teams.webhook import parse_teams_webhook, is_bot_added
+from roomkit.providers.teams import is_bot_added, parse_teams_webhook
 
 # Parse incoming Teams activity
 activity = parse_teams_webhook(request_data)
@@ -5930,8 +5863,7 @@ if is_bot_added(activity):
 
 ```python
 from roomkit import HTTPChannel
-from roomkit.providers.http.provider import WebhookHTTPProvider
-from roomkit.providers.http.config import HTTPProviderConfig
+from roomkit.providers.http import HTTPProviderConfig, WebhookHTTPProvider
 
 http = HTTPChannel("webhook", provider=WebhookHTTPProvider(HTTPProviderConfig(
     webhook_url="https://api.example.com/messages",
@@ -5990,7 +5922,7 @@ kit.unsubscribe_websocket("ws-client", "conn-1", "room-2")
 ## Phone Number Utilities
 
 ```python
-from roomkit.providers.sms.phone import is_valid_phone, normalize_phone
+from roomkit.providers.sms import is_valid_phone, normalize_phone
 
 is_valid_phone("+15551234567")   # True
 normalize_phone("555-123-4567")  # "+15551234567"
@@ -6034,7 +5966,7 @@ Inbound message arrives with sender_id
 
 ```python
 from roomkit import RoomKit, HookTrigger
-from roomkit.models.identity import IdentityHookResult, Identity
+from roomkit.models import Identity, IdentityHookResult
 
 kit = RoomKit()
 
@@ -6061,9 +5993,8 @@ async def handle_unknown(event, ctx):
 ### Custom Identity Resolver
 
 ```python
-from roomkit.identity.base import IdentityResolver
-from roomkit.models.identity import IdentityResult, Identity
-from roomkit.models.enums import IdentificationStatus
+from roomkit.identity import IdentityResolver
+from roomkit.models import IdentificationStatus, Identity, IdentityResult
 
 class DatabaseIdentityResolver(IdentityResolver):
     async def resolve(self, message: InboundMessage, context: RoomContext) -> IdentityResult:
@@ -6157,7 +6088,7 @@ await kit.publish_reaction("room-1", "alice", target_event_id="evt-123", emoji="
 await kit.publish_read_receipt("room-1", "alice", event_id="evt-123")
 
 # Tool call events (AIChannel publishes these automatically)
-from roomkit.realtime.base import EphemeralEventType
+from roomkit.realtime import EphemeralEventType
 
 await kit.publish_tool_call("room-1", "ai-agent", [
     {"id": "tc1", "name": "search", "arguments": {"q": "test"}}
@@ -6236,7 +6167,7 @@ await kit.mark_all_read("room-1", "ws-user")
 The default `InMemoryRealtime` works for single-process deployments. For distributed systems, implement `RealtimeBackend`:
 
 ```python
-from roomkit.realtime.base import RealtimeBackend
+from roomkit.realtime import RealtimeBackend
 
 class RedisRealtimeBackend(RealtimeBackend):
     # Implement publish, subscribe, unsubscribe using Redis Pub/Sub
@@ -6253,7 +6184,8 @@ RoomKit provides built-in resilience patterns for production deployments: rate l
 Apply rate limits per channel binding:
 
 ```python
-from roomkit import RoomKit, RateLimit
+from roomkit import RoomKit
+from roomkit.models import RateLimit
 
 kit = RoomKit()
 
@@ -6265,52 +6197,50 @@ await kit.attach_channel("room-1", "sms-out",
 Framework-level inbound rate limiting:
 
 ```python
-from roomkit import RoomKit, RateLimit
+from roomkit import RoomKit
+from roomkit.models import RateLimit
 
 kit = RoomKit(inbound_rate_limit=RateLimit(max_per_second=10.0))
 ```
 
 ## Circuit Breaker
 
-Isolate provider failures with circuit breakers:
+RoomKit keeps one circuit breaker per transport channel. Five consecutive
+failed deliveries (each after its binding's retries) open it: deliveries to
+that channel are then skipped, without calling the provider, for 60 seconds;
+after that one probe delivery goes through, and a success closes the breaker.
+A delivery refused for having no recipient does not count. Each transition is
+a framework event:
 
 ```python
-from roomkit.core.circuit_breaker import CircuitBreaker
+@kit.on("circuit_breaker_opened")
+async def breaker_opened(event):
+    logger.warning("Deliveries to %s suspended", event.data["channel_id"])
 
-cb = CircuitBreaker(failure_threshold=5, recovery_timeout=60.0)
-
-if cb.allow_request():
-    try:
-        result = await provider.send(event, to="+1234567890")
-        cb.record_success()
-    except Exception:
-        cb.record_failure()  # Opens after 5 consecutive failures
+@kit.on("circuit_breaker_closed")
+async def breaker_closed(event):
+    logger.info("Deliveries to %s resumed", event.data["channel_id"])
 ```
 
 States: CLOSED (normal) -> OPEN (failing, fast-reject) -> HALF_OPEN (testing recovery).
 
 ## Retry with Backoff
 
-Retry failed operations with exponential backoff:
+A binding's `RetryPolicy` retries a failed delivery with exponential backoff
+(`base_delay_seconds × exponential_base^attempt`, capped at
+`max_delay_seconds`). An error that declares itself not retryable, or one
+outside `retryable_errors` when the policy names some, fails on its first
+attempt:
 
 ```python
-from roomkit import RetryPolicy
-from roomkit.core.retry import retry_with_backoff
+from roomkit.models import RetryPolicy
 
-policy = RetryPolicy(
-    max_retries=3,
-    base_delay_seconds=1.0,
-    max_delay_seconds=60.0,
-)
-
-result = await retry_with_backoff(flaky_function, policy)
-```
-
-Apply per binding:
-
-```python
 await kit.attach_channel("room-1", "sms-out",
-    retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=1.0),
+    retry_policy=RetryPolicy(
+        max_retries=3,
+        base_delay_seconds=1.0,
+        max_delay_seconds=60.0,
+    ),
 )
 ```
 
@@ -6439,8 +6369,9 @@ await kit.process_delivery_status(status)
 ## Production Setup Example
 
 ```python
-from roomkit import RoomKit, RateLimit, RetryPolicy
-from roomkit.store.postgres import PostgresStore
+from roomkit import RoomKit
+from roomkit.models import RateLimit, RetryPolicy
+from roomkit.store import PostgresStore
 
 kit = RoomKit(
     store=PostgresStore("postgresql://user:pass@localhost/roomkit"),
@@ -6511,7 +6442,7 @@ Install: `pip install roomkit[postgres]`
 
 ```python
 from roomkit import RoomKit
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 store = PostgresStore("postgresql://user:pass@localhost/roomkit")
 await store.init()  # Creates connection pool and tables
@@ -6583,7 +6514,7 @@ import asyncio
 import os
 
 from roomkit import InboundMessage, RoomKit, TextContent, WebSocketChannel
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 
 async def main() -> None:
@@ -6622,9 +6553,7 @@ if __name__ == "__main__":
 Implement `ConversationStore` for other backends (Redis, DynamoDB, etc.):
 
 ```python
-from roomkit import RoomAlreadyExistsError
-from roomkit.store.base import ConversationStore
-from roomkit.models.room import Room
+from roomkit import ConversationStore, Room, RoomAlreadyExistsError
 
 class RedisStore(ConversationStore):
     async def create_room(self, room: Room) -> Room:
@@ -6772,9 +6701,8 @@ class TestMyFeature:
 ## Mock AI Provider
 
 ```python
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.channels.ai import AIChannel
-from roomkit import ChannelCategory
+from roomkit.providers.ai import MockAIProvider
+from roomkit import AIChannel, ChannelCategory
 
 # Responds with pre-configured messages in order
 provider = MockAIProvider(responses=["Response 1", "Response 2"])
@@ -6794,7 +6722,7 @@ print([t.name for t in last_call.tools])
 ## Mock Voice Backend
 
 ```python
-from roomkit.voice.backends.mock import MockVoiceBackend
+from roomkit.voice.backends import MockVoiceBackend
 
 backend = MockVoiceBackend()
 
@@ -6880,8 +6808,8 @@ backchannel = MockBackchannelDetector()
 ## Mock STT/TTS
 
 ```python
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
 
 stt = MockSTTProvider(transcripts=["Hello", "How are you?"])
 tts = MockTTSProvider()
@@ -6890,7 +6818,7 @@ tts = MockTTSProvider()
 ## Mock Identity Resolver
 
 ```python
-from roomkit.identity.mock import MockIdentityResolver
+from roomkit.identity import MockIdentityResolver
 
 resolver = MockIdentityResolver()
 kit = RoomKit(identity_resolver=resolver)
@@ -6899,7 +6827,7 @@ kit = RoomKit(identity_resolver=resolver)
 ## Mock Realtime Provider
 
 ```python
-from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
+from roomkit.voice.realtime import MockRealtimeProvider, MockRealtimeTransport
 
 provider = MockRealtimeProvider()
 transport = MockRealtimeTransport()
@@ -6939,10 +6867,10 @@ async def test_hook_blocks_message() -> None:
 ```python
 from roomkit import VoiceChannel
 from roomkit.voice.pipeline import AudioPipelineConfig, MockVADProvider, VADEvent, VADEventType
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
-from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.voice.audio_frame import AudioFrame
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
+from roomkit.voice.backends import MockVoiceBackend
+from roomkit.voice import AudioFrame
 
 async def test_voice_pipeline() -> None:
     kit = RoomKit()
@@ -6974,7 +6902,7 @@ async def test_voice_pipeline() -> None:
 
 ```python
 from roomkit import Agent, Pipeline, RoomKit, WebSocketChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 async def test_pipeline_orchestration() -> None:
     agent1 = Agent("a1", provider=MockAIProvider(responses=["Transferring..."]))
@@ -7418,58 +7346,61 @@ kit = RoomKit(
 ### AI Providers
 
 ```python
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
-from roomkit.providers.openai.ai import OpenAIAIProvider
-from roomkit.providers.openai.config import OpenAIConfig
-from roomkit.providers.gemini.ai import GeminiAIProvider
-from roomkit.providers.gemini.config import GeminiConfig
-from roomkit.providers.mistral.ai import MistralAIProvider
-from roomkit.providers.mistral.config import MistralConfig
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.providers.ai.base import AIProvider, AIContext, AIResponse, AITool, AIToolCall
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
+from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
+from roomkit.providers.mistral import MistralAIProvider, MistralConfig
+from roomkit.providers.ai import (
+    AIContext,
+    AIProvider,
+    AIResponse,
+    AITool,
+    AIToolCall,
+    MockAIProvider,
+)
 ```
 
 ### SMS Providers
 
 ```python
-from roomkit.providers.twilio.sms import TwilioSMSProvider
-from roomkit.providers.twilio.config import TwilioConfig
-from roomkit.providers.telnyx.sms import TelnyxSMSProvider
-from roomkit.providers.telnyx.config import TelnyxConfig
-from roomkit.providers.sinch.sms import SinchSMSProvider
-from roomkit.providers.sinch.config import SinchConfig
-from roomkit.providers.sms.mock import MockSMSProvider
+from roomkit.providers.twilio import TwilioConfig, TwilioSMSProvider
+from roomkit.providers.telnyx import TelnyxConfig, TelnyxSMSProvider
+from roomkit.providers.sinch import SinchConfig, SinchSMSProvider
+from roomkit.providers.sms import MockSMSProvider
 ```
 
-### Voice (Lazy Loaders)
+### Voice Providers and Backends
 
 ```python
-from roomkit.voice import (
-    get_deepgram_provider, get_deepgram_config,
-    get_elevenlabs_provider, get_elevenlabs_config,
-    get_gemini_tts_provider, get_gemini_tts_config,
-    get_sherpa_onnx_stt_provider, get_sherpa_onnx_tts_provider,
-    get_local_audio_backend,
-    get_fastrtc_backend,
-    get_rtp_backend,
-    get_sip_backend,
-    get_gemini_live_provider,
-    get_openai_realtime_provider,
-    get_xai_realtime_provider,
-    get_websocket_realtime_transport,
-    get_speex_aec_provider,
-    get_rnnoise_denoiser_provider,
+# Each module loads, with the vendor SDK it needs, on first use of its name.
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider, SherpaOnnxSTTProvider
+from roomkit.voice.tts import (
+    ElevenLabsConfig,
+    ElevenLabsTTSProvider,
+    GeminiTTSConfig,
+    GeminiTTSProvider,
+    SherpaOnnxTTSProvider,
 )
+from roomkit.voice.backends import (
+    FastRTCVoiceBackend,
+    LocalAudioBackend,
+    RTPVoiceBackend,
+    SIPVoiceBackend,
+)
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.providers.openai import OpenAIRealtimeProvider
+from roomkit.providers.xai import XAIRealtimeProvider
+from roomkit.voice.realtime import WebSocketRealtimeTransport
+from roomkit.voice import RNNoiseDenoiserProvider, SpeexAECProvider
 ```
 
 ### Voice Mocks
 
 ```python
-from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
-from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
+from roomkit.voice.backends import MockVoiceBackend
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
+from roomkit.voice.realtime import MockRealtimeProvider, MockRealtimeTransport
 from roomkit.voice.testing import ScenarioVoiceBackend, VoiceTrace, PCMAudio, read_wav, write_wav
 ```
 
@@ -7483,34 +7414,49 @@ from roomkit.voice.pipeline import (
     MockAGCProvider, MockAECProvider, MockDTMFDetector,
     MockAudioRecorder, MockTurnDetector, MockBackchannelDetector,
 )
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
-from roomkit.voice.stt.language import STTLanguageLock  # also exported from roomkit
-from roomkit.voice.audio_frame import AudioFrame
+from roomkit.voice import (
+    AudioFrame,
+    InterruptionConfig,
+    InterruptionStrategy,
+    STTLanguageLock,
+)
 ```
 
 ### Orchestration
 
 ```python
-from roomkit.orchestration.state import get_conversation_state, ConversationState
-from roomkit.orchestration.router import ConversationRouter, RoutingRule
-from roomkit.orchestration.pipeline import ConversationPipeline, PipelineStage
-from roomkit.orchestration.handoff import HandoffHandler, HandoffMemoryProvider
+from roomkit.orchestration import (
+    ConversationPipeline,
+    ConversationRouter,
+    ConversationState,
+    HandoffHandler,
+    HandoffMemoryProvider,
+    PipelineStage,
+    RoutingRule,
+    get_conversation_state,
+)
 ```
 
 ### Storage
 
 ```python
-from roomkit.store.base import ConversationStore
-from roomkit.store.memory import InMemoryStore
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import ConversationStore, InMemoryStore, PostgresStore
 ```
 
 ### Content Types
 
 ```python
-from roomkit.models.event import (
-    TextContent, RichContent, MediaContent, AudioContent, VideoContent,
-    LocationContent, CompositeContent, TemplateContent, SystemContent,
-    EditContent, DeleteContent,
+from roomkit.models import (
+    AudioContent,
+    CompositeContent,
+    DeleteContent,
+    EditContent,
+    LocationContent,
+    MediaContent,
+    RichContent,
+    SystemContent,
+    TemplateContent,
+    TextContent,
+    VideoContent,
 )
 ```

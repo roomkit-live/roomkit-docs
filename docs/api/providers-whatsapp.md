@@ -24,7 +24,7 @@ optional dependency.
 ```python
 from roomkit import RoomKit, WhatsAppPersonalChannel
 from roomkit.sources import WhatsAppPersonalSourceProvider
-from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.providers.whatsapp import WhatsAppPersonalProvider
 
 kit = RoomKit()
 

@@ -10,7 +10,7 @@ RoomKit provides two levels of auditing: **tool auditing** for recording individ
 
 ```python
 from roomkit import RoomKit
-from roomkit.orchestration.session_audit import JSONLSessionAuditor
+from roomkit.orchestration import JSONLSessionAuditor
 
 auditor = JSONLSessionAuditor("/tmp/session.jsonl")
 kit = RoomKit()
@@ -23,7 +23,7 @@ auditor.attach(kit)
 # Tool calls are recorded manually from your handler:
 from datetime import UTC, datetime
 
-from roomkit.orchestration.tool_audit import ToolAuditEntry
+from roomkit.orchestration import ToolAuditEntry
 
 auditor.record_tool(ToolAuditEntry(
     ts=datetime.now(UTC).isoformat(),  # entries hold UTC, as the auditor writes them
@@ -86,7 +86,7 @@ audited = audit_tool_handler(handler, bridge, agent_id="my-agent")
 Implement the `SessionAuditor` ABC:
 
 ```python
-from roomkit.orchestration.session_audit import SessionAuditor, SessionAuditEntry
+from roomkit.orchestration import SessionAuditEntry, SessionAuditor
 
 class MySessionAuditor(SessionAuditor):
     def record(self, entry: SessionAuditEntry) -> None:
@@ -110,7 +110,7 @@ For simpler use cases that only need tool call recording, use `JSONLToolAuditor`
 
 ```python
 from roomkit import Agent, Tool
-from roomkit.orchestration.tool_audit import JSONLToolAuditor, audit_tool_handler
+from roomkit.orchestration import JSONLToolAuditor, audit_tool_handler
 
 # Create an auditor
 auditor = JSONLToolAuditor("/tmp/audit.jsonl")
@@ -166,7 +166,7 @@ text, the parts flattened with `[image]` placeholders.
 Writes entries to a JSONL file and keeps them in memory:
 
 ```python
-from roomkit.orchestration.tool_audit import JSONLToolAuditor
+from roomkit.orchestration import JSONLToolAuditor
 
 auditor = JSONLToolAuditor("/tmp/screen_ai/audit.jsonl")
 ```
@@ -176,7 +176,7 @@ auditor = JSONLToolAuditor("/tmp/screen_ai/audit.jsonl")
 Logs entries in real-time via Python logging:
 
 ```python
-from roomkit.orchestration.tool_audit import ConsoleToolAuditor
+from roomkit.orchestration import ConsoleToolAuditor
 
 auditor = ConsoleToolAuditor()
 # Logs: [AUDIT] [+] exec.search_google → ok (9333ms) {"status": "ok", ...}
@@ -187,7 +187,7 @@ auditor = ConsoleToolAuditor()
 Implement the `ToolAuditor` ABC:
 
 ```python
-from roomkit.orchestration.tool_audit import ToolAuditor, ToolAuditEntry
+from roomkit.orchestration import ToolAuditEntry, ToolAuditor
 
 class MyAuditor(ToolAuditor):
     def record(self, entry: ToolAuditEntry) -> None:
@@ -207,7 +207,7 @@ class MyAuditor(ToolAuditor):
 #### For AIChannel (standard tool handler)
 
 ```python
-from roomkit.orchestration.tool_audit import audit_tool_handler
+from roomkit.orchestration import audit_tool_handler
 
 # Wraps async (name, args) -> str
 audited = audit_tool_handler(handler, auditor, agent_id="exec")

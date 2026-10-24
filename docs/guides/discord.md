@@ -50,7 +50,7 @@ the invite worked.
 ```python
 from roomkit import DiscordChannel, RoomKit
 from roomkit.providers.discord import DiscordBotProvider, DiscordConfig
-from roomkit.sources.discord import DiscordGatewaySource
+from roomkit.sources import DiscordGatewaySource
 
 config = DiscordConfig(bot_token="YOUR_BOT_TOKEN")
 source = DiscordGatewaySource(config, channel_id="discord-main")

@@ -6,10 +6,11 @@ The simplest way to handle SMS webhooks from any provider is using `extract_sms_
 
 ```python
 from roomkit import RoomKit
-from roomkit.providers.sms.meta import extract_sms_meta
-from roomkit.providers.voicemeup.sms import parse_voicemeup_webhook
+from roomkit.providers.sms import extract_sms_meta
+from roomkit.providers.voicemeup import VoiceMeUpConfig, VoiceMeUpSMSProvider
 
 kit = RoomKit()
+voicemeup = VoiceMeUpSMSProvider(VoiceMeUpConfig(...))
 
 @app.post("/webhooks/sms/{provider}/inbound")
 async def sms_webhook(provider: str, payload: dict):
@@ -17,7 +18,7 @@ async def sms_webhook(provider: str, payload: dict):
 
     # VoiceMeUp needs special handling for MMS aggregation
     if provider == "voicemeup":
-        message = parse_voicemeup_webhook(payload, channel_id=channel_id)
+        message = voicemeup.parse_inbound(payload, channel_id=channel_id)
         if message is None:
             return {"ok": True, "buffered": True}  # Waiting for image part
         await kit.process_inbound(message)
@@ -106,8 +107,6 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ::: roomkit.providers.voicemeup.config.VoiceMeUpConfig
 
-<!-- ::: roomkit.parse_voicemeup_webhook  # not yet implemented -->
-
 ### VoiceMeUp MMS Split Webhooks
 
 VoiceMeUp handles MMS differently from other providers. When a user sends an MMS (text + image), VoiceMeUp sends **two separate webhooks**:
@@ -121,22 +120,25 @@ Both webhooks have **different `sms_hash` values**, making correlation non-trivi
 
 ### Automatic MMS Aggregation
 
-`parse_voicemeup_webhook()` automatically handles MMS aggregation. When the first webhook arrives (text + `.mms.html`), it buffers the message and returns `None`. When the second webhook arrives (image), it merges them and returns a complete `InboundMessage`.
+`VoiceMeUpSMSProvider.parse_inbound()` handles MMS aggregation, in a buffer of
+its own per provider instance. When the first webhook arrives (text + `.mms.html`), it buffers the message and returns `None`. When the second webhook arrives (image), it merges them and returns a complete `InboundMessage`.
 
 **Usage example**:
 
 ```python
-from roomkit.providers.voicemeup.sms import parse_voicemeup_webhook, configure_voicemeup_mms
+from roomkit.providers.voicemeup import VoiceMeUpConfig, VoiceMeUpSMSProvider
+
+voicemeup = VoiceMeUpSMSProvider(VoiceMeUpConfig(...))
 
 # Optional: configure timeout behavior (default: 5s)
-configure_voicemeup_mms(
+voicemeup.configure_mms(
     timeout_seconds=5.0,
     on_timeout=handle_orphaned_text,  # Called if image never arrives
 )
 
 @app.post("/webhooks/sms/voicemeup/inbound")
 async def voicemeup_webhook(payload: dict):
-    message = parse_voicemeup_webhook(payload, channel_id="sms")
+    message = voicemeup.parse_inbound(payload, channel_id="sms")
 
     if message is None:
         # First part buffered, waiting for image
@@ -167,11 +169,16 @@ VoiceMeUp's CDN (`clients.voicemeup.com`) blocks certain services via `robots.tx
 import httpx
 from urllib.parse import urlparse
 from roomkit import (
-    RoomKit, HookTrigger, HookResult, RoomEvent, RoomContext,
-    ChannelType, TextContent,
+    ChannelType,
+    EventDirection,
+    HookResult,
+    HookTrigger,
+    RoomContext,
+    RoomEvent,
+    RoomKit,
+    TextContent,
 )
-from roomkit.models.enums import EventDirection
-from roomkit.models.event import MediaContent, CompositeContent
+from roomkit.models import CompositeContent, MediaContent
 
 # Domains that need re-hosting
 REHOST_DOMAINS = {"clients.voicemeup.com", "dev-clients.voicemeup.com"}

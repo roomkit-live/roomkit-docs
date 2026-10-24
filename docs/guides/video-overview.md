@@ -87,8 +87,7 @@ These are `Tool` protocol objects — pass them directly to any channel via `too
 
 ```python
 from roomkit import Agent
-from roomkit.video.vision.screen_tool import DescribeScreenTool
-from roomkit.video.vision.screen_input import ScreenInputTools
+from roomkit.video.vision import DescribeScreenTool, ScreenInputTools
 
 screen_tool = DescribeScreenTool(vision=gemini_vision, monitor=1)
 input_tools = ScreenInputTools(vision=gemini_vision, monitor=1)
@@ -117,8 +116,8 @@ Optional processing chain applied to inbound frames:
 | **Encoder** | Raw → compressed (outbound) | `PyAVVideoEncoder` (H.264) |
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.pipeline.filter.watermark import WatermarkFilter
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.pipeline.filter import WatermarkFilter
 
 video = VideoChannel(
     "video", backend=backend,
@@ -143,8 +142,11 @@ Three recording layers, from per-session to room-wide:
 The room-level recorder muxes audio and video from multiple channels into a single file with A/V sync maintained via a shared monotonic clock:
 
 ```python
-from roomkit.recorder import MediaRecordingConfig, RoomRecorderBinding
-from roomkit.recorder.pyav import PyAVMediaRecorder
+from roomkit.recorder import (
+    MediaRecordingConfig,
+    PyAVMediaRecorder,
+    RoomRecorderBinding,
+)
 
 voice = VoiceChannel("voice", ...)
 video = VideoChannel("video", ...)
@@ -179,9 +181,8 @@ Photorealistic talking-head avatars with lip-synced video output.
 `RealtimeAVBridge` wires any voice/video backend to an avatar provider, handling audio resampling, H.264 encoding, video pipeline, and session lifecycle:
 
 ```python
-from roomkit.providers.anam.config import AnamConfig
-from roomkit.providers.anam.realtime import AnamRealtimeProvider
-from roomkit.voice.realtime.bridge import RealtimeAVBridge
+from roomkit.providers.anam import AnamConfig, AnamRealtimeProvider
+from roomkit.voice.realtime import RealtimeAVBridge
 
 bridge = RealtimeAVBridge(
     AnamRealtimeProvider(AnamConfig(api_key="...", avatar_id="...")),

@@ -6,8 +6,7 @@ RoomKit provides first-class support for AI thinking (chain-of-thought reasoning
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 provider = AnthropicAIProvider(
     AnthropicConfig(api_key="sk-...", model="claude-opus-5")
@@ -193,8 +192,7 @@ above `high`, so `xhigh` and `max` go as `high` there. A model the catalogue
 does not carry (a new release, a proxy's alias) is sent nothing for off.
 
 ```python
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 provider = AnthropicAIProvider(AnthropicConfig(
     api_key="sk-...",
@@ -409,11 +407,11 @@ another's reply.
 During streaming generation, thinking content arrives as `StreamThinkingDelta` events before `StreamTextDelta` events:
 
 ```python
-from roomkit.providers.ai.base import (
-    StreamThinkingDelta,
-    StreamTextDelta,
-    StreamToolCall,
+from roomkit.providers.ai import (
     StreamDone,
+    StreamTextDelta,
+    StreamThinkingDelta,
+    StreamToolCall,
 )
 
 async for event in provider.generate_structured_stream(context):
@@ -552,7 +550,7 @@ effort left out and 247 to 256 with it sent.
 Represents a thinking block in conversation history:
 
 ```python
-from roomkit.providers.ai.base import AIThinkingPart
+from roomkit.providers.ai import AIThinkingPart
 
 part = AIThinkingPart(
     thinking="Let me reason step by step...",
@@ -566,7 +564,7 @@ redacted = AIThinkingPart(thinking="", redacted="EuYB...")  # A block the vendor
 A streaming event for thinking content:
 
 ```python
-from roomkit.providers.ai.base import StreamThinkingDelta
+from roomkit.providers.ai import StreamThinkingDelta
 
 delta = StreamThinkingDelta(thinking="Step 1: Consider...")
 ```
@@ -608,8 +606,7 @@ Use `MockAIProvider` with `AIResponse` that includes thinking content:
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.providers.ai.base import AIResponse
+from roomkit.providers.ai import AIResponse, MockAIProvider
 
 provider = MockAIProvider(
     ai_responses=[

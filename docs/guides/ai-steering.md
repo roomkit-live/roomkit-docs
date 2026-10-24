@@ -7,7 +7,7 @@ Steering directives let you dynamically control an active AI tool loop from exte
 ```python
 from __future__ import annotations
 
-from roomkit.models.steering import Cancel, InjectMessage, UpdateSystemPrompt
+from roomkit.models import Cancel, InjectMessage, UpdateSystemPrompt
 
 # Get the AI channel
 ai = kit.get_channel("ai-assistant")
@@ -99,7 +99,7 @@ The `steer()` method is safe to call from any async context. Cancel directives a
 from __future__ import annotations
 
 from roomkit import HookTrigger
-from roomkit.models.steering import Cancel
+from roomkit.models import Cancel
 
 @kit.hook(HookTrigger.ON_SESSION_ENDED)
 async def cancel_on_disconnect(event, ctx):
@@ -114,8 +114,8 @@ async def cancel_on_disconnect(event, ctx):
 from __future__ import annotations
 
 from roomkit import HookTrigger, ChannelType
-from roomkit.models.steering import InjectMessage
-from roomkit.tools.fence import fence
+from roomkit.models import InjectMessage
+from roomkit.tools import fence
 
 @kit.hook(HookTrigger.BEFORE_BROADCAST, channel_types={ChannelType.SMS})
 async def inject_sms_context(event, ctx):
@@ -135,7 +135,7 @@ async def inject_sms_context(event, ctx):
 ```python
 from __future__ import annotations
 
-from roomkit.models.steering import UpdateSystemPrompt
+from roomkit.models import UpdateSystemPrompt
 
 async def on_vip_detected(participant_id: str):
     ai = kit.get_channel("ai-assistant")
@@ -213,9 +213,9 @@ Configure a fallback AI provider for production resilience:
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.models.channel import RetryPolicy
-from roomkit.providers.ai.anthropic import AnthropicAIProvider
-from roomkit.providers.ai.openai import OpenAIAIProvider
+from roomkit.models import RetryPolicy
+from roomkit.providers.anthropic import AnthropicAIProvider
+from roomkit.providers.openai import OpenAIAIProvider
 
 primary = AnthropicAIProvider(model="claude-opus-5", api_key="...")
 fallback = OpenAIAIProvider(model="gpt-4o", api_key="...")
@@ -255,7 +255,7 @@ form. Both were measured on the vendors' APIs (2026-10-03).
 ## Retry Policy
 
 ```python
-from roomkit.models.channel import RetryPolicy
+from roomkit.models import RetryPolicy
 
 policy = RetryPolicy(
     max_retries=3,
@@ -298,8 +298,8 @@ ai = AIChannel(
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.models.steering import Cancel, InjectMessage
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.models import Cancel, InjectMessage
+from roomkit.providers.ai import MockAIProvider
 
 ai = AIChannel("ai", provider=MockAIProvider(responses=["Hello"]))
 

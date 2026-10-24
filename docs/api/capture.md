@@ -12,7 +12,7 @@ Normative reference: RFC Section 12.12. Narrative guide:
 
 ```python
 from roomkit.voice.capture import LocalMicSource
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.backends import LocalAudioBackend
 
 mic = LocalMicSource(sample_rate=24000, backlog_seconds=10)
 mic.start()

@@ -154,7 +154,7 @@ raises `ParticipantNotFoundError` if the participant is unknown.
 
 ```python
 from roomkit import ParticipantNotFoundError
-from roomkit.models.enums import ParticipantStatus
+from roomkit.models import ParticipantStatus
 
 await kit.remove_member("team", "carol")                              # status -> LEFT
 await kit.remove_member("team", "mallory", status=ParticipantStatus.BANNED)  # status -> BANNED

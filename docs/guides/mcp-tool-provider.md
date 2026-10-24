@@ -312,8 +312,7 @@ Local tools use the `Tool` protocol; MCP tools use `tool_handler`. Both can be c
 ```python
 import json
 from roomkit import AIChannel, ChannelCategory, RoomKit
-from roomkit.tools import compose_tool_handlers
-from roomkit.tools import MCPToolProvider
+from roomkit.tools import MCPToolProvider, compose_tool_handlers
 
 
 class GetTimeTool:

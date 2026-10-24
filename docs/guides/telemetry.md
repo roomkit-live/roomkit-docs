@@ -161,7 +161,7 @@ provider = TracerProvider()
 provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
 from roomkit import RoomKit
-from roomkit.telemetry.opentelemetry import OpenTelemetryProvider
+from roomkit.telemetry import OpenTelemetryProvider
 
 kit = RoomKit(telemetry=OpenTelemetryProvider(tracer_provider=provider))
 ```
@@ -224,7 +224,7 @@ docker run -p 4040:4040 grafana/pyroscope
 **Basic usage:**
 
 ```python
-from roomkit.telemetry.pyroscope import PyroscopeProfiler
+from roomkit.telemetry import PyroscopeProfiler
 
 profiler = PyroscopeProfiler(
     application_name="my-voice-app",
@@ -440,7 +440,7 @@ config = TelemetryConfig(
 Implement `TelemetryProvider` to integrate with any backend:
 
 ```python
-from roomkit.telemetry.base import SpanKind, TelemetryProvider
+from roomkit.telemetry import SpanKind, TelemetryProvider
 from typing import Any
 
 class LangfuseProvider(TelemetryProvider):

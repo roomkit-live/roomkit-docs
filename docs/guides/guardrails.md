@@ -174,7 +174,7 @@ Control which tools the AI can call using `ToolPolicy` — a declarative allow/d
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.tools.policy import RoleOverride, ToolPolicy
+from roomkit.tools import RoleOverride, ToolPolicy
 
 policy = ToolPolicy(
     allow=["get_weather", "search_*", "lookup_*"],  # Whitelist (fnmatch globs)
@@ -379,7 +379,7 @@ Cancel an active AI generation or tool loop at runtime using steering directives
 ```python
 from __future__ import annotations
 
-from roomkit.models.steering import Cancel
+from roomkit.models import Cancel
 
 ai_channel = kit.get_channel("ai-assistant")
 
@@ -418,8 +418,15 @@ AI channel responses are re-broadcast through `BEFORE_BROADCAST` hooks before re
 ```python
 from __future__ import annotations
 
-from roomkit import HookResult, HookTrigger, RoomContext, RoomEvent, RoomKit, TextContent
-from roomkit.models.enums import ChannelCategory
+from roomkit import (
+    ChannelCategory,
+    HookResult,
+    HookTrigger,
+    RoomContext,
+    RoomEvent,
+    RoomKit,
+    TextContent,
+)
 
 
 kit = RoomKit()
@@ -518,8 +525,7 @@ Control who can read and write in a room using `Access` levels on channel bindin
 ```python
 from __future__ import annotations
 
-from roomkit import RoomKit
-from roomkit.models.enums import Access
+from roomkit import Access, RoomKit
 
 kit = RoomKit()
 
@@ -598,7 +604,7 @@ Apply per-channel rate limits to prevent abuse or respect provider constraints:
 from __future__ import annotations
 
 from roomkit import RoomKit
-from roomkit.models.channel import RateLimit
+from roomkit.models import RateLimit
 
 kit = RoomKit()
 
@@ -631,7 +637,7 @@ Control when and how users can interrupt the AI during speech:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 
 # Require confirmed speech before interrupting (avoids false triggers)
 config = InterruptionConfig(
@@ -662,7 +668,7 @@ See the [Voice Interruption guide](voice-interruption.md) for the full interrupt
 from __future__ import annotations
 
 from roomkit import HookResult, HookTrigger, RoomContext, RoomKit
-from roomkit.voice.events import TranscriptionEvent
+from roomkit.voice import TranscriptionEvent
 
 
 kit = RoomKit()
@@ -737,8 +743,15 @@ RoomKit's hook system supports **channel-aware filtering**, letting you apply di
 ```python
 from __future__ import annotations
 
-from roomkit import HookResult, HookTrigger, RoomContext, RoomEvent, RoomKit, TextContent
-from roomkit.models.enums import ChannelType
+from roomkit import (
+    ChannelType,
+    HookResult,
+    HookTrigger,
+    RoomContext,
+    RoomEvent,
+    RoomKit,
+    TextContent,
+)
 
 
 kit = RoomKit()
@@ -781,8 +794,14 @@ Apply guardrails only to inbound messages (from users) or outbound messages (fro
 ```python
 from __future__ import annotations
 
-from roomkit import HookResult, HookTrigger, RoomContext, RoomEvent, RoomKit
-from roomkit.models.enums import EventDirection
+from roomkit import (
+    EventDirection,
+    HookResult,
+    HookTrigger,
+    RoomContext,
+    RoomEvent,
+    RoomKit,
+)
 
 
 kit = RoomKit()
@@ -844,18 +863,19 @@ import logging
 import re
 
 from roomkit import (
+    ChannelCategory,
     HookExecution,
     HookResult,
     HookTrigger,
+    RoleOverride,
     RoomContext,
     RoomEvent,
     RoomKit,
     TextContent,
+    ToolPolicy,
 )
 from roomkit.channels import AIChannel, WebSocketChannel
-from roomkit.models.channel import RateLimit
-from roomkit.models.enums import ChannelCategory
-from roomkit.tools.policy import RoleOverride, ToolPolicy
+from roomkit.models import RateLimit
 
 logger = logging.getLogger("roomkit.guardrails")
 

@@ -68,7 +68,7 @@ With that contract, a 22 050 Hz prompt reaches the SIP leg as 8 kHz audio (verif
 `play()` needs the `VoiceSession`. The safe point is `ON_SESSION_STARTED`, which fires when the audio path is live in both directions:
 
 ```python
-from roomkit.models.session_event import SessionStartedEvent
+from roomkit.models import SessionStartedEvent
 
 @kit.hook(HookTrigger.ON_SESSION_STARTED, execution=HookExecution.ASYNC)
 async def on_session_started(event: SessionStartedEvent, ctx: object) -> None:

@@ -35,7 +35,7 @@
 #### Usage
 
 ```python
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTProvider, SherpaOnnxSTTConfig
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
 
 # Transducer model (streaming + batch)
 stt = SherpaOnnxSTTProvider(SherpaOnnxSTTConfig(
@@ -73,7 +73,7 @@ Install with: `pip install roomkit[sherpa-onnx]`
 #### Usage
 
 ```python
-from roomkit.voice.stt.gemini import GeminiSTTConfig, GeminiSTTProvider
+from roomkit.voice.stt import GeminiSTTConfig, GeminiSTTProvider
 
 stt = GeminiSTTProvider(GeminiSTTConfig(api_key="your-gemini-api-key"))
 
@@ -101,7 +101,7 @@ Install with: `pip install roomkit[gemini]`
 #### Usage
 
 ```python
-from roomkit.voice.stt.meta import MetaSTTConfig, MetaSTTProvider
+from roomkit.voice.stt import MetaSTTConfig, MetaSTTProvider
 
 # No pipeline VAD: the model finds where each turn ends
 stt = MetaSTTProvider(MetaSTTConfig(api_key="your-meta-model-api-key"))
@@ -132,7 +132,7 @@ Install with: `pip install roomkit[meta-stt]`
 #### Usage
 
 ```python
-from roomkit.voice.stt.azure_mai import AzureMAISTTConfig, AzureMAISTTProvider
+from roomkit.voice.stt import AzureMAISTTConfig, AzureMAISTTProvider
 
 # Behind a pipeline VAD: one final per utterance
 stt = AzureMAISTTProvider(
@@ -158,7 +158,7 @@ Install with: `pip install roomkit[azure-speech]`
 #### Usage
 
 ```python
-from roomkit.voice.stt.voxtral import VoxtralSTTConfig, VoxtralSTTProvider
+from roomkit.voice.stt import VoxtralSTTConfig, VoxtralSTTProvider
 
 # No pipeline VAD: the model finds where each turn ends
 stt = VoxtralSTTProvider(VoxtralSTTConfig(api_key="your-mistral-api-key"))
@@ -290,7 +290,7 @@ Install with: `pip install roomkit[mistral-voice]`
 #### Usage
 
 ```python
-from roomkit.voice.tts.sherpa_onnx import SherpaOnnxTTSProvider, SherpaOnnxTTSConfig
+from roomkit.voice.tts import SherpaOnnxTTSConfig, SherpaOnnxTTSProvider
 
 # VITS/Piper model with multi-speaker support
 tts = SherpaOnnxTTSProvider(SherpaOnnxTTSConfig(
@@ -313,7 +313,7 @@ Install with: `pip install roomkit[sherpa-onnx]`
 #### Usage
 
 ```python
-from roomkit.voice.tts.grok import GrokTTSProvider, GrokTTSConfig
+from roomkit.voice.tts import GrokTTSConfig, GrokTTSProvider
 
 tts = GrokTTSProvider(GrokTTSConfig(
     api_key="your-xai-api-key",
@@ -338,7 +338,7 @@ Install with: `pip install httpx websockets`
 #### Usage
 
 ```python
-from roomkit.voice.tts.gemini import GeminiTTSConfig, GeminiTTSProvider
+from roomkit.voice.tts import GeminiTTSConfig, GeminiTTSProvider
 
 tts = GeminiTTSProvider(GeminiTTSConfig(
     api_key="your-gemini-api-key",

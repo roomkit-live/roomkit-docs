@@ -31,9 +31,16 @@ The most common test pattern — send a message and verify it's broadcast to oth
 ```python
 from __future__ import annotations
 
-from roomkit import EventSource, InboundMessage, RoomEvent, RoomKit, TextContent
-from roomkit.channels.base import Channel, ChannelOutput
-from roomkit.models.enums import ChannelType
+from roomkit import (
+    Channel,
+    ChannelOutput,
+    ChannelType,
+    EventSource,
+    InboundMessage,
+    RoomEvent,
+    RoomKit,
+    TextContent,
+)
 
 
 class SimpleChannel(Channel):
@@ -90,7 +97,7 @@ Test AI-powered channels with deterministic responses:
 ```python
 from __future__ import annotations
 
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 # Cycle through responses
 ai = MockAIProvider(responses=["Hello!", "How can I help?", "Goodbye!"])
@@ -113,7 +120,7 @@ from __future__ import annotations
 
 from roomkit import RoomKit
 from roomkit.channels import AIChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 ai_provider = MockAIProvider(responses=["AI says hello!"])
 ai = AIChannel("ai-bot", provider=ai_provider, system_prompt="Be helpful.")
@@ -134,8 +141,8 @@ Pure transport mock — no audio processing:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.voice.pipeline.base import AudioFrame
+from roomkit.voice.backends import MockVoiceBackend
+from roomkit.voice import AudioFrame
 
 backend = MockVoiceBackend()
 
@@ -214,7 +221,7 @@ Runnable: `examples/voice_scenario_backend.py`.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.stt.mock import MockSTTProvider
+from roomkit.voice.stt import MockSTTProvider
 
 stt = MockSTTProvider(
     transcripts=["Hello", "How are you?", "Goodbye"],
@@ -234,7 +241,7 @@ assert result2.text == "How are you?"
 ```python
 from __future__ import annotations
 
-from roomkit.voice.tts.mock import MockTTSProvider
+from roomkit.voice.tts import MockTTSProvider
 
 tts = MockTTSProvider(voice="test-voice")
 
@@ -263,8 +270,7 @@ Every audio pipeline stage has a mock with deterministic event sequences.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.pipeline.vad.base import VADEvent, VADEventType
-from roomkit.voice.pipeline.vad.mock import MockVADProvider
+from roomkit.voice.pipeline.vad import MockVADProvider, VADEvent, VADEventType
 
 # Pre-define the event sequence
 vad = MockVADProvider(events=[
@@ -291,7 +297,7 @@ assert vad.reset_count == 0
 ```python
 from __future__ import annotations
 
-from roomkit.voice.pipeline.aec.mock import MockAECProvider
+from roomkit.voice.pipeline.aec import MockAECProvider
 
 aec = MockAECProvider()
 
@@ -320,14 +326,14 @@ All follow the same pattern — event sequence in, deterministic results out:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.pipeline.agc.mock import MockAGCProvider
-from roomkit.voice.pipeline.backchannel.mock import MockBackchannelDetector
-from roomkit.voice.pipeline.denoiser.mock import MockDenoiserProvider
-from roomkit.voice.pipeline.diarization.mock import MockDiarizationProvider
-from roomkit.voice.pipeline.dtmf.mock import MockDTMFDetector
-from roomkit.voice.pipeline.recorder.mock import MockAudioRecorder
-from roomkit.voice.pipeline.resampler.mock import MockResamplerProvider
-from roomkit.voice.pipeline.turn.mock import MockTurnDetector
+from roomkit.voice.pipeline.agc import MockAGCProvider
+from roomkit.voice.pipeline.backchannel import MockBackchannelDetector
+from roomkit.voice.pipeline.denoiser import MockDenoiserProvider
+from roomkit.voice.pipeline.diarization import MockDiarizationProvider
+from roomkit.voice.pipeline.dtmf import MockDTMFDetector
+from roomkit.voice.pipeline.recorder import MockAudioRecorder
+from roomkit.voice.pipeline.resampler import MockResamplerProvider
+from roomkit.voice.pipeline.turn import MockTurnDetector
 
 # Diarization with speaker results
 diarization = MockDiarizationProvider(results=[
@@ -498,13 +504,16 @@ from __future__ import annotations
 import asyncio
 
 from roomkit.channels import VoiceChannel
-from roomkit.voice.backends.mock import MockVoiceBackend
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.base import AudioFrame
-from roomkit.voice.pipeline.vad.base import VADEvent, VADEventType
-from roomkit.voice.pipeline.vad.mock import MockVADProvider
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
+from roomkit.voice.backends import MockVoiceBackend
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    MockVADProvider,
+    VADEvent,
+    VADEventType,
+)
+from roomkit.voice import AudioFrame
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
 
 # Define pipeline behavior
 vad_events = [
@@ -554,7 +563,7 @@ Test conversation memory without a real store:
 from __future__ import annotations
 
 from roomkit.memory import MockMemoryProvider
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 
 mock_memory = MockMemoryProvider(
     messages=[AIMessage(role="system", content="Previous conversation summary")],
@@ -583,9 +592,8 @@ Test identity resolution with predefined mappings:
 ```python
 from __future__ import annotations
 
-from roomkit.identity.base import Identity
-from roomkit.identity.mock import MockIdentityResolver
-from roomkit.models.enums import IdentificationStatus
+from roomkit.models import IdentificationStatus, Identity
+from roomkit.identity import MockIdentityResolver
 
 alice = Identity(id="alice", display_name="Alice")
 bob = Identity(id="bob", display_name="Bob")
@@ -617,7 +625,7 @@ Test speech-to-speech without live API connections:
 from __future__ import annotations
 
 from roomkit.channels import RealtimeVoiceChannel
-from roomkit.voice.realtime.mock import MockRealtimeProvider, MockRealtimeTransport
+from roomkit.voice.realtime import MockRealtimeProvider, MockRealtimeTransport
 
 provider = MockRealtimeProvider()
 transport = MockRealtimeTransport()
@@ -751,7 +759,7 @@ Track spans and metrics for observability testing:
 ```python
 from __future__ import annotations
 
-from roomkit.telemetry.mock import MockTelemetryProvider
+from roomkit.telemetry import MockTelemetryProvider
 
 telemetry = MockTelemetryProvider()
 kit = RoomKit(telemetry=telemetry)
@@ -806,8 +814,7 @@ async def test_async_flow() -> None:
 ```python
 from __future__ import annotations
 
-from roomkit.models.enums import ChannelType
-from roomkit.models import EventSource, RoomEvent, TextContent
+from roomkit.models import ChannelType, EventSource, RoomEvent, TextContent
 
 
 def make_event(

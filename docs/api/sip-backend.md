@@ -7,7 +7,7 @@ Install with: `pip install roomkit[sip]`
 ## Quick start
 
 ```python
-from roomkit.voice.backends.sip import SIPVoiceBackend
+from roomkit.voice.backends import SIPVoiceBackend
 
 backend = SIPVoiceBackend(
     local_sip_addr=("0.0.0.0", 5060),
@@ -37,7 +37,7 @@ The SIP backend negotiates codecs via SDP. Supported codecs:
 By default, the backend accepts all three codecs with G.722 preferred. You can restrict codecs via `supported_codecs`:
 
 ```python
-from roomkit.voice.backends.sip import SIPVoiceBackend, PT_G722, PT_PCMU, PT_PCMA
+from roomkit.voice.backends import PT_G722, PT_PCMA, PT_PCMU, SIPVoiceBackend
 
 # G.722 only (wideband)
 backend = SIPVoiceBackend(

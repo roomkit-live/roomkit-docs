@@ -48,7 +48,7 @@ backend works out the request from that.
 ```python
 from roomkit import AIProviderReasoningBackend, RealtimeVoiceChannel
 from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
-from roomkit.providers.openai.live import IntegratorReasoning, OpenAILiveProvider
+from roomkit.providers.openai import IntegratorReasoning, OpenAILiveProvider
 
 backend = AIProviderReasoningBackend(
     AnthropicAIProvider(AnthropicConfig(api_key="sk-ant-...", model="claude-sonnet-5")),

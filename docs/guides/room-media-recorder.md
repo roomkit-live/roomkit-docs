@@ -14,9 +14,11 @@ pip install roomkit[local-video]    # opencv (webcam capture)
 
 ```python
 from roomkit import RoomKit, VideoChannel, VoiceChannel
-from roomkit.recorder import MediaRecordingConfig
-from roomkit.recorder import RoomRecorderBinding
-from roomkit.recorder.pyav import PyAVMediaRecorder
+from roomkit.recorder import (
+    MediaRecordingConfig,
+    PyAVMediaRecorder,
+    RoomRecorderBinding,
+)
 
 # 1. Create recorder + config (encryption at rest is required, see below)
 recorder = PyAVMediaRecorder()
@@ -218,9 +220,8 @@ video = VideoChannel("video", ..., recording=ChannelRecordingConfig(screen_share
 A conference records through the same `MediaRecorder` interface, but at a different granularity: **one recording per track**, not one per room. The recorder is passed to the channel rather than to `create_room()`.
 
 ```python
-from roomkit import ConferenceRecordingConfig
-from roomkit.channels.conference import ConferenceChannel
-from roomkit.recorder.pyav import PyAVMediaRecorder
+from roomkit import ConferenceChannel, ConferenceRecordingConfig
+from roomkit.recorder import PyAVMediaRecorder
 
 channel = ConferenceChannel(
     "conf",
@@ -340,7 +341,7 @@ Audio and video PTS are both derived from `time.monotonic()` at frame acquisitio
 Implement the `MediaRecorder` ABC to write to a custom backend (cloud storage, streaming server, etc.). A recorder that stores files owns encryption at rest: refuse `on_recording_start()` when the config carries neither `encryption` nor `storage_encrypted_at_rest`, and hand each finished file to `config.encryption.encrypt_file()`, as `PyAVMediaRecorder` does:
 
 ```python
-from roomkit.recorder.base import (
+from roomkit.recorder import (
     MediaRecorder,
     MediaRecordingConfig,
     MediaRecordingHandle,

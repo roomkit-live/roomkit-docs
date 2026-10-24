@@ -7,7 +7,7 @@ A pluggable memory backend that controls how conversation history is retrieved f
 ```python
 from roomkit import AIChannel
 from roomkit.memory import SlidingWindowMemory
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider
 
 # Default — last 50 events (same as omitting memory entirely)
 ai = AIChannel("ai", provider=provider, max_context_events=50)
@@ -73,7 +73,7 @@ ai = AIChannel("ai", provider=provider, memory=memory)
 Records all calls and returns pre-configured results. Useful for testing.
 
 ```python
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 from roomkit.memory import MockMemoryProvider
 
 mock = MockMemoryProvider(
@@ -92,7 +92,7 @@ Implement `MemoryProvider` to plug in any context retrieval strategy:
 
 ```python
 from roomkit import RoomContext, RoomEvent
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 from roomkit.memory import MemoryProvider, MemoryResult
 
 

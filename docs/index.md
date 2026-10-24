@@ -34,7 +34,7 @@ from roomkit import (
     TextContent,
     WebSocketChannel,
 )
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 
 async def main() -> None:

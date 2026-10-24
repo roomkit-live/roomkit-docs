@@ -139,7 +139,7 @@ supports, mirroring the AI model catalog — so an integrator can list the `voic
 ids before configuring (RFC §12.2):
 
 ```python
-from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
+from roomkit.providers.openai import OpenAIRealtimeProvider
 
 # Curated, offline catalog — a classmethod, so no API key, network, or SDK needed.
 for voice in OpenAIRealtimeProvider.available_voices():
@@ -522,7 +522,7 @@ anywhere else:
 
 ```python
 from roomkit import TextContent, current_turn_host
-from roomkit.models.enums import TaskStatus
+from roomkit.models import TaskStatus
 from roomkit.tools import current_tool_room_id
 
 async def handler(name, arguments):
@@ -1094,7 +1094,7 @@ reply = await kit.send_event("r1", "ws-bob", TextContent(body="Tuesday?"),
                              parent_event_id=root_id)
 
 # Reads: main timeline (replies excluded) and one thread's replies
-from roomkit.models.store_filter import EventFilter
+from roomkit.models import EventFilter
 timeline = await kit.store.list_events("r1", event_filter=EventFilter(top_level_only=True))
 thread = await kit.store.list_events("r1", event_filter=EventFilter(parent_event_id=root_id))
 
@@ -1358,8 +1358,7 @@ transport cannot be changed or withdrawn by the hook.
 **Hook filtering** allows hooks to run only for specific event sources:
 
 ```python
-from roomkit import ChannelType
-from roomkit.models.enums import EventDirection
+from roomkit import ChannelType, EventDirection
 
 # Only run for inbound SMS/MMS events
 @kit.hook(
@@ -1554,8 +1553,7 @@ The `AIChannel` is a special channel category (`INTELLIGENCE`) that generates AI
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 provider = AnthropicAIProvider(
     AnthropicConfig(api_key="sk-...", model="claude-opus-5")
@@ -1948,8 +1946,7 @@ When tools are configured and the AI provider supports streaming, RoomKit uses a
 
 ```python
 from roomkit import AIChannel, Tool
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 
 class LookupOrderTool:
@@ -2008,7 +2005,7 @@ Two bounds keep a degenerate model from running away with a turn. `max_tool_roun
 The loop yields a final `LoopEndMarker` on every exit (its `reason`, the tool `rounds` that ran, and the limits the turn ran under), `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
 
 ```python
-from roomkit.models.streaming import LoopEndMarker
+from roomkit.models import LoopEndMarker
 
 async def _observe(self, inner):
     async for delta in inner:
@@ -2053,7 +2050,7 @@ See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture
 A handler receives only `(name, arguments)`. An `AIChannel` object, meanwhile, is registered once per `channel_id` and shared by every room and speaker it serves — so whatever a handler closed over at construction time describes whoever attached it, not the turn now running. `roomkit.tools` exposes the turn itself, read from a contextvar the tool loop sets:
 
 ```python
-from roomkit.models.enums import IdentificationStatus
+from roomkit.models import IdentificationStatus
 from roomkit.tools import current_tool_actor_id, current_tool_allowed_names, current_tool_room_id
 
 
@@ -2084,8 +2081,7 @@ See the [Tool Calling guide](guides/tool-calling.md#what-a-handler-knows-about-t
 
 ```python
 from roomkit import AIChannel
-from roomkit.tools import compose_tool_handlers
-from roomkit.tools import MCPToolProvider
+from roomkit.tools import MCPToolProvider, compose_tool_handlers
 
 async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
     handler = compose_tool_handlers(local_handler, mcp.as_tool_handler())
@@ -2267,7 +2263,13 @@ AI providers can optionally support vision (image processing) by setting `suppor
 
 ```python
 from roomkit import AIChannel
-from roomkit.providers.ai.base import AIProvider, AIContext, AIResponse, AITextPart, AIImagePart
+from roomkit.providers.ai import (
+    AIContext,
+    AIImagePart,
+    AIProvider,
+    AIResponse,
+    AITextPart,
+)
 
 class VisionAIProvider(AIProvider):
     @property
@@ -2293,8 +2295,7 @@ class VisionAIProvider(AIProvider):
         return AIResponse(content="I can see the image!")
 
 # Gemini has built-in vision support
-from roomkit.providers.gemini.ai import GeminiAIProvider
-from roomkit.providers.gemini.config import GeminiConfig
+from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
 
 gemini = GeminiAIProvider(GeminiConfig(api_key="..."))
 assert gemini.supports_vision is True  # All Gemini models support vision
@@ -2673,7 +2674,7 @@ See the [Status Bus guide](guides/status-bus.md) for the full API, backend imple
 `JSONLSessionAuditor` captures the complete conversation timeline — speech turns, tool calls, vision events, and interruptions — in a unified JSONL file with a human-readable transcript summary:
 
 ```python
-from roomkit.orchestration.session_audit import JSONLSessionAuditor
+from roomkit.orchestration import JSONLSessionAuditor
 
 auditor = JSONLSessionAuditor("/tmp/session.jsonl")
 auditor.attach(kit)  # auto-capture via hooks
@@ -2705,7 +2706,7 @@ The `MemoryProvider` ABC controls how conversation history is retrieved for AI c
 ```python
 from roomkit import AIChannel
 from roomkit.memory import MemoryProvider, MemoryResult, SlidingWindowMemory
-from roomkit.providers.ai.base import AIMessage
+from roomkit.providers.ai import AIMessage
 
 # Default — last 50 events (same as omitting memory)
 ai = AIChannel("ai", provider=provider, max_context_events=50)
@@ -2751,9 +2752,7 @@ AIChannel includes built-in agentic capabilities for complex, multi-step AI work
 - **Pre-generation hooks** — `BEFORE_AI_GENERATION` sync hook fires after context is built but before the AI provider is called. Modify the context (system prompt, messages, tools) or block generation entirely. The hook sees the turn's toolset as the tool policy and skill gating leave it, under Tool Search its whole catalogue, deferred tools included, and the tools it leaves are the turn's toolset: one it removes is declared at no round, named by no `find_tools` or `list_tools` and a call to it is refused (the channel's own tools included); one it edits stays as the hook left it, and one it adds is declared at every round, never deferred by Tool Search, both still subject to the tool policy and skill gating:
 
 ```python
-from roomkit import add_turn_note, split_turn_notes
-from roomkit.models.enums import HookTrigger
-from roomkit.models.hook import HookResult
+from roomkit import HookResult, HookTrigger, add_turn_note, split_turn_notes
 
 # Budget gating — block expensive generation before tokens are spent
 @kit.hook(HookTrigger.BEFORE_AI_GENERATION)
@@ -2795,7 +2794,7 @@ RoomKit provides a pluggable realtime backend for ephemeral events that don't re
 
 ```python
 from roomkit import RoomKit
-from roomkit.realtime.base import EphemeralEvent, EphemeralEventType
+from roomkit.realtime import EphemeralEvent, EphemeralEventType
 
 kit = RoomKit()  # Uses InMemoryRealtime by default
 
@@ -3098,8 +3097,7 @@ SMS transport with 1600-character limit and provider abstraction:
 
 ```python
 from roomkit import SMSChannel
-from roomkit.providers.telnyx.sms import TelnyxSMSProvider
-from roomkit.providers.telnyx.config import TelnyxConfig
+from roomkit.providers.telnyx import TelnyxConfig, TelnyxSMSProvider
 
 provider = TelnyxSMSProvider(TelnyxConfig(
     api_key="KEY...",
@@ -3130,23 +3128,25 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 | Twilio | Single webhook with all media URLs |
 | Sinch | Single webhook with media array |
 | Telnyx | Single webhook with media array |
-| VoiceMeUp | **Split webhooks** - automatic aggregation in `parse_voicemeup_webhook()` |
+| VoiceMeUp | **Split webhooks** - automatic aggregation in `VoiceMeUpSMSProvider.parse_inbound()` |
 
-**VoiceMeUp MMS handling**: VoiceMeUp sends MMS as two separate webhooks (text + metadata, then image). `parse_voicemeup_webhook()` automatically buffers and merges them into a single event:
+**VoiceMeUp MMS handling**: VoiceMeUp sends MMS as two separate webhooks (text + metadata, then image). `VoiceMeUpSMSProvider.parse_inbound()` buffers and merges them into a single event:
 
 ```python
-from roomkit.providers.voicemeup.sms import parse_voicemeup_webhook, configure_voicemeup_mms
+from roomkit.providers.voicemeup import VoiceMeUpConfig, VoiceMeUpSMSProvider
+
+voicemeup = VoiceMeUpSMSProvider(VoiceMeUpConfig(...))
 
 # Configure timeout for split MMS aggregation
 async def handle_orphaned_mms(message):
     await kit.process_inbound(message)  # still valid for text/SMS inbound
 
-configure_voicemeup_mms(timeout_seconds=5.0, on_timeout=handle_orphaned_mms)
+voicemeup.configure_mms(timeout_seconds=5.0, on_timeout=handle_orphaned_mms)
 
 # Webhook handler
 @app.post("/webhooks/sms/voicemeup")
 async def voicemeup_webhook(payload: dict):
-    message = parse_voicemeup_webhook(payload, channel_id="sms")
+    message = voicemeup.parse_inbound(payload, channel_id="sms")
     if message:  # None if buffered (waiting for second part)
         await kit.process_inbound(message)  # still valid for text/SMS inbound
     return {"ok": True}
@@ -3155,8 +3155,7 @@ async def voicemeup_webhook(payload: dict):
 **SMS Utilities:**
 
 ```python
-from roomkit.providers.sms.meta import extract_sms_meta, WebhookMeta
-from roomkit.providers.sms.phone import normalize_phone
+from roomkit.providers.sms import WebhookMeta, extract_sms_meta, normalize_phone
 
 # Extract normalized metadata from any provider's webhook payload
 meta: WebhookMeta = extract_sms_meta("twilio", payload)
@@ -3175,8 +3174,7 @@ normalized = normalize_phone("418-555-1234", "CA")  # "+14185551234"
 
 ```python
 # Telnyx (ED25519, requires pynacl)
-from roomkit.providers.telnyx.sms import TelnyxSMSProvider
-from roomkit.providers.telnyx.config import TelnyxConfig
+from roomkit.providers.telnyx import TelnyxConfig, TelnyxSMSProvider
 
 telnyx = TelnyxSMSProvider(
     TelnyxConfig(api_key="KEY...", from_number="+15551234567"),
@@ -3189,8 +3187,7 @@ is_valid = telnyx.verify_signature(
 )
 
 # Twilio (HMAC-SHA1)
-from roomkit.providers.twilio.sms import TwilioSMSProvider
-from roomkit.providers.twilio.config import TwilioConfig
+from roomkit.providers.twilio import TwilioConfig, TwilioSMSProvider
 
 twilio = TwilioSMSProvider(TwilioConfig(
     account_sid="AC...", auth_token="...", from_number="+15551234567"
@@ -3208,7 +3205,7 @@ Rich Communication Services (RCS) for enhanced messaging with fallback to SMS:
 
 ```python
 from roomkit import RCSChannel
-from roomkit.providers.telnyx.rcs import TelnyxRCSProvider, TelnyxRCSConfig
+from roomkit.providers.telnyx import TelnyxRCSConfig, TelnyxRCSProvider
 
 provider = TelnyxRCSProvider(TelnyxRCSConfig(
     api_key="KEY...",
@@ -3247,8 +3244,7 @@ Email transport with threading support:
 
 ```python
 from roomkit import EmailChannel
-from roomkit.providers.elasticemail.email import ElasticEmailProvider
-from roomkit.providers.elasticemail.config import ElasticEmailConfig
+from roomkit.providers.elasticemail import ElasticEmailConfig, ElasticEmailProvider
 
 provider = ElasticEmailProvider(ElasticEmailConfig(
     api_key="...",
@@ -3266,8 +3262,7 @@ Facebook Messenger integration with rich interactive elements:
 
 ```python
 from roomkit import MessengerChannel
-from roomkit.providers.messenger.facebook import FacebookMessengerProvider
-from roomkit.providers.messenger.config import MessengerConfig
+from roomkit.providers.messenger import FacebookMessengerProvider, MessengerConfig
 
 provider = FacebookMessengerProvider(MessengerConfig(
     page_access_token="...",
@@ -3284,8 +3279,7 @@ Microsoft Teams integration via the Bot Framework SDK:
 
 ```python
 from roomkit import TeamsChannel
-from roomkit.providers.teams.bot_framework import BotFrameworkTeamsProvider
-from roomkit.providers.teams.config import TeamsConfig
+from roomkit.providers.teams import BotFrameworkTeamsProvider, TeamsConfig
 
 provider = BotFrameworkTeamsProvider(TeamsConfig(
     app_id="YOUR_APP_ID",
@@ -3302,8 +3296,7 @@ Telegram Bot integration over the Bot API:
 
 ```python
 from roomkit import TelegramChannel
-from roomkit.providers.telegram.bot import TelegramBotProvider
-from roomkit.providers.telegram.config import TelegramConfig
+from roomkit.providers.telegram import TelegramBotProvider, TelegramConfig
 
 provider = TelegramBotProvider(TelegramConfig(bot_token="YOUR_BOT_TOKEN"))
 kit.register_channel(TelegramChannel("telegram-main", provider=provider))
@@ -3368,7 +3361,7 @@ a single `discord.Client` (like WhatsApp-personal):
 ```python
 from roomkit import DiscordChannel
 from roomkit.providers.discord import DiscordBotProvider, DiscordConfig
-from roomkit.sources.discord import DiscordGatewaySource
+from roomkit.sources import DiscordGatewaySource
 
 config = DiscordConfig(bot_token="YOUR_BOT_TOKEN")
 source = DiscordGatewaySource(config, channel_id="discord-main")
@@ -3398,7 +3391,7 @@ client:
 ```python
 from roomkit import BuzzChannel
 from roomkit.providers.buzz import BuzzConfig, BuzzProvider
-from roomkit.sources.buzz import BuzzRelaySource
+from roomkit.sources import BuzzRelaySource
 
 config = BuzzConfig(relay_url="wss://you.communities.buzz.xyz", private_key="nsec1...")
 source = BuzzRelaySource(config, "buzz-main", relay_channel_id="<channel-uuid>")
@@ -3464,8 +3457,7 @@ Generic webhook transport for custom integrations:
 
 ```python
 from roomkit import HTTPChannel
-from roomkit.providers.http.provider import WebhookHTTPProvider
-from roomkit.providers.http.config import HTTPProviderConfig
+from roomkit.providers.http import HTTPProviderConfig, WebhookHTTPProvider
 
 provider = WebhookHTTPProvider(HTTPProviderConfig(
     webhook_url="https://example.com/webhook",
@@ -3501,9 +3493,9 @@ Real-time voice communication with STT, TTS, and VAD integration:
 
 ```python
 from roomkit import VoiceChannel
-from roomkit.voice.stt.mock import MockSTTProvider
-from roomkit.voice.tts.mock import MockTTSProvider
-from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend, mount_fastrtc_voice
+from roomkit.voice.stt import MockSTTProvider
+from roomkit.voice.tts import MockTTSProvider
+from roomkit.voice.backends import FastRTCVoiceBackend, mount_fastrtc_voice
 
 # Create providers
 stt = DeepgramSTTProvider(DeepgramConfig(api_key="..."))
@@ -3683,7 +3675,7 @@ Audio bridging enables direct session-to-session audio forwarding for human-to-h
 
 ```python
 from roomkit import VoiceChannel
-from roomkit.voice.bridge import AudioBridgeConfig
+from roomkit.voice import AudioBridgeConfig
 
 # Basic 2-party bridge
 voice = VoiceChannel("voice", backend=sip_backend, bridge=True)
@@ -3742,7 +3734,7 @@ Video bridging enables direct session-to-session video forwarding, mirroring aud
 
 ```python
 from roomkit import AudioVideoChannel
-from roomkit.video.bridge import VideoBridgeConfig
+from roomkit.video import VideoBridgeConfig
 
 # Full A/V bridge: audio + video forwarding between participants
 av = AudioVideoChannel(
@@ -3790,7 +3782,7 @@ See the [Video Bridging guide](guides/video-bridge.md) for configuration, frame 
 The `FastRTCVoiceBackend` uses [FastRTC](https://github.com/gradio-app/fastrtc) for WebSocket audio transport with built-in VAD:
 
 ```python
-from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend, mount_fastrtc_voice
+from roomkit.voice.backends import FastRTCVoiceBackend, mount_fastrtc_voice
 
 backend = FastRTCVoiceBackend(
     input_sample_rate=48000,     # Browser default
@@ -3819,10 +3811,7 @@ Lazy-loaded via `roomkit.voice.get_fastrtc_backend()` to avoid requiring `fastrt
 For speech-to-speech AI (`RealtimeVoiceChannel`), the `FastRTCRealtimeTransport` provides WebRTC-based audio transport in **passthrough mode** -- no VAD, no intermediate STT/TTS. Audio flows bidirectionally between the browser and the AI provider, which handles its own server-side VAD.
 
 ```python
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 transport = FastRTCRealtimeTransport(
     input_sample_rate=16000,
@@ -3854,7 +3843,7 @@ Lazy-loaded via `roomkit.voice.get_fastrtc_realtime_transport()` and `roomkit.vo
 The `WebTransportBackend` uses [WebTransport](https://www.w3.org/TR/webtransport/) (HTTP/3 over QUIC) for low-latency audio transport via **unreliable datagrams** — no head-of-line blocking, no ICE/STUN/TURN negotiation:
 
 ```python
-from roomkit.voice.backends.webtransport import WebTransportBackend
+from roomkit.voice.backends import WebTransportBackend
 
 backend = WebTransportBackend(
     host="0.0.0.0",
@@ -3912,7 +3901,7 @@ the session replay what was said before it existed:
 
 ```python
 from roomkit.voice.capture import LocalMicSource
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.voice.backends import LocalAudioBackend
 
 mic = LocalMicSource(sample_rate=24000, backlog_seconds=10)
 mic.start()                                      # the device opens once
@@ -3987,8 +3976,8 @@ Real-time video capture and AI-powered frame analysis:
 
 ```python
 from roomkit import VideoChannel
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
-from roomkit.video.backends.local import LocalVideoBackend
+from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.video.backends import LocalVideoBackend
 
 # Webcam backend
 backend = LocalVideoBackend(device=0, fps=15)
@@ -4023,12 +4012,17 @@ await backend.start_capture(session)
 Pipeline filters can emit detection events via `ON_VIDEO_DETECTION` — a generic hook trigger for all filter-originated detections (face touch, object detection, etc.):
 
 ```python
-from roomkit import RoomKit, HookTrigger, HookExecution, VideoDetectionEvent
-from roomkit.channels.video import VideoChannel
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.pipeline.filter.mediapipe_face_touch import (
-    FaceTouchConfig, FaceTouchFilter, FaceTouchSensitivity,
+from roomkit import (
+    FaceTouchConfig,
+    FaceTouchFilter,
+    FaceTouchSensitivity,
+    HookExecution,
+    HookTrigger,
+    RoomKit,
+    VideoChannel,
+    VideoDetectionEvent,
 )
+from roomkit.video.pipeline import VideoPipelineConfig
 
 pipeline = VideoPipelineConfig(
     filters=[FaceTouchFilter(FaceTouchConfig(sensitivity=FaceTouchSensitivity.HIGH))],
@@ -4057,7 +4051,7 @@ Capture your screen (or a region of it) for AI-powered analysis and recording:
 
 ```python
 from roomkit import VideoChannel
-from roomkit.video.backends.screen import ScreenCaptureBackend
+from roomkit.video.backends import ScreenCaptureBackend
 
 # Capture primary monitor at 2 FPS, half resolution, skip static frames
 backend = ScreenCaptureBackend(monitor=1, fps=2, scale=0.5, diff_threshold=0.02)
@@ -4091,9 +4085,8 @@ Record webcam frames to compressed MP4 files. Two recorders available:
 | `MockVideoRecorder` | None | In-memory (testing) | Built-in |
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.recorder.pyav import PyAVVideoRecorder
-from roomkit.video.recorder import VideoRecordingConfig
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.recorder import PyAVVideoRecorder, VideoRecordingConfig
 
 recorder = PyAVVideoRecorder()
 config = VideoRecordingConfig(storage="./recordings", codec="auto")
@@ -4114,7 +4107,7 @@ See the [Video & Vision guide](guides/video-vision.md) for full documentation.
 Real-time video transport over RTP, extending the voice backends with parallel video sessions. A single backend handles both audio and video for a call.
 
 ```python
-from roomkit.video.backends.sip import SIPVideoBackend
+from roomkit.video.backends import SIPVideoBackend
 
 # SIP backend with audio + video
 backend = SIPVideoBackend(
@@ -4155,13 +4148,12 @@ Connect to [Anam AI](https://anam.ai) for photorealistic talking-head avatars. A
 Use `RealtimeAVBridge` to wire any voice/video backend (SIP, RTP, local mic) to the avatar, with optional video pipeline (filters, watermark, resize) and H.264 encoding:
 
 ```python
-from roomkit.providers.anam.config import AnamConfig
-from roomkit.providers.anam.realtime import AnamRealtimeProvider
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.backends.sip import SIPVideoBackend
-from roomkit.video.pipeline.encoder.pyav import PyAVVideoEncoder
-from roomkit.video.pipeline.filter.watermark import WatermarkFilter
-from roomkit.voice.realtime.bridge import RealtimeAVBridge
+from roomkit.providers.anam import AnamConfig, AnamRealtimeProvider
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.backends import SIPVideoBackend
+from roomkit.video.pipeline.encoder import PyAVVideoEncoder
+from roomkit.video.pipeline.filter import WatermarkFilter
+from roomkit.voice.realtime import RealtimeAVBridge
 
 sip = SIPVideoBackend(local_sip_addr=("0.0.0.0", 5060), ...)
 provider = AnamRealtimeProvider(AnamConfig(
@@ -4187,8 +4179,11 @@ See the [Anam AI Avatar guide](guides/anam-avatar.md) for configuration, SIP int
 Mux audio and video from multiple channels into a single MP4 per room — the production path for recording conversations:
 
 ```python
-from roomkit.recorder import MediaRecordingConfig, RoomRecorderBinding
-from roomkit.recorder.pyav import PyAVMediaRecorder
+from roomkit.recorder import (
+    MediaRecordingConfig,
+    PyAVMediaRecorder,
+    RoomRecorderBinding,
+)
 
 voice = VoiceChannel("voice", ...)
 video = VideoChannel("video", ...)
@@ -4223,8 +4218,7 @@ A recording can also start on a room that already exists, a meeting resumed afte
 RoomKit joins multi-party meetings whose media plane an external SFU owns (RFC §12.10, conformance Level 3). Human clients connect directly to the SFU with credentials RoomKit mints; RoomKit is never in the media path between humans. It joins as a bot participant to transcribe, speak the AI's answers, record, and bridge the meeting to every other channel attached to the room:
 
 ```python
-from roomkit import LiveKitConferenceBackend, LiveKitConfig, RoomKit
-from roomkit.channels.conference import ConferenceChannel
+from roomkit import ConferenceChannel, LiveKitConferenceBackend, LiveKitConfig, RoomKit
 
 kit = RoomKit()
 conference = ConferenceChannel(
@@ -4302,7 +4296,7 @@ The meeting's whole surface reaches hooks: `ON_CONFERENCE_PARTICIPANT_JOINED`/`_
 RoomKit provides a unified webhook handling method that automatically routes inbound messages and delivery status updates:
 
 ```python
-from roomkit.providers.sms.meta import extract_sms_meta
+from roomkit.providers.sms import extract_sms_meta
 
 @app.post("/webhooks/sms/{provider}")
 async def sms_webhook(provider: str, payload: dict):
@@ -4991,7 +4985,7 @@ External systems deliver text messages to RoomKit via `process_inbound()`:
 @app.post("/webhook/sms")
 async def sms_webhook(request: Request):
     payload = await request.json()
-    message = parse_voicemeup_webhook(payload, channel_id="sms")
+    message = voicemeup.parse_inbound(payload, channel_id="sms")  # a VoiceMeUpSMSProvider
     if message:
         result = await kit.process_inbound(message)
         return {"status": "ok", "blocked": result.blocked}
@@ -5048,7 +5042,7 @@ Built-in webhook parsers for provider-specific payloads:
 - `parse_telnyx_rcs_webhook()` -- Telnyx RCS webhooks
 - `parse_twilio_webhook()` -- Twilio SMS webhooks (form-encoded)
 - `parse_twilio_rcs_webhook()` -- Twilio RCS webhooks
-- `parse_voicemeup_webhook()` -- VoiceMeUp SMS webhooks (with MMS aggregation)
+- `VoiceMeUpSMSProvider.parse_inbound()` -- VoiceMeUp SMS webhooks (with MMS aggregation)
 - `parse_messenger_webhook()` -- Facebook Messenger webhooks
 - `parse_teams_webhook()` -- Microsoft Teams Bot Framework Activities (messages)
 - `parse_teams_activity()` -- Microsoft Teams Activity metadata extraction (all types)

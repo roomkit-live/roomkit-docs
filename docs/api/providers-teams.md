@@ -6,9 +6,11 @@ Microsoft Teams integration via the [Bot Framework SDK](https://github.com/micro
 
 ```python
 from roomkit import RoomKit
-from roomkit.providers.teams.bot_framework import BotFrameworkTeamsProvider
-from roomkit.providers.teams.config import TeamsConfig
-from roomkit.providers.teams.webhook import parse_teams_webhook
+from roomkit.providers.teams import (
+    BotFrameworkTeamsProvider,
+    TeamsConfig,
+    parse_teams_webhook,
+)
 from roomkit.channels import TeamsChannel
 
 config = TeamsConfig(
@@ -27,7 +29,7 @@ kit.register_channel(TeamsChannel("teams-main", provider=provider))
 `TeamsConfig` holds the Azure Bot registration credentials:
 
 ```python
-from roomkit.providers.teams.config import TeamsConfig
+from roomkit.providers.teams import TeamsConfig
 
 config = TeamsConfig(
     app_id="your-azure-app-id",          # Azure AD application (client) ID
@@ -53,7 +55,11 @@ Bot Framework sends one Activity per HTTP POST to your messaging endpoint. Use `
 
 ```python
 from aiohttp import web
-from roomkit.providers.teams.webhook import is_bot_added, parse_teams_activity, parse_teams_webhook
+from roomkit.providers.teams import (
+    is_bot_added,
+    parse_teams_activity,
+    parse_teams_webhook,
+)
 
 async def handle_messages(request: web.Request) -> web.Response:
     payload = await request.json()
@@ -81,7 +87,11 @@ async def handle_messages(request: web.Request) -> web.Response:
 
 ```python
 from fastapi import FastAPI, Request
-from roomkit.providers.teams.webhook import is_bot_added, parse_teams_activity, parse_teams_webhook
+from roomkit.providers.teams import (
+    is_bot_added,
+    parse_teams_activity,
+    parse_teams_webhook,
+)
 
 app = FastAPI()
 
@@ -129,7 +139,7 @@ Parsed: "what's the weather?"
 `parse_teams_activity()` extracts common fields from any Bot Framework Activity (not just messages). Useful for handling lifecycle events like `conversationUpdate`:
 
 ```python
-from roomkit.providers.teams.webhook import parse_teams_activity
+from roomkit.providers.teams import parse_teams_activity
 
 activity = parse_teams_activity(payload)
 # Returns: {
@@ -152,7 +162,7 @@ activity = parse_teams_activity(payload)
 `is_bot_added()` checks if a `conversationUpdate` Activity indicates the bot was added to a conversation:
 
 ```python
-from roomkit.providers.teams.webhook import is_bot_added
+from roomkit.providers.teams import is_bot_added
 
 if is_bot_added(payload):
     conv_type = parse_teams_activity(payload)["conversation_type"]
@@ -180,7 +190,7 @@ result = await provider.send(event, to="conversation-id-here")
 The default `InMemoryConversationReferenceStore` works for single-process bots. For production, implement `ConversationReferenceStore` with a persistent backend:
 
 ```python
-from roomkit.providers.teams.store import ConversationReferenceStore
+from roomkit.providers.teams import ConversationReferenceStore
 
 class RedisConversationStore(ConversationReferenceStore):
     async def save(self, conversation_id, reference):
@@ -261,7 +271,7 @@ provider = BotFrameworkTeamsProvider(config)
 For unit tests, use `MockTeamsProvider` which records all sent messages:
 
 ```python
-from roomkit.providers.teams.mock import MockTeamsProvider
+from roomkit.providers.teams import MockTeamsProvider
 
 mock = MockTeamsProvider()
 result = await mock.send(event, to="conv-123")

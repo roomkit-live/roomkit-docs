@@ -1021,5 +1021,5 @@ The following providers have implementations but may need enhancement:
 ### Placeholder Channel Types
 
 - All source files stay under 500 lines, maintaining readability
-- The `__init__.py` exports a large public surface (~150 symbols) -- users can also use sub-module imports (e.g., `from roomkit.channels import SMSChannel`) for more granular control
+- The `__init__.py` exports a large public surface -- users can also import from a subpackage whose `__all__` lists the name (e.g., `from roomkit.channels import SMSChannel`); module paths are internal (see [Public API](public-api.md))
 - The `ChannelType` enum includes `push` and `system` values that have no channel implementations yet (voice is now implemented via `VoiceChannel`)

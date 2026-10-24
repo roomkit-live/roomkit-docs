@@ -16,7 +16,7 @@ Enable bridging by passing `bridge=True` to `VoiceChannel`:
 
 ```python
 from roomkit import RoomKit, VoiceChannel
-from roomkit.voice.backends.sip import SIPVoiceBackend
+from roomkit.voice.backends import SIPVoiceBackend
 
 backend = SIPVoiceBackend(
     local_sip_addr=("0.0.0.0", 5060),
@@ -56,7 +56,7 @@ Session A mic → Backend → Inbound Pipeline → AudioBridge.forward()
 ### AudioBridgeConfig
 
 ```python
-from roomkit.voice.bridge import AudioBridgeConfig
+from roomkit.voice import AudioBridgeConfig
 
 config = AudioBridgeConfig(
     max_participants=10,         # Max sessions per room (default: 10)
@@ -96,9 +96,8 @@ intermediate steps.
 The mixer is pluggable via the `MixerProvider` ABC:
 
 ```python
-from roomkit.voice.bridge import AudioBridgeConfig
-from roomkit.voice.pipeline.mixer.numpy import NumpyMixerProvider
-from roomkit.voice.pipeline.mixer.python import PythonMixerProvider
+from roomkit.voice import AudioBridgeConfig
+from roomkit.voice.pipeline.mixer import NumpyMixerProvider, PythonMixerProvider
 
 # Explicit NumPy mixer (~20x faster than pure Python)
 config = AudioBridgeConfig(
@@ -142,8 +141,7 @@ participants on WebRTC. One `VoiceChannel` serves them all. Build it on one
 backend and add the others with `add_backend()`:
 
 ```python
-from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend
-from roomkit.voice.backends.sip import SIPVoiceBackend
+from roomkit.voice.backends import FastRTCVoiceBackend, SIPVoiceBackend
 
 fastrtc_backend = FastRTCVoiceBackend()
 sip_backend = SIPVoiceBackend(local_sip_addr=("0.0.0.0", 5060))
@@ -283,7 +281,7 @@ To reshape a frame rather than drop it, return a new `BridgeAudioEvent`
 carrying the replacement — that frame is the one forwarded:
 
 ```python
-from roomkit.voice.events import BridgeAudioEvent
+from roomkit.voice import BridgeAudioEvent
 
 @kit.hook(HookTrigger.BEFORE_BRIDGE_AUDIO, execution=HookExecution.SYNC)
 async def duck_when_flagged(event, ctx):

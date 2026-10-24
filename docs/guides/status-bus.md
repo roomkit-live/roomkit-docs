@@ -6,7 +6,7 @@ Share real-time status updates between agents in a multi-agent setup. When an ex
 
 ```python
 from roomkit import RoomKit
-from roomkit.orchestration.status_bus import StatusBus
+from roomkit.orchestration import StatusBus
 
 # Create a bus (in-memory with optional JSONL persistence)
 bus = StatusBus(persist_path="/tmp/session.jsonl")
@@ -37,7 +37,7 @@ The `StatusBus` is wired into `RoomKit` automatically — no manual setup needed
 
 ```python
 from roomkit import RoomKit
-from roomkit.orchestration.status_bus import StatusBus
+from roomkit.orchestration import StatusBus
 
 # Default in-memory bus (always available)
 kit = RoomKit()
@@ -101,8 +101,7 @@ distributed deployments, use `RedisStatusBackend` — entries live in a capped
 Redis list (shared history) and fan out to every process via pub/sub:
 
 ```python
-from roomkit.orchestration import RedisStatusBackend
-from roomkit.orchestration.status_bus import StatusBus
+from roomkit.orchestration import RedisStatusBackend, StatusBus
 
 bus = StatusBus(backend=RedisStatusBackend("redis://localhost:6379"))
 ```

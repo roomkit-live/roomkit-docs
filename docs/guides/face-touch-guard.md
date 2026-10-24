@@ -31,15 +31,18 @@ pip install roomkit[local-video,mediapipe]
 
 ```python
 import asyncio
-from roomkit import RoomKit, HookTrigger, HookExecution, VideoDetectionEvent
-from roomkit.channels.video import VideoChannel
-from roomkit.video.backends.local import LocalVideoBackend
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.pipeline.filter.mediapipe_face_touch import (
+from roomkit import (
     FaceTouchConfig,
     FaceTouchFilter,
     FaceTouchSensitivity,
+    HookExecution,
+    HookTrigger,
+    RoomKit,
+    VideoChannel,
+    VideoDetectionEvent,
 )
+from roomkit.video.backends import LocalVideoBackend
+from roomkit.video.pipeline import VideoPipelineConfig
 
 async def main():
     kit = RoomKit()
@@ -80,7 +83,7 @@ The filter monitors five face zones defined by MediaPipe's 478-landmark face mes
 Select zones via the `zones` parameter:
 
 ```python
-from roomkit.video.pipeline.filter.mediapipe_face_touch import FaceZone
+from roomkit.video.pipeline.filter import FaceZone
 
 config = FaceTouchConfig(
     zones=frozenset({FaceZone.LEFT_CHEEK, FaceZone.RIGHT_CHEEK, FaceZone.FOREHEAD}),
@@ -184,8 +187,8 @@ async def alert(event: VideoDetectionEvent, ctx):
 Use `MockFaceTouchFilter` to test hook handlers without MediaPipe:
 
 ```python
-from roomkit.video.pipeline.filter.mock_face_touch import MockFaceTouchFilter
-from roomkit.video.events import VideoDetectionEvent
+from roomkit.video.pipeline.filter import MockFaceTouchFilter
+from roomkit.video import VideoDetectionEvent
 
 mock = MockFaceTouchFilter(events_at={
     5: [VideoDetectionEvent(

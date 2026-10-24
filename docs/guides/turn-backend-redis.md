@@ -21,7 +21,7 @@ what the agent is, not its provider, its MCP clients or its memory.
 
 ```python
 from roomkit import AgentIdentity, ChannelDeclaration, RedisTurnBackend, RoomKit
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 kit = RoomKit(
     store=PostgresStore(dsn=DSN),
@@ -36,7 +36,7 @@ The executor's process builds the agent and runs its turns:
 
 ```python
 from roomkit import Agent, RedisTurnBackend, TurnExecutor
-from roomkit.store.postgres import PostgresStore
+from roomkit.store import PostgresStore
 
 
 def build_agent(channel_id: str) -> Agent | None:

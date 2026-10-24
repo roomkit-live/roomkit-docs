@@ -23,7 +23,7 @@ pip install neutts
 ## Quick start
 
 ```python
-from roomkit.voice.tts.neutts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
+from roomkit.voice.tts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
 
 tts = NeuTTSProvider(NeuTTSConfig(
     voices={
@@ -150,16 +150,13 @@ tts = NeuTTSProvider(NeuTTSConfig(
 
 ---
 
-## Lazy loader
+## Lazy loading
 
-If you want to avoid importing `neutts` at module level:
+`neutts` is imported when the provider is constructed, not when the name is
+imported:
 
 ```python
-from roomkit.voice import get_neutts_provider, get_neutts_config, get_neutts_voice_config
-
-NeuTTSProvider = get_neutts_provider()
-NeuTTSConfig = get_neutts_config()
-NeuTTSVoiceConfig = get_neutts_voice_config()
+from roomkit.voice.tts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
 
 tts = NeuTTSProvider(NeuTTSConfig(
     voices={"marie": NeuTTSVoiceConfig(ref_audio="ref.wav", ref_text="...")},
@@ -172,11 +169,14 @@ tts = NeuTTSProvider(NeuTTSConfig(
 
 ```python
 from roomkit import VoiceChannel
-from roomkit.voice.backends.local import LocalAudioBackend
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADConfig, SherpaOnnxVADProvider
-from roomkit.voice.stt.sherpa_onnx import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
-from roomkit.voice.tts.neutts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
+from roomkit.voice.backends import LocalAudioBackend
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+)
+from roomkit.voice.stt import SherpaOnnxSTTConfig, SherpaOnnxSTTProvider
+from roomkit.voice.tts import NeuTTSConfig, NeuTTSProvider, NeuTTSVoiceConfig
 
 # VAD
 vad = SherpaOnnxVADProvider(

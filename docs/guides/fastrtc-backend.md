@@ -38,13 +38,11 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 from roomkit import RoomKit, VoiceChannel, AIChannel, ChannelCategory
-from roomkit.providers.anthropic.ai import AnthropicAIProvider
-from roomkit.providers.anthropic.config import AnthropicConfig
-from roomkit.voice.backends.fastrtc import FastRTCVoiceBackend, mount_fastrtc_voice
-from roomkit.voice.pipeline import AudioPipelineConfig
-from roomkit.voice.pipeline.vad.energy import EnergyVADProvider
-from roomkit.voice.stt.deepgram import DeepgramConfig, DeepgramSTTProvider
-from roomkit.voice.tts.elevenlabs import ElevenLabsConfig, ElevenLabsTTSProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.voice.backends import FastRTCVoiceBackend, mount_fastrtc_voice
+from roomkit.voice.pipeline import AudioPipelineConfig, EnergyVADProvider
+from roomkit.voice.stt import DeepgramConfig, DeepgramSTTProvider
+from roomkit.voice.tts import ElevenLabsConfig, ElevenLabsTTSProvider
 
 kit = RoomKit()
 
@@ -163,11 +161,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 from roomkit import RoomKit, RealtimeVoiceChannel
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 kit = RoomKit()
 
@@ -416,7 +411,7 @@ mount_fastrtc_voice(app, backend, path="/voice", auth=authenticate,
 Auth metadata is available inside `session_factory` via the `auth_context` context variable:
 
 ```python
-from roomkit.voice.auth import auth_context
+from roomkit.voice import auth_context
 
 async def session_factory(websocket_id: str):
     meta = auth_context.get()  # {"user_id": "...", "role": "agent"}
@@ -479,10 +474,15 @@ one fails; an unknown id does nothing.
 The `FastRTCVoiceBackend` integrates with the full AudioPipeline. You can add any combination of pipeline stages:
 
 ```python
-from roomkit.voice.pipeline import AudioPipelineConfig, WavFileRecorder, RecordingConfig
-from roomkit.voice.pipeline.aec.webrtc import WebRTCAECProvider
-from roomkit.voice.pipeline.denoiser.rnnoise import RNNoiseDenoiserProvider
-from roomkit.voice.pipeline.vad.sherpa_onnx import SherpaOnnxVADProvider, SherpaOnnxVADConfig
+from roomkit.voice.pipeline import (
+    AudioPipelineConfig,
+    RNNoiseDenoiserProvider,
+    RecordingConfig,
+    SherpaOnnxVADConfig,
+    SherpaOnnxVADProvider,
+    WavFileRecorder,
+)
+from roomkit.voice.pipeline.aec import WebRTCAECProvider
 
 pipeline = AudioPipelineConfig(
     vad=SherpaOnnxVADProvider(SherpaOnnxVADConfig(model="path/to/model.onnx")),

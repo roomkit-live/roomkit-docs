@@ -147,7 +147,7 @@ through the source. WhatsApp Personal works this way:
 
 ```python
 from roomkit import RoomKit, WhatsAppPersonalChannel
-from roomkit.providers.whatsapp.personal import WhatsAppPersonalProvider
+from roomkit.providers.whatsapp import WhatsAppPersonalProvider
 from roomkit.sources import WhatsAppPersonalSourceProvider
 
 kit = RoomKit()
@@ -274,7 +274,7 @@ Yes, with the right store backend. For multi-instance deployments:
 Configure retry policies and rate limits when attaching channels:
 
 ```python
-from roomkit.models.channel import RetryPolicy, RateLimit
+from roomkit.models import RateLimit, RetryPolicy
 
 await kit.attach_channel(
     room_id,
@@ -369,7 +369,7 @@ The default `InMemoryStore` and the mock providers make no network call. A
 
 ```python
 from roomkit import AIChannel, InboundMessage, RoomEvent, RoomKit, TextContent, WebSocketChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 
 async def test_ai_answers() -> None:

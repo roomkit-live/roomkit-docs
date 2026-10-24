@@ -26,9 +26,14 @@ RoomKit's `HumanInputHandler` solves this as a first-class feature with two laye
 For AI agents that define their own human-input tools:
 
 ```python
-from roomkit import RoomKit, HumanInputToolHandler, HookTrigger, HookExecution
-from roomkit.channels.ai import AIChannel
-from roomkit.providers.ai.anthropic import AnthropicAIProvider
+from roomkit import (
+    AIChannel,
+    HookExecution,
+    HookTrigger,
+    HumanInputToolHandler,
+    RoomKit,
+)
+from roomkit.providers.anthropic import AnthropicAIProvider
 
 kit = RoomKit()
 
@@ -118,8 +123,7 @@ pointing to `human_input_handler=`.
 For providers that execute tools internally (like Claude Code sandboxes), use `HumanInputHandler` directly inside your `ExternalToolHandler`. The channel decides who serves each call: one the provider already ran is reported — the provider says so on the call (`AIToolCall.served = ServedCall(result=..., is_error=...)`), never in its arguments, so a `_result` key the model writes is just an argument and its call goes through the gate; a pending call to a tool the channel does not serve goes to the `ExternalToolHandler`; every other call is the channel's own, gate first, so a `BEFORE_TOOL_USE` block refuses it even on a channel without a `tool_handler`.
 
 ```python
-from roomkit import HumanInputRejectedError
-from roomkit.tools.human_input import HumanInputHandler
+from roomkit import HumanInputHandler, HumanInputRejectedError
 
 handler = HumanInputHandler()
 

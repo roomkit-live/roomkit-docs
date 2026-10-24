@@ -163,7 +163,7 @@ PolarGrid's chat-completions endpoint supports tool / function calling as of `po
 PolarGrid sends tool arguments as a JSON string; the provider parses them into a dict for RoomKit (malformed payloads are preserved under a `raw` key). For multi-turn tool loops, assistant tool calls and tool results are rendered back into structured messages (`role="assistant"` with `tool_calls`, `role="tool"` with `tool_call_id`) rather than flattened to text.
 
 ```python
-from roomkit.providers.ai.base import AITool
+from roomkit.providers.ai import AITool
 
 context.tools = [
     AITool(

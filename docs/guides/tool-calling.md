@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import json
 
-from roomkit import RoomKit, Tool
+from roomkit import ChannelCategory, RoomKit, Tool
 from roomkit.channels import AIChannel
-from roomkit.models.enums import ChannelCategory
-from roomkit.providers.ai.anthropic import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider
 
 
 class GetWeatherTool:
@@ -59,7 +58,7 @@ No separate `tool_handler` or binding metadata `"tools"` list needed — the cha
 ### AITool Model
 
 ```python
-from roomkit.providers.ai.base import AITool
+from roomkit.providers.ai import AITool
 
 tool = AITool(
     name="get_weather",
@@ -447,7 +446,7 @@ claimed). Resolve it against the roster first:
 ```python
 import json
 
-from roomkit.models.enums import IdentificationStatus
+from roomkit.models import IdentificationStatus
 from roomkit.tools import current_tool_actor_id, current_tool_room_id
 
 
@@ -518,7 +517,7 @@ Control which tools are available to which roles:
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.tools.policy import RoleOverride, ToolPolicy
+from roomkit.tools import RoleOverride, ToolPolicy
 
 policy = ToolPolicy(
     allow=["get_weather", "search_*"],  # Glob patterns
@@ -567,7 +566,7 @@ Integrate tools from an MCP (Model Context Protocol) server:
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.tools.mcp import MCPToolProvider
+from roomkit.tools import MCPToolProvider
 
 async with MCPToolProvider.from_url("http://localhost:8000/mcp") as mcp:
     tools = mcp.get_tools()              # list[AITool]
@@ -605,7 +604,7 @@ For advanced cases where you have raw `ToolHandler` callables (e.g., MCP handler
 ```python
 from __future__ import annotations
 
-from roomkit.tools.compose import compose_tool_handlers
+from roomkit.tools import compose_tool_handlers
 
 local_handler = my_local_handler
 mcp_handler = mcp.as_tool_handler()
@@ -824,7 +823,7 @@ Use `MockAIProvider` for deterministic tool calling tests:
 from __future__ import annotations
 
 from roomkit.channels import AIChannel
-from roomkit.providers.ai.mock import MockAIProvider
+from roomkit.providers.ai import MockAIProvider
 
 # MockAIProvider can return tool calls and then final responses
 provider = MockAIProvider(responses=["The weather in Paris is 22C and sunny."])
@@ -840,7 +839,7 @@ arguments you give it, and restores the previous one when the block exits, an
 exception included:
 
 ```python
-from roomkit.providers.ai.base import AITool
+from roomkit.providers.ai import AITool
 from roomkit.tools import (
     ToolCallContext,
     current_response_metadata,

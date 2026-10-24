@@ -98,8 +98,8 @@ Scope: Financial advisory services only
 ```python
 from roomkit import Agent, RealtimeVoiceChannel, RoomKit
 from roomkit.orchestration import ConversationPipeline, PipelineStage
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.backends.local import LocalAudioBackend
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.backends import LocalAudioBackend
 
 # 1. Define agents (no provider — config-only for speech-to-speech)
 triage = Agent(

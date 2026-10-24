@@ -8,7 +8,7 @@ RoomKit provides four interruption strategies to control what happens when a use
 from __future__ import annotations
 
 from roomkit.channels import VoiceChannel
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 
 voice = VoiceChannel(
     "voice",
@@ -34,7 +34,7 @@ voice = VoiceChannel(
 ## Configuration
 
 ```python
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 
 config = InterruptionConfig(
     strategy=InterruptionStrategy.CONFIRMED,
@@ -249,7 +249,7 @@ final is judged as it is: "No" might have been "noted", its final "No." cuts.
 ```python
 from __future__ import annotations
 
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 from roomkit.voice.pipeline.backchannel import (
     ENGLISH_BACKCHANNELS,
     PhraseBackchannelDetector,
@@ -347,7 +347,7 @@ Interruption config can also be set via `AudioPipelineConfig`:
 from __future__ import annotations
 
 from roomkit.channels import VoiceChannel
-from roomkit.voice.interruption import InterruptionConfig, InterruptionStrategy
+from roomkit.voice import InterruptionConfig, InterruptionStrategy
 from roomkit.voice.pipeline import AudioPipelineConfig
 
 pipeline = AudioPipelineConfig(
@@ -521,9 +521,11 @@ Use `MockBackchannelDetector` for deterministic tests:
 ```python
 from __future__ import annotations
 
-from roomkit.voice.interruption import InterruptionConfig, InterruptionHandler, InterruptionStrategy
-from roomkit.voice.pipeline.backchannel import BackchannelDecision
-from roomkit.voice.pipeline.backchannel.mock import MockBackchannelDetector
+from roomkit.voice import InterruptionConfig, InterruptionHandler, InterruptionStrategy
+from roomkit.voice.pipeline.backchannel import (
+    BackchannelDecision,
+    MockBackchannelDetector,
+)
 
 # Test CONFIRMED strategy
 config = InterruptionConfig(strategy=InterruptionStrategy.CONFIRMED, min_speech_ms=300)

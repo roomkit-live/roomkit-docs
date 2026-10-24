@@ -31,9 +31,9 @@ pip install roomkit[openai]            # OpenAI GPT-4o / Ollama / vLLM
 ```python
 import asyncio
 from roomkit import RoomKit, VideoChannel, AIChannel, ChannelCategory
-from roomkit.video.vision.gemini import GeminiVisionConfig, GeminiVisionProvider
-from roomkit.providers.ai.mock import MockAIProvider
-from roomkit.video.backends.screen import ScreenCaptureBackend
+from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
+from roomkit.providers.ai import MockAIProvider
+from roomkit.video.backends import ScreenCaptureBackend
 
 async def main():
     kit = RoomKit()
@@ -155,7 +155,7 @@ The diff check samples a sparse subset of pixels (every 300th byte) for O(1) com
 Wire the screen capture to a `VisionProvider` for AI-powered screen understanding:
 
 ```python
-from roomkit.video.vision.openai import OpenAIVisionConfig, OpenAIVisionProvider
+from roomkit.video.vision import OpenAIVisionConfig, OpenAIVisionProvider
 
 # Ollama with a vision model
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
@@ -183,9 +183,8 @@ The `VisionResult` includes a `text` field with OCR output — useful for readin
 Combine with a video recorder to save screen captures to MP4:
 
 ```python
-from roomkit.video.pipeline.config import VideoPipelineConfig
-from roomkit.video.recorder.pyav import PyAVVideoRecorder
-from roomkit.video.recorder import VideoRecordingConfig
+from roomkit.video.pipeline import VideoPipelineConfig
+from roomkit.video.recorder import PyAVVideoRecorder, VideoRecordingConfig
 
 recorder = PyAVVideoRecorder()
 config = VideoRecordingConfig(storage="./recordings", codec="auto")
@@ -217,7 +216,7 @@ async def on_screen_started(event, ctx):
 `ScreenCaptureBackend` declares `VideoCapability.SCREEN_SHARE`. Use this to distinguish screen capture from webcam sessions:
 
 ```python
-from roomkit.video.base import VideoCapability
+from roomkit.video import VideoCapability
 
 if VideoCapability.SCREEN_SHARE in backend.capabilities:
     print("This is a screen share session")

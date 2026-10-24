@@ -60,7 +60,7 @@ See [`VoiceSession`](providers-voice.md#roomkit.voice.base.VoiceSession) and [`V
 ### Gemini Live
 
 ```python
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
+from roomkit.providers.gemini import GeminiLiveProvider
 
 provider = GeminiLiveProvider(
     api_key="...",
@@ -75,7 +75,7 @@ Supports `provider_config` metadata keys: `language`, `top_p`, `top_k`, `max_out
 ### OpenAI Realtime
 
 ```python
-from roomkit.providers.openai.realtime import OpenAIRealtimeProvider
+from roomkit.providers.openai import OpenAIRealtimeProvider
 
 provider = OpenAIRealtimeProvider(
     api_key="...",
@@ -93,7 +93,7 @@ Install with: `pip install roomkit[realtime-openai]`
 ### OpenAI GPT-Live (full-duplex)
 
 ```python
-from roomkit.providers.openai.live import HostedReasoning, OpenAILiveProvider
+from roomkit.providers.openai import HostedReasoning, OpenAILiveProvider
 
 provider = OpenAILiveProvider(
     api_key="...",
@@ -119,8 +119,7 @@ Install with: `pip install roomkit[realtime-openai]`
 ### xAI Grok Realtime
 
 ```python
-from roomkit.providers.xai.config import XAIRealtimeConfig
-from roomkit.providers.xai.realtime import XAIRealtimeProvider
+from roomkit.providers.xai import XAIRealtimeConfig, XAIRealtimeProvider
 
 provider = XAIRealtimeProvider(
     XAIRealtimeConfig(
@@ -191,7 +190,7 @@ through (RFC §12.4.1). See the [Reasoning Delegation guide](../guides/reasoning
 ### WebSocket Transport
 
 ```python
-from roomkit.voice.realtime.ws_transport import WebSocketRealtimeTransport
+from roomkit.voice.realtime import WebSocketRealtimeTransport
 
 transport = WebSocketRealtimeTransport()
 ```
@@ -203,10 +202,7 @@ Install with: `pip install roomkit[websocket]`
 ### FastRTC Transport (WebRTC)
 
 ```python
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 transport = FastRTCRealtimeTransport(
     input_sample_rate=16000,   # Mic input sample rate
@@ -261,8 +257,8 @@ Lazy-loaded via `roomkit.voice.get_fastrtc_realtime_transport()` and `roomkit.vo
 
 ```python
 from roomkit import RoomKit, RealtimeVoiceChannel
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.realtime.ws_transport import WebSocketRealtimeTransport
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.realtime import WebSocketRealtimeTransport
 
 # Configure provider and transport
 provider = GeminiLiveProvider(api_key="...")
@@ -372,7 +368,7 @@ See [`setup_realtime_delegation()`](delegation.md) for details.
 Wire screen/camera vision into the voice session:
 
 ```python
-from roomkit import setup_realtime_vision
+from roomkit.video import setup_realtime_vision
 
 setup_realtime_vision(kit, room_id="room-1", voice_channel_id="realtime-voice")
 ```
@@ -386,11 +382,8 @@ See [`setup_realtime_vision()`](../guides/video-vision.md#realtime-voice-integra
 ```python
 from fastapi import FastAPI
 from roomkit import RoomKit, RealtimeVoiceChannel
-from roomkit.providers.gemini.realtime import GeminiLiveProvider
-from roomkit.voice.realtime.fastrtc_transport import (
-    FastRTCRealtimeTransport,
-    mount_fastrtc_realtime,
-)
+from roomkit.providers.gemini import GeminiLiveProvider
+from roomkit.voice.realtime import FastRTCRealtimeTransport, mount_fastrtc_realtime
 
 app = FastAPI()
 

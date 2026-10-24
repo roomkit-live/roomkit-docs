@@ -44,7 +44,7 @@ For production, use a proper certificate from a CA (Let's Encrypt, etc.).
 
 ```python
 from roomkit import RoomKit, VoiceChannel
-from roomkit.voice.backends.webtransport import WebTransportBackend
+from roomkit.voice.backends import WebTransportBackend
 
 backend = WebTransportBackend(
     host="0.0.0.0",
@@ -161,8 +161,7 @@ async function receiveAudio() {
 Combine WebTransport with other backends for cross-transport bridging:
 
 ```python
-from roomkit.voice.backends.webtransport import WebTransportBackend
-from roomkit.voice.backends.sip import SIPVoiceBackend
+from roomkit.voice.backends import SIPVoiceBackend, WebTransportBackend
 
 wt_backend = WebTransportBackend(port=4433, certificate="cert.pem", private_key="key.pem")
 sip_backend = SIPVoiceBackend(local_sip_addr=("0.0.0.0", 5060))
@@ -191,11 +190,11 @@ See [Several Transports in One Room](audio-bridge.md#several-transports-in-one-r
 
 ## Lazy Loading
 
-To avoid requiring `aioquic` at import time:
+`roomkit.voice.backends` loads the backend's module only when the name is first
+used, and `aioquic` is required when the backend starts:
 
 ```python
-from roomkit.voice import get_webtransport_backend
+from roomkit.voice.backends import WebTransportBackend
 
-WebTransportBackend = get_webtransport_backend()
 backend = WebTransportBackend(port=4433, certificate="cert.pem", private_key="key.pem")
 ```
