@@ -33,10 +33,10 @@ The `DefaultContentTranscoder` applies intelligent fallbacks:
 | `MediaContent` | `MEDIA`, and a file it takes: its type listed by a non-empty `supported_media_types` (compared without parameters, whatever the case), its known `size_bytes` within `max_media_size_bytes` | `[Media: {caption or filename or url}]`, the URL only when a link (`http`, `https`), else the media type: never a `data:` URI or a reference |
 | `AudioContent` | `AUDIO` | `transcript` field, or `[Voice message: {url}]`, the URL only when a link, else the media type |
 | `VideoContent` | `VIDEO` | `[Video: {url}]`, the URL only when a link, else the media type |
-| `LocationContent` | `LOCATION` | `[Location: {label or address} ({lat}, {lon})]`, or `[Location: ({lat}, {lon})]` with neither |
+| `LocationContent` | `LOCATION` | `[Location: {label or address} ({lat}, {lon})]`, or `[Location: ({lat}, {lon})]` with neither; each coordinate the shortest decimal that reads back as the same number, one decimal at least, never an exponent (`45.0`, `0.00005`) |
 | `CompositeContent` | varies | Recursive transcode; flatten if all parts become text |
 | `TemplateContent` | `TEMPLATE` | `body` field or `[Template: {id}]` |
-| `EditContent` | `supports_edit` | Transcode `new_content` + "Correction:" prefix |
+| `EditContent` | `supports_edit` | One text, the edit's text form: `Correction: ` followed by the text form of `new_content`, whatever the target takes of it (a file, a composite keeping a file, a rich text) |
 | `DeleteContent` | `supports_delete` | `[Message deleted]` |
 | `SystemContent` | Always | Pass-through |
 

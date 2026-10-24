@@ -900,10 +900,10 @@ ws_caps = ChannelCapabilities(
 | `MediaContent` | MEDIA in media_types, its type listed (or none listed) and its known size within the limit → pass | `TextContent("[Media: {caption or filename or url}]")`, the URL only when a link, else the media type |
 | `AudioContent` | AUDIO in media_types → pass | `TextContent(transcript)` or `"[Voice message: {url}]"`, the URL only when a link, else the media type |
 | `VideoContent` | VIDEO in media_types → pass | `TextContent("[Video: {url}]")`, the URL only when a link, else the media type |
-| `LocationContent` | LOCATION in media_types → pass | `TextContent("[Location: {label} ({lat}, {lon})]")` |
+| `LocationContent` | LOCATION in media_types → pass | `TextContent("[Location: {label} ({lat}, {lon})]")`, each coordinate with one decimal at least and never an exponent (`45.0`, `0.00005`) |
 | `CompositeContent` | Recursive transcode of all parts, none dropped | If all parts become text → flatten to single TextContent, joined by newlines, an empty part skipped |
 | `TemplateContent` | TEMPLATE in media_types → pass | `TextContent(body or "[Template: {id}]")` |
-| `EditContent` | `supports_edit` → pass, a file in `new_content` the target does not take as its text form | Transcode `new_content` + prefix "Correction:" |
+| `EditContent` | `supports_edit` → pass, a file in `new_content` the target does not take as its text form | `TextContent("Correction: {text form of new_content}")`, whatever the target takes of `new_content` |
 | `DeleteContent` | `supports_delete` → pass | `TextContent("[Message deleted]")` |
 
 ### Multichannel Transcoding Example
@@ -992,7 +992,9 @@ writes `new_content` and `metadata.edited=True` on the target, a delete
 `metadata.deleted=True`. The change reaches no one who could not see its target
 (its visibility is narrowed to the target's), it is delivered with the target as
 the commit left it, and `ON_EVENT_UPDATED` / `ON_EVENT_DELETED` fire once the
-lock is released.
+lock is released. Whatever pass committed the change (an inbound message, an
+agent's response, a hook's injected event), their context is the room as the
+commit left it: the target as rewritten, and the change as the newest event.
 
 ```python
 await kit.process_inbound(
@@ -1317,6 +1319,16 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
 - A message routed back into the room (`process_inbound()` with no
   `room_id`) raises `ReentrantCallError` before anything is written: its room
   is known only once routed, so it cannot be adopted. Name the room instead.
+
+Once a hook ran under the lock, the room is read again before the event
+commits (RFC §10.1 step 9a). The event takes the room's next index: what the
+hooks committed ahead of it took the one they were shown, so an instruction,
+never stored, reports the index after it. A room a hook closed
+(`kit.close_room()`) refuses the event as a closed room does: `blocked=True,
+reason="room_closed"` (`send_event()` raises `RoomClosedError`), nothing of it
+stored, what its hooks returned dropped, and `room_refused_event` emitted. An
+agent's response and an injected event whose hook closed the room are refused
+the same way (`operation = reentry`).
 
 A channel's `handle_inbound()` stands in its message's admission order the
 same way: what it sends into its room is adopted beside the message, on its
