@@ -169,7 +169,8 @@ already loaded: a message never makes a process import anything.
 A thought posted after the turn ended, a background task's status: what an
 executor sends through `current_turn_host()` once its turn returned reaches
 the room owner process that submitted that turn, even with several owner
-processes on the same Redis.
+processes on the same Redis. That work starts fresh once its turn is over: an
+event it sends is at the chain depth it names, not the turn's.
 
 ## Security
 

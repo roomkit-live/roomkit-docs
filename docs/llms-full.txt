@@ -659,11 +659,12 @@ its channels would have seen of the message.
 
 `InboundMessage(response_visibility=...)` and `send_event(...,
 response_visibility=...)` say where the answers to an event may go, in the
-visibility vocabulary (RFC §5.12): `None` restricts nothing, any other value is
-a scope (`""` names nobody), and `internal` raises `ValueError`. Every answer
-the message's cascade derives from it, an agent's answer to another agent's
-answer, a stream's rows and the record stored in place of an answer included,
-is what its channel gave it intersected with the scope; a response's own
+visibility vocabulary (RFC §5.12): `None` restricts nothing and any other value
+is a scope. Both doors raise `ValueError` for `""` and for `internal`; an empty
+scope that reaches an event another way (a hook's modify) names nobody. Every
+answer the message's cascade derives from it, an agent's answer to another
+agent's answer, a stream's rows and the record stored in place of an answer
+included, is what its channel gave it intersected with the scope; a response's own
 `response_visibility` holds within it. A `BEFORE_BROADCAST` hook may narrow an
 event's `response_visibility`, never widen or clear it (`internal` reads as
 `none`), and a response its hooks widen is narrowed back within the scope.
