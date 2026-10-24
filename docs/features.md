@@ -833,6 +833,11 @@ has no address: it is routed as a message from no one, records no one, and a
 room opened for it names neither correspondent nor recipient, so its
 deliveries are refused `no_recipient` until the host names one.
 On an HTTP webhook the recipient is a URL the host sets.
+A recipient, and a chat, is a string that is not blank or a number (a chat
+id): `true`, a blank string, a list or an object under the key is none, so a
+delivery to that binding is refused `no_recipient`, routing reads no
+correspondent in it, and the first sender routed to it gets their address
+written as its recipient.
 
 #### Addresses by channel type
 
@@ -2811,7 +2816,7 @@ When a message is delivered to a channel that doesn't support the original conte
 | `LocationContent` | Text only | `"[Location: label (lat, lon)]"` |
 | `AudioContent` | Text only | Transcript text or `"[Voice message]"` |
 | `VideoContent` | Text only | `"[Video: url]"` |
-| `CompositeContent` | Text only | Recursively transcoded parts, flattened |
+| `CompositeContent` | Text only | Recursively transcoded parts, flattened one per line, an empty part skipped |
 | `TemplateContent` | Text only | Template body text |
 | `TextContent` | Any | Always passed through |
 
@@ -4543,11 +4548,13 @@ whitespace). `internal` reaches no channel, as `none` does, and marks a record
 the framework wrote (a voice channel's interruption record, which an agent
 reads as the cut it was), so only the framework writes it: `attach_channel`,
 `set_visibility`, `send_event` and `InboundMessage` raise `ValueError` for it,
-before anything is read or written; a hook's modify that writes it, or that
-changes it on a record that holds it, has the event's visibility put back; and
-an agent's answer, a row of its stream, or the record stored in place of an
-answer at the chain-depth limit, that carries it (the agent's own, or the
-trigger's `response_visibility`) is stored `none`, with a warning. Store an event for no channel with `none`;
+before anything is read or written, as `send_event` and `InboundMessage` do
+for a `response_visibility` of `internal`; a hook's modify that writes it, or
+that changes it on a record that holds it, has the event's visibility put
+back; and an agent's answer, a row of its stream, or the record stored in
+place of an answer at the chain-depth limit, that carries it (the agent's own,
+or the `response_visibility` a hook's modify gave the trigger) is stored
+`none`, with a warning. Store an event for no channel with `none`;
 `kit.commit_event()`, a record outside the pipeline, keeps the visibility it is
 given.
 

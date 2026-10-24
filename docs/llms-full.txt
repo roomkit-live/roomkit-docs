@@ -782,10 +782,14 @@ recipient and its chat are (RFC §5.7, Appendix A).
 
 Discord (`discord_channel_id` / `channel_id`) and Buzz (`buzz_channel_id`)
 declare chat keys of their own; a webhook forwards a binding's `recipient_id`
-to its provider, which names no one. On a channel whose replies go to a chat
-only, a message that does not carry its chat has no address: it records no
-one, and a room opened for it names neither correspondent nor recipient
-(deliveries refused `no_recipient` until the host names one).
+to its provider, which names no one. A recipient, and a chat, is a string
+that is not blank or a number (a chat id): `true`, a blank string, a list or
+an object under the key is none, so a delivery to that binding is refused
+`no_recipient` and routing reads no correspondent in it. On a channel whose
+replies go to a chat only, a message that does not carry its chat has no
+address: it records no one, and a room opened for it names neither
+correspondent nor recipient (deliveries refused `no_recipient` until the host
+names one).
 
 A message without a `room_id` is routed by the default strategy (RFC §10.4),
 scoped to the caller's organization:
@@ -877,7 +881,7 @@ ws_caps = ChannelCapabilities(
 | `AudioContent` | AUDIO in media_types → pass | `TextContent(transcript)` or `"[Voice message: {url}]"`, the URL only when a link, else the media type |
 | `VideoContent` | VIDEO in media_types → pass | `TextContent("[Video: {url}]")`, the URL only when a link, else the media type |
 | `LocationContent` | LOCATION in media_types → pass | `TextContent("[Location: {label} ({lat}, {lon})]")` |
-| `CompositeContent` | Recursive transcode of all parts, none dropped | If all parts become text → flatten to single TextContent, joined by newlines |
+| `CompositeContent` | Recursive transcode of all parts, none dropped | If all parts become text → flatten to single TextContent, joined by newlines, an empty part skipped |
 | `TemplateContent` | TEMPLATE in media_types → pass | `TextContent(body or "[Template: {id}]")` |
 | `EditContent` | `supports_edit` → pass, a file in `new_content` the target does not take as its text form | Transcode `new_content` + prefix "Correction:" |
 | `DeleteContent` | `supports_delete` → pass | `TextContent("[Message deleted]")` |
