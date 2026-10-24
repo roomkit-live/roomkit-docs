@@ -6448,9 +6448,11 @@ of `search_path` that exists). Two deployments may share a database, one
 schema each: `init()`, `migrate()`, `dedupe_event_indices()` and
 `drop_legacy_parent_index()` read, create and drop the tables, columns and
 indexes of their own schema only, never a namesake another schema holds.
-`init()` adds a column a newer release brings only when its table lacks it,
-so a boot on an up-to-date schema runs no `ALTER TABLE` and waits on no open
-transaction.
+`init()` adds a column, or an index, only when its schema lacks it, and
+seeds the per-room index marks (`event_sequences`) only in the boot that
+creates that table. A boot on an up-to-date schema runs no `ALTER TABLE`, no
+`CREATE INDEX` and no write of a row: it waits on no open reader or writer of
+the tables, and none waits on it.
 
 ### Operations
 
@@ -6602,9 +6604,11 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   (`commit_event(target=)`, `write_change_target()`) keep the stored results,
   whatever the copy they write carries. Its default reads the event and
   writes it back through `update_event()` (the framework calls it under the
-  room lock), under `records_delivery_results()` (`roomkit.store.base`), the
-  one rewrite whose results `update_event()` writes; a store that can update
-  the field in place overrides it.
+  room lock), which works for a store whose `update_event()` writes the row
+  as given; a store that keeps the results there overrides
+  `record_delivery_results()`, and the default, reading the event back,
+  raises `NotImplementedError` saying so rather than record nothing (the
+  framework logs it as a delivery record it could not write).
 ---
 
 RoomKit provides mock implementations for every pluggable component: AI providers, voice backends, pipeline stages, identity resolvers, and telemetry.

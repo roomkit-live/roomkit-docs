@@ -4419,6 +4419,8 @@ answered as its first delivery was: `blocked=True`, the record stored
 `BLOCKED` as its `event`, that record's `blocked_by` as the `reason`, and
 `duplicate=True`.
 
+A blank key, empty or spaces, is no key: `RoomEvent` and `InboundMessage`
+read it as `None`, and `kit.deliver()` refuses it `empty_idempotency_key`.
 A key the room holds for its channel is never committed again: a record
 `kit.commit_event()` commits is never a replay, and it, like a direct
 `commit_event()` on a store, raises `IdempotencyKeyTakenError`, nothing

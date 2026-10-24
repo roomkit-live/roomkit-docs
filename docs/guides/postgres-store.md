@@ -131,7 +131,7 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 `store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, bounded repairs that populate newly added columns without discarding existing values, and one-time rewrites a rule change needs, each recorded in `schema_version` so it runs once. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
 
-A column a release adds is added only when its table lacks it: `ALTER TABLE` takes an ACCESS EXCLUSIVE lock even when `ADD COLUMN IF NOT EXISTS` finds the column, so a boot on an up-to-date schema runs none, and never queues behind a transaction reading the tables.
+A column or an index a release adds is created only when the schema lacks it, and the per-room index marks (`event_sequences`) are seeded from the rooms and events only in the boot that creates that table. `ALTER TABLE` takes ACCESS EXCLUSIVE and `CREATE INDEX` takes SHARE even when `IF NOT EXISTS` finds the object, so a boot on an up-to-date schema runs neither and writes no row: it waits on no open reader or writer of the tables, and none waits on it.
 
 The tables live in the session's schema, `current_schema()`, the first schema of `search_path` that exists. Two deployments can share a database, one schema each (`search_path=tenant,public` beside a deployment in `public`): `init()`, `migrate()`, `dedupe_event_indices()` and `drop_legacy_parent_index()` look up, create and drop the tables, columns and indexes of their own schema only, never a namesake the other schema holds.
 
