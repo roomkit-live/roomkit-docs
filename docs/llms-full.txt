@@ -1313,8 +1313,10 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
   handler reporting that check's failure, it is **adopted beside** the event:
   no ticket, every hook under the lock, its own section for its commit,
   still ahead of the event.
-- Either way it draws on the event's reentry budget, one pass as it starts: a
-  hook that injects on every event stops at the cap. Past it, `send_event()`
+- Either way it answers at its commit (a `process_inbound()` result carries
+  no `delivery_results`): its delivery follows in the room's lane, behind the
+  event's work. It draws on the event's reentry budget, one pass as it starts:
+  a hook that injects on every event stops at the cap. Past it, `send_event()`
   stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
   that record; `process_inbound()` naming the room returns `blocked=True,
   reason="reentry_loop_cap"` with no event, before anything else: its channel

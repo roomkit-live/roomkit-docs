@@ -310,7 +310,9 @@ a message after a due close is refused as if the timer had run on time: its
 `room_refused_event`, and `ON_ROOM_PAUSED` / `ON_ROOM_CLOSED` fire once the room
 lock is released. A transition takes the instant it fell due, however late it
 is applied: a room idle long past both thresholds pauses at the first instant
-and closes at the second, in one write.
+and closes at the second, in one write. Once due, a transition is written,
+recorded and announced, its hook started, even when the call applying it is
+cancelled: no later operation would find it due again.
 
 See the [Room Lifecycle & Timers guide](guides/room-lifecycle.md) for statuses, the activity model, and resuming paused rooms.
 
@@ -974,7 +976,13 @@ Cancelling the task awaiting `process_inbound()` cancels that call's delivery.
 RoomKit waits for the owned work's cleanup before propagating
 `asyncio.CancelledError`. It keeps the committed inbound event and any
 persisted response segments. Other calls, rooms and shared providers continue;
-the next turn can use a new tool handler once cleanup has finished.
+the next turn can use a new tool handler once cleanup has finished. Once the
+call is decided, its writes do not depend on the caller (RFC §13.6): cancelled
+while its commit is in flight, it still leaves the event delivered, or its
+`BLOCKED` record stored, what its hooks injected committed, and the room's lane
+going on with no gap; a room step 2 opens for the message is created, its
+`ON_ROOM_CREATED` hooks run and the channel attached. `kit.close()` waits for
+these writes, never cutting them.
 
 For a deferred call, cancel explicitly through its handle:
 
@@ -1453,7 +1461,9 @@ of its own (RFC §9.4), whichever way that event ended:
   caller: a caller cancelled while another event holds the lock, or failing
   after the decision, loses none of it; a task the kit holds commits it once
   the lock frees, and `kit.close()` cancels that task with its other
-  background work. An event code under the lock sends with `kit.send_event()`
+  background work, the tasks its drains start meanwhile included; a caller
+  waiting for that task then returns rather than raise `CancelledError`. An
+  event code under the lock sends with `kit.send_event()`
   is another path: it commits at once, ahead of the event being processed,
   and what its own hooks inject joins the queue of the section holding the
   lock, committed once that section has released it.
@@ -4930,6 +4940,8 @@ A call into a room made by the room's own work is part of that work (RFC §9.5.1
 | A locked hook, or code under the room lock | Nested: no admission ticket, every hook under the lock, committed ahead of the event being processed; what its own hooks inject joins the queue of the section holding the lock |
 | An off-lock hook's body, a `hook_error` handler reporting that check's failure, a channel's `handle_inbound()` | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
 | A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
+
+A nested or adopted call answers at its commit (a `process_inbound()` result carries no `delivery_results`): its delivery follows in the room's lane, behind the event's work.
 
 Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event: before anything else when it names its room (its channel not looked up, nothing attached), once step 2 knows the room when it is routed or names a room the store lacks. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made while a turn or a tool call runs (a realtime or a conference call included), by it or a task it spawned, into whatever room, is at least as deep as the turn's response or the call's, so an agent that injects at each turn stops at `max_chain_depth`. A call of such work that creates a room, routed or named (the router answering none or naming a room the store lacks, `process_inbound(..., room_id=...)` naming one), is that work's own and draws on the same budget, charged once before the room is created, so a delivery that opens a room each time stops at the cap. A call into another existing room has a budget of its own, and work a turn, a tool call or a delivery began starts fresh once that work is over: depth 0 and a budget of its own. That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it while the turn runs; a verb made after its turn ended starts fresh, at the depth it names. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
 
