@@ -63,6 +63,7 @@ nav:
   - Features: features.md
   - Architecture: architecture.md
   - Technical: technical.md
+  - Public API: public-api.md
   - FAQ: faq.md
   - AI Assistant Integration: ai-integration.md
   - MCP Integration: mcp.md
