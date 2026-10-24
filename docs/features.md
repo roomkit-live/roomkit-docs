@@ -835,11 +835,13 @@ has no address: it is routed as a message from no one, records no one, and a
 room opened for it names neither correspondent nor recipient, so its
 deliveries are refused `no_recipient` until the host names one.
 On an HTTP webhook the recipient is a URL the host sets.
-A recipient, and a chat, is a string that is not blank or a number (a chat
-id): `true`, a blank string, a list or an object under the key is none, so a
-delivery to that binding is refused `no_recipient`, routing reads no
-correspondent in it, and the first sender routed to it gets their address
-written as its recipient.
+A recipient, and a chat, is a string that is not blank or an integer (a chat
+id): `true`, a float (`42.0` included), a blank string, a list or an object
+under the key is none, so a delivery to that binding is refused
+`no_recipient`, routing reads no correspondent in it, and the first sender
+routed to it gets their address written as its recipient. An integer is the
+address its digits write: `{"telegram_chat_id": 1001}` and
+`{"telegram_chat_id": "1001"}` name the same chat.
 
 #### Addresses by channel type
 
@@ -4371,10 +4373,13 @@ a failure is the one someone comes back to hours later, when the live
 whole, successes included: which channels *did* receive it is half the answer.
 
 It is written on the event as stored, the field alone
-(`ConversationStore.record_delivery_results()`), under the room lock: an edit or
-a delete committed while the delivery ran stands. Every shipped store keeps it,
-Postgres in an `events.delivery_results` column that `init()` adds to an
-existing schema.
+(`ConversationStore.record_delivery_results()`, which replaces the map), under
+the room lock: an edit or a delete committed while the delivery ran stands. It
+is the one write of the field once the event is stored: `update_event()` and
+the rewrite of a change's target keep the results stored, whatever the copy
+they are given carries, and a record `commit_event()` stores keeps the
+results it brings. Every shipped store keeps it, Postgres in an
+`events.delivery_results` column that `init()` adds to an existing schema.
 
 ### Idempotency
 
@@ -4413,6 +4418,13 @@ not ask. For the same reason, a redelivery of a message the room blocked is
 answered as its first delivery was: `blocked=True`, the record stored
 `BLOCKED` as its `event`, that record's `blocked_by` as the `reason`, and
 `duplicate=True`.
+
+A key the room holds for its channel is never committed again: a record
+`kit.commit_event()` commits is never a replay, and it, like a direct
+`commit_event()` on a store, raises `IdempotencyKeyTakenError`, nothing
+written. Every shipped store raises it alike, where SQLite and Postgres
+raised their driver's error and the in-memory store wrote the second event;
+an event under an id the store holds keeps the driver's own error.
 
 A `ConversationStore` checks a key with `check_idempotency(room_id, key, *,
 channel_id)` and resolves the original through

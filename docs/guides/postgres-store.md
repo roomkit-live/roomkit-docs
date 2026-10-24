@@ -131,6 +131,10 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 `store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, bounded repairs that populate newly added columns without discarding existing values, and one-time rewrites a rule change needs, each recorded in `schema_version` so it runs once. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
 
+A column a release adds is added only when its table lacks it: `ALTER TABLE` takes an ACCESS EXCLUSIVE lock even when `ADD COLUMN IF NOT EXISTS` finds the column, so a boot on an up-to-date schema runs none, and never queues behind a transaction reading the tables.
+
+The tables live in the session's schema, `current_schema()`, the first schema of `search_path` that exists. Two deployments can share a database, one schema each (`search_path=tenant,public` beside a deployment in `public`): `init()`, `migrate()`, `dedupe_event_indices()` and `drop_legacy_parent_index()` look up, create and drop the tables, columns and indexes of their own schema only, never a namesake the other schema holds.
+
 !!! warning "Upgrade every worker before one starts"
     The version that makes `latest_index` `None` for an empty room, scopes idempotency keys per source channel and stores each event's committed visibility changes the schema at its first `init()`: it drops the `NOT NULL` and default of `rooms.latest_index` and clears the `0` of empty rooms, replaces the unique index `idx_events_idempotency` (room, key) with `idx_events_idempotency_channel` (room, source channel, key), and rewrites once, as `schema_version` 3, the events stored `all` under a narrowed binding with that binding's visibility, so their readers stay the same. An older worker cannot read a room without an index and recreates the per-room index, so every worker sharing the database must run this version before one of them starts against it.
 

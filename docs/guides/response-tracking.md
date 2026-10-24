@@ -96,9 +96,9 @@ earlier event than the one that woke it.
 - **SQLite.** Schema version 4 adds the `responds_to` column and its index. A
   file at version 1, 2 or 3 is migrated when it is opened. Events written
   before the upgrade read `None`.
-- **Postgres.** `init()` adds the column and a partial index
-  (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`). Existing rows are `NULL`, which
-  is what they were.
+- **Postgres.** `init()` adds the column and a partial index when the table
+  lacks them, so a boot on an up-to-date schema takes no table lock. Existing
+  rows are `NULL`, which is what they were.
 
 ## Not covered yet
 
