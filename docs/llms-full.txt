@@ -711,7 +711,10 @@ await kit.post(room_id, "Refund issued.", idempotency_key=webhook_delivery_id)
 - `idempotency_key`: a key the host channel holds in the room is a replay. The
   post returns the event the key committed and texts nothing again, and from
   the room's own work it draws no pass. A blank key is no key. A webhook
-  delivered twice posts once.
+  delivered twice posts once. A replay into a room closed since, or after the
+  host channel was detached, raises `RoomClosedError` or
+  `ChannelNotFoundError`, as `send_event()` does: the room's status and
+  binding are read before the key (RFC §10.1).
 - The kit registers its host channel under `"host"` on first use. `"host"`
   taken by a channel of another type raises `ValueError`; `channel_id=` then
   speaks from another `HostChannel` you registered, and a channel of another
@@ -721,6 +724,9 @@ await kit.post(room_id, "Refund issued.", idempotency_key=webhook_delivery_id)
   concurrently, keeps its settings. A room you detached the host channel from
   is refused with `ChannelNotFoundError`, and a closed or archived room with
   `RoomClosedError`; nothing is written. `attach_channel()` grants it again.
+  One `process_timeout` bounds the whole call, the wait for the room lock
+  included (`ProcessTimeoutError`); once the lock is held, the attach runs to
+  its end even if the caller is cancelled.
 - A host channel is attached as a transport only: `category=INTELLIGENCE`
   raises `ValueError`. `process_inbound()` on it raises `ValueError` before
   anything is read: it receives no external payload.
