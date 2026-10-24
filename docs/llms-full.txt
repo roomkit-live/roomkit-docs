@@ -1331,9 +1331,12 @@ agent that sends into its room every time it is reached stops at the cap or at
 `max_chain_depth`. That depth holds where the owner runs the turn's code (an
 in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb);
 with a Redis turn backend a turn reaches the room through its `TurnHost`. A
-call into another room has a budget of its own, and work a turn, a tool call
-or a delivery began starts fresh once that work is over: depth 0 and a budget
-of its own.
+message such work routes that opens a new room (the router answering none, or
+naming a room the store lacks) is that work's own and draws on the same budget,
+charged before the room is created, so a delivery that opens a room each time
+stops at the cap. A call into another existing room has a budget of its own,
+and work a turn, a tool call or a delivery began starts fresh once that work
+is over: depth 0 and a budget of its own.
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
