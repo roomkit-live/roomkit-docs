@@ -1,33 +1,33 @@
 # AI Providers
 
-::: roomkit.providers.ai.base.AIProvider
+::: roomkit.providers.ai.AIProvider
 
-::: roomkit.providers.ai.base.AIContext
+::: roomkit.providers.ai.AIContext
 
-::: roomkit.providers.ai.base.AIMessage
+::: roomkit.providers.ai.AIMessage
 
-::: roomkit.providers.ai.base.AITextPart
+::: roomkit.providers.ai.AITextPart
 
-::: roomkit.providers.ai.base.AIImagePart
+::: roomkit.providers.ai.AIImagePart
 
-::: roomkit.providers.ai.base.AITool
+::: roomkit.providers.ai.AITool
 
-::: roomkit.providers.ai.base.AIToolCall
+::: roomkit.providers.ai.AIToolCall
 
-::: roomkit.providers.ai.base.ServedCall
+::: roomkit.providers.ai.ServedCall
 
-::: roomkit.providers.ai.base.AIResponse
+::: roomkit.providers.ai.AIResponse
 
-::: roomkit.providers.ai.base.ModelInfo
+::: roomkit.providers.ai.ModelInfo
 
-::: roomkit.providers.ai.base.ModelPricing
+::: roomkit.providers.ai.ModelPricing
 
 `ModelPricing` is also exported from the package root. Its rates are finite and
 non-negative, its multipliers finite and positive, and `cost_for()` accepts only
 non-negative integer token counters. Invalid accounting input raises instead of
 producing a negative or non-finite cost.
 
-::: roomkit.providers.ai.mock.MockAIProvider
+::: roomkit.providers.ai.MockAIProvider
 
 ## Model capability tags
 
@@ -45,11 +45,11 @@ chat list. A curated catalog's own `capabilities` stay out of a live listing.
 Schema within a portable subset. See the
 [Structured Output guide](../guides/structured-output.md).
 
-::: roomkit.providers.ai.json_schema.check_portable_schema
+::: roomkit.providers.ai.check_portable_schema
 
-::: roomkit.providers.ai.json_schema.schema_mismatch
+::: roomkit.providers.ai.schema_mismatch
 
-::: roomkit.providers.ai.response_schema.ResponseSchemaError
+::: roomkit.providers.ai.ResponseSchemaError
 
 ## Image parts
 
@@ -59,11 +59,11 @@ reader: media type from the header, then the part's `mime_type`, then
 corrupt one is refused before the request leaves, as a non-retryable
 `ProviderError` that names the cause.
 
-::: roomkit.providers.ai.image_parts.image_part_payload
+::: roomkit.providers.ai.image_part_payload
 
-::: roomkit.providers.ai.image_parts.image_part_base64
+::: roomkit.providers.ai.image_part_base64
 
-::: roomkit.providers.ai.image_parts.image_part_uri
+::: roomkit.providers.ai.image_part_uri
 
 ## Handing the loop a tool call
 
@@ -83,27 +83,27 @@ the channel refuses (RFC §12.4). A provider whose wire says whether the
 response cut a call reads it with `realtime_call_arguments` instead, which
 marks a call the cut stopped as `CutArguments` (RFC §6.4).
 
-::: roomkit.providers.ai.tool_calls.tool_arguments
+::: roomkit.providers.ai.tool_arguments
 
-::: roomkit.providers.ai.tool_calls.readable_arguments
+::: roomkit.providers.ai.readable_arguments
 
-::: roomkit.providers.ai.tool_calls.realtime_call_arguments
+::: roomkit.providers.ai.realtime_call_arguments
 
-::: roomkit.providers.ai.tool_calls.CutArguments
+::: roomkit.providers.ai.CutArguments
 
-::: roomkit.providers.ai.tool_calls.unreadable_arguments
+::: roomkit.providers.ai.unreadable_arguments
 
-::: roomkit.providers.ai.tool_calls.call_partial
+::: roomkit.providers.ai.call_partial
 
-::: roomkit.providers.ai.tool_calls.call_cut
+::: roomkit.providers.ai.call_cut
 
-::: roomkit.providers.ai.tool_calls.call_garbled
+::: roomkit.providers.ai.call_garbled
 
-::: roomkit.providers.ai.tool_calls.CallIds
+::: roomkit.providers.ai.CallIds
 
-::: roomkit.providers.ai.tool_calls.partial_call_error
+::: roomkit.providers.ai.partial_call_error
 
-::: roomkit.providers.ai.base.tool_call_of
+::: roomkit.providers.ai.tool_call_of
 
 ## Declaring tools
 
@@ -115,11 +115,11 @@ checks its vendor's rule before the request and raises a `ProviderError`
 naming the tool and the rule; a provider in front of a server it does not
 know (a custom URL: `base_url`, Mistral's `server_url`) checks none.
 
-::: roomkit.providers.ai.tool_declaration.declared_parameters
+::: roomkit.providers.ai.declared_parameters
 
-::: roomkit.providers.ai.tool_declaration.chat_tool_declarations
+::: roomkit.providers.ai.chat_tool_declarations
 
-::: roomkit.providers.ai.tool_declaration.ToolNameRule
+::: roomkit.providers.ai.ToolNameRule
 
 ## Rendering a conversation as Chat Completions messages
 
@@ -130,11 +130,11 @@ tags, a message field such as Cerebras's `reasoning`, or nowhere), whether a
 tool message names its tool, whether text goes flat. A derivative of
 `OpenAIAIProvider` whose service renders differently sets `_chat_dialect`.
 
-::: roomkit.providers.ai.chat_request.ChatDialect
+::: roomkit.providers.ai.ChatDialect
 
-::: roomkit.providers.ai.chat_request.chat_messages
+::: roomkit.providers.ai.chat_messages
 
-::: roomkit.providers.ai.tool_calls.is_truncation
+::: roomkit.providers.ai.is_truncation
 
 ## Explicit models and modern request profiling
 
@@ -235,13 +235,13 @@ for tool_call in response.tool_calls:
 
 ## Gemini Provider
 
-::: roomkit.providers.gemini.ai.GeminiAIProvider
+::: roomkit.providers.gemini.GeminiAIProvider
 
-::: roomkit.providers.gemini.config.GeminiConfig
+::: roomkit.providers.gemini.GeminiConfig
 
-::: roomkit.providers.gemini.vertex.GeminiVertexProvider
+::: roomkit.providers.gemini.GeminiVertexProvider
 
-::: roomkit.providers.gemini.vertex.GeminiVertexConfig
+::: roomkit.providers.gemini.GeminiVertexConfig
 
 ### Usage
 
@@ -270,9 +270,9 @@ Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. 
 
 ## Meta Muse Spark Provider
 
-::: roomkit.providers.meta.ai.MetaAIProvider
+::: roomkit.providers.meta.MetaAIProvider
 
-::: roomkit.providers.meta.config.MetaConfig
+::: roomkit.providers.meta.MetaConfig
 
 Muse Spark cannot turn reasoning off: `reasoning_effort="none"` is sent as
 `"minimal"`. See the [Meta Model API guide](../guides/meta.md).
@@ -329,9 +329,9 @@ Install with: `pip install roomkit[llamacpp]`
 
 ## Anthropic Provider
 
-::: roomkit.providers.anthropic.ai.AnthropicAIProvider
+::: roomkit.providers.anthropic.AnthropicAIProvider
 
-::: roomkit.providers.anthropic.config.AnthropicConfig
+::: roomkit.providers.anthropic.AnthropicConfig
 
 A tool result whose call was refused, failed, blocked, served by nothing or
 cancelled goes to Anthropic with `is_error` set on its `tool_result` block;
@@ -380,9 +380,9 @@ Install with: `pip install roomkit[anthropic]`
 
 ## OpenAI Provider
 
-::: roomkit.providers.openai.ai.OpenAIAIProvider
+::: roomkit.providers.openai.OpenAIAIProvider
 
-::: roomkit.providers.openai.config.OpenAIConfig
+::: roomkit.providers.openai.OpenAIConfig
 
 ### Usage
 
@@ -400,9 +400,9 @@ Install with: `pip install roomkit[openai]`
 
 ## Cerebras Provider
 
-::: roomkit.providers.cerebras.ai.CerebrasAIProvider
+::: roomkit.providers.cerebras.CerebrasAIProvider
 
-::: roomkit.providers.cerebras.config.CerebrasConfig
+::: roomkit.providers.cerebras.CerebrasConfig
 
 Install with `pip install "roomkit[cerebras]"`. The provider uses the shared
 OpenAI-compatible async transport and supports text, streaming, reasoning,
@@ -452,9 +452,9 @@ See `examples/cerebras_ai.py` for a complete conversation.
 
 ## Mistral Provider
 
-::: roomkit.providers.mistral.ai.MistralAIProvider
+::: roomkit.providers.mistral.MistralAIProvider
 
-::: roomkit.providers.mistral.config.MistralConfig
+::: roomkit.providers.mistral.MistralConfig
 
 ### Usage
 
@@ -472,9 +472,9 @@ Install with: `pip install roomkit[mistral]`
 
 ## Azure Provider
 
-::: roomkit.providers.azure.ai.AzureAIProvider
+::: roomkit.providers.azure.AzureAIProvider
 
-::: roomkit.providers.azure.config.AzureAIConfig
+::: roomkit.providers.azure.AzureAIConfig
 
 ### Usage
 
@@ -502,9 +502,9 @@ See [AI Thinking — Native Ollama provider](../guides/ai-thinking.md#native-oll
 for thinking, authentication, and sampling options (`temperature`, `num_ctx`,
 `top_p`, `top_k`, `min_p`, `keep_alive`).
 
-::: roomkit.providers.ollama.ai.OllamaAIProvider
+::: roomkit.providers.ollama.OllamaAIProvider
 
-::: roomkit.providers.ollama.config.OllamaConfig
+::: roomkit.providers.ollama.OllamaConfig
 
 ### Usage
 
@@ -531,22 +531,22 @@ schema meant for Ollama spells those out in its descriptions.
 
 ## Streaming
 
-::: roomkit.providers.ai.base.StreamEvent
+::: roomkit.providers.ai.StreamEvent
 
-::: roomkit.providers.ai.base.StreamTextDelta
+::: roomkit.providers.ai.StreamTextDelta
 
-::: roomkit.providers.ai.base.StreamThinkingDelta
+::: roomkit.providers.ai.StreamThinkingDelta
 
-::: roomkit.providers.ai.base.StreamToolCall
+::: roomkit.providers.ai.StreamToolCall
 
-::: roomkit.providers.ai.base.StreamDone
+::: roomkit.providers.ai.StreamDone
 
 ## Response Parts
 
-::: roomkit.providers.ai.base.AIThinkingPart
+::: roomkit.providers.ai.AIThinkingPart
 
-::: roomkit.providers.ai.base.AIToolCallPart
+::: roomkit.providers.ai.AIToolCallPart
 
-::: roomkit.providers.ai.base.AIToolResultPart
+::: roomkit.providers.ai.AIToolResultPart
 
-::: roomkit.providers.ai.base.ProviderError
+::: roomkit.providers.ai.ProviderError

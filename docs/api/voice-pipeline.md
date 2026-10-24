@@ -4,82 +4,82 @@ Audio processing pipeline for voice channels. See the [Audio Pipeline Stages gui
 
 ## Pipeline
 
-::: roomkit.voice.pipeline.engine.AudioPipeline
+::: roomkit.voice.pipeline.AudioPipeline
 
-::: roomkit.voice.pipeline.config.AudioPipelineConfig
+::: roomkit.voice.pipeline.AudioPipelineConfig
 
-::: roomkit.voice.audio_frame.AudioFrame
+::: roomkit.voice.AudioFrame
 
 ## VAD (Voice Activity Detection)
 
-::: roomkit.voice.pipeline.vad.base.VADProvider
+::: roomkit.voice.pipeline.vad.VADProvider
 
-::: roomkit.voice.pipeline.vad.base.VADConfig
+::: roomkit.voice.pipeline.vad.VADConfig
 
-::: roomkit.voice.pipeline.vad.base.VADEvent
+::: roomkit.voice.pipeline.vad.VADEvent
 
-::: roomkit.voice.pipeline.vad.base.VADEventType
+::: roomkit.voice.pipeline.vad.VADEventType
 
-::: roomkit.voice.pipeline.vad.mock.MockVADProvider
+::: roomkit.voice.pipeline.vad.MockVADProvider
 
 ## Acoustic Echo Cancellation
 
-::: roomkit.voice.pipeline.aec.base.AECProvider
+::: roomkit.voice.pipeline.aec.AECProvider
 
-::: roomkit.voice.pipeline.aec.webrtc.WebRTCAECProvider
+::: roomkit.voice.pipeline.aec.WebRTCAECProvider
 
-::: roomkit.voice.pipeline.aec.speex.SpeexAECProvider
+::: roomkit.voice.pipeline.aec.SpeexAECProvider
 
 ## Automatic Gain Control
 
-::: roomkit.voice.pipeline.agc.base.AGCConfig
+::: roomkit.voice.pipeline.agc.AGCConfig
 
-::: roomkit.voice.pipeline.agc.base.AGCProvider
+::: roomkit.voice.pipeline.agc.AGCProvider
 
-::: roomkit.voice.pipeline.agc.simple.SimpleAGCProvider
+::: roomkit.voice.pipeline.agc.SimpleAGCProvider
 
-::: roomkit.voice.pipeline.agc.mock.MockAGCProvider
+::: roomkit.voice.pipeline.agc.MockAGCProvider
 
 ## Denoiser
 
-::: roomkit.voice.pipeline.denoiser.base.DenoiserProvider
+::: roomkit.voice.pipeline.denoiser.DenoiserProvider
 
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserConfig
 
 ::: roomkit.voice.pipeline.denoiser.AICousticsDenoiserProvider
 
-::: roomkit.voice.pipeline.denoiser.rnnoise.RNNoiseDenoiserProvider
+::: roomkit.voice.pipeline.denoiser.RNNoiseDenoiserProvider
 
-::: roomkit.voice.pipeline.denoiser.sherpa_onnx.SherpaOnnxDenoiserProvider
+::: roomkit.voice.pipeline.denoiser.SherpaOnnxDenoiserProvider
 
-::: roomkit.voice.pipeline.denoiser.webrtc.WebRTCNoiseSuppressorProvider
+::: roomkit.voice.pipeline.denoiser.WebRTCNoiseSuppressorProvider
 
-::: roomkit.voice.pipeline.denoiser.mock.MockDenoiserProvider
+::: roomkit.voice.pipeline.denoiser.MockDenoiserProvider
 
 ## Diarization
 
-::: roomkit.voice.pipeline.diarization.base.DiarizationProvider
+::: roomkit.voice.pipeline.diarization.DiarizationProvider
 
-::: roomkit.voice.pipeline.diarization.base.DiarizationResult
+::: roomkit.voice.pipeline.diarization.DiarizationResult
 
-::: roomkit.voice.pipeline.diarization.mock.MockDiarizationProvider
+::: roomkit.voice.pipeline.diarization.MockDiarizationProvider
 
 ## TTS Stream Filters
 
-::: roomkit.voice.tts.filters.TTSStreamFilter
+::: roomkit.voice.tts.TTSStreamFilter
 
-::: roomkit.voice.tts.filters.StripBrackets
+::: roomkit.voice.tts.StripBrackets
 
-::: roomkit.voice.tts.filters.StripEmoji
+::: roomkit.voice.tts.StripEmoji
 
-::: roomkit.voice.tts.filters.StripInternalTags
+::: roomkit.voice.tts.StripInternalTags
 
-::: roomkit.voice.tts.filters.StripTechnicalText
+::: roomkit.voice.tts.StripTechnicalText
 
 ## Events & Callbacks
 
-::: roomkit.voice.events.SpeakerChangeEvent
+::: roomkit.voice.SpeakerChangeEvent
 
-::: roomkit.voice.base.BargeInCallback
+::: roomkit.voice.BargeInCallback
 
-::: roomkit.voice.backends.base.AudioReceivedCallback
+::: roomkit.voice.AudioReceivedCallback

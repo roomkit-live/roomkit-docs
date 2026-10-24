@@ -52,9 +52,9 @@ async def track_delivery(status: DeliveryStatus):
 
 ## Base Classes
 
-::: roomkit.providers.sms.base.SMSProvider
+::: roomkit.providers.sms.SMSProvider
 
-::: roomkit.providers.sms.mock.MockSMSProvider
+::: roomkit.providers.sms.MockSMSProvider
 
 ## MMS Handling
 
@@ -81,31 +81,31 @@ RoomKit supports MMS (Multimedia Messaging Service) through SMS providers. When 
 
 ## Sinch
 
-::: roomkit.providers.sinch.sms.SinchSMSProvider
+::: roomkit.providers.sinch.SinchSMSProvider
 
-::: roomkit.providers.sinch.config.SinchConfig
+::: roomkit.providers.sinch.SinchConfig
 
-::: roomkit.providers.sinch.sms.parse_sinch_webhook
+::: roomkit.providers.sinch.parse_sinch_webhook
 
 ## Telnyx
 
-::: roomkit.providers.telnyx.sms.TelnyxSMSProvider
+::: roomkit.providers.telnyx.TelnyxSMSProvider
 
-::: roomkit.providers.telnyx.config.TelnyxConfig
+::: roomkit.providers.telnyx.TelnyxConfig
 
 ## Twilio
 
-::: roomkit.providers.twilio.sms.TwilioSMSProvider
+::: roomkit.providers.twilio.TwilioSMSProvider
 
-::: roomkit.providers.twilio.config.TwilioConfig
+::: roomkit.providers.twilio.TwilioConfig
 
-::: roomkit.providers.twilio.sms.parse_twilio_webhook
+::: roomkit.providers.twilio.parse_twilio_webhook
 
 ## VoiceMeUp
 
-::: roomkit.providers.voicemeup.sms.VoiceMeUpSMSProvider
+::: roomkit.providers.voicemeup.VoiceMeUpSMSProvider
 
-::: roomkit.providers.voicemeup.config.VoiceMeUpConfig
+::: roomkit.providers.voicemeup.VoiceMeUpConfig
 
 ### VoiceMeUp MMS Split Webhooks
 
@@ -239,9 +239,9 @@ kit.hook(
 
 ### Webhook Metadata
 
-::: roomkit.providers.sms.meta.WebhookMeta
+::: roomkit.providers.sms.WebhookMeta
 
-::: roomkit.providers.sms.meta.extract_sms_meta
+::: roomkit.providers.sms.extract_sms_meta
 
 ### Delivery Status
 
@@ -249,10 +249,10 @@ kit.hook(
 
 ### Phone Normalization
 
-::: roomkit.providers.sms.phone.normalize_phone
+::: roomkit.providers.sms.normalize_phone
 
-::: roomkit.providers.sms.phone.is_valid_phone
+::: roomkit.providers.sms.is_valid_phone
 
 ### Telnyx Webhook
 
-::: roomkit.providers.telnyx.sms.parse_telnyx_webhook
+::: roomkit.providers.telnyx.parse_telnyx_webhook

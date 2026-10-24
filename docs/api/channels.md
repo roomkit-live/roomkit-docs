@@ -55,20 +55,20 @@ The discovery tools a channel serves itself under Tool Search.
 
 ## Addressing
 
-::: roomkit.channels.addressing.Addressing
+::: roomkit.channels.Addressing
 
-::: roomkit.channels.addressing.ChannelAddressing
+::: roomkit.channels.ChannelAddressing
 
-::: roomkit.channels.addressing.addressing_of
+::: roomkit.channels.addressing_of
 
 ## WebSocket Streaming
 
-::: roomkit.channels.websocket.StreamStart
+::: roomkit.channels.StreamStart
 
-::: roomkit.channels.websocket.StreamChunk
+::: roomkit.channels.StreamChunk
 
-::: roomkit.channels.websocket.StreamEnd
+::: roomkit.channels.StreamEnd
 
-::: roomkit.channels.websocket.StreamMessage
+::: roomkit.channels.StreamMessage
 
-::: roomkit.channels.websocket.StreamSendFn
+::: roomkit.channels.StreamSendFn

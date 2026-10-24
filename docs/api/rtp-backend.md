@@ -19,7 +19,7 @@ See the [full RTP example](https://github.com/roomkit-live/roomkit/blob/main/exa
 
 ## API Reference
 
-::: roomkit.voice.backends.rtp.RTPVoiceBackend
+::: roomkit.voice.backends.RTPVoiceBackend
 
 ## Capabilities
 

@@ -6,12 +6,12 @@ SQLite and Postgres preserve these receipts across restart until room deletion.
 Custom stores must implement the same contract before accepting keyed voice
 injection. See [voice idempotency](../guides/delivery.md#voice-idempotency-and-uncertainty).
 
-::: roomkit.store.base.ConversationStore
+::: roomkit.store.ConversationStore
 
-::: roomkit.store.memory.InMemoryStore
+::: roomkit.store.InMemoryStore
 
-::: roomkit.store.sqlite.SQLiteStore
+::: roomkit.store.SQLiteStore
 
-::: roomkit.store.sqlite.SQLiteSchemaError
+::: roomkit.store.SQLiteSchemaError
 
-::: roomkit.store.postgres.PostgresStore
+::: roomkit.store.PostgresStore

@@ -206,28 +206,28 @@ offsets count **UTF-16 code units** and Python indexes code points, so
 Multilingual Plane appears earlier in the message — one emoji is enough — and
 silently wrong after.
 
-::: roomkit.providers.telegram.bot.TelegramBotProvider
+::: roomkit.providers.telegram.TelegramBotProvider
 
-::: roomkit.providers.telegram.api.TelegramBotAPI
+::: roomkit.providers.telegram.TelegramBotAPI
 
-::: roomkit.providers.telegram.config.TelegramConfig
+::: roomkit.providers.telegram.TelegramConfig
 
-::: roomkit.providers.telegram.mock.MockTelegramProvider
+::: roomkit.providers.telegram.MockTelegramProvider
 
-::: roomkit.providers.telegram.webhook.parse_telegram_webhook
+::: roomkit.providers.telegram.parse_telegram_webhook
 
-::: roomkit.providers.telegram.webhook.parse_telegram_message
+::: roomkit.providers.telegram.parse_telegram_message
 
-::: roomkit.providers.telegram.webhook.TelegramMessageParts
+::: roomkit.providers.telegram.TelegramMessageParts
 
-::: roomkit.providers.telegram.update.parse_telegram_update
+::: roomkit.providers.telegram.parse_telegram_update
 
-::: roomkit.providers.telegram.update.parse_telegram_callback
+::: roomkit.providers.telegram.parse_telegram_callback
 
-::: roomkit.providers.telegram.update.TelegramUpdate
+::: roomkit.providers.telegram.TelegramUpdate
 
-::: roomkit.providers.telegram.update.TelegramCallback
+::: roomkit.providers.telegram.TelegramCallback
 
-::: roomkit.providers.telegram.entities.mentions_bot
+::: roomkit.providers.telegram.mentions_bot
 
-::: roomkit.providers.telegram.entities.entity_text
+::: roomkit.providers.telegram.entity_text

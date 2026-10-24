@@ -38,9 +38,9 @@ use raises `ModuleNotFoundError` naming the package to install.
   import the class from its package instead.
 
 The pages of this site, the examples in the repository, its README and the
-`llms.txt` files import only public paths, and a test keeps them on it. When
-a page shows a reference entry under a module path, the import path to use
-is written above it.
+`llms.txt` files import only public paths, and a test keeps them on it. The
+API reference shows each public name under the path to import it from, or
+writes that path above the entry.
 
 ## What counts as a break
 

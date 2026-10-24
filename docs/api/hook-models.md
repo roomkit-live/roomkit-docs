@@ -14,6 +14,6 @@ record its `declared_tools` is made of. See the hook table in
 
 ::: roomkit.DeclaredTool
 
-::: roomkit.models.task.Task
+::: roomkit.models.Task
 
-::: roomkit.models.task.Observation
+::: roomkit.models.Observation

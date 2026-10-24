@@ -4,27 +4,27 @@
 
 ::: roomkit.EventSource
 
-::: roomkit.models.event.EventContent
+::: roomkit.models.EventContent
 
 ## Content Types
 
 ::: roomkit.TextContent
 
-::: roomkit.models.event.RichContent
+::: roomkit.models.RichContent
 
-::: roomkit.models.event.MediaContent
+::: roomkit.models.MediaContent
 
-::: roomkit.models.event.AudioContent
+::: roomkit.models.AudioContent
 
-::: roomkit.models.event.VideoContent
+::: roomkit.models.VideoContent
 
-::: roomkit.models.event.LocationContent
+::: roomkit.models.LocationContent
 
-::: roomkit.models.event.CompositeContent
+::: roomkit.models.CompositeContent
 
-::: roomkit.models.event.SystemContent
+::: roomkit.models.SystemContent
 
-::: roomkit.models.event.TemplateContent
+::: roomkit.models.TemplateContent
 
 ## Framework Events
 
@@ -32,6 +32,6 @@
 
 ::: roomkit.SessionStartedEvent
 
-::: roomkit.models.trace.ProtocolTrace
+::: roomkit.models.ProtocolTrace
 
 ::: roomkit.RoomContext

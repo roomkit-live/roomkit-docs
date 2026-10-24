@@ -19,27 +19,27 @@ Async callback for executing tool/function calls from the AI provider. Receives 
 
 ## Provider ABC
 
-::: roomkit.voice.realtime.provider.RealtimeVoiceProvider
+::: roomkit.voice.realtime.RealtimeVoiceProvider
 
 ## Transport ABC
 
-All realtime transports extend [`VoiceBackend`](providers-voice.md#roomkit.voice.backends.base.VoiceBackend).
+All realtime transports extend [`VoiceBackend`](providers-voice.md#roomkit.voice.VoiceBackend).
 
 ## Session & State
 
-See [`VoiceSession`](providers-voice.md#roomkit.voice.base.VoiceSession) and [`VoiceSessionState`](providers-voice.md#roomkit.voice.base.VoiceSessionState).
+See [`VoiceSession`](providers-voice.md#roomkit.voice.VoiceSession) and [`VoiceSessionState`](providers-voice.md#roomkit.voice.VoiceSessionState).
 
 ## Events
 
-::: roomkit.voice.realtime.events.RealtimeTranscriptionEvent
+::: roomkit.voice.realtime.RealtimeTranscriptionEvent
 
-::: roomkit.voice.realtime.events.RealtimeSpeechEvent
+::: roomkit.voice.realtime.RealtimeSpeechEvent
 
-::: roomkit.voice.realtime.events.RealtimeToolCallEvent
+::: roomkit.voice.realtime.RealtimeToolCallEvent
 
-::: roomkit.voice.realtime.events.RealtimeErrorEvent
+::: roomkit.voice.realtime.RealtimeErrorEvent
 
-::: roomkit.voice.realtime.events.RealtimeDelegationEvent
+::: roomkit.voice.realtime.RealtimeDelegationEvent
 
 ## Callback Types
 
@@ -110,11 +110,11 @@ metadata keys: `codec`, `history`. See the [guide](../guides/realtime-voice-prov
 
 Install with: `pip install roomkit[realtime-openai]`
 
-::: roomkit.providers.openai.live.OpenAILiveProvider
+::: roomkit.providers.openai.OpenAILiveProvider
 
-::: roomkit.providers.openai.live.HostedReasoning
+::: roomkit.providers.openai.HostedReasoning
 
-::: roomkit.providers.openai.live.IntegratorReasoning
+::: roomkit.providers.openai.IntegratorReasoning
 
 ### xAI Grok Realtime
 
@@ -160,30 +160,30 @@ Supports `provider_config` metadata keys: `listen_model`, `listen_version`, `lis
 
 Turn detection is always Deepgram's (`server_vad=False` is ignored with a warning), transcriptions are final-only, and `reconfigure()` patches the live session through `UpdateThink` / `UpdateSpeak` instead of reconnecting. See the [Realtime Voice Providers guide](../guides/realtime-voice-providers.md#deepgram-voice-agent).
 
-::: roomkit.providers.deepgram.realtime.DeepgramAgentProvider
+::: roomkit.providers.deepgram.DeepgramAgentProvider
 
-::: roomkit.providers.deepgram.config.DeepgramAgentConfig
+::: roomkit.providers.deepgram.DeepgramAgentConfig
 
 ## Reasoning Delegation
 
 The integrator-side backend a full-duplex model's delegations are served
 through (RFC §12.4.1). See the [Reasoning Delegation guide](../guides/reasoning-delegation.md).
 
-::: roomkit.voice.realtime.reasoning.ReasoningBackend
+::: roomkit.voice.realtime.ReasoningBackend
 
-::: roomkit.voice.realtime.reasoning.ReasoningRequest
+::: roomkit.voice.realtime.ReasoningRequest
 
-::: roomkit.voice.realtime.reasoning.ToolCallResult
+::: roomkit.voice.realtime.ToolCallResult
 
-::: roomkit.voice.realtime.reasoning.ReasoningOutput
+::: roomkit.voice.realtime.ReasoningOutput
 
-::: roomkit.voice.realtime.reasoning.TranscriptLine
+::: roomkit.voice.realtime.TranscriptLine
 
-::: roomkit.voice.realtime.reasoning.AgentReasoningBackend
+::: roomkit.voice.realtime.AgentReasoningBackend
 
-::: roomkit.voice.realtime.reasoning.AIProviderReasoningBackend
+::: roomkit.voice.realtime.AIProviderReasoningBackend
 
-::: roomkit.voice.realtime.reasoning.ReasoningCutShortError
+::: roomkit.voice.realtime.ReasoningCutShortError
 
 ## Transports
 
@@ -249,9 +249,9 @@ Lazy-loaded via `roomkit.voice.get_fastrtc_realtime_transport()` and `roomkit.vo
 
 ## Mock Classes
 
-::: roomkit.voice.realtime.mock.MockRealtimeProvider
+::: roomkit.voice.realtime.MockRealtimeProvider
 
-::: roomkit.voice.realtime.mock.MockRealtimeTransport
+::: roomkit.voice.realtime.MockRealtimeTransport
 
 ## Usage Example
 

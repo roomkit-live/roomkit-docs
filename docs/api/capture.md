@@ -37,19 +37,19 @@ for a complete runnable script.
 
 ## Source ABC
 
-::: roomkit.voice.capture.base.AudioCaptureSource
+::: roomkit.voice.capture.AudioCaptureSource
 
 ## Marks and subscriptions
 
-::: roomkit.voice.capture.base.CaptureMark
+::: roomkit.voice.capture.CaptureMark
 
-::: roomkit.voice.capture.base.CaptureSubscription
+::: roomkit.voice.capture.CaptureSubscription
 
 ## Implementations
 
-::: roomkit.voice.capture.local.LocalMicSource
+::: roomkit.voice.capture.LocalMicSource
 
-::: roomkit.voice.capture.mock.MockCaptureSource
+::: roomkit.voice.capture.MockCaptureSource
 
 ## The subscriber contract
 

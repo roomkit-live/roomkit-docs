@@ -1,7 +1,7 @@
 # HTTP Providers
 
-::: roomkit.providers.http.base.HTTPProvider
+::: roomkit.providers.http.HTTPProvider
 
-::: roomkit.providers.http.mock.MockHTTPProvider
+::: roomkit.providers.http.MockHTTPProvider
 
-::: roomkit.providers.http.provider.WebhookHTTPProvider
+::: roomkit.providers.http.WebhookHTTPProvider

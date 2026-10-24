@@ -89,9 +89,9 @@
 
 ## Infrastructure
 
-::: roomkit.core.locks.RoomLockManager
+::: roomkit.RoomLockManager
 
-::: roomkit.core.locks.InMemoryLockManager
+::: roomkit.InMemoryLockManager
 
 ::: roomkit.voice.auth.AuthCallback
 

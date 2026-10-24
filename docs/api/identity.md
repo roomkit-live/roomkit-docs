@@ -2,15 +2,15 @@
 
 ::: roomkit.Participant
 
-::: roomkit.models.identity.Identity
+::: roomkit.models.Identity
 
-::: roomkit.models.identity.IdentityResult
+::: roomkit.models.IdentityResult
 
-::: roomkit.models.identity.IdentityHookResult
+::: roomkit.models.IdentityHookResult
 
-::: roomkit.identity.base.IdentityResolver
+::: roomkit.identity.IdentityResolver
 
-::: roomkit.identity.mock.MockIdentityResolver
+::: roomkit.identity.MockIdentityResolver
 
 ## Verification
 

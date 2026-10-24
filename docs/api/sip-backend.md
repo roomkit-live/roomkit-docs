@@ -22,7 +22,7 @@ See the [full SIP example](https://github.com/roomkit-live/roomkit/blob/main/exa
 
 ## API Reference
 
-::: roomkit.voice.backends.sip.SIPVoiceBackend
+::: roomkit.voice.backends.SIPVoiceBackend
 
 ## Codecs
 

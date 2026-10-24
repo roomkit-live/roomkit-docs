@@ -4,36 +4,36 @@ Agent skills framework for structured tool definitions. See the [Agent Skills gu
 
 ## Core
 
-::: roomkit.skills.models.Skill
+::: roomkit.skills.Skill
 
-::: roomkit.skills.models.SkillMetadata
+::: roomkit.skills.SkillMetadata
 
-::: roomkit.skills.models.ScriptResult
+::: roomkit.skills.ScriptResult
 
-::: roomkit.skills.registry.SkillRegistry
+::: roomkit.skills.SkillRegistry
 
-::: roomkit.skills.executor.ScriptExecutor
+::: roomkit.skills.ScriptExecutor
 
-::: roomkit.channels.skill_script_tool.RunSkillScriptTool
+::: roomkit.channels.RunSkillScriptTool
 
 ## Served over MCP
 
 Skills an MCP server publishes under the MCP Skills extension. See the [Skills over MCP guide](../guides/mcp-skills.md).
 
-::: roomkit.skills.mcp.skill.MCPSkill
+::: roomkit.skills.mcp.MCPSkill
 
-::: roomkit.skills.mcp.approval.SkillExecutionRequest
+::: roomkit.skills.mcp.SkillExecutionRequest
 
-::: roomkit.skills.mcp.catalog.ServedOrigin
+::: roomkit.skills.mcp.ServedOrigin
 
-::: roomkit.skills.mcp.server.MCPSkillServer
+::: roomkit.skills.mcp.MCPSkillServer
 
-::: roomkit.skills.mcp.catalog.SkillChangedError
+::: roomkit.skills.mcp.SkillChangedError
 
-::: roomkit.skills.errors.SkillVerificationError
+::: roomkit.skills.SkillVerificationError
 
 ## Exceptions
 
-::: roomkit.skills.parser.SkillParseError
+::: roomkit.skills.SkillParseError
 
-::: roomkit.skills.parser.SkillValidationError
+::: roomkit.skills.SkillValidationError

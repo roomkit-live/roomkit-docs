@@ -1,21 +1,21 @@
 # Memory
 
-::: roomkit.memory.base.MemoryProvider
+::: roomkit.memory.MemoryProvider
 
-::: roomkit.memory.base.MemoryResult
+::: roomkit.memory.MemoryResult
 
-::: roomkit.memory.sliding_window.SlidingWindowMemory
+::: roomkit.memory.SlidingWindowMemory
 
-::: roomkit.memory.budget_aware.BudgetAwareMemory
+::: roomkit.memory.BudgetAwareMemory
 
 ## The turn's footprint
 
-::: roomkit.tools.context.TurnFootprint
+::: roomkit.tools.TurnFootprint
 
-::: roomkit.tools.context.current_turn_footprint
+::: roomkit.tools.current_turn_footprint
 
-::: roomkit.memory.summarizing.SummarizingMemory
+::: roomkit.memory.SummarizingMemory
 
-::: roomkit.memory.retrieval.RetrievalMemory
+::: roomkit.memory.RetrievalMemory
 
-::: roomkit.memory.mock.MockMemoryProvider
+::: roomkit.memory.MockMemoryProvider

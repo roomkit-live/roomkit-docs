@@ -4,4 +4,4 @@
 
 ::: roomkit.core.inbound_router.DefaultInboundRoomRouter
 
-::: roomkit.models.store_filter.RoomFilter
+::: roomkit.models.RoomFilter

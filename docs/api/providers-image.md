@@ -5,55 +5,55 @@ conversational response. The model that holds a conversation is rarely one that
 draws, so an agent conversing through Anthropic draws through Gemini exactly as
 it transcribes through Deepgram.
 
-::: roomkit.providers.image.base.ImageProvider
+::: roomkit.providers.image.ImageProvider
 
-::: roomkit.providers.image.base.ImageResult
+::: roomkit.providers.image.ImageResult
 
-::: roomkit.providers.image.options.ImageOptions
+::: roomkit.providers.image.ImageOptions
 
-::: roomkit.providers.image.options.ImageCapabilities
+::: roomkit.providers.image.ImageCapabilities
 
-::: roomkit.providers.image.options.ImageModelInfo
+::: roomkit.providers.image.ImageModelInfo
 
-::: roomkit.providers.image.base.ImageAttempt
+::: roomkit.providers.image.ImageAttempt
 
-::: roomkit.providers.image.base.ImageGenerationError
+::: roomkit.providers.image.ImageGenerationError
 
-::: roomkit.providers.image.mock.MockImageProvider
+::: roomkit.providers.image.MockImageProvider
 
-::: roomkit.providers.image.base.parse_size
+::: roomkit.providers.image.parse_size
 
-::: roomkit.providers.image.base.to_data_uri
+::: roomkit.providers.image.to_data_uri
 
-::: roomkit.providers.image.base.parse_data_uri
+::: roomkit.providers.image.parse_data_uri
 
-::: roomkit.providers.image.base.sniff_mime_type
+::: roomkit.providers.image.sniff_mime_type
 
 ## Vendor implementations
 
-::: roomkit.providers.openai.image.OpenAIImageProvider
+::: roomkit.providers.openai.OpenAIImageProvider
 
-::: roomkit.providers.openai.config.OpenAIImageConfig
+::: roomkit.providers.openai.OpenAIImageConfig
 
-::: roomkit.providers.gemini.image.GeminiImageProvider
+::: roomkit.providers.gemini.GeminiImageProvider
 
-::: roomkit.providers.gemini.config.GeminiImageConfig
+::: roomkit.providers.gemini.GeminiImageConfig
 
-::: roomkit.providers.xai.image.XAIImageProvider
+::: roomkit.providers.xai.XAIImageProvider
 
-::: roomkit.providers.xai.config.XAIImageConfig
+::: roomkit.providers.xai.XAIImageConfig
 
-::: roomkit.providers.meta.image.MetaImageProvider
+::: roomkit.providers.meta.MetaImageProvider
 
-::: roomkit.providers.meta.config.MetaImageConfig
+::: roomkit.providers.meta.MetaImageConfig
 
-::: roomkit.providers.openrouter.image.OpenRouterImageProvider
+::: roomkit.providers.openrouter.OpenRouterImageProvider
 
-::: roomkit.providers.openrouter.config.OpenRouterImageConfig
+::: roomkit.providers.openrouter.OpenRouterImageConfig
 
-::: roomkit.providers.azure.image.AzureImageProvider
+::: roomkit.providers.azure.AzureImageProvider
 
-::: roomkit.providers.azure.config.AzureImageConfig
+::: roomkit.providers.azure.AzureImageConfig
 
 ## Catalogs and pricing
 

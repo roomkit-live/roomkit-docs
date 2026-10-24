@@ -2,35 +2,35 @@
 
 ## Voice Backend
 
-::: roomkit.voice.backends.base.VoiceBackend
+::: roomkit.voice.VoiceBackend
 
-::: roomkit.voice.backends.base.PlaybackErrors
+::: roomkit.voice.PlaybackErrors
 
-::: roomkit.voice.base.VoiceCapability
+::: roomkit.voice.VoiceCapability
 
-::: roomkit.voice.base.VoiceSession
+::: roomkit.voice.VoiceSession
 
-::: roomkit.voice.base.VoiceSessionState
+::: roomkit.voice.VoiceSessionState
 
-::: roomkit.voice.base.AudioChunk
+::: roomkit.voice.AudioChunk
 
-::: roomkit.voice.base.TranscriptionResult
+::: roomkit.voice.TranscriptionResult
 
-::: roomkit.voice.base.SpeakerSegment
+::: roomkit.voice.SpeakerSegment
 
 ## STT (Speech-to-Text)
 
-::: roomkit.voice.stt.base.STTProvider
+::: roomkit.voice.stt.STTProvider
 
-::: roomkit.voice.stt.mock.MockSTTProvider
+::: roomkit.voice.stt.MockSTTProvider
 
-::: roomkit.voice.stt.language.STTLanguageLock
+::: roomkit.voice.STTLanguageLock
 
 ### Sherpa-ONNX STT
 
-::: roomkit.voice.stt.sherpa_onnx.SherpaOnnxSTTProvider
+::: roomkit.voice.stt.SherpaOnnxSTTProvider
 
-::: roomkit.voice.stt.sherpa_onnx.SherpaOnnxSTTConfig
+::: roomkit.voice.stt.SherpaOnnxSTTConfig
 
 #### Usage
 
@@ -60,15 +60,15 @@ Install with: `pip install roomkit[sherpa-onnx]`
 
 ### Gemini STT (Google, batch)
 
-::: roomkit.voice.stt.gemini.GeminiSTTProvider
+::: roomkit.voice.stt.GeminiSTTProvider
 
-::: roomkit.voice.stt.gemini.GeminiSTTConfig
+::: roomkit.voice.stt.GeminiSTTConfig
 
-::: roomkit.voice.stt.gemini.Transcript
+::: roomkit.voice.stt.GeminiTranscript
 
-::: roomkit.voice.stt.gemini.TranscriptSegment
+::: roomkit.voice.stt.GeminiTranscriptSegment
 
-::: roomkit.voice.stt.gemini.TranscriptWord
+::: roomkit.voice.stt.GeminiTranscriptWord
 
 #### Usage
 
@@ -92,9 +92,9 @@ Install with: `pip install roomkit[gemini]`
 
 ### Meta Muse Voice Transcribe STT (streaming + batch)
 
-::: roomkit.voice.stt.meta.MetaSTTProvider
+::: roomkit.voice.stt.MetaSTTProvider
 
-::: roomkit.voice.stt.meta.MetaSTTConfig
+::: roomkit.voice.stt.MetaSTTConfig
 
 ::: roomkit.voice.stt.meta.MetaSTTError
 
@@ -123,9 +123,9 @@ Install with: `pip install roomkit[meta-stt]`
 
 ### Microsoft MAI-Transcribe STT (streaming)
 
-::: roomkit.voice.stt.azure_mai.AzureMAISTTProvider
+::: roomkit.voice.stt.AzureMAISTTProvider
 
-::: roomkit.voice.stt.azure_mai.AzureMAISTTConfig
+::: roomkit.voice.stt.AzureMAISTTConfig
 
 ::: roomkit.voice.stt.azure_mai.AzureMAISTTError
 
@@ -147,11 +147,11 @@ Install with: `pip install roomkit[azure-speech]`
 
 ### Mistral Voxtral STT (streaming + batch)
 
-::: roomkit.voice.stt.voxtral.VoxtralSTTProvider
+::: roomkit.voice.stt.VoxtralSTTProvider
 
-::: roomkit.voice.stt.voxtral.VoxtralSTTConfig
+::: roomkit.voice.stt.VoxtralSTTConfig
 
-::: roomkit.voice.stt.voxtral.VoxtralTurnDetection
+::: roomkit.voice.stt.VoxtralTurnDetection
 
 ::: roomkit.voice.stt.voxtral.VoxtralSTTError
 
@@ -180,59 +180,59 @@ Install with: `pip install roomkit[mistral-voice]`
 
 ## TTS (Text-to-Speech)
 
-::: roomkit.voice.tts.base.TTSProvider
+::: roomkit.voice.tts.TTSProvider
 
-::: roomkit.voice.tts.mock.MockTTSProvider
+::: roomkit.voice.tts.MockTTSProvider
 
 ### Voices and Dialogue
 
-::: roomkit.voice.voices.VoiceInfo
+::: roomkit.voice.VoiceInfo
 
-::: roomkit.voice.voices.DialogueTurn
+::: roomkit.voice.DialogueTurn
 
-::: roomkit.voice.voices.filter_voices
+::: roomkit.voice.filter_voices
 
 ### Custom Voices
 
-::: roomkit.voice.tts.library.VoiceLibrary
+::: roomkit.voice.VoiceLibrary
 
-::: roomkit.voice.tts.library.CustomVoice
+::: roomkit.voice.CustomVoice
 
-::: roomkit.voice.tts.library.VoiceConsentError
+::: roomkit.voice.VoiceConsentError
 
 ### Conversation Context
 
-::: roomkit.voice.tts.context.TTSContextLevel
+::: roomkit.voice.tts.TTSContextLevel
 
-::: roomkit.voice.tts.context.TTSContext
+::: roomkit.voice.tts.TTSContext
 
-::: roomkit.voice.tts.context.ConversationTurn
+::: roomkit.voice.tts.ConversationTurn
 
-::: roomkit.voice.tts.context.TTSContextConfig
+::: roomkit.voice.tts.TTSContextConfig
 
 ### Vui Nano TTS
 
-::: roomkit.voice.tts.vui.VuiTTSProvider
+::: roomkit.voice.tts.VuiTTSProvider
 
-::: roomkit.voice.tts.vui.VuiTTSConfig
+::: roomkit.voice.tts.VuiTTSConfig
 
-::: roomkit.voice.tts.vui.VuiVoice
+::: roomkit.voice.tts.VuiVoice
 
 Install with: `pip install roomkit[vui]` (Python 3.12, CUDA GPU).
 
 ### Fluxions TTS (Hosted Vui)
 
-::: roomkit.voice.tts.fluxions.FluxionsTTSProvider
+::: roomkit.voice.tts.FluxionsTTSProvider
 
-::: roomkit.voice.tts.fluxions.FluxionsTTSConfig
+::: roomkit.voice.tts.FluxionsTTSConfig
 
 Install with: `pip install roomkit[fluxions]`.
 
 ### Azure Speech TTS (MAI-Voice)
 
-::: roomkit.voice.tts.azure_speech.AzureSpeechTTSProvider
+::: roomkit.voice.tts.AzureSpeechTTSProvider
 
-::: roomkit.voice.tts.azure_speech.AzureSpeechTTSConfig
+::: roomkit.voice.tts.AzureSpeechTTSConfig
 
 ::: roomkit.voice.tts.azure_speech.AzureSpeechTTSError
 
@@ -240,9 +240,9 @@ Install with: `pip install roomkit[azure-speech]`.
 
 ### Fish Audio TTS (Drama 3)
 
-::: roomkit.voice.tts.fish_audio.FishAudioTTSProvider
+::: roomkit.voice.tts.FishAudioTTSProvider
 
-::: roomkit.voice.tts.fish_audio.FishAudioTTSConfig
+::: roomkit.voice.tts.FishAudioTTSConfig
 
 ::: roomkit.voice.tts.fish_audio.FishAudioTTSError
 
@@ -253,17 +253,17 @@ Install with: `pip install roomkit[fish-audio]`.
 
 ### Pocket TTS
 
-::: roomkit.voice.tts.pocket.PocketTTSProvider
+::: roomkit.voice.tts.PocketTTSProvider
 
-::: roomkit.voice.tts.pocket.PocketTTSConfig
+::: roomkit.voice.tts.PocketTTSConfig
 
 Install with: `pip install roomkit[pocket-tts]` (CPU or CUDA GPU).
 
 ### Phonon TTS
 
-::: roomkit.voice.tts.phonon.PhononTTSProvider
+::: roomkit.voice.tts.PhononTTSProvider
 
-::: roomkit.voice.tts.phonon.PhononTTSConfig
+::: roomkit.voice.tts.PhononTTSConfig
 
 See the [Phonon guide](../guides/phonon.md) for models, voices and measured speed.
 
@@ -271,9 +271,9 @@ Install with: `pip install roomkit[phonon]` (CPU).
 
 ### Voxtral Speech TTS (Mistral)
 
-::: roomkit.voice.tts.voxtral.VoxtralTTSProvider
+::: roomkit.voice.tts.VoxtralTTSProvider
 
-::: roomkit.voice.tts.voxtral.VoxtralTTSConfig
+::: roomkit.voice.tts.VoxtralTTSConfig
 
 ::: roomkit.voice.tts.voxtral.VoxtralTTSError
 
@@ -283,9 +283,9 @@ Install with: `pip install roomkit[mistral-voice]`
 
 ### Sherpa-ONNX TTS
 
-::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSProvider
+::: roomkit.voice.tts.SherpaOnnxTTSProvider
 
-::: roomkit.voice.tts.sherpa_onnx.SherpaOnnxTTSConfig
+::: roomkit.voice.tts.SherpaOnnxTTSConfig
 
 #### Usage
 
@@ -306,9 +306,9 @@ Install with: `pip install roomkit[sherpa-onnx]`
 
 ### Grok TTS (xAI)
 
-::: roomkit.voice.tts.grok.GrokTTSProvider
+::: roomkit.voice.tts.GrokTTSProvider
 
-::: roomkit.voice.tts.grok.GrokTTSConfig
+::: roomkit.voice.tts.GrokTTSConfig
 
 #### Usage
 
@@ -327,13 +327,13 @@ Install with: `pip install httpx websockets`
 
 ### Gemini TTS (Google)
 
-::: roomkit.voice.tts.gemini.GeminiTTSProvider
+::: roomkit.voice.tts.GeminiTTSProvider
 
-::: roomkit.voice.tts.gemini.GeminiTTSConfig
+::: roomkit.voice.tts.GeminiTTSConfig
 
-::: roomkit.voice.tts.gemini_library.GeminiVoiceLibrary
+::: roomkit.voice.tts.GeminiVoiceLibrary
 
-::: roomkit.voice.tts.gemini_library.GeminiVoiceLibraryConfig
+::: roomkit.voice.tts.GeminiVoiceLibraryConfig
 
 #### Usage
 
@@ -360,27 +360,27 @@ Install with: `pip install roomkit[gemini]`
 
 ## RTP Backend
 
-::: roomkit.voice.backends.rtp.RTPVoiceBackend
+::: roomkit.voice.backends.RTPVoiceBackend
 
 Install with: `pip install roomkit[rtp]`
 
 ## Mock Voice Backend
 
-::: roomkit.voice.backends.mock.MockVoiceBackend
+::: roomkit.voice.backends.MockVoiceBackend
 
 ::: roomkit.voice.backends.mock.MockVoiceCall
 
 ## Voice Events
 
-::: roomkit.voice.events.BargeInEvent
+::: roomkit.voice.BargeInEvent
 
-::: roomkit.voice.events.TTSCancelledEvent
+::: roomkit.voice.TTSCancelledEvent
 
-::: roomkit.voice.events.PartialTranscriptionEvent
+::: roomkit.voice.PartialTranscriptionEvent
 
-::: roomkit.voice.events.VADSilenceEvent
+::: roomkit.voice.VADSilenceEvent
 
-::: roomkit.voice.events.VADAudioLevelEvent
+::: roomkit.voice.VADAudioLevelEvent
 
 ## Callback Types
 

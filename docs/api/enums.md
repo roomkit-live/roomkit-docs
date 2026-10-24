@@ -4,11 +4,11 @@
 
 ::: roomkit.ChannelCategory
 
-::: roomkit.models.enums.ChannelDirection
+::: roomkit.models.ChannelDirection
 
-::: roomkit.models.enums.EventDirection
+::: roomkit.models.EventDirection
 
-::: roomkit.models.enums.ChannelMediaType
+::: roomkit.models.ChannelMediaType
 
 ::: roomkit.ChannelType
 
@@ -20,18 +20,18 @@
 
 ::: roomkit.HookTrigger
 
-::: roomkit.models.enums.IdentificationStatus
+::: roomkit.models.IdentificationStatus
 
 ::: roomkit.VerificationStatus
 
 ::: roomkit.VerificationRequestStatus
 
-::: roomkit.models.enums.ParticipantRole
+::: roomkit.models.ParticipantRole
 
-::: roomkit.models.enums.ParticipantStatus
+::: roomkit.models.ParticipantStatus
 
 ::: roomkit.RoomStatus
 
-::: roomkit.models.enums.TaskStatus
+::: roomkit.models.TaskStatus
 
-::: roomkit.models.enums.DeleteType
+::: roomkit.models.DeleteType

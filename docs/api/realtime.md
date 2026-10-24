@@ -187,14 +187,14 @@ transport (NATS, ...), implement the `RealtimeBackend` ABC below.
 
 ## API Reference
 
-::: roomkit.realtime.base.EphemeralEventType
+::: roomkit.realtime.EphemeralEventType
 
-::: roomkit.realtime.base.EphemeralEvent
+::: roomkit.realtime.EphemeralEvent
 
-::: roomkit.realtime.base.EphemeralCallback
+::: roomkit.realtime.EphemeralCallback
 
-::: roomkit.realtime.base.RealtimeBackend
+::: roomkit.realtime.RealtimeBackend
 
-::: roomkit.realtime.memory.InMemoryRealtime
+::: roomkit.realtime.InMemoryRealtime
 
-::: roomkit.realtime.redis.RedisRealtimeBackend
+::: roomkit.realtime.RedisRealtimeBackend

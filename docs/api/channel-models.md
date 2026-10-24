@@ -6,6 +6,6 @@
 
 ::: roomkit.ChannelOutput
 
-::: roomkit.models.channel.RateLimit
+::: roomkit.models.RateLimit
 
-::: roomkit.models.channel.RetryPolicy
+::: roomkit.models.RetryPolicy

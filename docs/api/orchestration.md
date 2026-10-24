@@ -4,15 +4,15 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ## Strategies
 
-::: roomkit.orchestration.base.Orchestration
+::: roomkit.orchestration.Orchestration
 
-::: roomkit.orchestration.strategies.pipeline.Pipeline
+::: roomkit.orchestration.strategies.Pipeline
 
-::: roomkit.orchestration.strategies.swarm.Swarm
+::: roomkit.orchestration.strategies.Swarm
 
 ::: roomkit.orchestration.strategies.supervisor.Supervisor
 
-::: roomkit.orchestration.strategies.loop.Loop
+::: roomkit.orchestration.strategies.Loop
 
 ::: roomkit.orchestration.strategies.discussion.Discussion
 
@@ -100,11 +100,11 @@ passing a `ResultTool`: the supervised flow's verdict comes back through
 `submit_verdict` this way. The capture is scoped to the child room, so two
 delegations to the same agent at once never read each other's result.
 
-::: roomkit.orchestration.result.ResultTool
+::: roomkit.orchestration.ResultTool
 
-::: roomkit.orchestration.result.MissingResult
+::: roomkit.orchestration.MissingResult
 
-::: roomkit.orchestration.result.SUBMIT_RESULT
+::: roomkit.orchestration.SUBMIT_RESULT
 
 ::: roomkit.orchestration.result.SUBMIT_RESULT_TOOL
 

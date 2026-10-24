@@ -3,30 +3,30 @@
 Narrow, typed questions answered with probabilities. See the
 [Classifiers guide](../guides/classifiers.md) for usage.
 
-::: roomkit.classifiers.base.Classifier
+::: roomkit.classifiers.Classifier
 
-::: roomkit.classifiers.base.YesNoQuestion
+::: roomkit.classifiers.YesNoQuestion
 
-::: roomkit.classifiers.base.ChoiceQuestion
+::: roomkit.classifiers.ChoiceQuestion
 
-::: roomkit.classifiers.base.ScoreQuestion
+::: roomkit.classifiers.ScoreQuestion
 
-::: roomkit.classifiers.base.YesNoAnswer
+::: roomkit.classifiers.YesNoAnswer
 
-::: roomkit.classifiers.base.ChoiceAnswer
+::: roomkit.classifiers.ChoiceAnswer
 
-::: roomkit.classifiers.base.ScoreAnswer
+::: roomkit.classifiers.ScoreAnswer
 
-::: roomkit.classifiers.base.Answers
+::: roomkit.classifiers.Answers
 
-::: roomkit.classifiers.base.ClassifierError
+::: roomkit.classifiers.ClassifierError
 
-::: roomkit.classifiers.base.check_answers
+::: roomkit.classifiers.check_answers
 
-::: roomkit.classifiers.jev.JevClassifier
+::: roomkit.classifiers.JevClassifier
 
-::: roomkit.classifiers.openai.OpenAIClassifier
+::: roomkit.classifiers.OpenAIClassifier
 
-::: roomkit.classifiers.llm.LLMClassifier
+::: roomkit.classifiers.LLMClassifier
 
-::: roomkit.classifiers.mock.MockClassifier
+::: roomkit.classifiers.MockClassifier

@@ -1,10 +1,12 @@
 # Buzz Provider
 
-::: roomkit.providers.buzz.relay.BuzzProvider
+::: roomkit.providers.buzz.BuzzProvider
 
-::: roomkit.providers.buzz.config.BuzzConfig
+::: roomkit.providers.buzz.BuzzConfig
 
-::: roomkit.providers.buzz.mock.MockBuzzProvider
+::: roomkit.providers.buzz.MockBuzzProvider
+
+Import it with `from roomkit.sources import BuzzRelaySource`.
 
 ::: roomkit.sources.buzz.BuzzRelaySource
 
@@ -14,12 +16,12 @@
 
 ## Agent lifecycle
 
-::: roomkit.providers.buzz.agent.BuzzAgent
+::: roomkit.providers.buzz.BuzzAgent
 
-::: roomkit.providers.buzz.agent.BuzzAgentStopCause
+::: roomkit.providers.buzz.BuzzAgentStopCause
 
 ## Voice (huddles)
 
-::: roomkit.voice.backends.buzz_huddle.BuzzHuddleBackend
+::: roomkit.voice.backends.BuzzHuddleBackend
 
-::: roomkit.voice.backends.buzz_huddle.BuzzHuddleWatcher
+::: roomkit.voice.backends.BuzzHuddleWatcher

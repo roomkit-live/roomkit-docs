@@ -918,15 +918,15 @@ The **Source + Provider pair**:
 
 ## API Reference
 
-::: roomkit.sources.base.SourceStatus
+::: roomkit.sources.SourceStatus
 
-::: roomkit.sources.base.SourceHealth
+::: roomkit.sources.SourceHealth
 
-::: roomkit.sources.base.SourceProvider
+::: roomkit.sources.SourceProvider
 
-::: roomkit.sources.base.BaseSourceProvider
+::: roomkit.sources.BaseSourceProvider
 
-::: roomkit.sources.base.EmitCallback
+::: roomkit.sources.EmitCallback
 
 ::: roomkit.SourceAlreadyAttachedError
 

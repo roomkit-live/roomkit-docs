@@ -3,21 +3,21 @@
 Whether an AI channel's agent speaks, offers or stays silent on an event. See the
 [Speaking Turns guide](../guides/speaking-turns.md) for usage.
 
-::: roomkit.speaking.base.SpeakPolicy
+::: roomkit.speaking.SpeakPolicy
 
-::: roomkit.speaking.base.SpeakTurn
+::: roomkit.speaking.SpeakTurn
 
-::: roomkit.speaking.base.CutReply
+::: roomkit.speaking.CutReply
 
-::: roomkit.speaking.base.SpeakDecision
+::: roomkit.speaking.SpeakDecision
 
-::: roomkit.speaking.base.SpeakDecisionEvent
+::: roomkit.speaking.SpeakDecisionEvent
 
-::: roomkit.speaking.always.AlwaysSpeak
+::: roomkit.speaking.AlwaysSpeak
 
-::: roomkit.speaking.answer_only.AnswerOnly
+::: roomkit.speaking.AnswerOnly
 
-::: roomkit.speaking.classifier.ClassifierSpeakPolicy
+::: roomkit.speaking.ClassifierSpeakPolicy
 
 ::: roomkit.speaking.classifier.compose
 
@@ -27,14 +27,14 @@ Whether an AI channel's agent speaks, offers or stays silent on an event. See th
 
 ::: roomkit.speaking.listening
 
-::: roomkit.speaking.mock.MockSpeakPolicy
+::: roomkit.speaking.MockSpeakPolicy
 
-::: roomkit.speaking.thought.Thought
+::: roomkit.speaking.Thought
 
-::: roomkit.speaking.thought.ThoughtEvent
+::: roomkit.speaking.ThoughtEvent
 
-::: roomkit.speaking.thinker.Thinker
+::: roomkit.speaking.Thinker
 
-::: roomkit.speaking.thinker.LLMThinker
+::: roomkit.speaking.LLMThinker
 
-::: roomkit.speaking.mock.MockThinker
+::: roomkit.speaking.MockThinker

@@ -1,10 +1,12 @@
 # Discord Provider
 
-::: roomkit.providers.discord.bot.DiscordBotProvider
+::: roomkit.providers.discord.DiscordBotProvider
 
-::: roomkit.providers.discord.config.DiscordConfig
+::: roomkit.providers.discord.DiscordConfig
 
-::: roomkit.providers.discord.mock.MockDiscordProvider
+::: roomkit.providers.discord.MockDiscordProvider
+
+Import it with `from roomkit.sources import DiscordGatewaySource`.
 
 ::: roomkit.sources.discord.DiscordGatewaySource
 

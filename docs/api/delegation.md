@@ -4,27 +4,27 @@ Background task delegation via child rooms. See the [Agent Delegation guide](../
 
 ## Task Runner
 
-::: roomkit.tasks.base.TaskRunner
+::: roomkit.tasks.TaskRunner
 
-::: roomkit.tasks.memory.InMemoryTaskRunner
+::: roomkit.tasks.InMemoryTaskRunner
 
 ## Task Models
 
-::: roomkit.tasks.models.DelegatedTask
+::: roomkit.tasks.DelegatedTask
 
-::: roomkit.tasks.models.DelegatedTaskResult
+::: roomkit.tasks.DelegatedTaskResult
 
 ## Tool Integration
 
-::: roomkit.tasks.delegate.DELEGATE_TOOL
+::: roomkit.tasks.DELEGATE_TOOL
 
-::: roomkit.tasks.delegate.build_delegate_tool
+::: roomkit.tasks.build_delegate_tool
 
-::: roomkit.tasks.delegate.DelegateHandler
+::: roomkit.tasks.DelegateHandler
 
-::: roomkit.tasks.delegate.setup_delegation
+::: roomkit.tasks.setup_delegation
 
-::: roomkit.tasks.delegate.setup_realtime_delegation
+::: roomkit.tasks.setup_realtime_delegation
 
 ## Background Work
 
@@ -34,35 +34,35 @@ and `RoomKit.start_task(room_id, agent_id, task, hand_back=None)` starts the
 same task from the host. See [Long work from an
 agent](../guides/agent-delegation.md#long-work-from-an-agent-work_in_background).
 
-::: roomkit.tasks.background.BackgroundSetup
+::: roomkit.tasks.BackgroundSetup
 
-::: roomkit.core.mixins.background.BackgroundMixin
+::: roomkit.core.mixins.BackgroundMixin
 
 ## Following Tasks
 
-::: roomkit.tasks.status.TaskStatusTool
+::: roomkit.tasks.TaskStatusTool
 
-::: roomkit.tasks.status.CancelTaskTool
+::: roomkit.tasks.CancelTaskTool
 
 ::: roomkit.tasks.status.room_tasks
 
-::: roomkit.tasks.status.post_task_progress
+::: roomkit.tasks.post_task_progress
 
 The tools' names, as a model calls them: `TASK_STATUS_TOOL` (`"task_status"`) and
 `CANCEL_TASK_TOOL` (`"cancel_task"`), from `roomkit.tasks`.
 
 ## Delegation State Tracking
 
-::: roomkit.tasks.cache.CompletedTaskCache
+::: roomkit.tasks.CompletedTaskCache
 
 ## Delivery Strategies
 
-::: roomkit.core.delivery.DeliveryStrategy
+::: roomkit.DeliveryStrategy
 
-::: roomkit.core.delivery.Immediate
+::: roomkit.Immediate
 
-::: roomkit.core.delivery.WaitForIdle
+::: roomkit.WaitForIdle
 
-::: roomkit.core.delivery.Queued
+::: roomkit.Queued
 
 ::: roomkit.core.delivery.DeliveryContext
