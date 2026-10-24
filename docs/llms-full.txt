@@ -1001,7 +1001,9 @@ delete: it removes the event, its thread replies unless told not to, and the
 edits and deletes of every event it removes (an edit holds the corrected text),
 returns their ids, and fires `ON_EVENT_DELETED` once per removed event.
 `kit.update_event()` rewrites an event's content, source or metadata. Neither
-runs the checks above: the host owns their authorization.
+runs the checks above: the host owns their authorization. Both take
+`organization_id=` (RFC §17.2): another organization's room is a missing one,
+`None` or `[]` with nothing written, its due timers included.
 
 ## Detaching Channels
 
