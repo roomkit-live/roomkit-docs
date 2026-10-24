@@ -1076,8 +1076,9 @@ RoomKit supports **flat, two-level threads** (Slack / Teams style) on the
 `RoomEvent.parent_event_id` field: a reply points at its thread **root**; a root
 or non-threaded message is `None`. Set it on the inbound message or on direct
 injection, and the pipeline **normalises** any parent to the thread root
-(replying to a reply collapses into one thread; a dangling or cross-room parent
-drops to top level with a warning). Every path that commits an event normalises
+(replying to a reply collapses into one thread; a dangling or cross-room parent,
+or a reply whose root a hard delete removed, drops to top level with a
+warning). Every path that commits an event normalises
 it the same way: an inbound message, a direct injection, an agent's response,
 an event a hook injects, a streamed row, a `kit.commit_event()` record, and the
 `BLOCKED` records that stand in for them. The invariant "`parent_event_id` is
