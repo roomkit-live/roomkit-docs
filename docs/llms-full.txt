@@ -1279,9 +1279,10 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
   and commits ahead of the event being processed. What its own hooks inject
   joins the queue of the section holding the lock, committed once that
   section has released it, after the event being processed.
-- From an off-lock hook's body (`needs_lock=False`), it is **adopted beside**
-  the event: no ticket, every hook under the lock, its own section for its
-  commit, still ahead of the event.
+- From an off-lock hook's body (`needs_lock=False`), or a `hook_error`
+  handler reporting that check's failure, it is **adopted beside** the event:
+  no ticket, every hook under the lock, its own section for its commit,
+  still ahead of the event.
 - Either way it draws on the event's reentry budget, one pass as it starts: a
   hook that injects on every event stops at the cap. Past it, `send_event()`
   stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
@@ -1297,9 +1298,12 @@ budget, and a message it routes back into that room raises
 `ReentrantCallError`. A call from a delivery set's work (a transport's
 `deliver()`, an agent's turn, a tool handler) is a new arrival with its own
 ticket and `process_timeout`, but it draws on the budget of the cascade that
-delivers, and a call made within a turn is at least as deep as the turn's
-response, so a transport or an agent that sends into its room every time it
-is reached stops at the cap or at `max_chain_depth`.
+delivers, and a call made within a turn, or by a task the turn spawned, is
+at least as deep as the turn's response, so a transport or an agent that
+sends into its room every time it is reached stops at the cap or at
+`max_chain_depth`. That depth holds where the owner runs the turn's code (an
+in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb);
+with a Redis turn backend a turn reaches the room through its `TurnHost`.
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
