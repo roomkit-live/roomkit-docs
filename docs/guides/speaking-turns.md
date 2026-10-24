@@ -277,8 +277,8 @@ Every silence of a listening room is final: the channel does not wait for the
 thought, and a thought back later with something to say is decided late (see
 [thinking while listening](#thinking-while-listening)). Every decision made
 while the room listens carries `listening` (1.0) among its judgments. A cut answer is not
-resumed. The three questions are replaceable by name with `questions=`, as the
-others are (`roomkit.speaking.listening`).
+resumed. The three questions (`listen_request`, `asked_me`, `lift`) are
+replaceable by name with `questions=`, as the others are.
 
 ### Changing the questions or the rules
 

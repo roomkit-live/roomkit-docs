@@ -6,9 +6,7 @@ Tool system for AI function calling. See the [Tool Calling & Policies guide](../
 
 ::: roomkit.tools.RoleOverride
 
-Import it with `from roomkit.tools import MCPToolProvider`.
-
-::: roomkit.tools.mcp.MCPToolProvider
+::: roomkit.tools.MCPToolProvider
 
 ::: roomkit.tools.compose_tool_handlers
 

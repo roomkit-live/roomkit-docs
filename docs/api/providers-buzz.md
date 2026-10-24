@@ -6,13 +6,11 @@
 
 ::: roomkit.providers.buzz.MockBuzzProvider
 
-Import it with `from roomkit.sources import BuzzRelaySource`.
+::: roomkit.sources.BuzzRelaySource
 
-::: roomkit.sources.buzz.BuzzRelaySource
+::: roomkit.sources.parse_buzz_event
 
-::: roomkit.sources.buzz.parse_buzz_event
-
-::: roomkit.sources.buzz.huddle_announcement_parser
+::: roomkit.sources.huddle_announcement_parser
 
 ## Agent lifecycle
 

@@ -6,8 +6,6 @@
 
 ::: roomkit.providers.discord.MockDiscordProvider
 
-Import it with `from roomkit.sources import DiscordGatewaySource`.
+::: roomkit.sources.DiscordGatewaySource
 
-::: roomkit.sources.discord.DiscordGatewaySource
-
-::: roomkit.sources.discord.parse_discord_message
+::: roomkit.sources.parse_discord_message

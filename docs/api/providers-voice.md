@@ -96,7 +96,7 @@ Install with: `pip install roomkit[gemini]`
 
 ::: roomkit.voice.stt.MetaSTTConfig
 
-::: roomkit.voice.stt.meta.MetaSTTError
+::: roomkit.voice.stt.MetaSTTError
 
 #### Usage
 
@@ -127,7 +127,7 @@ Install with: `pip install roomkit[meta-stt]`
 
 ::: roomkit.voice.stt.AzureMAISTTConfig
 
-::: roomkit.voice.stt.azure_mai.AzureMAISTTError
+::: roomkit.voice.stt.AzureMAISTTError
 
 #### Usage
 
@@ -153,7 +153,7 @@ Install with: `pip install roomkit[azure-speech]`
 
 ::: roomkit.voice.stt.VoxtralTurnDetection
 
-::: roomkit.voice.stt.voxtral.VoxtralSTTError
+::: roomkit.voice.stt.VoxtralSTTError
 
 #### Usage
 
@@ -234,7 +234,7 @@ Install with: `pip install roomkit[fluxions]`.
 
 ::: roomkit.voice.tts.AzureSpeechTTSConfig
 
-::: roomkit.voice.tts.azure_speech.AzureSpeechTTSError
+::: roomkit.voice.tts.AzureSpeechTTSError
 
 Install with: `pip install roomkit[azure-speech]`.
 
@@ -244,7 +244,7 @@ Install with: `pip install roomkit[azure-speech]`.
 
 ::: roomkit.voice.tts.FishAudioTTSConfig
 
-::: roomkit.voice.tts.fish_audio.FishAudioTTSError
+::: roomkit.voice.tts.FishAudioTTSError
 
 See the [STT & TTS Providers guide](../guides/stt-tts-providers.md#fish-audio-cloud-api-drama-3)
 for expressive mode, the texts never sent and the measured limits.
@@ -275,7 +275,7 @@ Install with: `pip install roomkit[phonon]` (CPU).
 
 ::: roomkit.voice.tts.VoxtralTTSConfig
 
-::: roomkit.voice.tts.voxtral.VoxtralTTSError
+::: roomkit.voice.tts.VoxtralTTSError
 
 See the [Voxtral guide](../guides/voxtral.md) for the voices and the tags.
 
@@ -368,7 +368,7 @@ Install with: `pip install roomkit[rtp]`
 
 ::: roomkit.voice.backends.MockVoiceBackend
 
-::: roomkit.voice.backends.mock.MockVoiceCall
+::: roomkit.voice.backends.MockVoiceCall
 
 ## Voice Events
 

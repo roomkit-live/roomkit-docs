@@ -4,7 +4,7 @@
 
 ::: roomkit.providers.rcs.RCSProvider
 
-::: roomkit.providers.rcs.base.RCSDeliveryResult
+::: roomkit.providers.rcs.RCSDeliveryResult
 
 ::: roomkit.providers.rcs.MockRCSProvider
 

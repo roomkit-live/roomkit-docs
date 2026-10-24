@@ -37,7 +37,13 @@ vendor serves. They carry `transcription` (speech-to-text) or `speech`
 reports or from the model's name, so a model picker can keep them out of a
 chat list. A curated catalog's own `capabilities` stay out of a live listing.
 
-::: roomkit.providers.ai.model_tags
+::: roomkit.providers.ai.TRANSCRIPTION_CAPABILITY
+
+::: roomkit.providers.ai.SPEECH_CAPABILITY
+
+::: roomkit.providers.ai.speech_tags
+
+::: roomkit.providers.ai.with_speech_tags
 
 ## Response schema
 
@@ -264,9 +270,7 @@ either way. Gemini Live does not flag it yet.
 
 ### Schema Cleaning
 
-Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. RoomKit auto-cleans schemas when building `FunctionDeclaration` objects:
-
-::: roomkit.providers.gemini.schema.clean_gemini_schema
+Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. RoomKit auto-cleans schemas when building `FunctionDeclaration` objects; nothing is to call.
 
 ## Meta Muse Spark Provider
 

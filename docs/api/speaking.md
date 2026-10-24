@@ -25,8 +25,6 @@ Whether an AI channel's agent speaks, offers or stays silent on an event. See th
 
 ::: roomkit.speaking.classifier.judgments_of
 
-::: roomkit.speaking.listening
-
 ::: roomkit.speaking.MockSpeakPolicy
 
 ::: roomkit.speaking.Thought

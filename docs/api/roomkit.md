@@ -93,5 +93,5 @@
 
 ::: roomkit.InMemoryLockManager
 
-::: roomkit.voice.auth.AuthCallback
+::: roomkit.voice.AuthCallback
 

@@ -74,7 +74,7 @@ Multi-agent orchestration for complex conversational workflows. See the [Multi-A
 
 ::: roomkit.orchestration.HANDOFF_TOOL
 
-::: roomkit.orchestration.handoff.build_handoff_tool
+::: roomkit.orchestration.build_handoff_tool
 
 ::: roomkit.orchestration.HandoffHandler
 
@@ -105,11 +105,3 @@ delegations to the same agent at once never read each other's result.
 ::: roomkit.orchestration.MissingResult
 
 ::: roomkit.orchestration.SUBMIT_RESULT
-
-::: roomkit.orchestration.result.SUBMIT_RESULT_TOOL
-
-::: roomkit.orchestration.result.is_submit_result
-
-::: roomkit.orchestration.result.normalize_result
-
-::: roomkit.orchestration.result.orchestration_fail

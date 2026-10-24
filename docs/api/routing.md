@@ -1,7 +1,7 @@
 # Routing
 
-::: roomkit.core.inbound_router.InboundRoomRouter
+::: roomkit.InboundRoomRouter
 
-::: roomkit.core.inbound_router.DefaultInboundRoomRouter
+::: roomkit.DefaultInboundRoomRouter
 
 ::: roomkit.models.RoomFilter

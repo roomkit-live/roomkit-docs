@@ -65,4 +65,4 @@ The tools' names, as a model calls them: `TASK_STATUS_TOOL` (`"task_status"`) an
 
 ::: roomkit.Queued
 
-::: roomkit.core.delivery.DeliveryContext
+::: roomkit.DeliveryContext
