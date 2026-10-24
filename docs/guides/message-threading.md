@@ -57,9 +57,15 @@ row (which takes its trigger's parent), a `kit.commit_event()` record, and the
 `BLOCKED` records that stand in for them. A `parent_event_id` that does not
 exist or belongs to another room, or names a reply whose root a hard delete
 removed (`cascade_replies=False` kept the reply), drops to top level (`None`)
-with a warning — a stale reference never loses the sender's message. Since every reply names
-its thread's root, `kit.delete_event(room_id, root_id)` removes the whole
-thread: its one level of replies is all of it.
+with a warning — a stale reference never loses the sender's message. Since
+every reply names its thread's root, `kit.delete_event(room_id, root_id)`
+removes the whole thread: its one level of replies is all of it.
+
+A `kit.commit_event()` record is rooted too, so commit a thread's root
+before its replies when importing a conversation; a parent the room does not
+hold yet is dropped. To know which message of the thread an answer, an
+injected event or a record answers, read its `responds_to`, not its
+`parent_event_id`, which names the root.
 
 ## AI replies stay in the thread
 
