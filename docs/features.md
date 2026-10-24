@@ -2526,6 +2526,27 @@ Key features:
 
 See the [Orchestration guide](guides/orchestration.md#addressing-naming-who-is-asked) for the full semantics.
 
+### Writing as the Host
+
+An agent speaks for itself; the application that embeds RoomKit speaks too — a shipping notice, a workflow's question, a reminder. `kit.post()` writes to a room's people in the host's own name:
+
+```python
+await kit.post(room_id, "Your order #1042 shipped today.", participant_id="desk")
+await kit.post(room_id, "Assistant, please confirm the delivery address with Marie.",
+               addressed_to=["assistant"])
+```
+
+Key features:
+
+- **A party's message, not an agent's** — the post comes from a `HostChannel`, a transport of type `HOST` that is never delivered to, so the room broadcasts it to its transports (an SMS to the correspondent) and agents read it as someone's message
+- **Solicits no agent by default** — `addressed_to` names the agents asked to answer; to let the room's routing decide, `send_event()` from the host channel does the same one step lower
+- **Signed** — `participant_id` names who speaks: with two people in the room, an agent reads `Acme Support: "Your order #1042 shipped today."`; `metadata` says where the message comes from (a workflow, its step, a job)
+- **Nothing to wire** — the kit registers its host channel on first use and attaches it to a room on its first post; a binding set up beforehand keeps its settings, and `channel_id=` speaks from another `HostChannel`
+- **Works in every room** — a Discussion, a Pipeline or an `ADDRESSED_ONLY` room reads it as a person's message; an intelligence channel used for the same purpose is refused by a Discussion and turns the host's words into an agent's output
+- **`deliver()` is the other way in** — content for the room's agents, which the correspondent never sees as such
+
+See RFC §10.5 for the full semantics.
+
 ### Text From Outside in the Model's Context
 
 What RoomKit places in a model's context without having written it (a person's words or name, a worker's output or progress, a tool's result, a model's thought or summary, the task a tool call asked for) can hold anything, a frame of the runtime's own included. Every such rendering keeps it in a frame it cannot leave (RFC §6.4):
