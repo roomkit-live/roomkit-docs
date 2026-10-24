@@ -6160,6 +6160,8 @@ await kit.unsubscribe_room(sub_id)
 | `TOOL_CALL_DELTA` | AI is composing a tool call (streaming only) |
 | `TOOL_CALL_START` | AI started executing a tool |
 | `TOOL_CALL_END` | AI finished executing a tool |
+| `THINKING_START` / `THINKING_DELTA` / `THINKING_END` | AI reasoning, coalesced |
+| `TEXT_DELTA` | AI answer text as it is written, coalesced (`text`, `round`, `channel_id`) |
 | `CUSTOM` | Custom ephemeral event |
 
 AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
@@ -6167,6 +6169,18 @@ AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
 `tool_calls` closes every composition attempt, including cancellation, provider
 failure, retry, and fallback; counts restart for a retry. The complete call
 still arrives in `TOOL_CALL_START`.
+
+AI channels publish `TEXT_DELTA` with the answer's text as it is written, for
+an observer that is not a transport of the room: a debugger, a dashboard, or
+the code that delegated a task, which subscribes to the child room (its id is
+in `ON_TASK_DELEGATED`'s event metadata, `child_room_id`, before the agent
+starts). The text is coalesced on `AIChannel(text_coalesce_ms=80,
+text_coalesce_chars=256)` (`text_coalesce_ms=0` publishes every token), and
+flushed before a round's tool-call events, so text and calls arrive in order.
+Joined, the texts are every round's answer text (`round` tells them apart),
+where a delegated task's result holds the last segment only. A client that
+already renders the answer from a streaming transport (a WebSocket) reads one
+or the other, not both. Never persisted: the stored message is the answer.
 
 A turn's ephemerals (its reasoning, its tool calls, a custom one its channel
 publishes, and what work it began publishes after it) reach a room's

@@ -2829,6 +2829,27 @@ await kit.unsubscribe_room(sub_id)
 | `READ_RECEIPT` | User read a message |
 | `CUSTOM` | Custom ephemeral event |
 
+**An agent's answer, live, for any observer:**
+
+`AIChannel` publishes its answer's text as `TEXT_DELTA` while it is written
+(`text`, `round`, `channel_id`), coalesced on `text_coalesce_ms` /
+`text_coalesce_chars` (80 ms / 256 characters) and flushed before each tool
+call, so text and calls arrive in order. It is for an observer that is not a
+transport of the room — a debugger, a dashboard, or the code that delegated a
+task, which subscribes to the task's child room from `ON_TASK_DELEGATED`:
+
+```python
+@kit.hook(HookTrigger.ON_TASK_DELEGATED, execution=HookExecution.ASYNC)
+async def watch(event, ctx):
+    async def on_text(ephemeral):
+        if ephemeral.type == EphemeralEventType.TEXT_DELTA:
+            print(ephemeral.data["text"], end="", flush=True)
+    await kit.realtime.subscribe_to_room(event.metadata["child_room_id"], on_text)
+```
+
+A client that already renders the answer from a streaming transport (a
+WebSocket) reads one or the other, not both.
+
 **An agent's live activity follows its answer's visibility:**
 
 While an agent works, its turn publishes live ephemerals: its reasoning
