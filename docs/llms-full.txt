@@ -655,6 +655,25 @@ been delivered with: its own intersected with its channel's binding (RFC
 §7.3). A host reading the room's refused records sees no more of one than
 its channels would have seen of the message.
 
+## Where Answers Go
+
+`InboundMessage(response_visibility=...)` and `send_event(...,
+response_visibility=...)` say where the answers to an event may go, in the
+visibility vocabulary (RFC §5.12): `None` restricts nothing, any other value is
+a scope (`""` names nobody), and `internal` raises `ValueError`. Every answer
+the message's cascade derives from it, an agent's answer to another agent's
+answer, a stream's rows and the record stored in place of an answer included,
+is what its channel gave it intersected with the scope; a response's own
+`response_visibility` holds within it. A `BEFORE_BROADCAST` hook may narrow an
+event's `response_visibility`, never widen or clear it (`internal` reads as
+`none`), and a response its hooks widen is narrowed back within the scope.
+
+The scope binds the cascade only. Work that leaves it starts a new cascade the
+scope does not follow: a background delegation's result handed back with
+`deliver()` or `send_event()`, a tool's own `send_event()`, a child room's
+answer to the channels it shares. Give such a call its own
+`response_visibility`.
+
 ## Muting Channels
 
 Muting suppresses a channel's output (AI responses) without detaching it. Side effects (tasks, observations) still fire.
@@ -1304,12 +1323,16 @@ budget, and a message it routes back into that room raises
 `ReentrantCallError`. A call from a delivery set's work (a transport's
 `deliver()`, an agent's turn, a tool handler) is a new arrival with its own
 ticket and `process_timeout`, but it draws on the budget of the cascade that
-delivers, and a call made within a turn, or by a task the turn spawned, is
-at least as deep as the turn's response, so a transport or an agent that
-sends into its room every time it is reached stops at the cap or at
+delivers, and a call made while a turn or a tool call runs (a realtime or a
+conference call included), by it or a task it spawned, into whatever room, is
+at least as deep as the turn's response or the call's, so a transport or an
+agent that sends into its room every time it is reached stops at the cap or at
 `max_chain_depth`. That depth holds where the owner runs the turn's code (an
 in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb);
-with a Redis turn backend a turn reaches the room through its `TurnHost`.
+with a Redis turn backend a turn reaches the room through its `TurnHost`. A
+call into another room has a budget of its own, and work a turn, a tool call
+or a delivery began starts fresh once that work is over: depth 0 and a budget
+of its own.
 
 ```python
 @kit.hook(HookTrigger.BEFORE_BROADCAST)
@@ -1324,7 +1347,9 @@ async def acknowledge(event, ctx):
 The visibility `internal` marks a record the framework wrote, and only the
 framework writes it: a `BEFORE_BROADCAST` modify that writes it, or that changes
 it on a record that holds it (a voice channel's interruption record), has the
-event's visibility put back.
+event's visibility put back. A modify may narrow an event's
+`response_visibility`, never widen or clear it: what it writes is intersected
+with the original, `None` keeps the original and `internal` reads as `none`.
 
 ### What happens when a hook fails
 

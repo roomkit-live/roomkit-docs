@@ -52,7 +52,11 @@ RoomEvent(visibility="ai", response_visibility="ws-ui")
 
 The mechanism works by intersecting the visibility the AI channel gave its response with the trigger event's `response_visibility` (RFC §5.12, §7.3): the scope narrows the reply, never widens it, a listed channel's category read from the room's bindings. Once stamped, the existing `_check_visibility()` in the broadcast pipeline handles all the filtering -- no special cases needed downstream.
 
-The scope binds every answer the message's cascade derives from it: an agent answering another agent's scoped reply, a stream's rows and the record stored in place of an answer stay within it too. A response that names a `response_visibility` of its own keeps it for what answers it, within the message's: neither widens the other, and `None` restricts nothing.
+The scope binds every answer the message's cascade derives from it: an agent answering another agent's scoped reply, a stream's rows and the record stored in place of an answer stay within it too. A response that names a `response_visibility` of its own keeps it for what answers it, within the message's: neither widens the other. `None` restricts nothing; any other value is a scope, and `""` names nobody.
+
+A `BEFORE_BROADCAST` hook may narrow an event's `response_visibility`, never widen or clear it: what it writes is intersected with the original, `None` keeps the original, and `internal` reads as `none`. A hook on a response may change its visibility as on any event, but the response is narrowed back within the scope once its hooks ran.
+
+The scope binds the message's cascade only. Work that leaves the cascade starts a new one the scope does not follow: a background delegation's result handed back with `deliver()` or `send_event()`, a tool's own `send_event()`, a child room's answer to the channels it shares. Give such a call its own `response_visibility`.
 
 The response is then committed as any event is: its visibility intersected with its source binding's, here the AI channel's. `response_visibility` can narrow where a reply goes, never widen it past what the agent's binding allows, and a live stream reaches no transport that binding excludes. An AI channel bound `visibility="transport"` and answering with `response_visibility="ws-ui,ai-critic"` stores its reply as `"ws-ui"` when `ai-critic` is an intelligence channel.
 

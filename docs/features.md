@@ -4552,9 +4552,9 @@ before anything is read or written, as `send_event` and `InboundMessage` do
 for a `response_visibility` of `internal`; a hook's modify that writes it, or
 that changes it on a record that holds it, has the event's visibility put
 back; and an agent's answer, a row of its stream, or the record stored in
-place of an answer at the chain-depth limit, that carries it (the agent's own,
-or the `response_visibility` a hook's modify gave the trigger) is stored
-`none`, with a warning. Store an event for no channel with `none`;
+place of an answer at the chain-depth limit, that carries it (the agent's own)
+is stored `none`, with a warning; a hook's modify writing it as
+`response_visibility` writes `none`. Store an event for no channel with `none`;
 `kit.commit_event()`, a record outside the pipeline, keeps the visibility it is
 given.
 
@@ -4586,7 +4586,7 @@ await kit.send_event(
 )
 ```
 
-This enables hybrid voice+text setups where typed text produces a text-only reply without triggering TTS. `None` (the default) preserves existing behavior. The scope narrows each answer, intersected with the visibility its channel gave it, never widening it, and binds every answer the message's cascade derives from it, an agent's answer to another agent's reply included; a response's own `response_visibility` holds within it. See the [Response Visibility guide](guides/response-visibility.md) for details.
+This enables hybrid voice+text setups where typed text produces a text-only reply without triggering TTS. `None` (the default) preserves existing behavior. The scope narrows each answer, intersected with the visibility its channel gave it, never widening it, and binds every answer the message's cascade derives from it, an agent's answer to another agent's reply included; a response's own `response_visibility` holds within it. `None` restricts nothing and `""` names nobody. A hook may narrow an event's `response_visibility`, never widen or clear it (`internal` reads as `none`), and a response its hooks widen is narrowed back within the scope. The scope binds the cascade only: a background delegation's result handed back with `deliver()` or `send_event()`, a tool's own `send_event()` and a child room's answer to the channels it shares start a new cascade, which takes its own `response_visibility`. See the [Response Visibility guide](guides/response-visibility.md) for details.
 
 ### Muting
 
@@ -4931,7 +4931,7 @@ A call into a room made by the room's own work is part of that work (RFC §9.5.1
 | An off-lock hook's body, a `hook_error` handler reporting that check's failure, a channel's `handle_inbound()` | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
 | A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
 
-Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made within a turn, or by a task the turn spawned, after the turn too, is at least as deep as the turn's response, so an agent that injects at each turn stops at `max_chain_depth`. That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
+Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made while a turn or a tool call runs (a realtime or a conference call included), by it or a task it spawned, into whatever room, is at least as deep as the turn's response or the call's, so an agent that injects at each turn stops at `max_chain_depth`. A call into another room has a budget of its own, and work a turn, a tool call or a delivery began starts fresh once that work is over: depth 0 and a budget of its own. That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
 
 ```python
 class Echo(WebSocketChannel):
