@@ -51,10 +51,14 @@ nested = await kit.send_event("r1", "ws-alice", TextContent(body="Tuesday?"),
 assert nested.parent_event_id == root_id   # collapsed to the root, not reply.id
 ```
 
-Normalisation happens once, inside the locked pipeline, for every entry point
-(`process_inbound` and `send_event` alike). A `parent_event_id` that does not
+Normalisation happens on every path that commits an event: `process_inbound`
+and `send_event`, an agent's response, an event a hook injects, a streamed
+row (which takes its trigger's parent), a `kit.commit_event()` record, and the
+`BLOCKED` records that stand in for them. A `parent_event_id` that does not
 exist or belongs to another room drops to top level (`None`) with a warning —
-a stale reference never loses the sender's message.
+a stale reference never loses the sender's message. Since every reply names
+its thread's root, `kit.delete_event(room_id, root_id)` removes the whole
+thread: its one level of replies is all of it.
 
 ## AI replies stay in the thread
 

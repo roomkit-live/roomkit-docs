@@ -1021,11 +1021,17 @@ message with and the one a broadcast delivers with all hold it so; the stored
 record and the contexts hooks receive keep the content.
 
 `kit.delete_event(room_id, event_id, cascade_replies=True)` is the host's hard
-delete: it removes the event, its thread replies unless told not to, and the
-edits and deletes of every event it removes (an edit holds the corrected text),
+delete: it removes the event, its thread replies unless told not to (the whole
+thread: every path that commits an event, an agent's answer, a hook's injected
+event and a `commit_event()` record included, roots its `parent_event_id` to
+the thread's root), and the edits and deletes of every event it removes (an
+edit holds the corrected text),
 returns their ids, and fires `ON_EVENT_DELETED` once per removed event.
 `kit.update_event()` rewrites an event's content, source or metadata. Neither
-runs the checks above: the host owns their authorization. Both take
+runs the checks above: the host owns their authorization. Neither fails once
+its change is stored: when the room cannot be read after the lock is
+released, a warning is logged and the trigger fires with the context the call
+held under the lock. Both take
 `organization_id=` (RFC §17.2): another organization's room is a missing one,
 `None` or `[]` with nothing written, its due timers included.
 
@@ -1315,7 +1321,12 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
   still ahead of the event.
 - Either way it answers at its commit (a `process_inbound()` result carries
   no `delivery_results`): its delivery follows in the room's lane, behind the
-  event's work. It draws on the event's reentry budget, one pass as it starts:
+  event's work. From an event's admission work (an off-lock hook's body, a
+  `hook_error` handler, a channel's `handle_inbound()`), a
+  `result.delivery.wait()` on a call it adopted whose delivery needs that
+  room (a transport's `deliver()` that sends into it) ends at
+  `process_timeout`. It draws on the event's reentry budget, one pass as it
+  starts:
   a hook that injects on every event stops at the cap. Past it, `send_event()`
   stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
   that record; `process_inbound()` naming the room returns `blocked=True,
@@ -7302,7 +7313,7 @@ kit = RoomKit(
 | `await steer(directive, channel_id, *, room_id=None, turn_id=None)` | Steer the running turns of an intelligence channel the kit started, wherever they run; answers the loops reached (RFC §21.3, §10.6.8) |
 | `await channel_call(channel_id, room_id, verb, *, organization_id=None, **arguments)` | Run a per-room verb of a channel attached to the room, on the executor holding the room's state (an ACP agent's `set_config_option`, `close_session`, `session_config`, `config_options`); what the room keeps for the channel is stored in its metadata, written by this call alone (RFC §10.6.3, §6.4) |
 | `await answer_input(request_id, value)` / `await reject_input(request_id, reason)` | Answer or reject a turn's human-input request, wherever its tool runs; an early answer is held 60 s, a second one returns `False` (RFC §10.6.5) |
-| `commit_event(room_id, event, organization_id?)` | Commit a record no member receives, outside the pipeline: stored as given, its `delivery_results` included, its index counted delivered, no hook, no broadcast; never a replay, a key its channel holds raises `IdempotencyKeyTakenError` (RFC §10.5) |
+| `commit_event(room_id, event, organization_id?)` | Commit a record no member receives, outside the pipeline: stored as given, its `delivery_results` included, its thread parent rooted as every event's, its index counted delivered, no hook, no broadcast; never a replay, a key its channel holds raises `IdempotencyKeyTakenError` (RFC §10.5) |
 | `await start_room_recording(room_id, recorders, *, organization_id=None)` | Start recorders on an existing room, all or nothing, each announced (ON_RECORDING_STARTED) before any media |
 | `await room_recordings(room_id, *, organization_id=None)` | The handles of the room's running recordings; the room read with its scope (another organization's, or a missing room recording nothing, is not found) |
 | `await add_room_recording_track(room_id, track, *, organization_id=None)` | Declare a track to the room's recordings; returns a `RoomRecordingFeed` (`feed(data, timestamp_ms)`, `close()`), or `None` when the room records nothing; the room read with its scope |

@@ -961,7 +961,10 @@ identity block), which has no delivery to follow. Whenever `blocked` is
 `False` the handle is there; a hook refusal, decided inside the commit
 region, gets one too. Awaited from a context the delivery lane cannot
 progress past (a sync hook under the room lock, a tool handler inside the
-lane), `wait()` returns unwaited instead of deadlocking. See
+lane, an event's admission work: an off-lock hook's body, a `hook_error`
+handler reporting its check, a channel's `handle_inbound()`), `wait()` returns
+unwaited instead of deadlocking; a task such code starts waits as any caller
+does. See
 `examples/deferred_inbound.py` for a runnable end-to-end demonstration.
 
 ### Cancelling a Delivery
@@ -1072,13 +1075,16 @@ cancel returns, so its result's `delivery_results` stay empty. See
 RoomKit supports **flat, two-level threads** (Slack / Teams style) on the
 `RoomEvent.parent_event_id` field: a reply points at its thread **root**; a root
 or non-threaded message is `None`. Set it on the inbound message or on direct
-injection, and the locked pipeline **normalises** any parent to the thread root
+injection, and the pipeline **normalises** any parent to the thread root
 (replying to a reply collapses into one thread; a dangling or cross-room parent
-drops to top level with a warning). Because normalisation is a single choke
-point, the invariant "`parent_event_id` is always a root" holds for every entry
-point and every channel — no per-channel wiring. An AI channel's response
-inherits the trigger's thread root, so an `@`-mention inside a thread is
-answered in-thread.
+drops to top level with a warning). Every path that commits an event normalises
+it the same way: an inbound message, a direct injection, an agent's response,
+an event a hook injects, a streamed row, a `kit.commit_event()` record, and the
+`BLOCKED` records that stand in for them. The invariant "`parent_event_id` is
+always a root" therefore holds for every entry point and every channel, with no
+per-channel wiring, and a hard delete of the root (`kit.delete_event()`)
+removes the whole thread. An AI channel's response inherits the trigger's
+thread root, so an `@`-mention inside a thread is answered in-thread.
 
 ```python
 reply = await kit.send_event("r1", "ws-bob", TextContent(body="Tuesday?"),
@@ -4955,7 +4961,7 @@ A call into a room made by the room's own work is part of that work (RFC §9.5.1
 | An off-lock hook's body, a `hook_error` handler reporting that check's failure, a channel's `handle_inbound()` | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
 | A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
 
-A nested or adopted call answers at its commit (a `process_inbound()` result carries no `delivery_results`): its delivery follows in the room's lane, behind the event's work.
+A nested or adopted call answers at its commit (a `process_inbound()` result carries no `delivery_results`): its delivery follows in the room's lane, behind the event's work. With `defer_delivery=True`, `await result.delivery.wait()` from that work while it runs returns at once with the result as it is, unwaited and raising nothing, as under the lock; a task the work starts waits as any caller does.
 
 Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event: before anything else when it names its room (its channel not looked up, nothing attached), once step 2 knows the room when it is routed or names a room the store lacks. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made while a turn or a tool call runs (a realtime or a conference call included), by it or a task it spawned, into whatever room, is at least as deep as the turn's response or the call's, so an agent that injects at each turn stops at `max_chain_depth`. A call of such work that creates a room, routed or named (the router answering none or naming a room the store lacks, `process_inbound(..., room_id=...)` naming one), is that work's own and draws on the same budget, charged once before the room is created, so a delivery that opens a room each time stops at the cap. A call into another existing room has a budget of its own, and work a turn, a tool call or a delivery began starts fresh once that work is over: depth 0 and a budget of its own. That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it while the turn runs; a verb made after its turn ended starts fresh, at the depth it names. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
 
@@ -4970,7 +4976,7 @@ class Echo(WebSocketChannel):
         return ChannelOutput.empty()
 ```
 
-A record no member receives (a trace, a display snapshot, the copy a branched conversation starts from) is committed outside the pipeline with `kit.commit_event(room_id, event, organization_id=...)` (RFC §10.5). The room is read under its lock, scoped to the tenant, and a room that refuses events raises `RoomClosedError`; the record takes the next index, which the room's delivery lane counts as delivered at once, so the next event never waits on it. No hook and no broadcast follow, and it is stored as given.
+A record no member receives (a trace, a display snapshot, the copy a branched conversation starts from) is committed outside the pipeline with `kit.commit_event(room_id, event, organization_id=...)` (RFC §10.5). The room is read under its lock, scoped to the tenant, and a room that refuses events raises `RoomClosedError`; the record takes the next index, which the room's delivery lane counts as delivered at once, so the next event never waits on it. No hook and no broadcast follow, and it is stored as given, but for its thread parent, rooted as every committed event's is (a reply named is replaced by its thread's root, a parent the room does not hold dropped).
 
 ### Webhook Parsers
 
