@@ -1320,13 +1320,16 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
   no ticket, every hook under the lock, its own section for its commit,
   still ahead of the event.
 - Either way it answers at its commit (a `process_inbound()` result carries
-  no `delivery_results`): its delivery follows in the room's lane, behind the
-  event's work. From an event's admission work (an off-lock hook's body, a
-  `hook_error` handler, a channel's `handle_inbound()`), a
-  `result.delivery.wait()` on a call it adopted whose delivery needs that
-  room (a transport's `deliver()` that sends into it) ends at
-  `process_timeout`. It draws on the event's reentry budget, one pass as it
-  starts:
+  no `delivery_results`). Made under the lock, its delivery waits in the
+  room's lane behind the work that made it, and `result.delivery.wait()`
+  there returns at once, unwaited. Made in an event's admission work (an
+  off-lock hook's body, a `hook_error` handler, a channel's
+  `handle_inbound()`), its delivery runs at its turn in the lane, during that
+  work and ahead of the event, so a `wait()` from the work returns with its
+  `delivery_results`; one whose delivery calls into the room and needs the
+  event's admission ticket (a transport's `deliver()` that sends into it)
+  ends at the event's `process_timeout`, the event refused. It draws on the
+  event's reentry budget, one pass as it starts:
   a hook that injects on every event stops at the cap. Past it, `send_event()`
   stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
   that record; `process_inbound()` naming the room returns `blocked=True,
