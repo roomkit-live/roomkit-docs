@@ -994,8 +994,9 @@ writes `new_content` and `metadata.edited=True` on the target, a delete
 the commit left it, and `ON_EVENT_UPDATED` / `ON_EVENT_DELETED` fire once the
 lock is released. Whatever pass committed the change (an inbound message, an
 agent's response, a hook's injected event), their context is the room as the
-commit left it: the target as rewritten, and the change as the newest event, at
-its committed index and as its hooks left it.
+commit left it: the target as rewritten, what its hooks committed ahead of it,
+and the change as the newest event, at its committed index and as its hooks
+left it, with `ctx.room.event_count` and `latest_index` past it.
 
 ```python
 await kit.process_inbound(
