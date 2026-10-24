@@ -2829,6 +2829,18 @@ await kit.unsubscribe_room(sub_id)
 | `READ_RECEIPT` | User read a message |
 | `CUSTOM` | Custom ephemeral event |
 
+**An agent's live activity follows its answer's visibility:**
+
+While an agent works, its turn publishes live ephemerals: its reasoning
+(`THINKING_*`) and its tool calls (`TOOL_CALL_*`, with their arguments and a
+result preview). A subscriber of the room's ephemerals is not a bound channel,
+so RoomKit publishes them only when the agent's answer reaches the whole room:
+the agent can write, its binding's visibility is `all` (read at each publish,
+so narrowing it mid-turn stops them at once), and the triggering message's
+`response_visibility` restricts nothing. An agent whose answers are
+scoped elsewhere (a supervisor's whisper, an internal agent, a read-only
+agent) shows no live activity to the room's subscribers (RFC §8.4).
+
 **Distributed deployments:**
 
 The default `InMemoryRealtime` is single-process only. `RedisRealtimeBackend`

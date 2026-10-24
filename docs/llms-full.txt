@@ -6168,6 +6168,15 @@ AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
 failure, retry, and fallback; counts restart for a retry. The complete call
 still arrives in `TOOL_CALL_START`.
 
+A turn's ephemerals (its reasoning, its tool calls, a custom one its channel
+publishes, and what work it began publishes after it) reach a room's
+subscribers only when the turn's answer reaches the whole room: the agent can
+write, its binding's visibility is `all` (read at each publish, so narrowing it
+mid-turn stops them at once), and the triggering message's
+`response_visibility` restricts nothing (RFC §8.4). Subscribers are not bound
+channels, so an agent whose answers are scoped elsewhere (a supervisor's
+whisper, an internal agent, a read-only agent) publishes none of them.
+
 ### Read Tracking
 
 ```python
