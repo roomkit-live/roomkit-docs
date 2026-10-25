@@ -927,6 +927,11 @@ delivery path writes: a message's key in it is dropped, `send_event()`
 refuses one, and a sender's message keyed like a coming publication never
 stands in for it.
 
+`kit.deliver()`, `send_greeting()`, `regenerate_target()`,
+`regenerate_response()` and `delegate()` take `organization_id=` (RFC
+§17.2): another organization's room raises `RoomNotFoundError` before any
+hook, queue, turn or child room. Unset, no room is read for the scope.
+
 ## Content Transcoding
 
 When broadcasting events, the EventRouter automatically **transcodes** content to match each target channel's capabilities. A channel that only supports TEXT will receive a text fallback of a RichContent message.
@@ -1120,6 +1125,12 @@ await kit.add_member("room-id", "web", "u-1")  # records "web"; the role stays O
 # Now the same message on "web" is the owner's.
 ```
 
+A host serving several organizations passes `organization_id=` to
+`add_member`, `remove_member`, `rename_member`, `list_members` and
+`is_member` (RFC §17.2): another organization's room raises
+`RoomNotFoundError`, its roster neither read nor written. Unset, the call is
+unscoped, as before.
+
 ## Cancelling a turn
 
 Cancelling a message's delivery stops its agents' turns and only those: a turn
@@ -1235,7 +1246,7 @@ executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared s
 register_turn_hooks(executor)
 ```
 
-`kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
+`await kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
 kit's own executor's hook for that room. For agents other executors run, a
 room hook is defined by name on the executors and enabled per room on the
 kit, which names a room's hooks in each turn's request; only an executor that
@@ -1249,8 +1260,8 @@ async def audit(event, ctx) -> None: ...
 for executor in (kit.turn_executor, host_executor):
     executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)(audit)
 
-kit.enable_room_hook("vip-room", "audit")
-kit.disable_room_hook("vip-room", "audit")
+await kit.enable_room_hook("vip-room", "audit")
+await kit.disable_room_hook("vip-room", "audit")
 ```
 
 On an executor a name carries one hook per trigger: `room_hook()` called again
@@ -1604,9 +1615,16 @@ await kit.add_room_hook(
 await kit.remove_room_hook("vip-room", "vip_filter")
 ```
 
+`add_room_hook()`, `remove_room_hook()`, `enable_room_hook()` and
+`disable_room_hook()` take `organization_id=` (RFC §17.2): the room is read
+with it first, and another organization's room raises `RoomNotFoundError`
+with nothing registered, removed, enabled or disabled. `kit.hook_engine`'s
+own `add_room_hook()` / `remove_room_hook()` are the synchronous engine
+calls: they read no room.
+
 A trigger a turn fires takes no room hook by callable: define it by name on
 the executors (`executor.room_hook(name, trigger)(fn)`) and enable the name
-for the room (`kit.enable_room_hook(room_id, name)`), as above.
+for the room (`await kit.enable_room_hook(room_id, name)`), as above.
 
 ## Complete Hook Trigger Reference
 
@@ -2083,8 +2101,12 @@ reached = await kit.steer(Cancel(reason="stop pressed"), "agent", room_id="room-
 `kit.steer(directive, channel_id, room_id=..., turn_id=...)` follows the same
 rules (a `Cancel` reaches every turn of the room, another directive the most
 recent one) and answers the loops reached. A channel without steering (an ACP
-agent) takes a `Cancel` as its turn's cancel, counted as one. `agent.steer()`
-reaches the loops of the process it is called in.
+agent) takes a `Cancel` as its turn's cancel, counted as one. With
+`kit.steer(..., organization_id=...)` (RFC §17.2), a `room_id` of another
+organization raises `RoomNotFoundError`, and only the turns of that
+organization's rooms are reached. `agent.steer()` reaches the loops of the
+process it is called in, whatever room's: the channel holds no store, and
+the kit's `steer()` is the door that reads the room.
 
 ## Tool Calling
 
@@ -3162,6 +3184,9 @@ Collect user quality ratings:
 await kit.submit_feedback("room-1", rating=0.9, comment="Very helpful", dimension="helpfulness")
 # Stored as Observation in ConversationStore, fires ON_FEEDBACK hook
 ```
+
+With `organization_id=` (RFC §17.2), another organization's room raises
+`RoomNotFoundError`, nothing stored or fired.
 
 ## Tool Call Events
 
@@ -5184,8 +5209,14 @@ await kit.cancel_task(task.id)
   channel the `work_in_background` tool; the task runs on its worker (itself,
   another agent, an external agent) in a child room, handed the room's last
   12 messages (`delegate(brief=..., conversation=12)`).
-- `start_task(room_id, agent_id, task, hand_back=None)` starts the same task
-  from the host, for any agent of the room, an `ACPChannel` included.
+- `start_task(room_id, agent_id, task, hand_back=None, organization_id=None)`
+  starts the same task from the host, for any agent of the room, an
+  `ACPChannel` included; another organization's room raises
+  `RoomNotFoundError`, nothing started (RFC §17.2).
+- `cancel_task(task_id, organization_id=None)` cancels a task the kit runs
+  in the background; with `organization_id=`, only one running for a room
+  of that organization: another organization's task answers `False`, as one
+  the kit does not hold, and keeps running.
 - `hand_back="relay"`: the agent is told the result and says it in a turn of
   its own, at the front of the queue. `"post"`: the result is posted as the
   agent's message, as it is, with no generation; it waits at the front of the
@@ -5285,7 +5316,9 @@ A second strategy is refused while one is installed, but for a Discussion
 installed over a discussion, which takes its place and keeps its queue. A
 host's own strategy gets the same treatment through `install_strategy`. If it is installed by
 calling its `install()` directly, it should call
-`kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
+`await kit.claim_room_strategy(room_id, self)` first, as the built-in ones
+do; with `organization_id=` (RFC §17.2), another organization's room is not
+found.
 Example: `examples/strategy_on_the_fly.py`.
 
 ## Using Orchestration
@@ -6067,6 +6100,34 @@ kit.subscribe_websocket("ws-client", "conn-1", "room-2")
 kit.unsubscribe_websocket("ws-client", "conn-1", "room-2")
 ```
 
+`connect_websocket(..., organization_id=...)` reads the room with the
+organization first (RFC §17.2): another organization's room raises
+`RoomNotFoundError`, no connection is registered and no `channel_connected`
+event is emitted.
+
+The channel's own registry is synchronous and reads no room.
+`register_connection(..., organization_id=...)` registers the connection for
+the organization: a room of another organization, or of none, delivers
+nothing to it, streamed or not, whatever it is subscribed to.
+`subscribe()`, `unsubscribe()`, `unregister_connection()`,
+`kit.subscribe_websocket()`, `kit.unsubscribe_websocket()` and
+`kit.disconnect_websocket()` take `organization_id=` too, and a scoped call
+on a connection that is not registered for that organization (another's,
+an unscoped one, none) raises `ValueError` and changes nothing, as does a
+scoped `register_connection()` of an id another organization holds. Unset,
+the calls act as before. A registration that changes the organization of an
+id still known, to none included, drops the rooms it was subscribed to, and
+a connection evicted after repeated send failures is forgotten as
+`unregister_connection()` forgets it. A stream under way sends only to the
+registrations present when it started: an id registered again since, a
+reconnection of the same organization included, gets neither the rest of
+it nor its `stream_end`.
+
+Connection ids are one namespace for every organization: generate them on
+the host server (a UUID per socket), never take one a client chose. A
+refused registration tells that an id is taken, as a refused room id does;
+an id no client can choose tells nothing.
+
 ## Phone Number Utilities
 
 ```python
@@ -6254,6 +6315,11 @@ sub_id = await kit.subscribe_room("room-1", on_ephemeral)
 # Unsubscribe later
 await kit.unsubscribe_room(sub_id)
 ```
+
+Each `publish_*` call and `subscribe_room` take `organization_id=` (RFC
+§17.2): another organization's room raises `RoomNotFoundError`, nothing
+published or subscribed. Unset, no room is read: a room id is published to
+and subscribed to as given, as before.
 
 ### Event Types
 
@@ -7454,8 +7520,8 @@ kit = RoomKit(
 |--------|-------------|
 | `process_inbound(message, room_id?, defer_delivery=False, organization_id=None)` | Process an inbound message; deferred results are backfilled by `DeliveryHandle.wait()` |
 | `cancel_delivery(key, *, reason="caller_cancelled", organization_id=None)` | Stop the turns of the deliveries in flight of the messages sent with `delivery_key=key`, from the start of `process_inbound`, and a message held for verification until its release is answered (of the organization's rooms when given); the messages are still delivered; returns how many it cancelled |
-| `regenerate_response(room_id, *, trigger_id=None)` | Re-run the intelligence channel on the newest accepted transport message; `InboundResult(blocked=True, reason="room_closed")` on a closed or archived room; with `trigger_id`, `reason="trigger_moved"` when the selection under the lock is no longer that event; from an ASYNC hook's body, one of the cascade's hook calls (`ReentryLoopCapError` past them) |
-| `regenerate_target(room_id)` | The event `regenerate_response` would replay, or `None`; raises `RoomClosedError` when the room refuses events |
+| `regenerate_response(room_id, *, trigger_id=None, organization_id=None)` | Re-run the intelligence channel on the newest accepted transport message; `InboundResult(blocked=True, reason="room_closed")` on a closed or archived room; with `trigger_id`, `reason="trigger_moved"` when the selection under the lock is no longer that event; from an ASYNC hook's body, one of the cascade's hook calls (`ReentryLoopCapError` past them) |
+| `regenerate_target(room_id, *, organization_id=None)` | The event `regenerate_response` would replay, or `None`; raises `RoomClosedError` when the room refuses events |
 
 ### Hooks
 
@@ -7465,19 +7531,19 @@ kit = RoomKit(
 | `on(event_type)` | Decorator for framework events |
 | `identity_hook(trigger, ...)` | Decorator for identity hooks |
 | `on_delivery_status(fn)` | Decorator for delivery status |
-| `add_room_hook(room_id, trigger, execution, fn, ...)` | Add room-scoped hook on an owner trigger |
-| `enable_room_hook(room_id, name)` / `disable_room_hook(room_id, name)` | Run (or stop running) for the room's turns the room hook *name* the executors define on a trigger a turn fires; only an executor defining every enabled name takes the room's turns (RFC §10.6.6) |
-| `remove_room_hook(room_id, name)` | Remove room-scoped hook |
+| `await add_room_hook(room_id, trigger, execution, fn, ..., organization_id=None)` | Add room-scoped hook on an owner trigger |
+| `await enable_room_hook(room_id, name, *, organization_id=None)` / `await disable_room_hook(room_id, name, *, organization_id=None)` | Run (or stop running) for the room's turns the room hook *name* the executors define on a trigger a turn fires; only an executor defining every enabled name takes the room's turns (RFC §10.6.6) |
+| `await remove_room_hook(room_id, name, *, organization_id=None)` | Remove room-scoped hook |
 
 ### Realtime
 
 | Method | Description |
 |--------|-------------|
-| `publish_typing(room_id, user_id, is_typing?)` | Typing indicator |
-| `publish_presence(room_id, user_id, status)` | Presence update |
-| `publish_reaction(room_id, user_id, target_event_id, emoji)` | Reaction |
-| `publish_read_receipt(room_id, user_id, event_id)` | Read receipt |
-| `subscribe_room(room_id, callback)` | Subscribe to ephemeral events |
+| `publish_typing(room_id, user_id, is_typing?, *, organization_id=None)` | Typing indicator |
+| `publish_presence(room_id, user_id, status, *, organization_id=None)` | Presence update |
+| `publish_reaction(room_id, user_id, target_event_id, emoji, *, organization_id=None)` | Reaction |
+| `publish_read_receipt(room_id, user_id, event_id, *, organization_id=None)` | Read receipt |
+| `subscribe_room(room_id, callback, *, organization_id=None)` | Subscribe to ephemeral events; another organization's room is not found, nothing subscribed |
 | `unsubscribe_room(subscription_id)` | Unsubscribe |
 
 ### Sources
@@ -7492,14 +7558,14 @@ kit = RoomKit(
 
 | Method | Description |
 |--------|-------------|
-| `delegate(room_id, agent_id, task, ...)` | Delegate to background agent |
+| `delegate(room_id, agent_id, task, ..., organization_id=None)` | Delegate to background agent |
 | `setup_background(agent, worker?, hand_back?)` | Give an agent (or the id of one the kit holds) the `work_in_background` tool: its long work runs as a task (RFC §23.4) |
 | `setup_task_tools(agent)` | Give an agent (or the id of one the kit holds) `task_status` and `cancel_task`, served by the room's owner: the room's own tasks only (RFC §23.4) |
-| `await start_task(room_id, agent_id, task, hand_back?)` | Start an agent's background task from the host, for any agent of the room |
-| `send_greeting(room_id, channel_id?, greeting?, ...)` | Send greeting |
+| `await start_task(room_id, agent_id, task, hand_back?, organization_id?)` | Start an agent's background task from the host, for any agent of the room |
+| `send_greeting(room_id, channel_id?, greeting?, ..., organization_id=None)` | Send greeting |
 | `send_event(room_id, channel_id, content, ...)` | Send event directly: `INBOUND` from a transport, `OUTBOUND` from an intelligence channel; from the room's own work (a hook, a parse, a delivery, a turn) it draws on that work's reentry budget (RFC §10.5, §9.5.1) |
 | `await post(room_id, content, *, participant_id?, addressed_to=(), metadata?, channel_id?, organization_id?, idempotency_key?, chain_depth=0)` | Write to the room's people in the host's own name, from a `HostChannel` attached on a room's first post (refused for a room it was detached from, or closed); solicits no agent unless addressed; speaks as a participant the host channel reaches (`ParticipantNotFoundError` for any other id); a key the channel holds returns the original, sending nothing again (RFC §10.5) |
-| `await steer(directive, channel_id, *, room_id=None, turn_id=None)` | Steer the running turns of an intelligence channel the kit started, wherever they run; answers the loops reached (RFC §21.3, §10.6.8) |
+| `await steer(directive, channel_id, *, room_id=None, turn_id=None, organization_id=None)` | Steer the running turns of an intelligence channel the kit started, wherever they run; answers the loops reached (RFC §21.3, §10.6.8) |
 | `await channel_call(channel_id, room_id, verb, *, organization_id=None, **arguments)` | Run a per-room verb of a channel attached to the room, on the executor holding the room's state (an ACP agent's `set_config_option`, `close_session`, `session_config`, `config_options`); what the room keeps for the channel is stored in its metadata, written by this call alone (RFC §10.6.3, §6.4) |
 | `await answer_input(request_id, value)` / `await reject_input(request_id, reason)` | Answer or reject a turn's human-input request, wherever its tool runs; an early answer is held 60 s, a second one returns `False` (RFC §10.6.5) |
 | `commit_event(room_id, event, organization_id?)` | Commit a record no member receives, outside the pipeline: stored as given, its `delivery_results` included, its thread parent rooted as every event's, its index counted delivered, no hook, no broadcast; never a replay, a key its channel holds raises `IdempotencyKeyTakenError` (RFC §10.5) |
