@@ -112,7 +112,10 @@ one. A task that failed or was cancelled posts that it did, without its error;
 a completed task with nothing to say posts nothing. `post` needs `notify` to
 name an intelligence channel attached to the room, and a background task. In a
 room a [discussion](discussion.md#talking-and-working-tasks) holds, the posted
-result waits at the front of the speak queue for the turn under way to end.
+result waits at the front of the speak queue for the turn under way to end;
+until it is committed it is kept with the room's private state, and an
+uninstall in any process posts it, under the id it was taken under as its
+idempotency key, so a second post is a replay.
 
 ## Long work from an agent: `work_in_background`
 

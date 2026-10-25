@@ -341,6 +341,12 @@ an agent asked how a task goes answers from them; `task_status` and
 of its own: the tool is refused in a task's child room. A task outlives the
 discussion: a result that comes back once it is over or uninstalled is posted
 at once, or relayed as any instruction (refused once the discussion is over).
+A result to post that the discussion took is never lost to an uninstall: from
+when it is taken until it is committed, it is kept with the room's private
+state in the store (`_speak_queue_results`), apart from the room's metadata, so
+no one reading the room sees its text before the message would show it to
+them; an uninstall, in any process, posts every one of them before the agents
+leave (see [State and processes](#state-and-processes)).
 
 ## External agents (ACP)
 
@@ -471,7 +477,9 @@ async with kit.lock_manager.locked(room_id):
 ```
 
 Uninstalling cuts the turn that runs, and nothing of that turn's end is
-recorded: the queue is forgotten anyway.
+recorded: the queue is forgotten anyway. The task results to post the
+discussion took and has not committed are posted first, as the agents'
+messages, then the agents its installs attached are detached.
 
 ## State and processes
 
@@ -503,9 +511,16 @@ Several processes may serve one room, behind a load balancer, on one store
 | A worker changes the agents | Every worker routes by the new agents; a worker whose host installed the old ones gives no turn until its host installs the new ones |
 
 Uninstalling, in any process, forgets the discussion in all of them, a process
-that only follows it included, and detaches the agents its installs attached
-(stored with the configuration). A runnable version with two simulated
-workers is `examples/discussion_two_workers.py`.
+that only follows it included, posts the task results the discussion took and
+has not committed, then detaches the agents its installs attached (stored with
+the configuration). A result is posted once whichever process holds it, even
+while its holder is committing it: each carries the id it was taken under as
+its idempotency key, so the second post is a replay. It goes through the hooks
+of the process that uninstalls, so every process serving a room registers the
+same hooks. A result a closing process did not post, or whose post failed,
+stays kept and is posted at the next uninstall, after the room's later
+messages; a discussion never uninstalled never posts it. A runnable version
+with two simulated workers is `examples/discussion_two_workers.py`.
 
 ### Changing the agents
 
