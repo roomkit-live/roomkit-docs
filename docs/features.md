@@ -1767,6 +1767,15 @@ The transport owns its connection pool and limits, and environment proxies are
 not read. A host that lets users name the endpoint puts there a policy judging
 the address actually dialled. See `examples/openai_outbound_policy.py`.
 
+The image and vision clients take the same keyword: `OpenAIImageProvider`,
+`AzureImageProvider`, `XAIImageProvider`, `MetaImageProvider` and
+`OpenAIVisionProvider` inside the SDK's default client, `OpenRouterImageProvider`
+in its own `httpx.AsyncClient`. `LiteLLMAIProvider.list_models()` and
+`OpenRouterAIProvider.list_models()` go through the provider's transport too.
+An image attempt the policy refuses before it is sent (an `httpx.ConnectError`
+or a subclass) is `failed`; any other failure, or any failure once the SDK
+retried, is `unknown`: the vendor may have run and billed it (RFC §25.2).
+
 #### Model Pricing
 
 A `ModelInfo` carries its vendor's list price, so pricing a turn needs no
