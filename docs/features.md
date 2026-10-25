@@ -2902,18 +2902,14 @@ await kit.unsubscribe_room(sub_id)
 | `READ_RECEIPT` | User read a message |
 | `CUSTOM` | Custom ephemeral event |
 
-**An agent's answer, live, for any observer:**
+**A delegated task's answer, live, for the code that delegated it:**
 
-`AIChannel(publish_text_deltas=True)` publishes its answer's text as
-`TEXT_DELTA` while it is written; it is off by default. `BEFORE_BROADCAST`
-judges the stored message, never this stream: an answer a hook blocks or
-redacts reaches a subscriber whole, so a host that filters or redacts answers
-leaves it off (RFC §6.4). Each event carries `text`, `round` and
-`channel_id`, coalesced on `text_coalesce_ms` /
-`text_coalesce_chars` (80 ms / 256 characters) and flushed before each tool
-call, so text and calls arrive in order. It is for an observer that is not a
-transport of the room — a debugger, a dashboard, or the code that delegated a
-task, which subscribes to the task's child room from `ON_TASK_DELEGATED`:
+With `AIChannel(publish_text_deltas=True)` (off by default), an agent's answer
+text in a delegated task is published as `TEXT_DELTA` while it is written.
+Each event carries `text`, `round` and `channel_id`, coalesced on
+`text_coalesce_ms` / `text_coalesce_chars` (80 ms / 256 characters) and
+flushed before each tool call, so text and calls arrive in order. The code
+that delegated the task subscribes to its child room from `ON_TASK_DELEGATED`:
 
 ```python
 @kit.hook(HookTrigger.ON_TASK_DELEGATED, execution=HookExecution.ASYNC)
@@ -2924,9 +2920,15 @@ async def watch(event, ctx):
     await kit.realtime.subscribe_to_room(event.metadata["child_room_id"], on_text)
 ```
 
-A client that already renders the answer from a streaming transport (a
-WebSocket) reads one or the other, not both. Turn it on only once every
-worker runs 0.109.0: an earlier process cannot read a `text_delta` event.
+Only a task's trace publishes it: the turns a child room with no shared
+transport stores without a `BEFORE_BROADCAST` hook (RFC §6.4, §23.3). An
+answer a hook judges (in a room, in a task's room a transport is shared into,
+or one another agent's message starts there) publishes no text, so a
+subscriber never reads what a hook blocked or redacted. Turn it on only once
+every worker runs 0.109.0 or later: an earlier process cannot read a
+`text_delta` event. The room's owner decides what is published, so a host whose
+hooks filter answers needs every process that owns rooms on 0.110.0 or later: a
+0.109.0 owner publishes every turn's text.
 
 **An agent's live activity follows its answer's visibility:**
 

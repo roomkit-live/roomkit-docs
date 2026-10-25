@@ -6360,7 +6360,7 @@ and subscribed to as given, as before.
 | `TOOL_CALL_START` | AI started executing a tool |
 | `TOOL_CALL_END` | AI finished executing a tool |
 | `THINKING_START` / `THINKING_DELTA` / `THINKING_END` | AI reasoning, coalesced |
-| `TEXT_DELTA` | AI answer text as it is written, coalesced (`text`, `round`, `channel_id`); opt-in |
+| `TEXT_DELTA` | A delegated task's answer text as it is written, coalesced (`text`, `round`, `channel_id`); opt-in |
 | `CUSTOM` | Custom ephemeral event |
 
 AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
@@ -6369,24 +6369,29 @@ AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
 failure, retry, and fallback; counts restart for a retry. The complete call
 still arrives in `TOOL_CALL_START`.
 
-With `AIChannel(publish_text_deltas=True)`, AI channels publish `TEXT_DELTA`
-with the answer's text as it is written, for an observer that is not a
-transport of the room: a debugger, a dashboard, or the code that delegated a
-task, which subscribes to the child room (its id is in `ON_TASK_DELEGATED`'s
-event metadata, `child_room_id`, before the agent starts). It is off by
-default: `BEFORE_BROADCAST` judges the stored message, never this stream, so
-an answer a hook blocks or redacts reaches a subscriber whole once it is on. A
-host that filters or redacts answers leaves it off. The text is coalesced on
-`AIChannel(text_coalesce_ms=80, text_coalesce_chars=256)` (`text_coalesce_ms=0`
-publishes every token), which have no effect while the option is off, and
-flushed before a round's tool-call events, so text and calls arrive in order.
-Joined, the texts are every round's answer text (`round` tells them apart),
-where a delegated task's result holds the last segment only. A client that
-already renders the answer from a streaming transport (a WebSocket) reads one
-or the other, not both. Never persisted: the stored message is the answer. A
+With `AIChannel(publish_text_deltas=True)`, an agent's answer text is
+published as `TEXT_DELTA` while it is written, for the code that delegated a
+task to it (or a debugger watching the task), which subscribes to its child
+room (its id is in `ON_TASK_DELEGATED`'s event metadata, `child_room_id`,
+before the agent starts). It is off by default. The room's owner publishes it
+only for a turn the delegation reads as its trace: the rows a child room with
+no shared transport stores without a `BEFORE_BROADCAST` hook (RFC §23.3). No
+other turn's text is published: not an answer in a room, nor in a task's child
+room a transport is shared into, nor one another agent's message starts in a
+child room, since a hook judges those answers and never this stream. A
+subscriber therefore never reads an answer a hook blocked or redacted; a
+delegation cut short may store less text than was published, what its executor
+read ahead. The text is coalesced on `AIChannel(text_coalesce_ms=80,
+text_coalesce_chars=256)` (`text_coalesce_ms=0` publishes every token), which
+have no effect while the option is off, and flushed before a round's tool-call
+events, so text and calls arrive in order. Joined, the texts are every round's
+answer text (`round` tells them apart), where the task's result holds the last
+segment only. Never persisted: the trace's stored messages are the answer. A
 0.108.0 process cannot read a `text_delta` event (`EphemeralEvent.from_dict`
-raises), so turn the option on once every process sharing the realtime
-backend runs 0.109.0 or later.
+raises), so turn the option on once every process sharing the realtime backend
+runs 0.109.0 or later. The room's owner decides what is published: a host
+whose hooks filter answers needs every process that owns rooms on 0.110.0 or
+later, since a 0.109.0 owner publishes every turn's text.
 
 ```python
 agent = Agent("assistant", provider=provider, publish_text_deltas=True)
