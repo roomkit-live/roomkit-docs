@@ -1426,30 +1426,42 @@ async def acknowledge(event, ctx):
 
 A cascade counts the calls of its ASYNC hooks' bodies apart from its own
 passes (its answers, chained streams and injected events), on a counter of the
-same size, `10 × max_chain_depth` (50 by default):
+same size, `10 × max_chain_depth` (50 by default), shared by all the cascade's
+hooks together; and a call a hook's body makes is at least one deeper than the
+event that fired the hook, as a call made within a turn is at least as deep as
+its response:
 
 - A hook that posts after every event, its own posts included, stops at the
   cap: each post draws one hook call, and past the cap it is stored `BLOCKED`
   with `reentry_loop_cap`.
-- A notice posted once per event draws one hook call per event of that
-  event's cascade: it costs the agents no answer, and their answers block no
-  notice. Only past 50 events of one cascade (a streamed turn of more rows
-  than that, a notice per row) is a notice blocked.
+- A hook that asks an agent again after each of its answers (a judge) ends at
+  `max_chain_depth`, or at a discussion's `max_depth`: each post, message,
+  `deliver()` (a queued item carries the depth) or regeneration is one deeper
+  than the answer, about `max_chain_depth / 2` answers in all (3 at 6).
+- A notice posted once per event draws one hook call per event: it costs the
+  agents no answer, and their answers block no notice. Only past 50 calls of
+  all the cascade's hooks together (a streamed turn of more rows than that, a
+  notice per row) is a notice blocked.
 - A direct `kit.update_event()`, `kit.delete_event()` or
   `kit.regenerate_response()` made from the body draws one hook call too, and
   past the cap raises `ReentryLoopCapError`, nothing written; the engine logs
-  what a body raises. The change's own hooks (`ON_EVENT_UPDATED`,
+  one it lets escape as a warning. The change's own hooks (`ON_EVENT_UPDATED`,
   `ON_EVENT_DELETED`, a regeneration's answers) run on the budget of the work
   it was made in, one of their own when it came from outside the room's work,
   so a hook that edits, deletes or regenerates on every change stops there.
+  Bulk work from one body stops at the cap too (15 deletes against 10: the
+  last 5 refused).
 - A task the body starts and does not await begins fresh once the body has
   returned: depth 0 and a budget of its own. A task the body awaits, or
   gathers, stays on the budget while the body runs.
 
-Work that follows an agent's answer outside the answer's cascade runs in such
-a task. It passes the chain it continues, `chain_depth` on `post()` or
-`send_event()`, so that its round trips with the agent end at
-`max_chain_depth`:
+Work that follows an agent's answer outside the answer's cascade, and bulk work
+of more than 50 changes, runs in such a task. A post or a `send_event()` from
+it passes the chain it continues, `chain_depth`, so that its round trips with
+the agent end at `max_chain_depth`. `update_event()`, `delete_event()` and
+`regenerate_response()` take no `chain_depth`: made from a task, nothing of
+the framework bounds them, and the hook bounds the changes it makes there
+itself:
 
 ```python
 background: set[asyncio.Task] = set()
