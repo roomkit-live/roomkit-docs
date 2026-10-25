@@ -78,6 +78,23 @@ config = VideoRecordingConfig(
 )
 ```
 
+A `storage` containing `..` raises `ValueError`: the recording does not start, and `kit.join()` fails before the session is bound.
+
+## Encryption at rest
+
+A session's video recording is encrypted at rest when you pass `encryption=`, the same `RecordingEncryption` the audio and room recorders take (RFC §12.8.10, §17.6):
+
+```python
+from roomkit.video.recorder import VideoRecordingConfig
+from roomkit.voice.pipeline import RecordingEncryption
+
+config = VideoRecordingConfig(storage="./recordings", encryption=my_cipher)
+```
+
+Each finished file goes through `encrypt_file()` at `stop()`, and at `close()` for a recording still open, also when flushing or closing the file failed. The result's `url` names the encrypted artifact and `metadata["encryption"]` the cipher; a file the cipher cannot encrypt is deleted. `storage_encrypted_at_rest=True` with no `encryption` states that the storage encrypts: the file stays as written and `metadata["encryption"]` is `"storage"`.
+
+Unlike the audio recorder, the video recorders do not refuse to start without either field: with neither, the file is stored as written. When `kit.close()` stops several recordings and one fails, the others are still stopped and encrypted, and the first error is raised once the channel is closed.
+
 ## Frame format
 
 The PyAV recorder accepts raw (uncompressed) frames only:
@@ -107,4 +124,5 @@ See [`examples/pyav_video_recorder.py`](https://github.com/roomkit-live/roomkit/
 uv run python examples/pyav_video_recorder.py
 uv run python examples/pyav_video_recorder.py --codec h264_nvenc --duration 30
 uv run python examples/pyav_video_recorder.py --output ./my_recordings --fps 30
+uv run python examples/pyav_video_recorder.py --encrypt   # stores the MP4 encrypted
 ```

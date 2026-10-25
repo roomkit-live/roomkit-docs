@@ -219,7 +219,7 @@ video = VideoChannel(
 )
 ```
 
-Recording starts automatically when a session binds and stops when it unbinds. Every received frame is tapped to the recorder and the file is finalized on stop.
+Recording starts automatically when a session binds and stops when it unbinds. Every received frame is tapped to the recorder and the file is finalized on stop. Pass `encryption=` (a `RecordingEncryption`) to `VideoRecordingConfig` to store the file encrypted at rest; see [Encryption at rest](pyav-video-recorder.md#encryption-at-rest).
 
 See the [PyAV Video Recorder guide](pyav-video-recorder.md) for codec selection, NVENC hardware encoding, and compression details.
 

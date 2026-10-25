@@ -4110,6 +4110,8 @@ video = VideoChannel(
 
 `codec="auto"` uses NVIDIA NVENC when available, falls back to `libx264`. See the [PyAV Video Recorder guide](guides/pyav-video-recorder.md) for codec options and hardware encoding.
 
+`VideoRecordingConfig(encryption=...)` stores each finished file encrypted at rest through the same `RecordingEncryption` the audio recorder takes; `storage_encrypted_at_rest=True` states that the storage encrypts instead. The video recorders apply these fields when set and do not refuse to start without them (RFC §12.8.10, §17.6). See [Encryption at rest](guides/pyav-video-recorder.md#encryption-at-rest).
+
 See the [Video & Vision guide](guides/video-vision.md) for full documentation.
 
 ### Video Backends (RTP/SIP)
