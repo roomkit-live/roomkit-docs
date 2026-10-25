@@ -194,8 +194,7 @@ from datetime import UTC, datetime
 from roomkit.models import RoomStatus
 
 # Under the room's lock: a whole-room write from a room read earlier would
-# undo what a message committed meanwhile wrote (its counters, the room's
-# register of authors).
+# undo what a message committed meanwhile wrote (its counters).
 async with kit.lock_manager.locked("support-123"):
     room = await kit.get_room("support-123")
     timers = room.timers.model_copy(update={"last_activity_at": datetime.now(UTC)})

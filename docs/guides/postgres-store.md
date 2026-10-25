@@ -107,7 +107,7 @@ Three things it is **not**:
 
 ## Schema
 
-PostgresStore creates 11 tables on first `init()`:
+PostgresStore creates 12 tables on first `init()`:
 
 | Table | Purpose | Key Columns | Indexes |
 |-------|---------|-------------|---------|
@@ -121,6 +121,7 @@ PostgresStore creates 11 tables on first `init()`:
 | `tasks` | Background tasks | `title`, `status`, `assigned_to` | room_id |
 | `observations` | AI/ML observations | `channel_id`, `content`, `category`, `confidence` | room_id |
 | `read_markers` | Read state tracking | `event_index` (integer) | (room_id, channel_id) PK |
+| `private_state` | A room's private state, apart from its metadata (the register of authors) | `room_id`, `key`, `value` (JSONB) | (room_id, key) PK |
 | `schema_version` | Migration tracking | `version` | -- |
 
 The schema uses **real relational columns** for all frequently queried fields — `type`, `source_channel_id`, `index`, `correlation_id`, `visibility`, `status`. JSONB is used only for extensible data: `content` (message body, tool call payload), `metadata` (application-specific), and `capabilities`. This enables efficient B-tree indexed queries instead of JSONB path extraction.
@@ -137,6 +138,9 @@ The tables live in the session's schema, `current_schema()`, the first schema of
 
 !!! warning "Upgrade every worker before one starts"
     The version that makes `latest_index` `None` for an empty room, scopes idempotency keys per source channel and stores each event's committed visibility changes the schema at its first `init()`: it drops the `NOT NULL` and default of `rooms.latest_index` and clears the `0` of empty rooms, replaces the unique index `idx_events_idempotency` (room, key) with `idx_events_idempotency_channel` (room, source channel, key), and rewrites once, as `schema_version` 3, the events stored `all` under a narrowed binding with that binding's visibility, so their readers stay the same. An older worker cannot read a room without an index and recreates the per-room index, so every worker sharing the database must run this version before one of them starts against it.
+
+!!! note "The register of authors moves out of the room's metadata"
+    `schema_version` 4 creates `private_state` and moves each room's register of authors out of `rooms.metadata` into it, so a client reading the room no longer gets the salted digests it could try ids and names against. A worker of an earlier version can still start against this schema, unlike a SQLite file: it rebuilds a register in the metadata from the timeline, and the next turn that names its sender merges that copy into the store's, so no rank is given again. In a rollback, a rank only the store knew (a seat, the rank of a deleted turn) can be given again until the upgrade is back.
 
 !!! danger "Legacy v1 → v2 migration is explicit and destructive"
     A very early (v1) release stored rooms as a JSONB blob. Migrating that schema to the current relational layout requires **dropping every table** — irreversible data loss. `init()` will **not** do this for you: if it detects a v1 schema it raises `PostgresSchemaError` and refuses to touch your data.
