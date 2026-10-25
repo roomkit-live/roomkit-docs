@@ -232,7 +232,9 @@ stay readable in an archived room.
 `regenerate_response()` is refused the same way at either status, before the
 agent runs: it returns `InboundResult(blocked=True, reason="room_closed")`, and
 `regenerate_target()` raises `RoomClosedError`, so a host learns the room is
-closed before it acts on a trigger.
+closed before it acts on a trigger. With `organization_id=` (RFC §17.2), both
+raise `RoomNotFoundError` for another organization's room before anything is
+read or replayed.
 
 Archiving an `ARCHIVED` room returns it as stored, writing and emitting
 nothing; otherwise the call stops any room-level media recorder and emits the

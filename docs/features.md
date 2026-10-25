@@ -348,6 +348,59 @@ organization's room raises `RoomNotFoundError`, no session joins it, no
 credential admits to it, and none of its recordings is told of the session's
 tracks.
 
+The kit's other room verbs take `organization_id=None`, keyword-only: against
+another organization's room each fails as not found (`RoomNotFoundError`)
+before any effect. Unset, no room is read for the scope, as before:
+
+- **Membership** -- `add_member`, `remove_member`, `rename_member`,
+  `list_members`, `is_member`: the roster is neither read nor written, no
+  event, no hook.
+- **Deliveries and turns** -- `deliver`, `send_greeting`, `regenerate_target`,
+  `regenerate_response`, `delegate`: no hook runs, nothing is queued, no turn
+  starts, no child room is created.
+- **Tasks, feedback and steering** -- `start_task`, `submit_feedback`,
+  `steer`: no task, observation, hook or steer. `cancel_task` answers `False`
+  for a task of another organization's room, which keeps running, and
+  `steer()` without a `room_id` reaches only the turns of that
+  organization's rooms (`TurnClient.steer()` takes it too).
+- **Ephemerals** -- `publish_typing`, `publish_tool_call`, `publish_presence`,
+  `publish_read_receipt`, `publish_reaction`, `subscribe_room`: nothing
+  published or subscribed.
+- **Room hooks and strategies** -- `add_room_hook`, `remove_room_hook`,
+  `enable_room_hook`, `disable_room_hook` and `claim_room_strategy` are
+  coroutines, so every call is awaited, scoped or not: nothing registered,
+  removed, enabled, disabled or claimed. `kit.hook_engine`'s own
+  `add_room_hook()` / `remove_room_hook()` stay synchronous and read no room.
+- **WebSocket** -- `connect_websocket` reads the room before the socket is
+  registered, and registers the connection for the organization.
+
+```python
+await kit.add_member("support-123", "ws-user", "alice", organization_id="acme")
+await kit.deliver("support-123", "Search finished.", organization_id="acme")
+await kit.add_room_hook(
+    "support-123", HookTrigger.BEFORE_BROADCAST, HookExecution.SYNC, moderate,
+    organization_id="acme",
+)
+```
+
+A WebSocket connection belongs to the organization it was registered for
+(`register_connection(..., organization_id="acme")`, or `connect_websocket`
+scoped): a room of another organization, or of none, delivers nothing to it,
+streamed or not, whatever it is subscribed to, and a stream under way sends
+only to the registrations present when it started: an id registered again
+since, a reconnection of the same organization included, gets neither the
+rest of it nor its `stream_end`. The registry reads no room:
+`subscribe()`, `unsubscribe()`, `unregister_connection()`,
+`kit.subscribe_websocket()`, `kit.unsubscribe_websocket()` and
+`kit.disconnect_websocket()` take `organization_id=`, and a scoped call on a
+connection not registered for that organization (another's, an unscoped one,
+none) raises `ValueError` and changes nothing, so another tenant can neither
+take a socket over nor disconnect it. A subscription to another
+organization's room is not refused: it delivers nothing. A registration that
+changes an id's organization, to none included, drops the rooms the id
+followed. Connection ids are one namespace for every organization: the host
+server generates them (a UUID per socket), never takes one a client chose.
+
 `organization_id` remains optional for single-tenant compatibility: RoomKit is
 a library and has no request principal from which to infer it. A multi-tenant
 application must derive it from authenticated context and pass it at every
@@ -1221,7 +1274,7 @@ executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared s
 register_turn_hooks(executor)
 ```
 
-`kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
+`await kit.add_room_hook(room_id, trigger, ...)` on one of these triggers is the
 kit's own executor's hook for that room. For agents other executors run, a
 room hook is defined by name on the executors and enabled per room on the
 kit, which names a room's hooks in each turn's request; only an executor that
@@ -1235,8 +1288,8 @@ async def audit(event, ctx) -> None: ...
 for executor in (kit.turn_executor, host_executor):
     executor.room_hook("audit", HookTrigger.ON_TOOL_CALL, HookExecution.ASYNC)(audit)
 
-kit.enable_room_hook("vip-room", "audit")
-kit.disable_room_hook("vip-room", "audit")
+await kit.enable_room_hook("vip-room", "audit")
+await kit.disable_room_hook("vip-room", "audit")
 ```
 
 On an executor a name carries one hook per trigger: `room_hook()` called again
@@ -2405,7 +2458,9 @@ Both honour the room's status (RFC §5.1): on a `CLOSED` or `ARCHIVED` room
 `regenerate_response()` returns `InboundResult(blocked=True, reason="room_closed")`
 before the agent runs (`room_closed` wins over `trigger_moved`), including a
 room closed while the regeneration waited in the lane, and
-`regenerate_target()` raises `RoomClosedError`.
+`regenerate_target()` raises `RoomClosedError`. Both take `organization_id=`
+(RFC §17.2): another organization's room raises `RoomNotFoundError` before
+anything is read or replayed.
 
 ### Image Generation
 
@@ -3089,15 +3144,24 @@ authorship, identification or verification. See
 Real-time bidirectional communication via callback-based connection registry:
 
 ```python
+import uuid
+
 ws = WebSocketChannel("ws-user")
 kit.register_channel(ws)
 
-# Register a connection and send function
-await kit.connect_websocket("ws-user", "conn-123", send_fn)
+# Register a connection for a room; the host generates its id, never the client
+connection_id = str(uuid.uuid4())
+await kit.connect_websocket(
+    "ws-user", connection_id, send_fn, room_id="support-123", organization_id="acme"
+)
 
 # Later: disconnect
-await kit.disconnect_websocket("ws-user", "conn-123")
+await kit.disconnect_websocket("ws-user", connection_id, organization_id="acme")
 ```
+
+A connection registered for an organization receives nothing from a room of
+another organization, or of none; see
+[Organization-scoped room operations](#organization-scoped-room-operations).
 
 The `WebSocketChannel` is the only transport channel with a dedicated class (not using `TransportChannel`). It supports typing indicators, reactions, and read receipts.
 

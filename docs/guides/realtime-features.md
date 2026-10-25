@@ -104,6 +104,11 @@ sub_id = await kit.subscribe_room("room-1", on_event)
 await kit.unsubscribe_room(sub_id)
 ```
 
+Each `publish_*` call (`publish_tool_call` included) and `subscribe_room`
+take `organization_id=` (RFC §17.2): another organization's room raises
+`RoomNotFoundError`, nothing published or subscribed. Unset, no room is
+read: a room id is published to and subscribed to as given, as before.
+
 ## EphemeralEventType
 
 All 14 ephemeral event types:

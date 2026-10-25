@@ -64,6 +64,12 @@ joined = await kit.is_member("team", "alice")              # True if that identi
 `list_members` returns `Participant` objects — each carries `channel_id`,
 `display_name`, `role`, `status`, `identity_id`, and `connected_via`.
 
+A host serving several organizations passes `organization_id=` to
+`add_member`, `remove_member`, `rename_member`, `list_members` and
+`is_member` (RFC §17.2): another organization's room raises
+`RoomNotFoundError`, its roster neither read nor written, no event and no
+hook. Unset, the call is unscoped, as before.
+
 ## One record, several channels
 
 A participant is **one record per (room, id)**. The same person reached by SMS

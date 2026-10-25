@@ -499,19 +499,28 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     async def list_tasks(self, room_id, status=None) -> list[Task]
     async def list_observations(self, room_id) -> list[Observation]
 
-    # --- WebSocket lifecycle ---
-    async def connect_websocket(self, channel_id, connection_id, send_fn) -> None
-    async def disconnect_websocket(self, channel_id, connection_id) -> None
+    # --- WebSocket lifecycle (organization_id= scopes each to a tenant, RFC §17.2) ---
+    async def connect_websocket(self, channel_id, connection_id, send_fn, *, room_id,
+                                stream_send_fn=None, organization_id=None) -> None
+    def subscribe_websocket(self, channel_id, connection_id, room_id, *,
+                            organization_id=None) -> None
+    def unsubscribe_websocket(self, channel_id, connection_id, room_id, *,
+                              organization_id=None) -> None
+    async def disconnect_websocket(self, channel_id, connection_id, *,
+                                   organization_id=None) -> None
 
     # --- Read tracking ---
     async def mark_read(self, room_id, channel_id, event_id) -> None
     async def mark_all_read(self, room_id, channel_id) -> None
 
     # --- Realtime (ephemeral events) ---
-    async def publish_typing(self, room_id, user_id, is_typing=True) -> None
-    async def publish_presence(self, room_id, user_id, status) -> None
-    async def publish_read_receipt(self, room_id, user_id, event_id) -> None
-    async def subscribe_room(self, room_id, callback) -> str
+    async def publish_typing(self, room_id, user_id, is_typing=True, data=None, *,
+                             organization_id=None) -> None
+    async def publish_presence(self, room_id, user_id, status, *,
+                               organization_id=None) -> None
+    async def publish_read_receipt(self, room_id, user_id, event_id, *,
+                                   organization_id=None) -> None
+    async def subscribe_room(self, room_id, callback, *, organization_id=None) -> str
     async def unsubscribe_room(self, subscription_id) -> bool
 
     # --- Hook registration ---
@@ -522,8 +531,12 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     def identity_hook(self, trigger, channel_types=None, channel_ids=None,
                        directions=None) -> decorator    # Identity resolution hook
     def on_delivery_status(self, fn) -> decorator   # Delivery status handler
-    def add_room_hook(self, room_id, trigger, execution, fn, priority=0, name="") -> HookRegistration
-    def remove_room_hook(self, room_id, name) -> bool
+    async def add_room_hook(self, room_id, trigger, execution, fn, priority=0, name="", *,
+                            fail_closed=False, needs_lock=True,
+                            organization_id=None) -> HookRegistration
+    async def remove_room_hook(self, room_id, name, *, organization_id=None) -> bool
+    async def enable_room_hook(self, room_id, name, *, organization_id=None) -> None
+    async def disable_room_hook(self, room_id, name, *, organization_id=None) -> bool
 
     # --- Session lifecycle (voice / video) ---
     async def join(self, room_id, channel_id, *, session=None,

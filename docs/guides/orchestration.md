@@ -489,7 +489,9 @@ kit.room_strategy(room_id)                                          # the instal
   [Changing the agents](discussion.md#changing-the-agents)). A host's own
   strategy gets the same treatment through `install_strategy`; installed by
   calling its `install()` directly, it calls
-  `kit.claim_room_strategy(room_id, self)` first, as the built-in ones do.
+  `await kit.claim_room_strategy(room_id, self)` first, as the built-in ones
+  do; with `organization_id=` (RFC §17.2), another organization's room is
+  not found.
 - Both calls may run while the host holds `kit.lock_manager.locked(room_id)`,
   as it does to serialise its own changes of the room: they take the lock
   again in the same task, and neither waits on work that needs it.

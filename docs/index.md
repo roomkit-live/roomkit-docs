@@ -72,6 +72,10 @@ It prints `browser <- Hi! How can I help?`. Replace the mock with
 `AnthropicAIProvider`, `OpenAIAIProvider` or another provider, and the socket
 with `SMSChannel` or any other channel: the room code does not change.
 
+In a server, the host generates the connection id (a UUID per socket, never
+one a client chose), and `register_connection(..., organization_id=...)`
+keeps a tenant's socket to its own rooms (RFC §17.2).
+
 ## Key concepts
 
 | Concept | What it does |

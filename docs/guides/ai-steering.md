@@ -182,8 +182,12 @@ await kit.steer(InjectMessage(content="The user attached a file."), "ai-assistan
 
 It answers the loops it reached. A channel without steering of its own (an
 ACP agent) takes a `Cancel` as its turn's cancel, which counts as one; any
-other directive reaches nothing there. `ai.steer()` still reaches the loops
-running in the process it is called in.
+other directive reaches nothing there. With
+`kit.steer(..., organization_id=...)` (RFC §17.2), a `room_id` of another
+organization raises `RoomNotFoundError`, and only the turns of that
+organization's rooms are reached. `ai.steer()` still reaches the loops
+running in the process it is called in, whatever room's: the channel holds no
+store, and the kit's `steer()` is the door that reads the room.
 
 One turn is addressed by its id, which a tool or a hook of that turn reads
 with `current_turn_id()`:

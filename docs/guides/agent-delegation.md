@@ -64,6 +64,10 @@ The flow:
    notified agent's system prompt is never touched.
 7. **Hooks fired**: `ON_TASK_DELEGATED` (immediately) and `ON_TASK_COMPLETED` (on finish)
 
+With `kit.delegate(..., organization_id=...)` (RFC §17.2), another
+organization's parent room raises `RoomNotFoundError` before any child room
+is created or task run.
+
 ## What the worker reads: brief and conversation
 
 `task` is what was asked: the label the hand-back, the StatusBus and a turn's
@@ -127,8 +131,10 @@ playback under way, only the person does.
 The task is always the calling agent's own: a model never runs another
 agent's worker, which may hold more than it does, nor has a result come back
 in another agent's name; it asks that agent by name instead.
-`kit.start_task(room_id, agent_id, task, hand_back=None)` starts the same task
-from the host, for any agent of the room, an external agent included. A call
+`kit.start_task(room_id, agent_id, task, hand_back=None, organization_id=None)`
+starts the same task from the host, for any agent of the room, an external
+agent included; another organization's room raises `RoomNotFoundError`,
+nothing started (RFC §17.2). A call
 from a task's child room is refused: a worker does its work and starts no task
 of its own.
 
@@ -490,7 +496,9 @@ the bus lists ended is answered as `task_status` lists it, whoever ran it.
 
 A host cancels a task with `await kit.cancel_task(task_id)` (a cancel button,
 say). That cancellation is the host's, so the agent the result was going to is
-told the task was cancelled.
+told the task was cancelled. With `organization_id=` (RFC §17.2), only a task
+running for a room of that organization is cancelled: another organization's
+answers `False`, as a task the kit does not hold, and keeps running.
 
 Calls that cancel one task at once, the host's and agents' together, cancel it
 once: each is answered that it was cancelled, and none of the agents that made

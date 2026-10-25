@@ -65,6 +65,8 @@
         - sender_verification
         - check_verifications
         - connect_websocket
+        - subscribe_websocket
+        - unsubscribe_websocket
         - disconnect_websocket
         - mark_read
         - mark_all_read
@@ -78,6 +80,8 @@
         - identity_hook
         - add_room_hook
         - remove_room_hook
+        - enable_room_hook
+        - disable_room_hook
 
 ## Exceptions
 

@@ -26,6 +26,11 @@ await kit.deliver("room-id", content="Flight search finished: 3 options found.")
     `sent` and texts nothing. To send the correspondent a message, see
     [Sending a message to the correspondent](#sending-a-message-to-the-correspondent).
 
+A host serving several organizations passes the one it acts for,
+`kit.deliver(room_id, content, organization_id=...)` (RFC §17.2): another
+organization's room raises `RoomNotFoundError` before any hook runs or
+anything is queued. Unset, no room is read for the scope, as before.
+
 ## Use cases
 
 - **Delegation results** — workers finish in the background, results delivered to user

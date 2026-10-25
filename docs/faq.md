@@ -60,6 +60,14 @@ ws.unsubscribe("conn-alice", "room-1")  # ...and closes the first one
 `ws.rooms_for(connection_id)` lists the rooms a connection follows, and
 `ws.unregister_connection(connection_id)` drops it when the socket closes.
 
+Connection ids are one namespace for every organization: generate them on the
+host server (a UUID per socket), never take one a client chose. When rooms
+belong to tenants, pass `organization_id=` to `register_connection` and to
+the calls after it (RFC §17.2): the connection then receives nothing from a
+room of another organization, or of none, whatever it is subscribed to, and a
+scoped call on a connection registered for another organization raises
+`ValueError` and changes nothing.
+
 What stays in your application, above RoomKit:
 
 ```

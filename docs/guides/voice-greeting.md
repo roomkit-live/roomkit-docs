@@ -86,6 +86,8 @@ async def on_ready(event: SessionStartedEvent, context: object) -> None:
 
 Passing `session` and `channel_type` lets `send_greeting()` dispatch correctly — voice sessions get TTS via `say()`, text sessions get a broadcast. Without these parameters, the greeting falls back to the text broadcast path.
 
+A host serving several organizations also passes `organization_id=` (RFC §17.2): another organization's room raises `RoomNotFoundError`, and nothing is said or stored.
+
 !!! tip
     Use this pattern when you need to check caller metadata, time of day, or other conditions before deciding which greeting to send.
 

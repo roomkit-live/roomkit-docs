@@ -892,6 +892,10 @@ browser.register_connection("tab-1", to_browser, room_id="chat")
 await kit.attach_source("cli", source)
 ```
 
+In a server, the host generates each connection id (a UUID per tab, never
+one a client chose), and `register_connection(..., organization_id=...)`
+keeps a tenant's socket to its own rooms (RFC §17.2).
+
 A gateway message such as `{"sender_id": "cli-user", "text": "Hello"}` goes
 through the inbound pipeline and reaches the browser. A browser message
 (`kit.process_inbound(InboundMessage(channel_id="browser", ...))`) reaches the

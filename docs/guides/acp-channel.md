@@ -985,6 +985,7 @@ permission options it presents.
 ```python
 # Stop the room's running turn, wherever it runs: the agent is sent
 # session/cancel and the turn ends as its prompt returns. How many it reached.
+# organization_id= (RFC §17.2): another organization's room raises RoomNotFoundError.
 reached = await kit.steer(Cancel(reason="stop"), "claude-code", room_id="coding-session")
 
 # Forget one Room's ACP session but keep the process for other Rooms.

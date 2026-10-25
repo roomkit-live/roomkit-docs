@@ -332,7 +332,10 @@ await kit.cancel_task(task.id)                      # the agent says it was canc
 ```
 
 `start_task` works for any agent of the room, an external agent included,
-which takes no tool from RoomKit. Each turn's notes list the room's tasks, so
+which takes no tool from RoomKit. A host serving several organizations passes
+`organization_id=` to both (RFC §17.2): `start_task` raises
+`RoomNotFoundError` for another organization's room, nothing started, and
+`cancel_task` answers `False` for its task, which keeps running. Each turn's notes list the room's tasks, so
 an agent asked how a task goes answers from them; `task_status` and
 `cancel_task` are tools you may give it as well. A worker never starts a task
 of its own: the tool is refused in a task's child room. A task outlives the
