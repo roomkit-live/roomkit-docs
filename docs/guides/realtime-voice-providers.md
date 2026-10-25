@@ -1388,7 +1388,8 @@ These variables are conveniences implemented by the example, not global
 RoomKit settings. In application code, their equivalents are
 `WebRTCAECProvider(stream_delay_ms=...)` and
 `WebRTCNoiseSuppressorProvider(...)`, plus
-`LocalAudioBackend(rt_prebuffer_ms=...)`.
+`LocalAudioBackend(rt_prebuffer_ms=...)` and
+`LocalAudioBackend(output_latency_ms=...)` (below).
 
 Start with `AEC_DELAY_MS=0`. If the speaker stream reports underruns, increase
 `AUDIO_PREBUFFER_MS`; lowering it reduces startup latency but gives bursty
@@ -1506,6 +1507,18 @@ before playback starts and re-primes after an underrun — the local-speaker
 analogue of the SIP pacer's pre-buffer. It paces streamed TTS the same way:
 every response plays through the backend's one speaker stream. Set it to `0` to play from the first
 byte. The `rt_underruns` property counts mid-response starvations.
+
+**Output latency**: `output_latency_ms` (default `None`: PortAudio's "low" with
+an `aec`, "high" otherwise) is the margin the speaker's PortAudio stream keeps.
+The speaker's callback is Python, so a call that holds the GIL past that margin
+underflows the device, which you hear as clicks: with "low" (about 20 ms), a C
+call holding the GIL for 50 ms every 400 ms gave 84 underflows; at
+`output_latency_ms=100`, none. The margin costs as much latency on each
+response and each cut, and with an `aec` adds about as much to the echo delay
+(100 ms asked: echo at about 149 ms instead of 38). Keep it inside the
+canceller's range: WebRTC about 500 ms in all (past it the backend warns),
+Speex its `filter_length` (200 ms by default). Under such stalls the AEC can
+still drift and let more echo through.
 
 When `aec` is supplied, the local backend uses the blocks actually written to
 the speaker as the reference, including silence inserted after playback has

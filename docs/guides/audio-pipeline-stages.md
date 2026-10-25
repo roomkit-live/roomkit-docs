@@ -250,7 +250,10 @@ so capture and render do not drift apart. RoomKit prevents the pipeline from fee
 second time.
 
 `LocalAudioBackend` plays every response through one output stream, opened at
-the first playback and kept open. A stream opened per response starts at a new
+the first playback and kept open, with the output margin `output_latency_ms`
+sets (PortAudio's "low" by default with an `aec`; a wider margin stops the
+underflows a GIL-holding call causes, at the cost of latency and of a longer
+echo delay, see the local speaker's output latency in [Realtime voice providers](realtime-voice-providers.md)). A stream opened per response starts at a new
 render-to-capture delay, which the audio server then takes seconds to settle,
 and AEC3 cannot follow a delay that moves under it: on a PipeWire desktop, a
 quarter of the echo was left above -50 dBFS, against one twentieth with the
