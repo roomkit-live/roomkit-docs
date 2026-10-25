@@ -2904,8 +2904,12 @@ await kit.unsubscribe_room(sub_id)
 
 **An agent's answer, live, for any observer:**
 
-`AIChannel` publishes its answer's text as `TEXT_DELTA` while it is written
-(`text`, `round`, `channel_id`), coalesced on `text_coalesce_ms` /
+`AIChannel(publish_text_deltas=True)` publishes its answer's text as
+`TEXT_DELTA` while it is written; it is off by default. `BEFORE_BROADCAST`
+judges the stored message, never this stream: an answer a hook blocks or
+redacts reaches a subscriber whole, so a host that filters or redacts answers
+leaves it off (RFC §6.4). Each event carries `text`, `round` and
+`channel_id`, coalesced on `text_coalesce_ms` /
 `text_coalesce_chars` (80 ms / 256 characters) and flushed before each tool
 call, so text and calls arrive in order. It is for an observer that is not a
 transport of the room — a debugger, a dashboard, or the code that delegated a
@@ -2921,13 +2925,15 @@ async def watch(event, ctx):
 ```
 
 A client that already renders the answer from a streaming transport (a
-WebSocket) reads one or the other, not both.
+WebSocket) reads one or the other, not both. Turn it on only once every
+worker runs 0.109.0: an earlier process cannot read a `text_delta` event.
 
 **An agent's live activity follows its answer's visibility:**
 
 While an agent works, its turn publishes live ephemerals: its reasoning
 (`THINKING_*`) and its tool calls (`TOOL_CALL_*`, with their arguments and a
-result preview). A subscriber of the room's ephemerals is not a bound channel,
+result preview). No hook judges them: `BEFORE_BROADCAST` runs on the stored
+answer only (RFC §8.4). A subscriber of the room's ephemerals is not a bound channel,
 so RoomKit publishes them only when the agent's answer reaches the whole room:
 the agent can write, its binding's visibility is `all` (read at each publish,
 so narrowing it mid-turn stops them at once), and the triggering message's

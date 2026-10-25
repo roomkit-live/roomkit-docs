@@ -201,6 +201,8 @@ PipelineDebugTaps(
 
 Valid stage names: `raw`, `post_aec`, `post_agc`, `post_denoiser`, `post_vad_speech`, `outbound_raw`, `outbound_final`.
 
+An `output_dir` with a `..` component raises `ValueError`, and the taps are never written elsewhere (RFC §12.3.15).
+
 ### Recorder vs debug taps
 
 | | WavFileRecorder | PipelineDebugTaps |

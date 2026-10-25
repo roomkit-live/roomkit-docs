@@ -728,7 +728,9 @@ await kit.post(room_id, "Refund issued.", idempotency_key=webhook_delivery_id)
   One `process_timeout` bounds the whole call, the wait for the room lock
   included (`ProcessTimeoutError`); once the lock is held, the attach runs to
   its end even if the caller is cancelled, and stays when the deadline passes
-  during it, the message then not written.
+  during it, the message then not written. A first post a hook or a turn
+  makes past its reentry budget is stored `BLOCKED` with `reentry_loop_cap`
+  and binds nothing: the post draws its pass before the attach.
 - A host channel is attached as a transport only: `category=INTELLIGENCE`
   raises `ValueError`. `process_inbound()` on it raises `ValueError` before
   anything is read: it receives no external payload.
@@ -1388,7 +1390,9 @@ the event it runs for. The call is part of that event's work (RFC §9.5.1):
   stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns
   that record; `process_inbound()` naming the room returns `blocked=True,
   reason="reentry_loop_cap"` with no event, before anything else: its channel
-  is not looked up, nothing is attached.
+  is not looked up, nothing is attached. A call acting for an organization
+  has the room read with it first, so another organization's room raises
+  `RoomNotFoundError` and draws nothing.
 - A message routed back into the room (`process_inbound()` with no
   `room_id`) raises `ReentrantCallError` before anything is written: its room
   is known only once routed, so it cannot be adopted. Name the room instead.
@@ -1453,6 +1457,10 @@ its response:
 - A hook that posts after every event, its own posts included, stops at the
   cap: each post draws one hook call, and past the cap it is stored `BLOCKED`
   with `reentry_loop_cap`.
+- A call refused for its organization (`organization_id=` naming another
+  organization's room) raises `RoomNotFoundError` before it draws anything:
+  `process_inbound()` naming the room as much as `post()`, `send_event()`,
+  `deliver()` or a regeneration.
 - A hook that asks an agent again after each of its answers (a judge) ends at
   `max_chain_depth`, or at a discussion's `max_depth`: each post, message,
   `deliver()` (a queued item carries the depth) or regeneration is one deeper
@@ -5333,7 +5341,8 @@ host's own strategy gets the same treatment through `install_strategy`. If it is
 calling its `install()` directly, it should call
 `await kit.claim_room_strategy(room_id, self)` first, as the built-in ones
 do; with `organization_id=` (RFC §17.2), another organization's room is not
-found.
+found. The claim reads the room as an install does: a discussion another
+process stored refuses another strategy in a process that never saw it.
 Example: `examples/strategy_on_the_fly.py`.
 
 ## Using Orchestration
@@ -6351,7 +6360,7 @@ and subscribed to as given, as before.
 | `TOOL_CALL_START` | AI started executing a tool |
 | `TOOL_CALL_END` | AI finished executing a tool |
 | `THINKING_START` / `THINKING_DELTA` / `THINKING_END` | AI reasoning, coalesced |
-| `TEXT_DELTA` | AI answer text as it is written, coalesced (`text`, `round`, `channel_id`) |
+| `TEXT_DELTA` | AI answer text as it is written, coalesced (`text`, `round`, `channel_id`); opt-in |
 | `CUSTOM` | Custom ephemeral event |
 
 AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
@@ -6360,17 +6369,28 @@ AI channels publish `TOOL_CALL_DELTA` with the tool name and cumulative
 failure, retry, and fallback; counts restart for a retry. The complete call
 still arrives in `TOOL_CALL_START`.
 
-AI channels publish `TEXT_DELTA` with the answer's text as it is written, for
-an observer that is not a transport of the room: a debugger, a dashboard, or
-the code that delegated a task, which subscribes to the child room (its id is
-in `ON_TASK_DELEGATED`'s event metadata, `child_room_id`, before the agent
-starts). The text is coalesced on `AIChannel(text_coalesce_ms=80,
-text_coalesce_chars=256)` (`text_coalesce_ms=0` publishes every token), and
+With `AIChannel(publish_text_deltas=True)`, AI channels publish `TEXT_DELTA`
+with the answer's text as it is written, for an observer that is not a
+transport of the room: a debugger, a dashboard, or the code that delegated a
+task, which subscribes to the child room (its id is in `ON_TASK_DELEGATED`'s
+event metadata, `child_room_id`, before the agent starts). It is off by
+default: `BEFORE_BROADCAST` judges the stored message, never this stream, so
+an answer a hook blocks or redacts reaches a subscriber whole once it is on. A
+host that filters or redacts answers leaves it off. The text is coalesced on
+`AIChannel(text_coalesce_ms=80, text_coalesce_chars=256)` (`text_coalesce_ms=0`
+publishes every token), which have no effect while the option is off, and
 flushed before a round's tool-call events, so text and calls arrive in order.
 Joined, the texts are every round's answer text (`round` tells them apart),
 where a delegated task's result holds the last segment only. A client that
 already renders the answer from a streaming transport (a WebSocket) reads one
-or the other, not both. Never persisted: the stored message is the answer.
+or the other, not both. Never persisted: the stored message is the answer. A
+0.108.0 process cannot read a `text_delta` event (`EphemeralEvent.from_dict`
+raises), so turn the option on once every process sharing the realtime
+backend runs 0.109.0 or later.
+
+```python
+agent = Agent("assistant", provider=provider, publish_text_deltas=True)
+```
 
 A turn's ephemerals (its reasoning, its tool calls, a custom one its channel
 publishes, and what work it began publishes after it) reach a room's
@@ -6809,7 +6829,8 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   its digests hash the room's id with each sender's id and name, and trying
   every phone number or name finds the senders. `get` returns the caller's
   own copy, `None` for an unknown room or key; `set` writes nothing for a
-  room the store lacks, removes the key when `value` is `None`, and removes
+  room the store lacks, one deleted while it writes included, removes the
+  key when `value` is `None`, and removes
   the copy the metadata may still hold under the key, in one write; the
   room's deletion takes its private state. The keys are the
   implementation's, and each reserves the same key in the room's metadata:
@@ -6865,7 +6886,9 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
   `find_room_id_by_binding(channel_id, participant_id, identity_id,
   room_filter, *, recipient_key=None)` finds a binding naming the address or
   the identity, or naming no one and not `group` with the address as its
-  recipient under `recipient_key`; `find_room_id_by_participant(channel_id,
+  recipient under `recipient_key` (SQLite reads an integer recipient beyond
+  64 bits as a real number and does not find it; the other stores do);
+  `find_room_id_by_participant(channel_id,
   participant_id, identity_id, room_filter)` a participant reached through the
   channel whose id or identity is one of the names;
   `find_room_ids_by_channel(channel_id, room_filter, limit, *, group=None)`
@@ -7360,6 +7383,8 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `DeclaredChannel` | The channel the kit holds for a registered declaration: bound and routed to, never run in the kit's process |
 | `TurnClient` | The room owner's side: runs a turn, reads it back as the channel's `ChannelOutput` |
 | `OwnerTools` | ABC for the tools a room owner serves its turns: what a request lists, how a call's handler runs |
+| `OwnerHost` | ABC for what a room owner runs for its turns' `TurnHost` (`TurnClient(host=)`): `call(request, verb, arguments)`, and `call_between_turns(message)`, refused by default |
+| `OwnerEvents` | ABC for where a room owner publishes what its turns published on their executors (`TurnClient(events=)`): `publish(channel, event)`, `emit(...)`, and `reaches_room(room_id, channel_id)`, whose default `False` publishes no turn ephemeral (RFC §8.4) |
 | `OwnerTool` | One tool a turn's request lists, served by the room owner (`tool`, `waits_by_design`) |
 | `TurnHost` | What a host's tool or hook on a turn's executor asks of the room owner: `send_event`, `delegate`, `wait_task`, `post_status`, `update_room_metadata`, `add_observation` |
 | `current_turn_host()` | The `TurnHost` of the turn the current code runs in; after the turn, in work it began, the host for `send_event`, `post_status`, `update_room_metadata`, `add_observation` (`host.open` false); `None` elsewhere |
