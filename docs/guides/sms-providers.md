@@ -248,7 +248,9 @@ VoiceMeUp sends MMS as **two separate webhooks** — a text/metadata wrapper fir
 ```python
 from __future__ import annotations
 
-from roomkit.providers.voicemeup import VoiceMeUpSMSProvider
+from roomkit.providers.voicemeup import VoiceMeUpConfig, VoiceMeUpSMSProvider
+
+provider = VoiceMeUpSMSProvider(VoiceMeUpConfig(...))
 
 # Configure MMS aggregation
 async def on_mms_timeout(msg):
@@ -263,7 +265,7 @@ async def voicemeup_webhook(request: Request):
 
     # Returns None if buffering (waiting for second part)
     # Returns InboundMessage when complete
-    inbound = provider.parse_mms_webhook(payload, channel_id="sms-main")
+    inbound = provider.parse_inbound(payload, channel_id="sms-main")
     if inbound:
         await kit.process_inbound(inbound)
 

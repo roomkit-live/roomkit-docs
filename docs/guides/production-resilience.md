@@ -232,8 +232,8 @@ from __future__ import annotations
 from roomkit import RoomKit, RoomTimers
 from roomkit.channels import AIChannel, SMSChannel
 from roomkit.models import RateLimit, RetryPolicy
-from roomkit.providers.anthropic import AnthropicAIProvider
-from roomkit.providers.openai import OpenAIAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
 from roomkit.store import PostgresStore
 from roomkit.telemetry import OpenTelemetryProvider
 
@@ -248,8 +248,8 @@ kit = RoomKit(
 )
 
 # AI with fallback and retries
-primary = AnthropicAIProvider(model="claude-opus-5", api_key="...")
-fallback = OpenAIAIProvider(model="gpt-4o", api_key="...")
+primary = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5"))
+fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
 
 ai = AIChannel(
     "ai-assistant",

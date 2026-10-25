@@ -33,7 +33,7 @@ from roomkit import (
     HumanInputToolHandler,
     RoomKit,
 )
-from roomkit.providers.anthropic import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 kit = RoomKit()
 
@@ -58,7 +58,7 @@ human = HumanInputToolHandler(
 
 ai = AIChannel(
     "agent",
-    provider=AnthropicAIProvider(model="claude-opus-5", api_key="..."),
+    provider=AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5")),
     system_prompt="You are a helpful assistant. Use AskUserQuestion to ask the user.",
     tool_handler=my_other_tools,        # Your regular tools
     human_input_handler=human,           # Human-input tools

@@ -39,7 +39,7 @@ with distributed implementations (Redis, PostgreSQL, etc.) for production deploy
 ## Key Concepts (in llms-full.txt)
 
 - **Channel-to-AI Message Flow**: How messages flow from transport channels through the inbound pipeline to AI and back via the reentry loop, with chain depth tracking
-- **Content Transcoding**: ChannelCapabilities, DefaultContentTranscoder fallback chain (Rich→Text, Media→Text, etc.), custom ContentTranscoder implementation
+- **Content Transcoding**: ChannelCapabilities, DefaultContentTranscoder fallback chain (Rich→Text, Media→Text, etc.)
 - **ConversationState**: Persistent state across conversation turns — phase, active_agent_id, handoff_count, context dict for custom data, transition() for phase changes, PhaseTransition audit trail
 - **Dynamic Routing**: ConversationRouter with RoutingConditions (phases, channel_types, intents, source_channel_ids, custom callable), routing by content/origin/state
 

@@ -13,7 +13,7 @@ import json
 
 from roomkit import ChannelCategory, RoomKit, Tool
 from roomkit.channels import AIChannel
-from roomkit.providers.anthropic import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 
 class GetWeatherTool:
@@ -42,7 +42,7 @@ class GetWeatherTool:
 kit = RoomKit()
 ai = AIChannel(
     "ai-assistant",
-    provider=AnthropicAIProvider(model="claude-opus-5", api_key="..."),
+    provider=AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5")),
     system_prompt="You are a helpful assistant.",
     tools=[GetWeatherTool()],
 )

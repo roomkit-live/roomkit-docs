@@ -214,11 +214,11 @@ from __future__ import annotations
 
 from roomkit.channels import AIChannel
 from roomkit.models import RetryPolicy
-from roomkit.providers.anthropic import AnthropicAIProvider
-from roomkit.providers.openai import OpenAIAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
+from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
 
-primary = AnthropicAIProvider(model="claude-opus-5", api_key="...")
-fallback = OpenAIAIProvider(model="gpt-4o", api_key="...")
+primary = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5"))
+fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
 
 ai = AIChannel(
     "ai-assistant",

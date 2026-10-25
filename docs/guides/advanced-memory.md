@@ -141,10 +141,10 @@ from __future__ import annotations
 
 from roomkit.channels import AIChannel
 from roomkit.memory import CompactingMemory, SlidingWindowMemory
-from roomkit.providers.anthropic import AnthropicAIProvider
+from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 
 # Use a fast, cheap model for summarization
-summarizer = AnthropicAIProvider(model="claude-haiku-5-5", api_key="...")
+summarizer = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-haiku-5-5"))
 
 memory = CompactingMemory(
     inner=SlidingWindowMemory(max_events=200),

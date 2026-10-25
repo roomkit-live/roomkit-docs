@@ -24,7 +24,8 @@ both `roomkit` and `roomkit.models`. Either import is public.
 A provider whose module needs an optional dependency is listed by its
 package all the same. Its module loads the first time the name is used, so
 `import roomkit` never needs the extra; when the extra is missing, that first
-use raises `ModuleNotFoundError` naming the package to install.
+use raises the import error of the missing package, such as
+`ModuleNotFoundError: No module named 'httpx'`.
 
 ## What is internal
 
