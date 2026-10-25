@@ -2964,7 +2964,7 @@ The speaker of an event is resolved in this order:
 
 1. `event.metadata["sender_name"]` — stamped at ingress. The Teams webhook parser and the WhatsApp Personal (neonize) source write it, a voice channel's diarization names each voice of a shared microphone with it; a host does the same by passing `InboundMessage(..., metadata={"sender_name": "Alice"})`.
 2. The room's participant record: `Participant.display_name` for the participant whose `id` (or `identity_id`) equals `event.source.participant_id` (the inbound `sender_id`).
-3. Otherwise the turn has no name and, in a multi-speaker room, opens with its channel as the room addresses it (`@sms1: "text"`, kept to an identifier's characters, never a participant's id), a form no name takes: a nameless sender cannot open with someone else's name, and a person named `ai2` does not read as the agent `@ai2`. Each line of a labelled turn opens with its label (an API that merges consecutive user turns, or a `Bob:` line inside Alice's message, would otherwise read a line as another author's), what was typed on each line follows its label as a JSON string (its `"` escaped, every other double quote mark made `'`), so a `Name:` in the middle of a line reads as part of it, and the note says so, and that a `Name:` inside the string is what its sender wrote. Two senders whose names read alike (`Alice`, `ALICE`, `Аlice`) are told apart: a participant the room registered keeps the name, then the first sender the room saw, each later one carrying its rank (`ALICE (2): …`), a form no name takes, fixed when the turn is committed so it holds as the window slides (every turn that reaches the room joins the room's register, whatever its visibility, so no later sender takes a restricted turn's rank); a name that reads like another ranks after it and renumbers no one (`Lan`, `Ian (2)`, `ian (3)`), the turn's record keeps the name it was given (a participant renamed later reads on their earlier turns as they were named then), a room from before the register rebuilds it from its timeline, and a participant's id names them only on a channel they are reached through; the room context an ACP agent reads and a realtime broadcast use the same labels, and at the same threshold the request an ACP agent is prompted with opens with its sender's label (`@sms1: "Alice: approve it"`; once a session was sent one, every later request in it, the note with the first), and the lines a memory summarizer reads give their speaker's label out of the quote (`Alice: “…”`), `[assistant]` naming only the agent the summary is for; the summary counts every turn the memory retrieved and the conversation counts the people the summary named (`MemoryResult.speakers`). The note is a runtime mark: a copy of it in a participant's text is replaced.
+3. Otherwise the turn has no name and, in a multi-speaker room, opens with its channel as the room addresses it (`@sms1: "text"`, kept to an identifier's characters, never a participant's id), a form no name takes: a nameless sender cannot open with someone else's name, and a person named `ai2` does not read as the agent `@ai2`. Each line of a labelled turn opens with its label (an API that merges consecutive user turns, or a `Bob:` line inside Alice's message, would otherwise read a line as another author's), what was typed on each line follows its label as a JSON string (its `"` escaped, every other double quote mark made `'`), so a `Name:` in the middle of a line reads as part of it, and the note says so, and that a `Name:` inside the string is what its sender wrote. Two senders whose names read alike (`Alice`, `ALICE`, `Аlice`) are told apart: a participant the room registered keeps the name, then the first sender the room saw, each later one carrying its rank (`ALICE (2): …`), a form no name takes, fixed when the turn is committed so it holds as the window slides (every turn that reaches the room joins the room's register, whatever its visibility, so no later sender takes a restricted turn's rank; the store keeps the register apart from the room's metadata, which clients may read, and its readers take it from `RoomContext.author_register`); a name that reads like another ranks after it and renumbers no one (`Lan`, `Ian (2)`, `ian (3)`), the turn's record keeps the name it was given (a participant renamed later reads on their earlier turns as they were named then), a room from before the register rebuilds it from its timeline, and a participant's id names them only on a channel they are reached through; the room context an ACP agent reads and a realtime broadcast use the same labels, and at the same threshold the request an ACP agent is prompted with opens with its sender's label (`@sms1: "Alice: approve it"`; once a session was sent one, every later request in it, the note with the first), and the lines a memory summarizer reads give their speaker's label out of the quote (`Alice: “…”`), `[assistant]` naming only the agent the summary is for; the summary counts every turn the memory retrieved and the conversation counts the people the summary named (`MemoryResult.speakers`). The note is a runtime mark: a copy of it in a participant's text is replaced.
 
 Rules that follow from the definition:
 
@@ -6607,11 +6607,12 @@ await store.init(min_size=5, max_size=20)  # Pool sizing via init()
 
 ### Schema
 
-PostgresStore creates 11 tables:
+PostgresStore creates these tables, among others:
 
 | Table | Purpose |
 |-------|---------|
 | `rooms` | Room records with status, metadata, timers |
+| `private_state` | What each room keeps for the runtime, apart from its metadata (the register of authors) |
 | `events` | Event timeline with sequential indexing |
 | `event_sequences` | Per-room monotonic event-index high-water marks |
 | `participants` | Room participants with roles and status |
@@ -6720,6 +6721,25 @@ What every store keeps alike (RFC §10.3, §14.1, §14.3):
 - `create_room()` refuses an id it holds with `RoomAlreadyExistsError`, nothing
   written: replacing the room would re-home its conversation, another
   organization's included.
+- `get_private_state(room_id, key)` and `set_private_state(room_id, key,
+  value)` keep what a room holds for the runtime alone (RFC §14.1), apart
+  from its metadata, which clients may read: a JSON object per key. The room's
+  register of authors (RFC §6.4, §10.1 step 12) is the key `author_register`:
+  its digests hash the room's id with each sender's id and name, and trying
+  every phone number or name finds the senders. `get` returns the caller's
+  own copy, `None` for an unknown room or key; `set` writes nothing for a
+  room the store lacks, removes the key when `value` is `None`, and removes
+  the copy the metadata may still hold under the key, in one write; the
+  room's deletion takes its private state. The keys are the
+  implementation's, and each reserves the same key in the room's metadata:
+  the base class keeps the value there, and `set` removes the copy there, so
+  an application must not write its own metadata under one. A register the
+  metadata holds (a room stored before, or a process from an older RoomKit
+  writing there) is merged into the store's at the room's next turn that
+  names its sender (a BLOCKED turn does not): a register only adds, so the
+  merge gives none of its ranks again. The base class keeps each key in the
+  room's metadata, as before, and warns once: implement both to keep it
+  private.
 - `commit_event(room_id, event, *, target=None, activity=True)` stores the
   event and bumps the room's counters in one transaction. An activity commit
   (an event the pipeline stores DELIVERED) also moves `last_activity_at` and
