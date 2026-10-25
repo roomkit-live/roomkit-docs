@@ -889,12 +889,17 @@ room opened for it names neither correspondent nor recipient, so its
 deliveries are refused `no_recipient` until the host names one.
 On an HTTP webhook the recipient is a URL the host sets.
 A recipient, and a chat, is a string that is not blank or an integer (a chat
-id): `true`, a float (`42.0` included), a blank string, a list or an object
-under the key is none, so a delivery to that binding is refused
-`no_recipient`, routing reads no correspondent in it, and the first sender
-routed to it gets their address written as its recipient. An integer is the
-address its digits write: `{"telegram_chat_id": 1001}` and
-`{"telegram_chat_id": "1001"}` name the same chat.
+id). The key absent, null and a blank string are no value: routing reads no
+correspondent in the binding, and the first sender routed to a room that
+names no participant gets their address written as its recipient. Any other
+value under the key (`true`, a float, `42.0` included, a list, an object) is
+not a recipient: routing reads it as someone else's, so a binding that names
+no participant and is not `group` admits no routed sender and its field is
+never written over, with a warning that names the binding and the value's
+type, never the value (RFC §5.7, §10.4). A delivery to either is refused
+`no_recipient`. An integer is the address its digits write:
+`{"telegram_chat_id": 1001}` and `{"telegram_chat_id": "1001"}` name the same
+chat.
 
 #### Addresses by channel type
 
