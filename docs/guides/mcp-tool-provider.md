@@ -42,9 +42,40 @@ compose_tool_handlers(local_handler, mcp_handler)
 AIChannel(tool_handler=composed)
 ```
 
-`MCPToolProvider` connects to an MCP server via streamable HTTP or SSE, discovers available tools, and maps them to RoomKit's `AITool` model. The `as_tool_handler()` method returns a `ToolHandler` callable that routes tool calls to the MCP server. A call named with the MCP alias `mcp__<server>__<tool>` (how some agents and prompts name MCP tools) runs `<tool>`; every gate judges such a call under both names, so a tool policy or a skill that refuses `<tool>` refuses its alias too (RFC §21.1). The `<server>` part is not checked: write policy patterns against the tool's own name.
+`MCPToolProvider` connects to an MCP server via streamable HTTP or SSE, discovers available tools, and maps them to RoomKit's `AITool` model. The `as_tool_handler()` method returns a `ToolHandler` callable that routes tool calls to the MCP server. A call named with the MCP alias `mcp__<server>__<tool>` (how some agents and prompts name MCP tools) runs `<tool>`; every gate judges such a call under both names, so a tool policy or a skill that refuses `<tool>` refuses its alias too (RFC §21.1). A provider without `label=` does not check the `<server>` part; a labelled one serves only the aliases naming its server (see [Several servers](#several-servers-label) below).
 
 When a tool is not a handler's own (it raises `UnservedToolCallError`, or answers the earlier `{"error": "Unknown tool: ..."}` envelope), `compose_tool_handlers` tries the next handler in the chain. The last handler's answer is the composition's, a decline included.
+
+## Several servers: `label=`
+
+`label=` (on the constructor, `from_url` and `from_command`) is the host's name for the server, the `<server>` of an alias `mcp__<server>__<tool>`: letters, digits and `_ . -`, 64 at most, no `__` and no final `_`, either of which would make an alias read another server (`ValueError` otherwise). A labelled provider's handler serves only the aliases naming its server; one naming another server raises `UnservedToolCallError`, so the next handler of the `compose_tool_handlers` chain takes it (RFC §21.2). Give `label=` to every provider of a chain: an unlabelled one serves an alias whatever server it names, so the first provider of the chain that has the tool runs it.
+
+A policy judges an alias under both its names (RFC §21.1). To keep a server out, deny its aliases; to admit one server only, allow its aliases and its tools' own names. Either holds only when the tools are declared under their aliases alone: a call under a bare name (`delete_records`) names no server, and the first handler of the chain that serves it runs it. Declared under aliases alone, a bare name is refused as not declared:
+
+```python
+from roomkit.channels import AIChannel
+from roomkit.tools import MCPToolProvider, ToolPolicy, compose_tool_handlers
+
+async with (
+    MCPToolProvider.from_url(CRM_URL, label="crm") as crm,
+    MCPToolProvider.from_url(ARCHIVE_URL, label="archive") as archive,
+):
+    aliases = [
+        tool.model_copy(update={"name": f"mcp__{label}__{tool.name}"})
+        for label, server in (("crm", crm), ("archive", archive))
+        for tool in server.get_tools()
+    ]
+    ai = AIChannel(
+        "ai",
+        provider=provider,
+        tools=aliases,  # the aliases alone: a bare name is not declared
+        tool_handler=compose_tool_handlers(archive.as_tool_handler(), crm.as_tool_handler()),
+        tool_policy=ToolPolicy(deny=["mcp__archive__*"]),  # keep the archive out
+    )
+    # Or admit the CRM only: ToolPolicy(allow=["mcp__crm__*", "delete_records", "search_records"])
+```
+
+`allow=["mcp__crm__*"]` alone admits nothing: the tool's own name fails it. A host that declares the bare names instead puts first in the chain the server its bare names must reach. Runnable: `examples/mcp_server_labels.py`.
 
 ## MCPToolProvider
 
