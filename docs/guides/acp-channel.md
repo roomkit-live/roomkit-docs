@@ -299,9 +299,10 @@ agent = ACPChannel(
   executor opens for the room after losing this one is set to it as well.
   `close_session` forgets it: the room's next session opens on
   `session_config` alone. Detaching the agent from the room forgets it too.
-  Only `kit.channel_call` writes that key: `kit.update_room_metadata` and
-  `kit.create_room` refuse it, and a tool or hook of a turn writes no
-  `roomkit:` key at all, so nothing but the host sets the agent's mode.
+  Only `kit.channel_call` writes that key: `kit.update_room_metadata`,
+  `kit.create_room`, a tool or hook of a turn (its `TurnHost`) and a
+  channel's `metadata_updates` drop it with a warning, as every `roomkit:`
+  key, and write the rest, so nothing but the host sets the agent's mode.
 - **A value the agent refuses fails closed.** The session is released and never
   prompted, and the turn fails (or `set_config_option` raises) with a
   `RuntimeError` naming the option. The mode is what makes the agent ask

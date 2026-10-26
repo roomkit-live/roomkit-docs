@@ -218,6 +218,19 @@ When a message arrives on any channel, it is automatically broadcast to all othe
 
 A room is created once (RFC §14.3): `create_room()` with an id the store already holds raises `RoomAlreadyExistsError` and keeps the room it holds, in every store (the in-memory and SQLite stores used to replace it, re-homing its conversation). Room ids are global, across organizations: the refusal comes whichever organization holds the id and says only that it is taken. A host that lets its tenants choose room ids namespaces them (`f"{tenant}:{name}"`) or lets RoomKit generate them, since a refused id is one another tenant may hold. A message whose named room another call created meanwhile reads that room again, for the caller's organization.
 
+#### Keys only the framework writes
+
+A room's metadata is the application's, but for two kinds of key (RFC §5.1, §14.1): any key under `roomkit:` (a detach's revocation, `roomkit:detached_channels`; what the room keeps for a channel, `roomkit:channel_state:<channel_id>`) and a key of the room's private state (`author_register`, `_speak_queue_results`). Every writer the kit takes a room's metadata from drops such a key with a warning naming it, and writes the rest: `create_room(metadata=...)`, `update_room_metadata()` (from a hook's body too), a turn's `TurnHost.update_room_metadata`, and a channel's `metadata_updates`. A caller who can write the metadata therefore cannot clear a detach's revocation, which would let the detached channel's next message attach it again, nor plant a register of authors that gives its own sender another person's name. A read-modify-write keeps working, and leaves the framework's keys as they are:
+
+```python
+room = await kit.get_room("support-123")
+await kit.update_room_metadata("support-123", {**room.metadata, "priority": "high"})
+# "priority" is written; each roomkit: key copied from room.metadata is dropped
+# with a warning, and the stored one stays: a detached channel stays detached.
+```
+
+Only `attach_channel()` grants a detached channel back. An application that kept a value of its own under a `roomkit:` key renames it. The store's `update_room()` and `patch_room_metadata()` take any key: they sit below the kit's API, where migrations and the runtime write these keys.
+
 #### Attachment is a channel contract, not just a store write
 
 Some channels have outside-world work to do when they are attached: `ConferenceChannel` creates the SFU room (RFC §12.10.4 step 1). That work runs through two `Channel` methods the framework awaits itself — no-ops on the base class, so an ordinary channel needs neither:
@@ -422,7 +435,7 @@ Every message passes through a deterministic processing pipeline:
 10. **Event storage** -- Persist the allowed event as `DELIVERED`, under a fresh id the pipeline gives it and with its own visibility intersected with its source binding's
 11. **Broadcast** -- Every eligible channel gets `on_event()`; a transport whose binding sends (`OUTBOUND` or `BIDIRECTIONAL`) also gets `deliver()`
 12. **Reentry drain** -- Process AI response events in a loop (bounded by `max_chain_depth`), each committed as its responder's: direction `OUTBOUND`, the trigger's depth plus one, `responds_to` the trigger. Events the hooks injected are committed after their cause, each as a pass of its own ([Injected events](#injected-events))
-13. **Side effects** -- Persist tasks and observations
+13. **Side effects** -- Persist tasks and observations, and write the channels' `metadata_updates` on the room, once per delivery set ([Side Effects](#side-effects-tasks-observations-and-room-metadata))
 14. **Activity update** -- Update room timestamp and latest event index
 15. **Async hooks** -- Side effects, logging, analytics (AFTER_BROADCAST), run after the room lock is released
 
@@ -597,8 +610,10 @@ itself reads comes back detached rather than waiting on that lane. A host
 acts for its turn's room and that room's organization: a verb naming another
 room raises `ValueError` (a status post's `metadata["room_id"]` included,
 which is the turn's room when the post names none), as does an option a verb
-does not take, or a `roomkit:` room-metadata key, which the framework alone
-writes. In memory a
+does not take. `update_room_metadata` drops a key only the framework writes
+(any `roomkit:` key, a key of the room's private state) with a warning and
+writes the rest, as the kit's own call does
+([Keys only the framework writes](#keys-only-the-framework-writes)). In memory a
 tool may still call the kit it holds; the host is the way that keeps working
 when the executor runs in another process.
 
@@ -650,8 +665,9 @@ What the room keeps for the channel when a verb changes it (an ACP session's
 config values) is stored with the room, under the room-metadata key
 `roomkit:channel_state:<channel_id>`, and handed to the channel on the room's
 next turn, on whichever executor runs it; a detach forgets it. Only
-`kit.channel_call` writes that key (`update_room_metadata` and `create_room`
-refuse it, a turn's host writes no `roomkit:` key). A channel declares its
+`kit.channel_call` writes that key: `update_room_metadata`, `create_room` and
+a turn's host drop it with a warning, as every `roomkit:` key, and write the
+rest. A channel declares its
 verbs with `Channel.channel_call`, and what belongs to the room with
 `room_state` / `restore_room_state`, which follow the room to an executor in
 another process too (see *Turns in another process* below).
@@ -1194,7 +1210,7 @@ await kit.process_inbound(InboundMessage(
 
 **What a channel is handed of a deleted event.** A soft-deleted event stays in every history a channel is handed (RFC §7.5 rule 8), its content withheld: an empty text in place of what was said and no `source.raw_payload`, its id, index, type, source with the provider's message id, thread, metadata (`metadata.deleted`) and `channel_data` kept, so the delete that follows names an event the reader holds and a channel that deletes natively still finds the provider's references. An edit of a deleted event has its new content withheld alike: the delete's commit marks each edit of its target `metadata.deleted` in the same transaction, so the edit is withheld even where the history no longer holds the message; a DELETE row alone (one the host's `commit_event()` stored) hides nothing. It holds for `visible_events()`, the AI context and its memory, ACP catch-up, delegation and discussion briefings, a discussion's dispatch turn, a rebuilt tool memory, cut records, the media an application keeps beside a message, and the contexts a channel parses a message with and is delivered with. The stored record keeps its content, and so do the contexts hooks receive: the store and the hooks are the host's.
 
-**The host's own calls.** `kit.update_event()` rewrites an event's content, source or metadata wholesale, with no `edited` mark (a host that soft-deletes a message this way, writing `metadata.deleted`, marks none of its edits, and an edit a history holds without its message stays readable: delete through the pipeline or `kit.delete_event()`, or mark the edits too); `kit.delete_event(room_id, event_id, cascade_replies=True)` is a hard delete of the event, its thread replies unless told not to, and the edits and deletes of every event it removes (an edit holds the corrected text), in one transaction, their idempotency keys released. It returns the removed ids and fires `ON_EVENT_DELETED` once per removed event, each as it was stored. Neither runs the checks above: the host owns their authorization. Both take `organization_id=` (RFC §17.2): another organization's room is a missing one, `None` or `[]` with nothing written, its due timers included.
+**The host's own calls.** `kit.update_event()` rewrites an event's content, source or metadata wholesale, with no `edited` mark (a host that soft-deletes a message this way, writing `metadata.deleted`, marks none of its edits, and an edit a history holds without its message stays readable: delete through the pipeline or `kit.delete_event()`, or mark the edits too), but for the record of its author (`metadata["author"]`), which the room fixed at the commit: the update keeps it, and writes none on an event committed with none, whatever the metadata it is given holds, so `update_event(..., metadata={})` clears every key but that record; `kit.delete_event(room_id, event_id, cascade_replies=True)` is a hard delete of the event, its thread replies unless told not to, and the edits and deletes of every event it removes (an edit holds the corrected text), in one transaction, their idempotency keys released. It returns the removed ids and fires `ON_EVENT_DELETED` once per removed event, each as it was stored. Neither runs the checks above: the host owns their authorization. Both take `organization_id=` (RFC §17.2): another organization's room is a missing one, `None` or `[]` with nothing written, its due timers included.
 
 ### Response Tracking
 
@@ -4884,7 +4900,7 @@ async def monitor(event: RoomEvent, ctx: RoomContext) -> None:
     await metrics.gauge("room_event_count", ctx.room.event_count)
 ```
 
-### Side Effects: Tasks and Observations
+### Side Effects: Tasks, Observations and Room Metadata
 
 Hooks and intelligence channels can produce structured side effects:
 
@@ -4897,6 +4913,18 @@ Both are persisted via the `ConversationStore` and queryable per room:
 tasks = await kit.list_tasks("room-1", status="pending")
 observations = await kit.list_observations("room-1")
 ```
+
+A channel can also write keys on the room's metadata: the `metadata_updates` of the `ChannelOutput` its `on_event()` or `deliver()` returns (RFC §10.1 step 15). The updates of every target are merged key by key, in the order the targets answered, and written once per delivery set, as a partial update under the room lock, before `AFTER_BROADCAST` runs:
+
+```python
+class CrmTransport(WebSocketChannel):
+    async def deliver(self, event, binding, context):
+        contact = await crm.upsert_contact(event)
+        return ChannelOutput(metadata_updates={"crm_contact": contact.id})
+# Once the delivery set has run, the room's metadata holds "crm_contact".
+```
+
+A key only the framework writes (any `roomkit:` key, `author_register`, `_speak_queue_results`) is dropped with a warning naming the channel, and the rest is applied ([Keys only the framework writes](#keys-only-the-framework-writes)).
 
 ---
 
@@ -5095,21 +5123,43 @@ event = await kit.send_event(
 
 The event's source is the channel it names, travelling `INBOUND` from a transport, whose event stands for a message coming in, and `OUTBOUND` from an intelligence channel, whose event is its own words going out, as its answers are: an agent edits or deletes its own injected message as its channel, naming no participant. Content holding more than five composite levels raises `ValueError` before anything is read, as `process_inbound()` does for such a message or for the event its channel parses (RFC §5.3).
 
+The channel must be one the kit registers (RFC §10.5). One it does not raises `ChannelNotRegisteredError` before anything is read, nothing written, even when the room still binds it: a binding outlives `unregister_channel()`. A registered channel the room does not bind raises `ChannelNotFoundError`. A caller that caught `ChannelNotFoundError` for an unknown channel catches `ChannelNotRegisteredError` too, or `RoomKitError`. `kit.commit_event()`, whose record reaches no one, takes any source.
+
 #### Calling into the room from its own work
 
 A call into a room made by the room's own work is part of that work (RFC §9.5.1):
 
 | Called from | What the call is |
 |---|---|
-| A locked hook, or code under the room lock | Nested: no admission ticket, every hook under the lock, committed ahead of the event being processed; what its own hooks inject joins the queue of the section holding the lock |
-| An off-lock hook's body, a `hook_error` handler reporting that check's failure, a channel's `handle_inbound()` | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
-| A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb; the body of an ASYNC hook the cascade fires once an event's delivery set has run (`AFTER_BROADCAST`, a change's `ON_EVENT_UPDATED` or `ON_EVENT_DELETED`) | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
+| A locked hook, or code under the room lock; a task the hook starts, awaited or not, while the hook runs | Nested: no admission ticket, every hook under the lock, committed ahead of the event being processed; what its own hooks inject joins the queue of the section holding the lock |
+| An off-lock hook's body, a `hook_error` handler reporting that check's failure, a channel's `handle_inbound()`; a task the body starts, while the body runs | Adopted beside the event: no ticket, every hook under the lock, its own section for its commit, ahead of the event |
+| A delivery set's work: a transport's `deliver()`, an agent's turn, a tool handler, a `TurnHost` verb; the body of an ASYNC hook the cascade fires once an event's delivery set has run (`AFTER_BROADCAST`, a change's `ON_EVENT_UPDATED` or `ON_EVENT_DELETED`), or of an ASYNC hook observing a SYNC trigger the room's work fires once per event (`BEFORE_BROADCAST`, `BEFORE_DELIVER`, `BEFORE_TTS`, ...); a task a locked or off-lock hook started, once the hook has returned | A new arrival: its own ticket and `process_timeout`, answered at its decision when its delivery could only wait behind its caller's |
+
+A hook lends the room lock only while its body runs. Once the hook has returned, the event's pass still holds the lock for its next hook, but a task the hook started holds nothing of it: its calls wait for the lock (an off-lock hook's task takes a ticket) and commit after the event. A later hook of the same pass that awaits such a task waits with it, until its own `timeout`, which cancels the task it awaited unless it shields it. Await the work in the hook that starts it, or leave it to run after the event:
+
+```python
+receipts: dict[str, asyncio.Task] = {}
+
+@kit.hook(HookTrigger.BEFORE_BROADCAST, priority=0)
+async def start(event, ctx):
+    if event.source.channel_id != "receipts":
+        receipts[event.id] = asyncio.create_task(
+            kit.send_event(event.room_id, "receipts", TextContent(body="Received."))
+        )
+    return HookResult.allow()  # from here, the task's call waits for the lock
+
+@kit.hook(HookTrigger.BEFORE_BROADCAST, priority=1)
+async def finish(event, ctx):
+    if event.id in receipts:
+        await receipts.pop(event.id)  # don't: waits for this pass's lock until the hook's timeout
+    return HookResult.allow()
+```
 
 A nested or adopted call answers at its commit (a `process_inbound()` result carries no `delivery_results`). Made under the lock, its delivery follows in the room's lane behind the event's work, and a `wait()` on it there returns unwaited. Made in an event's admission work, its delivery runs during that work, ahead of the event, and a `wait()` from the work returns with its `delivery_results`; one whose delivery needs the event's admission ticket ends at the event's `process_timeout`.
 
-Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event: before anything else when it names its room (its channel not looked up, nothing attached), once step 2 knows the room when it is routed or names a room the store lacks. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made while a turn or a tool call runs (a realtime or a conference call included), by it or a task it spawned, into whatever room, is at least as deep as the turn's response or the call's, so an agent that injects at each turn stops at `max_chain_depth`. A call of such work that creates a room, routed or named (the router answering none or naming a room the store lacks, `process_inbound(..., room_id=...)` naming one), is that work's own and draws on the same budget, charged once before the room is created, so a delivery that opens a room each time stops at the cap. A call into another existing room has a budget of its own, and work a turn, a tool call, a delivery or an ASYNC hook's body began starts fresh once that work is over: depth 0 and a budget of its own, unless it names the chain it continues (`chain_depth` on `post()` or `send_event()`). That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it while the turn runs; a verb made after its turn ended starts fresh, at the depth it names. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
+Each draws on the reentry budget of the event it works for (`10 × max_chain_depth` passes), a new arrival on the budget of the cascade that delivers, one pass as it starts: past it, `send_event()` stores the event `BLOCKED` with `reentry_loop_cap`, no hook run, and returns that record, and `process_inbound()` returns `blocked=True, reason="reentry_loop_cap"` with no event: before anything else when it names its room (its channel not looked up, nothing attached), once step 2 knows the room when it is routed or names a room the store lacks. A hook, a parse or a transport that sends into its room every time it is reached therefore stops at the cap, and a call made while a turn or a tool call runs (a realtime or a conference call included), by it or a task it spawned, into whatever room, is at least as deep as the turn's response or the call's, so an agent that injects at each turn stops at `max_chain_depth`. A call of such work that creates a room, routed or named (the router answering none or naming a room the store lacks, `process_inbound(..., room_id=...)` naming one), is that work's own and draws on the same budget, charged once before the room is created, so a delivery that opens a room each time stops at the cap. A call into another existing room has a budget of its own, and work a turn, a tool call, a delivery or an ASYNC hook's body began starts fresh once that work is over: depth 0 and a budget of its own, unless it names the chain it continues (`chain_depth` on `post()` or `send_event()`); what an observer of a trigger fired per tool call sends stays at least as deep as the turn was (below). That depth holds where the owner runs the turn's code: an in-memory turn calling the kit it holds, a tool handler, a `TurnHost` verb; with a Redis turn backend a turn reaches the room through its `TurnHost`, whose verbs carry it while the turn runs; a verb made after its turn ended starts fresh, at the depth it names. A message routed back into its room (`process_inbound()` with no `room_id`) from under its lock, an off-lock hook's body or a parse raises `ReentrantCallError` before anything is written: its room is known only once routed, so it cannot be adopted; name the room instead.
 
-A cascade counts the calls of its ASYNC hooks' bodies apart from its own passes (its answers, chained streams and injected events), on a counter of the same size, `10 × max_chain_depth`, shared by all the cascade's hooks together. While a hook's body runs, each call it makes into its room, and each direct `update_event()`, `delete_event()` or `regenerate_response()` it makes there, draws one hook call: a hook that posts, edits, deletes or regenerates on every event stops at the cap, its post stored `BLOCKED` with `reentry_loop_cap` and its direct change refused with `ReentryLoopCapError`, nothing written, which the engine logs as a warning; bulk work from one body stops there too (15 deletes against a cap of 10: the last 5 refused). A call the body makes is also at least one deeper than the event that fired the hook, as a call made within a turn is at least as deep as its response: a post, a message, a `deliver()` (a queued item carries the depth), a regeneration. A hook that asks an agent again after each of its answers therefore ends at `max_chain_depth`, or at a discussion's `max_depth`, after about `max_chain_depth / 2` answers. A direct change's own hooks run on the budget of the work it was made in, one of their own from outside the room's work. A notice posted once per event draws one hook call per event: it costs the agents no answer, their answers block no notice, and only past `10 × max_chain_depth` calls of all the cascade's hooks together (a streamed turn of more rows, a notice per row) is a notice blocked. A task the body starts and does not await begins fresh once the body has returned, at depth 0 with a budget of its own; one it awaits or gathers stays on the budget while the body runs. Bulk work of more than 50 changes goes into such a task; a post from it passes the `chain_depth` it continues, while `update_event()`, `delete_event()` and `regenerate_response()` take none, so the hook bounds the changes it makes from a task itself.
+A cascade counts the calls of its ASYNC hooks' bodies, the observers of its SYNC triggers included, apart from its own passes (its answers, chained streams and injected events), on a counter of the same size, `10 × max_chain_depth`, shared by all the cascade's hooks together. While a hook's body runs, each call it makes into its room, and each direct `update_event()`, `delete_event()` or `regenerate_response()` it makes there, draws one hook call: a hook that posts, edits, deletes or regenerates on every event stops at the cap, its post stored `BLOCKED` with `reentry_loop_cap` and its direct change refused with `ReentryLoopCapError`, nothing written, which the engine logs as a warning; bulk work from one body stops there too (15 deletes against a cap of 10: the last 5 refused). A call the body makes is also at least one deeper than the event that fired the hook, as a call made within a turn is at least as deep as its response: a post, a message, a `deliver()` (a queued item carries the depth), a regeneration. A hook that asks an agent again after each of its answers therefore ends at `max_chain_depth`, or at a discussion's `max_depth`, after about `max_chain_depth / 2` answers. An ASYNC observer of a SYNC trigger fired once per event (`BEFORE_BROADCAST`, `BEFORE_DELIVER`, `BEFORE_TTS`, `BEFORE_AI_CONTEXT_BUILD`, `BEFORE_AI_GENERATION`, `ON_SPEAK_DECISION`, `ON_VERIFICATION_REQUIRED`, ...) is such a body: one that posts on every event it observes stops at the cap, and its calls are one deeper than the event it observes, so with `max_chain_depth=2` an agent does not answer the follow-up such an observer posts on a person's message; raise `max_chain_depth` to keep that answer. The observers of the triggers that fire per tool call, per round or per input request (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`, `AFTER_TOOL_ROUND`, `ON_USER_INPUT_REQUIRED`), which a turn may fire hundreds of times, are not the cascade's work: they run as any task the turn's work starts. A post they make while the turn's delivery runs draws one of that cascade's passes, so one per tool call stops at `10 × max_chain_depth`; a direct change (`update_event()`, a progress card) draws nothing; and what they send is at least as deep as the turn was when the trigger fired, once the turn is over too. A direct change's own hooks run on the budget of the work it was made in, one of their own from outside the room's work. A notice posted once per event draws one hook call per event: it costs the agents no answer, their answers block no notice, and only past `10 × max_chain_depth` calls of all the cascade's hooks together (a streamed turn of more rows, a notice per row) is a notice blocked. A task the body starts and does not await begins fresh once the body has returned, at depth 0 with a budget of its own; one it awaits or gathers stays on the budget while the body runs. Bulk work of more than 50 changes goes into such a task; a post from it passes the `chain_depth` it continues, while `update_event()`, `delete_event()` and `regenerate_response()` take none, so the hook bounds the changes it makes from a task itself.
 
 Once a hook ran under the lock, the room is read again before the event commits (RFC §10.1 step 9a), and the event is planned with the room as its hooks left it: a message a hook deleted or redacted (`kit.delete_event()`, `kit.update_event()`) is not handed to an agent as it was, and a channel a hook detached receives nothing, its record stored or not. The event takes the room's next index: what its hooks committed ahead of it took the one they were shown, so an instruction, never stored, reports the index after it, allowed or blocked. A room a hook closed (`kit.close_room()`) refuses the event as a closed room does: `blocked=True, reason="room_closed"` (`send_event()` raises `RoomClosedError`), nothing of it stored, what its hooks returned dropped, and `room_refused_event` emitted; an agent's response or an injected event whose hook closed the room is refused the same way, with `operation = reentry`.
 

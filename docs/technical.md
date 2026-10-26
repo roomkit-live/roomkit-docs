@@ -479,7 +479,10 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     async def get_room(self, room_id) -> Room
     async def close_room(self, room_id) -> Room    # CLOSED: as stored; ARCHIVED: raises
     async def archive_room(self, room_id) -> Room
-    async def update_room_metadata(self, room_id, metadata) -> Room
+    async def update_room_metadata(self, room_id, metadata) -> Room  # merges its keys
+    # create_room and update_room_metadata drop a key only the framework writes
+    # (roomkit:*, author_register, _speak_queue_results) with a warning, and
+    # write the rest (RFC §5.1, §14.1)
     async def ensure_participant(self, room_id, channel_id, participant_id,
                                  display_name=None) -> Participant
     async def resolve_participant(self, room_id, participant_id, identity_id,
@@ -492,6 +495,8 @@ class RoomKit(InboundMixin, ChannelOpsMixin, RoomLifecycleMixin, HelpersMixin):
     # --- Direct send ---
     async def send_event(self, room_id, channel_id, content,
                          event_type=MESSAGE, chain_depth=0) -> RoomEvent
+    # A channel the kit does not register: ChannelNotRegisteredError, even one the
+    # room still binds; a registered one the room does not bind: ChannelNotFoundError
 
     # --- Queries ---
     async def get_timeline(self, room_id, offset=0, limit=50,
