@@ -6628,7 +6628,9 @@ the call, and a text whose answer would reach the limit enters its session
 silently, whatever brings it (a broadcast, `deliver()`, a handoff greeting,
 `inject_text()`, whose text is at least as deep as the work it is called
 from): the model takes it into its context and answers nothing. An `ON_TOOL_CALL` hook that posts at each call the model then
-hears ends at the limit (`examples/realtime_tool_observer_depth.py`).
+hears ends at the limit, and so does a hook on the model's words
+(`ON_TRANSCRIPTION`), which runs at the depth of the answer it hears
+(`examples/realtime_tool_observer_depth.py`).
 
 ## Processing Timeout
 
