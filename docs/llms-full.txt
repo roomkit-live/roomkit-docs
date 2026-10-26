@@ -6590,6 +6590,14 @@ turn). Past it, an answer or an injected event is stored `BLOCKED` with
 `reentry_loop_cap`, so a transport whose `deliver()` sends into its own room
 stops too.
 
+A speech-to-speech model (a `RealtimeVoiceChannel`, a conference's realtime
+configuration) is held the same way. What its tool call's gate, handler and
+hooks send into a room is at least as deep as the model's answer that issued
+the call, and a text whose answer would reach the limit enters its session
+silently, by a broadcast, a conference or `deliver()`: the model takes it into
+its context and answers nothing. An `ON_TOOL_CALL` hook that posts at each call
+the model then hears ends at the limit (`examples/realtime_tool_observer_depth.py`).
+
 ## Processing Timeout
 
 `process_timeout` (seconds, default 30) is one deadline from the call's start
@@ -6720,6 +6728,20 @@ kit = RoomKit()  # Uses InMemoryStore automatically
 ```
 
 Data lives in Python dicts — fast for development, lost on restart.
+
+What a store returns is its snapshot (RFC §14.4): a room, a binding, a
+participant or an event read from it is treated as frozen, and changed by a
+copy and a write. `InMemoryStore` copies a record once as it is written and
+shares the stored object with every reader, so changing a read object in
+place changes the store behind the write interface's back; SQL stores return a
+new object per read, and the same code holds on all of them:
+
+```python
+from roomkit import RoomStatus
+
+room = await kit.store.get_room("persistent")
+await kit.store.update_room(room.model_copy(update={"status": RoomStatus.PAUSED}))
+```
 
 ## SQLiteStore
 
@@ -7436,7 +7458,7 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | `DeliveryItemStatus` | Lifecycle status of a delivery item |
 | `InMemoryDeliveryBackend` | Asyncio-queue delivery backend (single process, no persistence) |
 | `TurnBackend` | ABC for what carries an intelligence channel's turns between the room owner and an executor (RFC §10.6) |
-| `InMemoryTurnBackend` | Default turn backend: in this process, every message serialized |
+| `InMemoryTurnBackend` | Default turn backend: in this process, every message serialized but a request's committed events, which cross as the store shares them |
 | `RedisTurnBackend` | Turn backend across processes (`pip install roomkit[redis]`): one per process on a shared Redis and store; an executor declared with `hosts={...}` takes turns from every process, beating from a thread; a killed executor fails its turn with `executor_lost` |
 | `TurnExecutor` | Builds a channel and runs its turns; the kit owns one reading its registered channels. One a host builds (`TurnExecutor(build_channel, hosts={...}, store=, media_resolver=, attached_media=, telemetry=, error_classes=)`, `hosts` the set of channel ids it runs, or a predicate for its own process only; with an `OpenTelemetryProvider` as `telemetry=`, a turn from another process continues the owner's trace) builds each channel once, wires it as the kit wires the ones it registers (its hooks fire, what the channel publishes during a turn crosses as `ephemeral` / `framework_event` frames), and closes what it built; `executor.room_hook(name, trigger)(fn)` defines a room hook by name |
 | `ChannelDeclaration` | What the room's owner knows of a channel without its object: `channel_id`, `channel_type`, `category`, `capabilities`, `identity`, `thinks_while_listening`, `recent_events_window`; `channel.declaration()` gives a live channel's |
