@@ -178,12 +178,11 @@ from roomkit import Room, RoomFilter, RoomStatus
 # Create
 room = await store.create_room(Room(id="room-1", organization_id="org-1"))
 
-# Read
+# Read: the store's snapshot, treated as frozen (RFC §14.4)
 room = await store.get_room("room-1")
 
-# Update
-room.status = "paused"
-await store.update_room(room)
+# Update: a copy, then a write, the same on every store
+await store.update_room(room.model_copy(update={"status": RoomStatus.PAUSED}))
 
 # Delete (cascades to events, bindings, participants, tasks, observations)
 await store.delete_room("room-1")
