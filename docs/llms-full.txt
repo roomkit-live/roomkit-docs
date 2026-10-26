@@ -1484,6 +1484,12 @@ its response:
   `max_chain_depth`, or at a discussion's `max_depth`: each post, message,
   `deliver()` (a queued item carries the depth) or regeneration is one deeper
   than the answer, about `max_chain_depth / 2` answers in all (3 at 6).
+- A hook on a turn's trigger (`BEFORE_AI_GENERATION`, `ON_AI_RESPONSE`, a
+  tool call's), or on a speech-to-speech model's words, observes no event of
+  a depth of its own: its body sends at least as deep as the turn, the tool
+  call or the answer was when the trigger fired, for as long as the body
+  runs, once that work is over too. A reminder it posts at each turn ends at
+  `max_chain_depth` (`examples/hook_observer_depth.py`).
 - A notice posted once per event draws one hook call per event: it costs the
   agents no answer, and their answers block no notice. Only past 50 calls of
   all the cascade's hooks together (a streamed turn of more rows than that, a
@@ -1498,8 +1504,16 @@ its response:
   Bulk work from one body stops at the cap too (15 deletes against 10: the
   last 5 refused).
 - A task the body starts and does not await begins fresh once the body has
-  returned: depth 0 and a budget of its own. A task the body awaits, or
-  gathers, stays on the budget while the body runs.
+  returned: at depth 0, whether the turn or the other hooks of the same
+  trigger still run or not, and on a budget of its own once the room's
+  delivery it was fired from is over (while it runs, a call into that room
+  draws on the delivery's budget, as any of its work does). A quality gate
+  that relaunches the agent from such a task relaunches it at depth 0 each
+  time, bounded by its own attempts, or by the first delivery's reentry cap
+  when every relaunch is sent while a turn still runs (about `10 ×
+  max_chain_depth` relaunches) (`examples/hook_observer_depth.py`). A
+  task the body awaits, or gathers, stays on the budget and the depth while
+  the body runs.
 
 Work that follows an agent's answer outside the answer's cascade, and bulk work
 of more than 50 changes, runs in such a task. A post or a `send_event()` from
