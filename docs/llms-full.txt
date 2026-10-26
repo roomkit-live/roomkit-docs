@@ -1485,8 +1485,9 @@ its response:
   `deliver()` (a queued item carries the depth) or regeneration is one deeper
   than the answer, about `max_chain_depth / 2` answers in all (3 at 6).
 - A hook on a turn's trigger (`BEFORE_AI_GENERATION`, `ON_AI_RESPONSE`, a
-  tool call's), or on a speech-to-speech model's words, observes no event of
-  a depth of its own: its body sends at least as deep as the turn, the tool
+  tool call's), on a speech-to-speech model's words or delegations, or on
+  what a voice agent says (`BEFORE_TTS`, `AFTER_TTS`), observes no event of a
+  depth of its own: its body sends at least as deep as the turn, the tool
   call or the answer was when the trigger fired, for as long as the body
   runs, once that work is over too. A reminder it posts at each turn ends at
   `max_chain_depth` (`examples/hook_observer_depth.py`).
@@ -6655,8 +6656,16 @@ silently, whatever brings it (a broadcast, `deliver()`, a handoff greeting,
 `inject_text()`, whose text is at least as deep as the work it is called
 from): the model takes it into its context and answers nothing. An `ON_TOOL_CALL` hook that posts at each call the model then
 hears ends at the limit, and so does a hook on the model's words
-(`ON_TRANSCRIPTION`), which runs at the depth of the answer it hears
-(`examples/realtime_tool_observer_depth.py`).
+(`ON_TRANSCRIPTION`), which runs at the depth of the answer it hears, and
+one on its delegations (`ON_REALTIME_DELEGATION`), at the depth of the answer
+that delegated (`examples/realtime_tool_observer_depth.py`).
+
+A voice agent built from speech to text, an agent and text to speech (a
+`VoiceChannel`, a conference's voice lane) is held the same way: the hooks on
+what it says (`BEFORE_TTS`, on each sentence of a streamed reply too, and
+`AFTER_TTS`) run at the depth of the answer they speak, so a hook that asks
+the agent something after each of its answers ends at the limit
+(`examples/hook_observer_depth.py`).
 
 ## Processing Timeout
 
