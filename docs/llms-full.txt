@@ -6595,8 +6595,8 @@ configuration) is held the same way. What its tool call's gate, handler and
 hooks send into a room is at least as deep as the model's answer that issued
 the call, and a text whose answer would reach the limit enters its session
 silently, whatever brings it (a broadcast, `deliver()`, a handoff greeting,
-`inject_text(chain_depth=...)`): the model takes it into its context and
-answers nothing. An `ON_TOOL_CALL` hook that posts at each call the model then
+`inject_text()`, whose text is at least as deep as the work it is called
+from): the model takes it into its context and answers nothing. An `ON_TOOL_CALL` hook that posts at each call the model then
 hears ends at the limit (`examples/realtime_tool_observer_depth.py`).
 
 ## Processing Timeout
