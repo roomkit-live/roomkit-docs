@@ -1163,13 +1163,21 @@ room run one after the other, in the order the messages arrived:
 worker = Agent("worker", provider=provider, serialize_room_turns=True)
 ```
 
-A waiting turn starts once the turn before it has written its answer. It reads
-the room as it stood when its message arrived, plus the agent's answers since,
-never a message that came after it, which waits its own turn: with three tasks
-A, B and C, B reads A and its answer, not C. Cancelling a waiting turn's
-delivery (`result.delivery.cancel()`, `kit.cancel_delivery(key)`) means it
-never starts while the running one goes on; cutting the running turn lets the
-next one start. A turn whose agent left the room while it waited never starts.
+A turn takes its place when its message is delivered, and starts once the
+turn before it has written its answer (a cut answer's kept text included). It
+reads the room as it is when it starts, less what others wrote after its
+message: never a message that came after it, which waits its own turn, nor one
+deleted meanwhile. With three tasks A, B and C, B reads A and its answer, not
+C. Cancelling a waiting turn's delivery (`result.delivery.cancel()`,
+`kit.cancel_delivery(key)`) means it never starts while the running one goes
+on; cutting the running turn lets the next one start. A turn whose agent left
+the room while it waited never starts, and a muted agent reads each message as
+it comes, its answer withheld, as any muted channel does.
+
+A message the running turn sends into its own room that asks the same agent (a
+tool calling `kit.process_inbound()`, `kit.send_event()` or `kit.post()`) is
+answered after that turn: the call, or its handle's `wait()`, returns without
+the answer rather than wait on the turn that made it.
 
 The room's owner keeps the order, per process, as an ACP agent keeps its own:
 two processes each handed a message of the room run their turns side by side.
