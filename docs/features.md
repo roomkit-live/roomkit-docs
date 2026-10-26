@@ -460,19 +460,24 @@ The default backend keeps the turn in the kit's process, on the kit's own
 executor, which reads the channels you register. It still serializes every
 message, as a distributed backend will: nothing the channel holds (its
 stream, its response-metadata record, its tool-call markers, an exception)
-reaches the lane as a live object.
+reaches the lane as a live object. One part goes as it is: the events a
+request carries (the event the turn answers and the room's history), records
+nothing changes once made; a channel treats them as frozen, and copies one
+before changing it.
 
 - **A turn's request carries the room's recent history.** The
   `TurnRequest` holds the turn's room context: the room's tail, as long as
   the largest `recent_events_window` of its channels (50 events for an
-  `AIChannel` by default), each event with its full `metadata`, serialized
-  and parsed on every turn, in memory too. Its cost grows with the history's
-  length, and with what your application keeps in each event's metadata: with
-  51 events in the request (the default window and the message), about
-  0.4 ms of CPU per turn on a desktop i7 for plain messages, about 1 ms when
-  each stored answer carries some 10 KB of metadata (30 retrieval sources).
-  Data that heavy, stored on every answer, is better kept in a store of your
-  own and referenced from the event by an id.
+  `AIChannel` by default), each event with its full `metadata`. In the
+  owner's process the events reach the executor as they are and only the
+  rest of the request is serialized, about 0.05 ms per turn; across a
+  distributed backend the whole request is serialized and parsed, and its
+  cost grows with the history's length and with what your application keeps
+  in each event's metadata: with 51 events, about 0.4 ms of CPU per turn on a
+  desktop i7 for plain messages, about 1 ms when each stored answer carries
+  some 10 KB of metadata (30 retrieval sources). Data that heavy, stored on
+  every answer, is better kept in a store of your own and referenced from the
+  event by an id.
 - **The stream is pulled.** The executor advances the channel's stream only
   as the lane reads it: a muted agent closes the stream unread and never
   calls the provider (an event a hook injects asks no agent at all). Each read
