@@ -1151,6 +1151,34 @@ message cancelled while it waited in the room's lane is delivered after the
 cancel returns, so its result's `delivery_results` stay empty. See
 `examples/cancel_delivery_by_key.py`.
 
+#### An agent's turns one after the other
+
+By default an agent answers a room's messages side by side: two tasks handed
+to one agent in one room run at once, and the second turn reads the first
+task's order still unanswered, so it may do that task too. With
+`serialize_room_turns=True` (on `AIChannel` and `Agent`) the agent's turns in a
+room run one after the other, in the order the messages arrived:
+
+```python
+worker = Agent("worker", provider=provider, serialize_room_turns=True)
+```
+
+A waiting turn starts once the turn before it has written its answer. It reads
+the room as it stood when its message arrived, plus the agent's answers since,
+never a message that came after it, which waits its own turn: with three tasks
+A, B and C, B reads A and its answer, not C. Cancelling a waiting turn's
+delivery (`result.delivery.cancel()`, `kit.cancel_delivery(key)`) means it
+never starts while the running one goes on; cutting the running turn lets the
+next one start. A turn whose agent left the room while it waited never starts.
+
+The room's owner keeps the order, per process, as an ACP agent keeps its own:
+two processes each handed a message of the room run their turns side by side.
+A strategy that takes the agent's turns (`Loop`, `Supervisor`) orders them
+itself. A memory provider that reads the store itself, rather than the history
+it is handed, still sees later messages. An agent the kit holds by its
+declaration says so with `ChannelDeclaration(..., serializes_room_turns=True)`.
+See `examples/agent_turns_in_order.py`.
+
 ### Message Threading
 
 RoomKit supports **flat, two-level threads** (Slack / Teams style) on the

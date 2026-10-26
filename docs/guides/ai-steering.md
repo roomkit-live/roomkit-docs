@@ -209,6 +209,13 @@ the same room), cancel that message's delivery instead of steering its room:
 with `delivery_key=key` (see [Cancelling a Delivery](../features.md#cancelling-a-delivery)).
 The room's other turns go on.
 
+An agent built with `serialize_room_turns=True` runs its turns in a room one
+after the other: a task waits behind the one before it and starts once that
+answer is written, reading it (see
+[An agent's turns one after the other](../features.md#an-agents-turns-one-after-the-other)).
+A `Cancel` reaches the running turn only: stop a waiting task by cancelling
+its delivery.
+
 ## Fallback Provider Chain
 
 Configure a fallback AI provider for production resilience:
