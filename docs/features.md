@@ -1172,12 +1172,18 @@ C. Cancelling a waiting turn's delivery (`result.delivery.cancel()`,
 `kit.cancel_delivery(key)`) means it never starts while the running one goes
 on; cutting the running turn lets the next one start. A turn whose agent left
 the room while it waited never starts, and a muted agent reads each message as
-it comes, its answer withheld, as any muted channel does.
+it comes, its answer withheld, as any muted channel does. One muted while its
+turn waits is withheld too: a turn that waited is delivered on the room it
+starts in, so a streaming client sees it begin once the turn before it has
+ended, and a hook judges its answer with the answer before it.
 
 A message the running turn sends into its own room that asks the same agent (a
 tool calling `kit.process_inbound()`, `kit.send_event()` or `kit.post()`) is
 answered after that turn: the call, or its handle's `wait()`, returns without
-the answer rather than wait on the turn that made it.
+the answer rather than wait on the turn that made it. Two such agents that ask
+each other from their running turns wait on each other instead: each question
+waits behind the other agent's running turn until the tool's timeout
+(`tool_timeout_seconds`), and neither is answered.
 
 The room's owner keeps the order, per process, as an ACP agent keeps its own:
 two processes each handed a message of the room run their turns side by side.
