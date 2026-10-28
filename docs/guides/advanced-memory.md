@@ -119,8 +119,8 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
    reads its memory, the AI channel measures the rest of the turn, readable as
    `current_turn_footprint()`, a `TurnFootprint`: `input_tokens` (system prompt
    with an `Agent`'s identity, tools declared under Tool Search and the tool
-   policy, the room's plan, the digest of the tools already used, the speaker
-   attribution) and `reply_tokens` (the turn's `max_tokens`). The memory reserves
+   policy, the room's plan, the earlier tool calls the history replays, the
+   speaker attribution) and `reply_tokens` (the turn's `max_tokens`). The memory reserves
    the larger of `input_tokens` and `reserved_tokens`, and for the reply the
    larger of `max_context_tokens * safety_margin_ratio` and `reply_tokens`, never
    both. What a `BEFORE_AI_GENERATION` hook adds afterwards is not measured.

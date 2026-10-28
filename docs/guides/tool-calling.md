@@ -669,36 +669,46 @@ still arrive once in `TOOL_CALL_START`.
 
 ## Cross-turn tool memory
 
-The AI context rebuilt for each turn contains MESSAGE events only — tool-call
-events are filtered out (providers track tool context *within* a turn, not
-across turns). Left alone, the model would lose all trace of the tools it
-invoked from one turn to the next: it couldn't tell which tool or source it
-already used, and under Tool Search it couldn't re-call a tool it used a moment
-ago because the catalogue is re-hidden every turn.
+`AIChannel` keeps what it did with its tools from one turn to the next, with
+no configuration needed:
 
-`AIChannel` closes both gaps automatically with a per-room, in-memory record of
-tool usage — no configuration needed:
+- **Earlier calls in the history** — each round of tool calls an earlier
+  turn made reads, at its place in the conversation, the way the turn itself
+  sent it: the assistant's calls, then their results, as the tool messages a
+  chat API carries. A follow-up question ("and the fifteenth board?") is
+  answered from the result instead of invented, and a model never takes the
+  recall for something the person asked. The rounds are read from the store
+  each turn, so they outlive a restart. What a round replays is what the
+  model was given:
+  - the arguments it wrote, never what a `BEFORE_TOOL_USE` hook rewrote them
+    to;
+  - the result it read, an `ON_TOOL_CALL` rewrite included.
 
-- **A "what you did" digest** — recent tool calls (name + arguments) ride
-  the turn's input, after the user's words and marked as the runtime's notes,
-  so the model knows what it already did and what it got. They are not in the
-  system prompt: it changes after every turn that calls a tool, and a system
-  prompt that changes invalidates a provider's cache of the whole history
-  (RFC §6.4). The room's plan (`enable_planning`) travels the same way. The three most recent keep their result, up to 6,000 characters
-  each and never more than the eviction threshold (`evict_threshold_tokens`)
-  lets through: a follow-up question ("and the fifteenth board?") is answered
-  from the data instead of invented. Each result sits in a `<tool_result>`
-  block the model is told to read as data, never as instructions, since it
-  comes from a tool and not from the prompt's author. A longer result is cut
-  and marked so, telling the model to call the tool again rather than guess,
-  and not to take back what it said from a result it read whole;
-  older calls shrink to a short preview, set apart as data too. In a live conversation
-  the result kept is what the tool returned, even when eviction gave the model
-  a placeholder for it. Bounded by recent *calls*.
+  Which calls replay:
+  - only the agent's own;
+  - calls a tool answered: served, failed, or withheld by a hook;
+  - never a refused call, nor a discovery or housekeeping call of the
+    channel's own (`find_tools`, `read_stored_result`, `activate_skill`).
+
+  Bounds:
+  - the last 8 calls;
+  - the three most recent keep their result whole up to 6,000 characters,
+    never more than the eviction threshold (`evict_threshold_tokens`) lets
+    through; a longer result is cut, and says so;
+  - older calls replay a short preview, telling the model to call the tool
+    again for the rest.
+
+  A result eviction stored replays as the placeholder the model read, which
+  `read_stored_result` serves while the room still stores it. Once the stored
+  copy is gone, after a restart, the result reads as its size alone.
+
+  A round older than the history the memory keeps is not replayed. The
+  footprint the turn measures before its memory reads the room counts the
+  rounds (`current_turn_footprint()`).
 - **Images tools returned** — for a model that sees, the two latest images the
   agent's own tool calls in the room returned (a drawing, a screenshot) ride
   each later turn's input, after the notes, each after the call that returned
-  it and framed as data, never instructions: the digest says what a result
+  it and framed as data, never instructions: a replayed result says what it
   showed, never what it looks like. They go in the turn's input, never an
   assistant's message, which providers refuse an image in. Only an image every
   vision provider takes is kept: inline (a `data:` URI; a link may expire or be
@@ -783,7 +793,7 @@ A turn can also be capped by what it spends: `turn_budget_tokens` counts every t
 !!! note
     A tool result over `evict_threshold_tokens` (5,000 by default) is stored and replaced by a preview the model can page back with `read_stored_result`, or search with its `query` for the lines that contain one line of text: a search reads every line of the result whole, so no match means the text is absent (RFC §21.5).
 
-When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, tools already used, speakers) stay whole. When the input falls in the older half of the messages, the history before it is summarized and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`; a skill's instructions and a page already read back stay whole. Otherwise the older half is summarized. Every call keeps its result, a summary joins the user message that follows it instead of forming a second one in a row (RFC §6.4), and a context with nothing left to shorten before the input fails the round rather than cutting the input.
+When the provider refuses a round's context as too long, the channel compacts it once and replays the round. The turn's input and its notes (plan, speakers) stay whole, and the earlier rounds the history replays are summarized with the rest of it. When the input falls in the older half of the messages, the history before it is summarized and the long results of the turn's older tool rounds are stored like an evicted result, a short preview in their place, so the model can page them back with `read_stored_result`; a skill's instructions and a page already read back stay whole. Otherwise the older half is summarized. Every call keeps its result, a summary joins the user message that follows it instead of forming a second one in a row (RFC §6.4), and a context with nothing left to shorten before the input fails the round rather than cutting the input.
 
 ### Tool call timeout
 
