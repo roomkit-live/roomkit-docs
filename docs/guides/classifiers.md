@@ -84,6 +84,8 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 |------------|---------------|---------|-------|
 | `JevClassifier(api_key=None, *, model=None, timeout=3.0, client=None)` | calibrated: threshold on them, read a spread as doubt | ~150 ms for the whole call | `pip install roomkit[typesafe]`, `TYPESAFE_API_KEY` |
 | `OpenAIClassifier(api_key=None, *, model="gpt-6-luna", timeout=3.0, client=None)` | probabilities from OpenAI's Decisions API, often near 0 or 1; OpenAI advises calibrating thresholds on labelled data | ~150–450 ms for the whole call | `pip install roomkit[openai]`, `OPENAI_API_KEY` |
+| `SystemOneClassifier(base_url=None, *, model=None, api_key=None, timeout=10.0, client=None)` | the decision model's own, through any server with a System One API (below) | from ~50 ms on a local GPU to ~800 ms, by server and model | `pip install roomkit[typesafe]`, the server |
+| `LlamaCppClassifier(config, *, timeout=30.0)` | the decision model's own; RoomKit runs `llama-server` itself | ~50 ms per call on a GPU with d1 | `pip install roomkit[typesafe,llamacpp]` |
 | `LLMClassifier(provider, *, timeout=10.0, max_tokens=1000)` | 0 or 1: the model picks one answer per question | a generation (about 1 s on Claude Haiku 5.5) | an AI provider whose `supports_response_schema` is true |
 | `MockClassifier(answers=None, *, error=None)` | as scripted | none | — |
 
@@ -91,6 +93,72 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 calibrated probabilities. Every question of a call is answered in parallel, so a
 dozen questions cost about what one does. Without a `client`, it makes an
 `AsyncTypeSafeClient` and closes it on `close()`; a client you pass stays yours.
+The `model` you give goes with every call, through a client you pass too.
+
+**`SystemOneClassifier`** asks a decision model on any server that speaks the
+System One API (`POST {base_url}/v1/systemone`), through the TypeSafe SDK. The
+API is TypeSafe's, and other servers have taken it up, open and hosted alike:
+
+| Server | `base_url` | Models | Measured (three questions, one call) |
+|--------|------------|--------|--------------------------------------|
+| TypeSafe | `https://api.typesafe.ai` | `jev-latest` | 78–125 ms |
+| LiteLLM proxy ≥ 1.104.2 | your proxy | the names in its config: Jev, OpenAI's Decisions models (which it translates), Cloudflare Clef, Databricks, Perplexity… | 72–101 ms to Jev, 175–815 ms to `gpt-6-luna` |
+| Ollama ≥ 0.35 | `http://localhost:11434` | `d3:2b`, `d1:2b`, `nimble`, `tev1`, `clef`… | 58–73 ms with `d3:2b`, 250–360 ms with `d1:2b` (on Linux it needs Ollama's MLX add-on) |
+| llama.cpp `llama-server` | its address | a decision model in GGUF, LiquidAI's d1 among them (or `LlamaCppClassifier`, below) | 43–66 ms with d1 |
+| vLLM ≥ 0.32, vLLM Semantic Router | its address | the `vllm-sr/d3` family | not measured |
+
+The local times are on an RTX 4070.
+
+`base_url` is the server's root, and `model` is the name the server gives the
+model. `api_key` is only for a server that asks for one; a local server asks
+for none, and the classifier never reads `TYPESAFE_API_KEY`, which is another
+server's.
+
+A score is the expected level, computed from each level's probability: some
+servers put the likeliest level in their `score` field instead (llama.cpp did).
+That gives a score the same meaning whatever the server.
+
+The models differ in quality and in licence. LiquidAI's d1 comes under the LFM
+Open License, which allows commercial use only below 10 million USD of annual
+revenue. The `vllm-sr/d3` family is Apache-2.0.
+
+With the decision rule of `examples/classifier_judgments.py`, four test turns
+(two of the example's, an urgent call to the room, a thanks) came out 4/4 with
+`gpt-6-luna`, 3/4 with Jev and `d3:2b`, and 2/4 with d1. On the example's own
+five turns, d1 takes the expected decision every time, twice for another
+reason. Measure a model on your own turns before you rely on it.
+
+```python
+from roomkit import SystemOneClassifier
+
+local = SystemOneClassifier("http://localhost:11434", model="d3:2b")
+proxy = SystemOneClassifier("http://localhost:4000", model="jev", api_key="sk-...")
+```
+
+The model is required: without it the TypeSafe SDK would send its own
+default, a TypeSafe model another server does not have. A `client` you pass
+sends its own model when you give none.
+
+**`LlamaCppClassifier`** runs a decision model itself through llama.cpp, the
+way [`LlamaCppAIProvider`](llamacpp.md) runs a chat model. The first question,
+or `await classifier.start()`, downloads the pinned llama.cpp build and the
+model, and starts `llama-server` on a free local port. Then it asks the
+server's System One API. `close()` stops the server. A server that cannot
+start is a `ClassifierError`. The first question waits for that start, which
+`LlamaCppConfig.startup_timeout` bounds, not `timeout`: call `start()` before
+the first turn to keep the download off it.
+
+```python
+from roomkit import LlamaCppClassifier
+from roomkit.providers.llamacpp import LlamaCppConfig
+
+classifier = LlamaCppClassifier(LlamaCppConfig(model="LiquidAI/d1-2B-GGUF:Q8_0"))
+```
+
+`LlamaCppConfig` is the provider's, and `max_tokens` and `enable_thinking` do
+not apply. Some decision models read their whole prompt in one batch: vllm-d3,
+laya, clef and d1-omni. Give them a batch that holds it, for example
+`extra_args=["-b", "8192", "-ub", "8192"]`.
 
 **`OpenAIClassifier`** answers on OpenAI's Decisions API (`POST /v1/decisions`,
 public beta, `gpt-6-luna`), which takes the same three kinds of question: a

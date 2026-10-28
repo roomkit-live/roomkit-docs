@@ -2739,6 +2739,8 @@ if answers.choice("addressee") == "nova" or answers.yes("asks") >= 0.5:
 - **Three question kinds** — `YesNoQuestion` (probability of yes), `ChoiceQuestion` (one option, every option's probability), `ScoreQuestion` (the expected level on an ordered scale)
 - **Jev** — `JevClassifier`, TypeSafe's System One model: calibrated probabilities, ~150 ms for the whole call, behind the `typesafe` extra
 - **OpenAI Decisions** — `OpenAIClassifier`, OpenAI's Decisions API (`POST /v1/decisions`, `gpt-6-luna`): probabilities for predicate, choice and score questions, ~150–450 ms for the whole call, behind the `openai` extra
+- **Any System One server** — `SystemOneClassifier(base_url, model=...)` asks a decision model on any server with a System One API (`POST /v1/systemone`): Ollama (d3, d1, nimble…), a LiteLLM proxy (Jev, OpenAI's Decisions, Clef…), llama.cpp, vLLM; the score is the expected level whatever the server sends, behind the `typesafe` extra
+- **Local decision models** — `LlamaCppClassifier(LlamaCppConfig(model="LiquidAI/d1-2B-GGUF:Q8_0"))` runs llama.cpp itself, as `LlamaCppAIProvider` does for chat: ~50 ms a call on a GPU
 - **Any AI provider** — `LLMClassifier` asks for one JSON answer under a response schema; probabilities 0 or 1, not calibrated
 - **One failure mode** — every question answered, or `ClassifierError` (refusal, unreadable answer, bounded wait); `MockClassifier` for tests
 

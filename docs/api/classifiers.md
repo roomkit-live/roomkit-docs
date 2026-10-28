@@ -27,6 +27,10 @@ Narrow, typed questions answered with probabilities. See the
 
 ::: roomkit.classifiers.OpenAIClassifier
 
+::: roomkit.classifiers.SystemOneClassifier
+
+::: roomkit.classifiers.LlamaCppClassifier
+
 ::: roomkit.classifiers.LLMClassifier
 
 ::: roomkit.classifiers.MockClassifier
