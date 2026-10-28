@@ -60,6 +60,26 @@ Every tool call's arguments matched the tool's JSON Schema on both. On the CPU t
 
 Any GGUF repository works: `unsloth/…-GGUF`, `bartowski/…-GGUF`, `Qwen/…-GGUF`. Smaller quantizations (`Q4_K_M`) fit more easily; larger ones (`Q8_0`) follow instructions and tools a little better.
 
+### LiquidAI LFM3
+
+LFM3-1.7B (about 1 GB in `Q4_K_M`) runs on the pinned build from its Hugging Face reference:
+
+```python
+LlamaCppConfig(
+    model="LiquidAI/LFM3-1.7B-GGUF:Q4_K_M",
+    extra_args=["--temp", "0.1", "--top-k", "50", "--repeat-penalty", "1.1"],
+)
+```
+
+Measured on the same machine:
+
+- **Tools.** Its tool calls are right on the GPU and on the CPU. That includes a booking whose four arguments it reads off French wording ("salle Québec, 14 h, une heure et demie" gives `Quebec`, `14:00`, `90`).
+- **Speed.** A turn takes 0.6–3.3 s on the GPU, 3–6 s on the CPU.
+- **Language.** It does not always answer in the user's language, and its French answers are less reliable than its tool calls.
+- **Keep its reasoning on**, which is the model's default (`enable_thinking` left `None`). With reasoning off, its chat template pre-fills an empty `<think></think>`. The model still writes a draft, closes it with a `</think>` of its own, then answers again. llama.cpp, with reasoning off, leaves it all in the reply: `answer</think>answer` came back in 17 of 20 replies to one question. With reasoning on, the draft goes to the reasoning and the reply is clean: 0 of 80.
+
+LFM3 comes under the LFM Open License v1.0, which allows commercial use only below 10 million USD of annual revenue. Check that it fits your use before you ship it.
+
 ## Tools
 
 Nothing is specific to llama.cpp: define tools on the `AIChannel` as with any provider.
@@ -155,8 +175,9 @@ LlamaCppConfig(model="…", extra_args=["--threads", "8"])
 ## Maintainers: moving the pinned build
 
 ```bash
-make update-llamacpp              # the newest llama.cpp build
-make update-llamacpp BUILD=b11160 # or a given one
+make update-llamacpp                # llama.cpp's latest stable release
+make update-llamacpp BUILD=v0.8.0   # a given stable release
+make update-llamacpp BUILD=b11960   # or a given nightly build
 ```
 
-It rewrites `src/roomkit/providers/llamacpp/_builds.py` with every variant's archive and SHA-256 from the GitHub release. Run the provider tests, then try the new build on a GPU machine before releasing.
+The provider pins llama.cpp's latest stable release. A stable release (`vX.Y.Z`) carries no binaries: its `nightly-tag.txt` names the `bNNNN` build it is, and the script pins that build's archives. It rewrites `src/roomkit/providers/llamacpp/_builds.py` with every variant's archive and SHA-256 from the GitHub release. Run the provider tests, then try the new build on a GPU machine before releasing.

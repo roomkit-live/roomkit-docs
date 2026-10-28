@@ -1717,8 +1717,9 @@ from roomkit.providers.llamacpp import LlamaCppAIProvider, LlamaCppConfig
 provider = LlamaCppAIProvider(LlamaCppConfig(model="unsloth/Qwen3-4B-Instruct-2507-GGUF:Q4_K_M"))
 ```
 
-- **Nothing to install or start** -- the first request (or `await provider.start()`) downloads the pinned llama.cpp build for this OS, CPU and GPU driver, verifies its SHA-256, downloads the model into the Hugging Face cache, and starts `llama-server` on a free local port; `close()` stops it
+- **Nothing to install or start** -- the first request (or `await provider.start()`) downloads the pinned llama.cpp build (llama.cpp's latest stable release) for this OS, CPU and GPU driver, verifies its SHA-256, downloads the model into the Hugging Face cache, and starts `llama-server` on a free local port; `close()` stops it
 - **Tools in the model's own format** -- `--jinja` renders each model's chat template, and replies go through the same OpenAI-compatible path as vLLM: `AIChannel` tools, MCP tools, streaming and `enable_thinking` work unchanged
+- **LiquidAI LFM3** -- `LiquidAI/LFM3-1.7B-GGUF:Q4_K_M` runs with its tools; keep its reasoning on (see the llama.cpp guide)
 - **GPU or CPU** -- as many layers on the GPU as fit by default, `gpu_layers=0` for the CPU; builds for Linux (CUDA 12/13, Vulkan, CPU, arm64), macOS (Metal) and Windows
 - **Your own server** -- `binary=` runs a `llama-server` you built; one merely present on the `PATH` is never picked up on its own
 - **Measured** -- Qwen3-4B-Instruct Q4 on an RTX 4070: tool choice in 0.2–0.5 s, answers in 1.4–3.6 s, ~4 GB of VRAM, beside Vui TTS on a 12 GB card
