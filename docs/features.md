@@ -1256,8 +1256,9 @@ kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
 
    The turn backend closes (its turns and their calls waited for on its own
    budget: a second in process, its `TurnTimeouts.cancel` across Redis), then
-   the channels, and the store is released (a Postgres pool the kit opened
-   closed within a second, its connections still in use terminated).
+   the channels, and the store is released (a Postgres pool the store or the
+   lock manager opened closed within a second, its connections still in use
+   terminated; their own `close()`, called by you, waits for them).
    `close()` takes the grace, plus the turn backend's budget, plus the
    channels' and the kit's own backends' closes, each on its own budget, plus
    at most a second more, twice, for cut work that ignores its cancellation. Nothing is written or delivered after
