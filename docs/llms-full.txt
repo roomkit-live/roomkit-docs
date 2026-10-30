@@ -1200,19 +1200,26 @@ shutdown, whoever calls it and however often:
    calls.** From the moment `close()` starts, a call raises `KitClosedError`,
    a `RoomKitError`, whoever makes it: from outside, from a hook or a tool
    still running, or from a channel's own `close()`. That holds for the calls
-   that write or deliver and for every other one (`steer`, `transcribe`,
-   `synthesize`, `register_channel`, `unregister_channel`…), for a channel's
-   own doors (`RealtimeVoiceChannel.start_session`, a participant arriving in
-   a conference), and for `async with` on a closed kit. The reads
-   (`get_room`, `get_timeline`, `get_binding`, `list_*`, `is_member`,
-   `regenerate_target`, `room_recordings`, `room_strategy_is_current`,
-   `sender_verification`, `source_health`, `verification_of`) answer during
-   the close, and after it while the store is open (an `InMemoryStore`, a
-   Postgres pool you handed in); a store the kit closed (SQLite, a Postgres
-   pool the kit opened) refuses them with `KitClosedError`. The teardown
+   that write or deliver and for every other one, synchronous ones included
+   (`steer`, `transcribe`, `synthesize`, `register_channel`,
+   `unregister_channel`, `hook()`, `on()`, `identity_hook()`,
+   `on_delivery_status()`, `subscribe_websocket`, `setup_background`,
+   `setup_task_tools`…), for a channel's own doors
+   (`RealtimeVoiceChannel.start_session`, a participant arriving in a
+   conference), and for `async with` on a closed kit. The reads (`get_room`,
+   `get_timeline`, `get_binding`, `list_*`, `is_member`, `regenerate_target`,
+   `room_recordings`, `room_strategy_is_current`, `sender_verification`,
+   `source_health`, `verification_of`, and the synchronous `get_channel`,
+   `hooks_for`, `identity_enabled_for`, `list_channels`, `list_sources`,
+   `room_strategy`, `speak_queue`) answer during the close, and after it
+   while the store is open (an `InMemoryStore`, a Postgres pool you handed
+   in); once the kit closed the store (SQLite, a Postgres pool the kit
+   opened), a read raises `KitClosedError`, not the store's `RuntimeError`.
+   Work a read starts (a source's health check) is no read. The teardown
    calls (`cancel_delivery`, `cancel_task`, `disconnect_websocket`,
-   `disconnect_voice`, `disconnect_video`, `leave`, `unsubscribe_room`)
-   return doing nothing: the close tears down what they would.
+   `disconnect_voice`, `disconnect_video`, `leave`, `unsubscribe_room`,
+   `unsubscribe_websocket`) return doing nothing: the close tears down what
+   they would.
 2. **What has not started is cut at once**: a delivery queued in a room's lane
    is dropped and never sent, the kit's background runs and its verification
    timers are cut, and a call waiting for its room's lock is cut, nothing of
@@ -1222,27 +1229,38 @@ shutdown, whoever calls it and however often:
    `KitClosedError`).
 3. **A model turn is cut at once**, its stream and its tool calls. The text it
    already streamed is stored marked `cancelled`; an open tool call gets its
-   end row, `failed`.
+   end row, `failed`, error `kit_closed`. The turn a tool closing the kit
+   runs in is cut the same way, the tool's own call left to run: its end row
+   is stored before the store is released, and what the turn does after the
+   close is refused quietly.
 4. **Other running work gets one grace of five seconds**: a hook, a store
    write, a room change, a transport send, the kit's own steps that wait on
-   your code (a source's `stop()`, a delegation's `on_complete`), a voice or
-   video channel's session handlers. A call that commits within the grace is
-   stored and delivered to no one (its `delivery_results` empty). Then what
-   is left is cut: a call cut before its commit stores nothing, one cut as
-   its commit landed reads its event back and returns it, `kit_closed`. The
-   channels close and the store is released. `close()` takes the grace plus
-   the channels' closes, and at most a second more, twice, for cut work that
-   ignores its cancellation; work still running then is abandoned and named
-   in the log, the store released under it (its writes fail), and a send it
-   still makes is its channel's own. Nothing the kit takes is written or
-   delivered after `close()` returns.
+   your code (a source's `stop()`, a delegation's `on_complete`, run side by
+   side, every source's task cut whatever its `stop()` does, no source
+   restarted), a voice or video channel's session handlers. A call that
+   commits within the grace is stored and delivered to no one (its
+   `delivery_results` empty). Then what is left is cut: a call cut before
+   its commit stores nothing; one cut as its commit landed reads its event
+   back once its writes unwound, and `process_inbound` returns it with
+   `kit_closed` (a BLOCKED record keeping its hooks' reason), `send_event`,
+   `commit_event` and `post` return it. A store that completes the write
+   later, or a read-back that fails (logged), leaves the call reported as
+   not stored. The channels close and the store is released. `close()` takes
+   the grace, plus the channels' and the kit's own backends' closes, plus at
+   most a second more, twice, for cut work that ignores its cancellation.
+   Nothing is written or delivered after `close()` returns by work that
+   honours its cut. Work that ignores it past the unwind is abandoned and
+   named in the log: a store the kit closed then refuses its writes, a store
+   that stays open (an `InMemoryStore`, a pool you handed in) takes them, and
+   a send it still makes is its channel's own.
 5. **Every call the close cuts returns one result**, its
    `cancellation_reason` `"kit_closed"` (never `"lane_cancelled"`), with the
    answers already stored (`response_events`) and each target's delivery: a
    target already delivered keeps `sent`, a send cut mid-way is `failed` with
    code `kit_closed`, retryable. A deferred call's `result.delivery.wait()`
-   returns it once its delivery set ended or was cut. A call still under way
-   as the close ends reads `kit_closed` too, whatever it delivered.
+   returns it once its delivery set ended or was cut. A call under way when
+   the close starts reads `kit_closed` too, even when its sends end within
+   the grace.
 
 To have a delivery go out, wait for `result.delivery.wait()` before
 `close()`; to have a turn's answer, let the turn end first.
@@ -7836,7 +7854,7 @@ kit = RoomKit(
 | `await add_room_recording_track(room_id, track, *, organization_id=None)` | Declare a track to the room's recordings; returns a `RoomRecordingFeed` (`feed(data, timestamp_ms)`, `close()`), or `None` when the room records nothing; the room read with its scope |
 | `await stop_room_recording(room_id, *, organization_id=None)` | Stop the room's recordings, each result announced (ON_RECORDING_STOPPED) |
 | `get_timeline(room_id, offset?, limit?)` | Query event timeline |
-| `close()` | Close the kit (RFC §12.10.4): every new call but a read or a teardown call raises `KitClosedError` at once, queued deliveries, lock waiters and model turns are cut at once, the running work gets a 5 s grace then is cut (1 s more, twice, for work ignoring its cut, then abandoned); every call it cut returns `cancellation_reason="kit_closed"` with what it delivered, its event when its commit landed; one shutdown shared by every caller |
+| `close()` | Close the kit (RFC §12.10.4): every new call but a read or a teardown call, synchronous or not, raises `KitClosedError` at once, queued deliveries, lock waiters and model turns are cut at once, the running work gets a 5 s grace then is cut (1 s more, twice, for work ignoring its cut, then abandoned and logged); every call it cut returns `cancellation_reason="kit_closed"` with what it delivered, its event when its commit landed; one shutdown shared by every caller |
 
 ## Provider Subpackage Imports
 
