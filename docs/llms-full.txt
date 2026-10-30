@@ -2373,6 +2373,45 @@ the message reaches the model verbatim and the observers as `error_detail`, and
 the call is failed, not refused (`event.refused` is false). An MCP tool whose
 result says `isError` raises it.
 
+### A call's intent for the person (`tool_call_intents`)
+
+With `tool_call_intents=True`, the model writes, with each call, one short
+sentence saying what the call does, for a UI to show ("Je recherche les
+fichiers texte du projet."). Off by default.
+
+```python
+ai = AIChannel("ai", provider=provider, tools=[shell], tool_handler=run, tool_call_intents=True)
+
+@kit.hook(HookTrigger.ON_TOOL_CALL, execution=HookExecution.ASYNC)
+async def show(event: ToolCallEvent, ctx) -> None:
+    print(event.name, event.intent)  # shell Je recherche les fichiers texte du projet.
+```
+
+- Each tool's schema is shown to the model with one optional string property
+  more, `_roomkit_intent`. The tool's own schema is unchanged; validation and
+  hooks read it.
+- The loop takes the property out of the call's arguments before anything
+  reads them: the handler, `BEFORE_TOOL_USE` and the policy see the tool's
+  arguments only, and a closed schema (`additionalProperties: false`) does not
+  refuse the call.
+- The value, normalized, is the call's `intent`: on `ToolCallEvent`
+  (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`, refusals, cut calls), on the
+  `TOOL_CALL_START` and `TOOL_CALL_END` ephemeral events (`intent` beside each
+  call's `id`, only when it has one) and on the stored rows
+  (`ToolCallContent.intent`). Normalized: a string only, control characters
+  as spaces, bidirectional controls removed, whitespace collapsed, trimmed,
+  cut at 200 characters; anything else is `None`, and never fails the call.
+- A tool whose own schema declares `_roomkit_intent` keeps it as its argument
+  and its calls have no intent.
+- The model reads its calls back with their intent, in the turn's next rounds
+  and in later turns while the option is on.
+- It is display text the model wrote: it grants nothing, and says nothing
+  about the call's outcome. A hook cannot change it.
+- Not covered: a realtime session's calls, an ACP agent's calls, and calls a
+  provider serves itself carry no intent.
+
+See `examples/tool_call_intent.py`.
+
 ### Tool Protocol (Tool ABC)
 
 For structured tool definitions, use the `Tool` base class:

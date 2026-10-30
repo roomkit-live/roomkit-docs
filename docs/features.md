@@ -2279,6 +2279,20 @@ See `examples/ai_continuation_policy.py`.
 
 See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture details and the full event protocol.
 
+#### A Call's Intent
+
+`AIChannel(tool_call_intents=True)` has the model write, with each call, one
+short sentence for the person saying what the call does ("Je recherche les
+fichiers texte du projet."), so a UI shows the agent's work rather than a
+tool's name and raw arguments. Each tool's schema is shown with the optional
+`_roomkit_intent` property; the loop takes it out of the call's arguments
+before the gate, so the handler and `BEFORE_TOOL_USE` see the tool's own
+arguments, and carries it, normalized, as `intent` on `ToolCallEvent`, on the
+`TOOL_CALL_START` and `TOOL_CALL_END` events and on the stored rows
+(`ToolCallContent.intent`). Off by default; an unusable intent is `None` and
+never fails a call. See the [Tool Calling guide](guides/tool-calling.md#a-calls-intent-for-the-person)
+and `examples/tool_call_intent.py`.
+
 #### Per-Call Tool Context
 
 A handler receives only `(name, arguments)`. An `AIChannel` object, meanwhile, is registered once per `channel_id` and shared by every room and speaker it serves — so whatever a handler closed over at construction time describes whoever attached it, not the turn now running. `roomkit.tools` exposes the turn itself, read from a contextvar the tool loop sets:

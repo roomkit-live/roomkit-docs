@@ -667,6 +667,53 @@ closes every composition attempt, including cancellation, provider failure,
 retry, or fallback. Counts restart when a retry begins; the complete arguments
 still arrive once in `TOOL_CALL_START`.
 
+### A call's intent, for the person
+
+A live surface showing `shell {"command": "find . -name '*.txt'"}` explains
+little. With `tool_call_intents=True`, the model writes, with each call, one
+short sentence saying what the call does, and the events carry it beside the
+call's id:
+
+```python
+ai = AIChannel(
+    "assistant",
+    provider=provider,
+    tools=[shell],
+    tool_handler=run_tool,
+    tool_call_intents=True,
+)
+
+
+async def on_tool_event(event: EphemeralEvent) -> None:
+    if event.type == EphemeralEventType.TOOL_CALL_START:
+        for call in event.data["tool_calls"]:
+            # "Je recherche les fichiers texte du projet."
+            print(call.get("intent") or call["name"])
+```
+
+Each tool's schema is shown to the model with one optional string property
+more, `_roomkit_intent`; the tool's own schema is unchanged. The loop takes the
+property out of the call's arguments before anything reads them, so the
+handler, `BEFORE_TOOL_USE` and the schema check see the tool's own arguments,
+and a closed schema (`additionalProperties: false`) does not refuse the call.
+The value, normalized (a string only, control characters as spaces,
+bidirectional controls removed, whitespace collapsed, at most 200
+characters), is the call's `intent`:
+
+| Where | What carries it |
+|---|---|
+| hooks | `ToolCallEvent.intent` (`BEFORE_TOOL_USE`, `ON_TOOL_CALL`, refusals, cut calls) |
+| live events | `intent` beside each call's `id` in `TOOL_CALL_START` and `TOOL_CALL_END`, only when set |
+| stored rows | `ToolCallContent.intent` on both rows, only when set, so a replay of the conversation shows it too |
+
+A missing or unusable intent is `None` and never fails a call. A tool whose own
+schema declares `_roomkit_intent` keeps it as its argument. The model reads its
+calls back with their intent, in the turn and in later turns. The intent is
+display text the model wrote: it grants nothing, is not what an approval shows
+(the arguments are), and says nothing about the call's outcome. A realtime
+session's own calls, an ACP agent's calls and the calls a provider serves
+itself carry none. See `examples/tool_call_intent.py`.
+
 ## Cross-turn tool memory
 
 `AIChannel` keeps what it did with its tools from one turn to the next, with
