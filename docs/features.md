@@ -1198,35 +1198,59 @@ See `examples/agent_turns_in_order.py`.
 `await kit.close()`, or the end of an `async with RoomKit()` block, closes the
 kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
 
-1. **Every new call that writes or delivers is refused at once.** From the
-   moment `close()` starts, such a call raises `KitClosedError` (a
-   `RoomKitError`), whoever makes it: an outside caller, a hook or a tool
-   still running, a channel's own `close()`. Reads (`get_room`,
-   `get_timeline`, `list_*`) stay open, during the close and after it.
+1. **Every new call is refused at once, but the reads and the teardown
+   calls.** From the moment `close()` starts, a call raises `KitClosedError`
+   (a `RoomKitError`), whoever makes it: an outside caller, a hook or a tool
+   still running, a channel's own `close()`. That holds for the calls that
+   write or deliver and for every other one (`steer`, `transcribe`,
+   `synthesize`, `register_channel`, `unregister_channel`…), for a channel's
+   own doors (`RealtimeVoiceChannel.start_session`, a participant arriving in
+   a conference), and for `async with` on a closed kit.
+   - The reads (`get_room`, `get_timeline`, `get_binding`, `list_*`,
+     `is_member`, `regenerate_target`, `room_recordings`,
+     `room_strategy_is_current`, `sender_verification`, `source_health`,
+     `verification_of`) answer during the close, and after it while the store
+     is open: an `InMemoryStore`, or a Postgres pool you handed in. A store
+     the kit closed (SQLite, a Postgres pool the kit opened) refuses them with
+     `KitClosedError`.
+   - The teardown calls (`cancel_delivery`, `cancel_task`,
+     `disconnect_websocket`, `disconnect_voice`, `disconnect_video`, `leave`,
+     `unsubscribe_room`) return doing nothing: the close tears down what they
+     would.
 2. **What has not started is cut at once.** A delivery queued in a room's lane
-   is dropped and never sent. A call waiting for its room's lock is cut,
-   nothing of it stored: `process_inbound` and `regenerate_response` return
-   `InboundResult(blocked=True, reason="kit_closed")`, `send_event` and
-   `commit_event` raise `KitClosedError`. A call whose hooks or commit
-   outlast the grace is cut the same way. One cut just after its write
-   committed reads `blocked` though its event is stored: give a message you
-   may retry an `idempotency_key`, and the retry returns the stored event
-   (`duplicate=True`) instead of storing it twice.
+   is dropped and never sent; the kit's background runs and its verification
+   timers are cut. A call waiting for its room's lock is cut, nothing of it
+   stored: `process_inbound` and `regenerate_response` return
+   `InboundResult(blocked=True, reason="kit_closed")`; `send_event`,
+   `commit_event` and a room change (`attach_channel`,
+   `update_room_metadata`, `close_room`…) raise `KitClosedError`.
 3. **A model turn is cut at once**, its stream and its tool calls. The text it
    streamed is stored marked `cancelled`, and an open tool call gets its end
    row (`failed`), so the history stays valid.
 4. **Other running work gets one grace of five seconds**: a hook, a store
-   write, a transport send. Then what is left is cut, the channels close, and
-   the store is released. Nothing is written or delivered after `close()`
-   returns; it takes the grace plus the channels' closes, and at most one
-   second more, after the grace and after the channels, for cut work that
-   ignores its cancellation.
+   write, a room change, a transport send, the kit's own steps that wait on
+   your code (a source's `stop()`, a delegation's `on_complete`), the handlers
+   a voice or video channel runs for a session. A call that commits within
+   the grace is stored and delivered to no one, its `delivery_results` empty.
+   Then what is left is cut: a call cut before its commit stores nothing; one
+   cut as its commit landed reads its event back and returns it, with
+   `cancellation_reason="kit_closed"`, never a refusal. The channels close and
+   the store is released. `close()` takes the grace plus the channels'
+   closes, and at most a second more, twice, for cut work that ignores its
+   cancellation. Work still running then is abandoned and named in the log:
+   the store is released under it, so its writes fail, and a send it still
+   makes is its channel's own. Nothing the kit takes is written or delivered
+   after `close()` returns.
 5. **Every call the close cuts returns one result**: its `cancellation_reason`
    is `"kit_closed"`, never `"lane_cancelled"`, and it carries the answers
    already stored and each target's delivery. A target already delivered keeps
    `sent`; a send cut mid-way is `failed`, code `kit_closed`, retryable. A
    deferred call's `delivery.wait()` returns once its delivery set ended or was
-   cut.
+   cut. A call still under way as the close ends reads `kit_closed` too,
+   whatever it delivered.
+
+To have a delivery go out, wait for `result.delivery.wait()` before `close()`;
+to have a turn's answer, let the turn end first.
 
 ```python
 result = await kit.process_inbound(message, defer_delivery=True)
