@@ -2,6 +2,10 @@
 
 ::: roomkit.RoomKitError
 
+::: roomkit.KitClosedError
+
+::: roomkit.ShutdownCancelledError
+
 ::: roomkit.IdentityNotFoundError
 
 ::: roomkit.ParticipantNotFoundError

@@ -1190,6 +1190,42 @@ its refusal, not the cancellation. A `kit.steer(Cancel(), ...)` reaches only
 turns that have started; use the delivery to stop one message's turns.
 External effects already committed and tasks detached by application handlers
 are outside this cancellation contract. See `examples/cancel_delivery.py`.
+
+## Closing the kit
+
+`await kit.close()` (or leaving `async with RoomKit()`) closes the kit in one
+shutdown, whoever calls it and however often:
+
+1. **Every new call is refused at once.** From the moment `close()` starts,
+   every call the kit offers raises `KitClosedError`, a `RoomKitError`, reads
+   included (`get_room`, `get_timeline`): from outside, from a hook or a tool
+   still running, or from a channel's own `close()`. Read what is left
+   through `kit.store` after the close.
+2. **What has not started is cut at once**: a delivery queued in a room's lane
+   is dropped and never sent; a call waiting for its room's lock is cut,
+   nothing of it stored (`process_inbound` and `regenerate_response` return
+   `InboundResult(blocked=True, reason="kit_closed")`, `send_event` and
+   `commit_event` raise `KitClosedError`).
+3. **A model turn is cut at once**, its stream and its tool calls. The text it
+   already streamed is stored marked `cancelled`; an open tool call gets its
+   end row, `failed`.
+4. **Other running work gets one grace of five seconds**: a hook, a store
+   write, a transport send. Then what is left is cut, the channels close and
+   the store is released. Nothing is written or delivered after `close()`
+   returns, which takes the grace plus the channels' closes.
+5. **Every call the close cuts returns one result**, its
+   `cancellation_reason` `"kit_closed"` (never `"lane_cancelled"`), with the
+   answers already stored (`response_events`) and each target's delivery: a
+   target already delivered keeps `sent`, a send cut mid-way is `failed` with
+   code `kit_closed`, retryable. A deferred call's `result.delivery.wait()`
+   returns it once its delivery set ended or was cut.
+
+A `close()` from the kit's own work (a tool, a hook, a session's end) does not
+wait for itself, and concurrent `close()` calls share one shutdown and its
+result: a channel that failed to close raises the same `ExceptionGroup` to
+every caller. A shutdown cut itself (every task cancelled, as `asyncio.run`
+does as it ends) raises `ShutdownCancelledError` to a caller nobody
+cancelled. See `examples/close_with_work_in_flight.py`.
 ---
 
 Hooks intercept events at specific points in the processing pipeline. They can block messages, modify content, trigger side effects, or observe the conversation.
@@ -7615,6 +7651,8 @@ RoomKit exports **348 symbols** from `roomkit`. Providers and voice types import
 | Symbol | Description |
 |--------|-------------|
 | `RoomKitError` | Base exception |
+| `KitClosedError` | A call made once `kit.close()` started, or one it cut before its commit; also the code (`kit_closed`) of a send it cut (RFC §12.10.4) |
+| `ShutdownCancelledError` | The kit's shutdown was cancelled before it ended, to a caller nobody cancelled (RFC §12.10.4) |
 | `RoomNotFoundError` | Room does not exist |
 | `RoomAlreadyExistsError` | A room created under an id the store holds (RFC §14.3) |
 | `RoomClosedError` | Room's status refuses new events (RFC §5.1) |
@@ -7770,7 +7808,7 @@ kit = RoomKit(
 | `await add_room_recording_track(room_id, track, *, organization_id=None)` | Declare a track to the room's recordings; returns a `RoomRecordingFeed` (`feed(data, timestamp_ms)`, `close()`), or `None` when the room records nothing; the room read with its scope |
 | `await stop_room_recording(room_id, *, organization_id=None)` | Stop the room's recordings, each result announced (ON_RECORDING_STOPPED) |
 | `get_timeline(room_id, offset?, limit?)` | Query event timeline |
-| `close()` | Shutdown framework |
+| `close()` | Close the kit (RFC §12.10.4): every new call raises `KitClosedError` at once, queued deliveries and model turns are cut at once, the running work gets a 5 s grace then is cut; every call it cut returns `cancellation_reason="kit_closed"` with what it delivered; one shutdown shared by every caller |
 
 ## Provider Subpackage Imports
 
