@@ -1198,22 +1198,29 @@ See `examples/agent_turns_in_order.py`.
 `await kit.close()`, or the end of an `async with RoomKit()` block, closes the
 kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
 
-1. **Every new call is refused at once.** From the moment `close()` starts,
-   every call the kit offers raises `KitClosedError` (a `RoomKitError`), reads
-   included, whoever makes it: an outside caller, a hook or a tool still
-   running, a channel's own `close()`. Read what is left through `kit.store`.
+1. **Every new call that writes or delivers is refused at once.** From the
+   moment `close()` starts, such a call raises `KitClosedError` (a
+   `RoomKitError`), whoever makes it: an outside caller, a hook or a tool
+   still running, a channel's own `close()`. Reads (`get_room`,
+   `get_timeline`, `list_*`) stay open, during the close and after it.
 2. **What has not started is cut at once.** A delivery queued in a room's lane
    is dropped and never sent. A call waiting for its room's lock is cut,
    nothing of it stored: `process_inbound` and `regenerate_response` return
    `InboundResult(blocked=True, reason="kit_closed")`, `send_event` and
-   `commit_event` raise `KitClosedError`.
+   `commit_event` raise `KitClosedError`. A call whose hooks or commit
+   outlast the grace is cut the same way. One cut just after its write
+   committed reads `blocked` though its event is stored: give a message you
+   may retry an `idempotency_key`, and the retry returns the stored event
+   (`duplicate=True`) instead of storing it twice.
 3. **A model turn is cut at once**, its stream and its tool calls. The text it
    streamed is stored marked `cancelled`, and an open tool call gets its end
    row (`failed`), so the history stays valid.
 4. **Other running work gets one grace of five seconds**: a hook, a store
    write, a transport send. Then what is left is cut, the channels close, and
    the store is released. Nothing is written or delivered after `close()`
-   returns; it takes the grace plus the channels' closes.
+   returns; it takes the grace plus the channels' closes, and at most one
+   second more, after the grace and after the channels, for cut work that
+   ignores its cancellation.
 5. **Every call the close cuts returns one result**: its `cancellation_reason`
    is `"kit_closed"`, never `"lane_cancelled"`, and it carries the answers
    already stored and each target's delivery. A target already delivered keeps
@@ -1230,9 +1237,10 @@ final.delivery_results["web"].status   # "sent"
 final.delivery_results["sms"].error    # DeliveryError(code="kit_closed", retryable=True)
 ```
 
-A `close()` called from the kit's own work (a tool, a hook, a session's end)
-does not wait for itself, and concurrent calls share one shutdown and its
-result: a channel that failed to close raises the same `ExceptionGroup` to
+A `close()` called from the kit's own work (a tool, a hook, a conference
+handler, a session's end) does not wait for that work nor cut it, whether it
+started the shutdown or joined one under way, and concurrent calls share one
+shutdown and its result: a channel that failed to close raises the same `ExceptionGroup` to
 each. A shutdown cut itself (every task cancelled, as `asyncio.run` does as it
 ends) raises `ShutdownCancelledError` to a caller nobody cancelled. See
 `examples/close_with_work_in_flight.py`.
