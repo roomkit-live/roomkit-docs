@@ -2408,7 +2408,9 @@ async def show(event: ToolCallEvent, ctx) -> None:
 - It is display text the model wrote: it grants nothing, and says nothing
   about the call's outcome. A hook cannot change it.
 - Not covered: a realtime session's calls, an ACP agent's calls, and calls a
-  provider serves itself carry no intent.
+  provider serves itself carry no intent. An agent a realtime session
+  delegates to takes the property out of its calls' arguments, but reports
+  them through the session, whose reports carry none.
 
 See `examples/tool_call_intent.py`.
 
