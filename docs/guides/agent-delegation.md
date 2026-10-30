@@ -212,7 +212,8 @@ the runner's `close()`, even right after `delegate()` returned. The result is
 had begun, `metadata["turns"]` names it `{"<worker>": {"loop_end_reason":
 "cancelled"}}`, as a room turn's caller reads a cancelled read (a turn cut
 mid-way records no usage); `ON_TASK_COMPLETED` and
-the `on_complete` callback still run, once, a notified agent is told
+the `on_complete` callback still run, once (the callback within the close's
+grace when `kit.close()` cancels the task, then cut), a notified agent is told
 `[Background task from <worker> cancelled. ...]` (not while `kit.close()`
 runs: a closing framework starts no turn), and a Supervisor's worker can be
 delegated to again. A task whose work already ran when the cancel arrives
@@ -657,7 +658,8 @@ stored: later turns see the agent's answer, not the raw result, which
 `ON_TASK_COMPLETED` still carries in full. A result still being handed back
 when `kit.close()` runs is cut with it, whatever the task's status: the
 notified agent's turn is cancelled, what it had said is kept as a cancelled
-response, and the task's `on_complete` callback and waiters still run.
+response, and the task's waiters still run, its `on_complete` callback
+within the close's grace, then cut.
 
 ## Structured results
 

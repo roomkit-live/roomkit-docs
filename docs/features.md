@@ -1233,14 +1233,17 @@ kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
 3. **A model turn is cut at once**, its stream and its tool calls. The text it
    streamed is stored marked `cancelled`, and an open tool call gets its end
    row (`failed`, error `kit_closed`), so the history stays valid. The turn a
-   tool closing the kit runs in is cut the same way, the tool's own call left
-   to run: its end row is stored before the store is released, and what the
-   turn does after the close is refused quietly.
+   tool closing the kit runs in is cut the same way, but the call that awaits
+   `close()` itself runs on: its end row is stored before the store is
+   released, and what the turn does after the close is refused quietly. A
+   call that awaits a close it started on a task of its own is cut with its
+   turn, and the close runs on.
 4. **Other running work gets one grace of five seconds**: a hook, a store
    write, a room change, a transport send, the kit's own steps that wait on
    your code (a source's `stop()`, a delegation's `on_complete`, run side by
-   side, every source's task cut whatever its `stop()` does, no source
-   restarted), the handlers a voice or video channel runs for a session. A
+   side, each logging its own failure as it ends, every source's task cut
+   whatever its `stop()` does, no source restarted), the handlers a voice or
+   video channel runs for a session. A
    call that commits within the grace is stored and delivered to no one, its
    `delivery_results` empty. Then what is left is cut:
    - a call cut before its commit stores nothing;
@@ -1251,12 +1254,14 @@ kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
      refusal. A store that completes the write later, or a read-back that
      fails (logged as a warning), leaves the call reported as not stored.
 
-   The channels close and the store is released. `close()` takes the grace,
-   plus the channels' and the kit's own backends' closes, plus at most a
-   second more, twice, for cut work that ignores its cancellation. Nothing is
-   written or delivered after `close()` returns by work that honours its cut.
-   Work that ignores it past the unwind is abandoned and named in the log: a
-   store the kit closed then refuses its writes, a store that stays open (an
+   The turn backend closes (its turns and their calls waited for a second at
+   most), then the channels, and the store is released. `close()` takes the
+   grace, plus that second, plus the channels' and the kit's own backends'
+   closes, each on its own budget, plus at most a second more, twice, for cut
+   work that ignores its cancellation. Nothing is written or delivered after
+   `close()` returns by work that honours its cut. Work that ignores it past
+   the unwind is abandoned and named in one line of the log, each task by the
+   work it runs: a store the kit closed then refuses its writes, a store that stays open (an
    `InMemoryStore`, a pool you handed in) takes them, and a send it still
    makes is its channel's own.
 5. **Every call the close cuts returns one result**: its `cancellation_reason`
@@ -1280,8 +1285,9 @@ final.delivery_results["sms"].error    # DeliveryError(code="kit_closed", retrya
 ```
 
 A `close()` called from the kit's own work (a tool, a hook, a conference
-handler, a session's end) does not wait for that work nor cut it, whether it
-started the shutdown or joined one under way, and concurrent calls share one
+handler, a session's end) does not wait for that work nor cut it, but for the
+model turn it runs in (step 3), whether it started the shutdown or joined one
+under way, and concurrent calls share one
 shutdown and its result: a channel that failed to close raises the same `ExceptionGroup` to
 each. A shutdown cut itself (every task cancelled, as `asyncio.run` does as it
 ends) raises `ShutdownCancelledError` to a caller nobody cancelled. See
