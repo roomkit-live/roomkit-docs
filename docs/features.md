@@ -1254,11 +1254,13 @@ kit in one shutdown that every caller shares (RFC §12.10.4). Its contract:
      refusal. A store that completes the write later, or a read-back that
      fails (logged as a warning), leaves the call reported as not stored.
 
-   The turn backend closes (its turns and their calls waited for a second at
-   most), then the channels, and the store is released. `close()` takes the
-   grace, plus that second, plus the channels' and the kit's own backends'
-   closes, each on its own budget, plus at most a second more, twice, for cut
-   work that ignores its cancellation. Nothing is written or delivered after
+   The turn backend closes (its turns and their calls waited for on its own
+   budget: a second in process, its `TurnTimeouts.cancel` across Redis), then
+   the channels, and the store is released (a Postgres pool the kit opened
+   closed within a second, its connections still in use terminated).
+   `close()` takes the grace, plus the turn backend's budget, plus the
+   channels' and the kit's own backends' closes, each on its own budget, plus
+   at most a second more, twice, for cut work that ignores its cancellation. Nothing is written or delivered after
    `close()` returns by work that honours its cut. Work that ignores it past
    the unwind is abandoned and named in one line of the log, each task by the
    work it runs: a store the kit closed then refuses its writes, a store that stays open (an
