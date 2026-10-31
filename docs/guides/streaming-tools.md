@@ -233,9 +233,11 @@ class ObservingAIChannel(AIChannel):
 ```
 
 !!! note "The marker does not reach downstream channels"
-    The framework's inbound streaming path forwards text deltas and the
-    tool-call and thinking markers to a channel's `deliver_stream`, but not
-    the terminal marker — it would arrive at a renderer as noise. So
+    The framework's inbound streaming path hands a channel's
+    `deliver_stream` the text deltas, a `ThinkingDeltaMarker` (from
+    `roomkit.models`) per chunk of reasoning and each row of the response
+    once stored (a text segment, a tool call's start or end), but not the
+    terminal marker — it would arrive at a renderer as noise. So
     overriding `deliver_stream` on a WebSocket or CLI channel will **not**
     see it. Wrap the AI channel's own `response_stream`, as above, and act on
     the reason there.
