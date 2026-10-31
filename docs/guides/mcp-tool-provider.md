@@ -138,6 +138,8 @@ async with MCPToolProvider.from_command(
 
 The arguments are passed as a list, with no shell. The MCP SDK starts the server with a **minimal environment** (on POSIX `HOME`, `PATH`, `SHELL`, `TERM`, `USER`, `LOGNAME`; on Windows the system and profile variables), not the whole of your process's: whatever the server needs beyond that, an API key or a config path, goes in `env=`, which is added to that minimum. The server's own stderr goes to yours. The provider logs the server's command without its arguments, which may carry secrets; entering a provider that is already connected is refused.
 
+Entering waits `connect_timeout` seconds at most (60 by default) for the server's start, the handshake and the listing of its tools, a first start that fetches its package included: past it, the server is stopped and entering raises `TimeoutError`, so a server that never answers does not hold the host. Raise it for a package that takes longer to fetch. When the provider is exited, the MCP SDK gives the server 2 seconds to exit once its input is closed, then sends it `SIGTERM`, then `SIGKILL` 2 seconds later.
+
 A runnable version with a local model and a small notes server: [`examples/mcp_stdio_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_stdio_tools.py).
 
 ### Parameters
@@ -153,6 +155,7 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `env` | `None` | Extra environment variables for the server, added to the SDK's minimal one |
 | `cwd` | `None` | Working directory of the server |
 | `discover` | `True` | List the server's tools on entry; `False` connects without listing |
+| `connect_timeout` | `60.0` | Seconds entering may take for a server it starts (stdio): past it, the server is stopped and `TimeoutError` raised |
 
 ### Methods
 
