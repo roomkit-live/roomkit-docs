@@ -5368,7 +5368,8 @@ class PostgresStore(ConversationStore):
         async with self.pool.acquire() as conn:
             await conn.execute("INSERT INTO rooms ...", room.model_dump())
         return room
-    # ... implement remaining 29 abstract methods
+    # ... implement the remaining abstract methods, commit_event and
+    # advance_delivered_index each as one transaction
 ```
 
 ### Custom AI Providers
