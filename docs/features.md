@@ -5455,6 +5455,24 @@ above: a router that sends several senders to one room declares its binding
 
 ---
 
+### Testing a Room Without a Provider
+
+`roomkit.testing` holds the two channels a test or an example needs to see a
+room work, as roomkit-rs's `roomkit::testing` does:
+
+- **`RecordingTransport(channel_id, channel_type, *, capabilities=None)`**: a
+  text transport of any type that records every event delivered to it.
+  `deliveries` holds each as a `Delivery(event, text)`, the event as
+  transcoded for the transport and its text as a person there reads it;
+  `texts` the texts alone. It needs no recipient, addresses its senders as
+  its type does (an SMS one in E.164), and declares the capabilities it is
+  given: one that edits natively receives an edit as it is.
+- **`EchoAgent(channel_id, reply, *, quote=False)`**: an intelligence
+  channel that answers every event it is asked with `reply`, followed by the
+  event's text when `quote` is set.
+
+See `examples/testing_channels.py`.
+
 ## Current Limitations
 
 - **Single-process defaults** -- `InMemoryLockManager`, `InMemoryRealtime`, and `InMemoryStatusBackend` use asyncio primitives; distributed deployments must opt in to `PostgresAdvisoryLockManager`, `RedisRealtimeBackend`, and `RedisStatusBackend` (see the [Scaling guide](guides/scaling.md))
