@@ -2285,7 +2285,8 @@ See the [Streaming with Tools guide](guides/streaming-tools.md) for architecture
 short sentence for the person saying what the call does ("Je recherche les
 fichiers texte du projet."), so a UI shows the agent's work rather than a
 tool's name and raw arguments. Each tool's schema is shown with the optional
-`_roomkit_intent` property; the loop takes it out of the call's arguments
+`_roomkit_intent` property (listed as required with
+`tool_call_intents_required=True`, which refuses no call); the loop takes it out of the call's arguments
 before the gate, so the handler and `BEFORE_TOOL_USE` see the tool's own
 arguments, and carries it, normalized, as `intent` on `ToolCallEvent`, on the
 `TOOL_CALL_START` and `TOOL_CALL_END` events and on the stored rows

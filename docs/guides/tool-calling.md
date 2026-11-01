@@ -692,7 +692,10 @@ async def on_tool_event(event: EphemeralEvent) -> None:
 ```
 
 Each tool's schema is shown to the model with one optional string property
-more, `_roomkit_intent`; the tool's own schema is unchanged. The loop takes the
+more, `_roomkit_intent`; the tool's own schema is unchanged. With
+`tool_call_intents_required=True` the property is listed in the shown schema's
+`required` too, for a model that leaves optional properties out; a call that
+still comes without one runs, with no intent. The loop takes the
 property out of the call's arguments before anything reads them, so the
 handler, `BEFORE_TOOL_USE` and the schema check see the tool's own arguments,
 and a closed schema (`additionalProperties: false`) does not refuse the call.
