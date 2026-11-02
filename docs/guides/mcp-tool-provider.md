@@ -291,8 +291,10 @@ host authorizes that call itself.
 |------------|---------------|---------------------|
 | Single `TextContent` | Plain text string | Plain text string |
 | Multiple text parts | JSON array of strings | JSON array of strings |
-| A PNG, JPEG, GIF or WebP `ImageContent` whose payload decodes | As above, the image as its repr text | `[AITextPart, AIImagePart, ...]` in the server's order |
-| Another image format, a corrupt payload, `AudioContent`, a blob resource | As above, as its repr text | A one-line note, `[audio content (audio/wav) not shown to the model]` |
+| A PNG, JPEG, GIF or WebP `ImageContent` whose payload decodes | As above, the image as a one-line note, `[image content (image/png) not shown to the model]` | `[AITextPart, AIImagePart, ...]` in the server's order |
+| Another image format, a corrupt payload, `AudioContent`, a blob resource | As above, as a one-line note, `[audio content (audio/wav) not shown to the model]` | The same note |
+| An embedded text resource | As above, its text | Its text |
+| A `ResourceLink` | As above, as a one-line note, `[resource_link content (text/plain) not shown to the model]` | The same note |
 | `isError=True` | `{"error": "..."}` | raises `ToolFailedError` (failed, not refused) |
 
 A bad image would fail the whole request at the vendor, and base64 read as text is noise the model pays for: the handler hands over only what a vision model can take. A result with an image is bounded too: its texts hold within 100,000 characters in all (the text past the bound cut with a note saying how long it was when the note fits, the texts after it left out), and at most four of its images, within 5 MiB of data URL in all, reach the model; each image past either becomes the note `[image content (image/png) not shown to the model]`, which counts as a text. An `AIChannel` evicts the text of a content-part result like any other large result and keeps its images; with a provider that has no vision it hands the model the text, the images marked `[image]`.
