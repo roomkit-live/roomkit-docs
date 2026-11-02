@@ -1177,6 +1177,12 @@ turn waits is withheld too: a turn that waited is delivered on the room it
 starts in, so a streaming client sees it begin once the turn before it has
 ended, and a hook judges its answer with the answer before it.
 
+With `steer_room_turns=True` a message that comes while the agent's turn runs
+in the room is read by that turn instead of waiting a turn of its own: it is
+stored as any message, and the turn reads it before its next round, or asks
+the model again once it has answered (RFC §21.3). It implies
+`serialize_room_turns`. See [AI Steering](guides/ai-steering.md#writing-to-an-agent-while-it-works).
+
 A message the running turn sends into its own room that asks the same agent (a
 tool calling `kit.process_inbound()`, `kit.send_event()` or `kit.post()`) is
 answered after that turn: the call, or its handle's `wait()`, returns without

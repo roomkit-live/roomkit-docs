@@ -88,6 +88,36 @@ Each AI tool loop creates an isolated `_ToolLoopContext` with its own steering q
 
 - **Checkpoint 1**: Fast cancel check — avoids expensive API calls if already cancelled
 - **Checkpoint 2**: Full queue drain — applies all pending directives to the context
+- **After the answer**: once the model has answered, the loop reads its queue
+  one last time. An `InjectMessage` that came while the model wrote the answer
+  has the same turn ask the model again, the answer then the message, so
+  nothing `steer()` counted goes unread; with none, the loop is reached no
+  more and `steer()` returns 0 for it.
+
+## Writing to an Agent While It Works
+
+A host that lets a person write while the agent works (a coding agent's
+terminal, say) builds the agent with `steer_room_turns=True` and sends the
+person's message as any message:
+
+```python
+coder = Agent("coder", provider=provider, tools=[list_files], steer_room_turns=True)
+
+await kit.process_inbound(
+    InboundMessage(channel_id="ws", sender_id="dev", content=TextContent(body="Only the .py files.")),
+    room_id="session",
+)
+```
+
+The message is stored in the room, passes the hooks and the permissions, and,
+while the agent's turn runs in the room, is handed to that turn rather than
+starting a second turn beside it: the model reads it before its next round, or
+the same turn asks the model again once it has answered. The agent's turns in
+the room run one after the other (`serialize_room_turns`, which it implies), so
+a message that comes before the turn can be reached waits a turn of its own,
+which reads the first turn's answer. In a room where several people speak, the
+turn reads the message under its speaker's label. Runnable:
+`examples/agent_steered_turn.py`.
 
 The `steer()` method is safe to call from any async context. Cancel directives also set the fast-path event for immediate exit.
 
