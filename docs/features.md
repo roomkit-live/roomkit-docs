@@ -2141,6 +2141,12 @@ tools retain their own dispatch, and the turn's toolset still gates every call.
 The runnable `examples/turn_tool_handler.py` demonstrates two rooms resolving
 the same tool name to their own backend.
 
+A callback can also return `skills`, a `SkillRegistry`: the turn's manifest,
+its skill activation, reference and script tools and its skill gating read it
+instead of the channel's, so one channel serves each person the skills that
+belong to them, concurrent turns included. `None` keeps the channel's registry;
+the channel must be built with one (an empty one will do).
+
 #### Function Calling / Tools
 
 AI channels support function calling via the `tools` binding metadata:
