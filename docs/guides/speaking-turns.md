@@ -115,9 +115,11 @@ async def on_decision(event: SpeakDecisionEvent, ctx) -> None:
     )
 ```
 
-A channel without a policy answers every event, as before, and decides nothing.
-`AlwaysSpeak` answers every event and reports each decision: a baseline to
-measure another policy against.
+A channel without a policy answers every message and instruction, as before,
+and decides nothing; a notice, a reaction, a participant's arrival, an edit or
+a delete opens no turn and is submitted to no policy. `AlwaysSpeak` answers
+every message and reports each decision: a baseline to measure another policy
+against.
 
 ## Acting on a decision
 
