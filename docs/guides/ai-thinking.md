@@ -445,7 +445,10 @@ Two ephemeral events bracket the thinking phase:
 | Event | When |
 |-------|------|
 | `THINKING_START` | AI begins reasoning |
-| `THINKING_END` | AI finishes reasoning (thinking text in payload) |
+| `THINKING_DELTA` | A coalesced part of the reasoning |
+| `THINKING_END` | AI finishes reasoning |
+
+Each carries `thinking_length`, `round` and `channel_id`. The reasoning repeats what the model read, and a room's realtime channel has no visibility gate, so its text is opt-in: `AIChannel(publish_thinking_text=True)` adds `thinking`, up to 1000 characters. A turn whose answer the room narrows publishes none of these events.
 
 These are published via the `RealtimeBackend` and do not persist in the conversation store. Use them for real-time UI indicators (e.g., "AI is thinking...").
 
