@@ -84,8 +84,9 @@ check on its own, for a schema you build at startup.
 
 | Provider | Native field | Supported |
 |---|---|---|
-| OpenAI, Azure, xAI, Cerebras, OpenRouter, LiteLLM, vLLM, llama.cpp | strict `json_schema` `response_format` | yes |
+| OpenAI, Azure, xAI, Cerebras, Kimi, OpenRouter, LiteLLM, vLLM, llama.cpp | strict `json_schema` `response_format` | yes |
 | DeepSeek, Qwen | — | no: only free-form JSON mode is documented |
+| MiniMax | — | no: documented for `MiniMax-Text-01` alone, which its API no longer lists |
 | Anthropic | `output_config.format` | yes |
 | Gemini, Gemini Vertex | `response_mime_type` + `response_json_schema` | yes |
 | Mistral | strict `json_schema` `response_format` | yes |

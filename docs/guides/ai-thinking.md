@@ -208,7 +208,7 @@ Models served via Ollama or vLLM (DeepSeek-R1, QwQ, etc.) emit reasoning inside 
 
 - **Streaming**: `ThinkTagParser` handles tags split across chunk boundaries
 - **Non-streaming**: the same parser over the complete response, so `generate()` hands back the same reasoning and answer as the stream, spaces included
-- **History**: the reasoning stays out of the next Chat Completions request (Ollama's native provider sends its API's own `thinking` field). A generic server would read it as text the model said, and its prompt cache would not survive it: measured on a real Qwen, the same conversation processed 137,000 tokens in 116 s with it and 46,000 in 43 s without. It still reaches `AIThinkingPart`, the hooks and `publish_thinking_text`. DeepSeek (`reasoning_content`) and Cerebras (`reasoning`) read it in a field of their own, which their providers send
+- **History**: the reasoning stays out of the next Chat Completions request (Ollama's native provider sends its API's own `thinking` field). A generic server would read it as text the model said, and its prompt cache would not survive it: measured on a real Qwen, the same conversation processed 137,000 tokens in 116 s with it and 46,000 in 43 s without. It still reaches `AIThinkingPart`, the hooks and `publish_thinking_text`. DeepSeek, [MiniMax](minimax.md) and [Kimi](kimi.md) (`reasoning_content`) and Cerebras (`reasoning`) read it in a field of their own, which their providers send
 
 ```python
 from roomkit.providers.vllm import VLLMConfig, create_vllm_provider
@@ -504,7 +504,7 @@ the value accepted, read from its model catalogue:
 
 | Provider | On a turn with tools |
 |---|---|
-| Anthropic, Gemini, Ollama, vLLM, Cerebras, Meta, Qwen, PolarGrid, xAI, Mistral, DeepSeek, OpenRouter | As on any turn |
+| Anthropic, Gemini, Ollama, vLLM, Cerebras, Meta, Qwen, PolarGrid, xAI, Mistral, DeepSeek, MiniMax, Kimi, OpenRouter | As on any turn |
 | OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3`, `o4-mini` | The turn's `reasoning_effort` |
 | OpenAI: `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna` | `none`, the only value Chat Completions takes with function tools |
 | OpenAI: a model not in the catalogue, or not tagged (`gpt-4.1`), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out, with one warning per provider: the model is not known. `supports_reasoning_effort_with_tools=True` sends it |
@@ -536,7 +536,7 @@ unset leaves it out and warns once. On OpenAI's own endpoint a model the
 catalogue tags follows its tag whatever the field says, since the catalogue
 records what Chat Completions measurably takes. The configs of the providers
 that apply their vendor's own rule (xAI, OpenRouter, Meta, Cerebras, DeepSeek,
-Qwen) refuse the field with a `ValidationError` rather than ignore it.
+MiniMax, Kimi, Qwen) refuse the field with a `ValidationError` rather than ignore it.
 
 A server that does not take the pair answers the turn with an error, and one
 that cannot read its model's reasoning back fails on the next round, so check

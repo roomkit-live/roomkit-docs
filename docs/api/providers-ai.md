@@ -402,6 +402,22 @@ ai_channel = AIChannel("ai", provider=provider)
 
 Install with: `pip install roomkit[openai]`
 
+## MiniMax Provider
+
+::: roomkit.providers.minimax.MiniMaxAIProvider
+
+::: roomkit.providers.minimax.MiniMaxConfig
+
+See the [MiniMax guide](../guides/minimax.md).
+
+## Kimi Provider
+
+::: roomkit.providers.kimi.KimiAIProvider
+
+::: roomkit.providers.kimi.KimiConfig
+
+See the [Kimi guide](../guides/kimi.md).
+
 ## Cerebras Provider
 
 ::: roomkit.providers.cerebras.CerebrasAIProvider
