@@ -839,9 +839,15 @@ written, and the message is routed once more; a second answer that is not the
 message's gives it a new room, so a routed message is never refused
 `room_closed` at that point. A sender is known by their address and by the
 identity the store resolves it to (`link_address`); what the host sends with
-`deliver()` does not close a room to its customer's reply, and a message routed
-under the framework's own sender (`system`) is never recorded on a binding
-nor let into an existing room that is not a group. Routing spends the
+`deliver()` does not close a room to its customer's reply, and a message with no
+`room_id` under the framework's own sender (`system`) is refused
+`reserved_sender`, with nothing written; a host writing under that name passes
+`room_id`. A message with no address, its sender empty or blank and no chat, enters
+a room only through a `group` binding: otherwise it opens a room of its own, no other
+sender admitted. A custom router's answer is the host's
+decision, as a `room_id` is: a room that does not bind the channel has it attached,
+whoever writes, so never route on a field the sender chooses without authenticating
+it. Routing spends the
 message's `process_timeout`, one deadline from the call's start: the identity
 it reads, the router and the wait for the room lock to record the sender. A
 message whose room lock stays taken past it while it is being recorded is
@@ -906,7 +912,7 @@ the host opens for a chat (`metadata={"telegram_chat_id": "1001"}`) is that
 chat's, as a room opened for a number is that number's: no one else is let in.
 On Telegram, Teams, Discord and Buzz a message that does not carry its chat
 has no address: it is routed as a message from no one, records no one, and a
-room opened for it names neither correspondent nor recipient, so its
+room routing opens for it names no recipient and no sender, so its
 deliveries are refused `no_recipient` until the host names one.
 On an HTTP webhook the recipient is a URL the host sets.
 A recipient, and a chat, is a string that is not blank or an integer (a chat
