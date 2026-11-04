@@ -208,7 +208,7 @@ Models served via Ollama or vLLM (DeepSeek-R1, QwQ, etc.) emit reasoning inside 
 
 - **Streaming**: `ThinkTagParser` handles tags split across chunk boundaries
 - **Non-streaming**: the same parser over the complete response, so `generate()` hands back the same reasoning and answer as the stream, spaces included
-- **History**: the reasoning stays out of the next request. On Chat Completions a generic server would read it as text the model said, and its prompt cache would not survive it: measured on a real Qwen, the same conversation processed 137,000 tokens in 116 s with it and 46,000 in 43 s without. It still reaches `AIThinkingPart`, the hooks and `publish_thinking_text`. DeepSeek (`reasoning_content`) and Cerebras (`reasoning`) read it in a field of their own, which their providers send
+- **History**: the reasoning stays out of the next Chat Completions request (Ollama's native provider sends its API's own `thinking` field). A generic server would read it as text the model said, and its prompt cache would not survive it: measured on a real Qwen, the same conversation processed 137,000 tokens in 116 s with it and 46,000 in 43 s without. It still reaches `AIThinkingPart`, the hooks and `publish_thinking_text`. DeepSeek (`reasoning_content`) and Cerebras (`reasoning`) read it in a field of their own, which their providers send
 
 ```python
 from roomkit.providers.vllm import VLLMConfig, create_vllm_provider
