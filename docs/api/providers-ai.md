@@ -131,9 +131,9 @@ know (a custom URL: `base_url`, Mistral's `server_url`) checks none.
 
 OpenAI and its derivatives, Mistral and PolarGrid render a conversation
 through one builder. What a provider renders differently is its
-`ChatDialect`: where a model's earlier reasoning goes (inline `<think>`
-tags, a message field such as Cerebras's `reasoning`, or nowhere), whether a
-tool message names its tool, whether text goes flat. A derivative of
+`ChatDialect`: the message field a vendor reads a model's earlier reasoning
+from (Cerebras's `reasoning`, DeepSeek's `reasoning_content`; without one none
+is sent), whether a tool message names its tool, whether text goes flat. A derivative of
 `OpenAIAIProvider` whose service renders differently sets `_chat_dialect`.
 
 ::: roomkit.providers.ai.ChatDialect
