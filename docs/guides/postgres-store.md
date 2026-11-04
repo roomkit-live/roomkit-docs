@@ -130,7 +130,7 @@ Foreign keys use `ON DELETE CASCADE` for automatic cleanup when rooms are delete
 
 ### Schema Initialization
 
-`store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, bounded repairs that populate newly added columns without discarding existing values, and one-time rewrites a rule change needs, each recorded in `schema_version` so it runs once. It **never drops a table or deletes user data**, so calling `init()` after a library upgrade cannot destroy data. Version tracking via the `schema_version` table records the current version.
+`store.init()` runs **only additive, idempotent schema maintenance** — `CREATE TABLE IF NOT EXISTS`, `INSERT ... WHERE NOT EXISTS`, bounded repairs that populate newly added columns without discarding existing values, and one-time rewrites a rule change needs, each recorded in `schema_version` so it runs once. It **never drops a table**, and calling `init()` after a library upgrade deletes no user data but, once, address rows no read serves: an unscoped row whose organization holds the address already, or whose identity no longer declares it (the others move to their identity's organization). Version tracking via the `schema_version` table records the current version.
 
 A column or an index a release adds is created only when the schema lacks it, and the per-room index marks (`event_sequences`) are seeded from the rooms and events only in the boot that creates that table. `ALTER TABLE` takes ACCESS EXCLUSIVE and `CREATE INDEX` takes SHARE even when `IF NOT EXISTS` finds the object, so a boot on an up-to-date schema runs neither and writes no row: it waits on no open reader or writer of the tables, and none waits on it.
 
