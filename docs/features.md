@@ -2910,6 +2910,7 @@ Key features:
 - **Delivery strategies** — `Immediate`, `WaitForIdle`, `Queued`: the kit's strategy and the `BEFORE_DELIVER`/`AFTER_DELIVER` hooks apply to a task's result as to any delivery
 - **Dedup** — `CompletedTaskCache` prevents re-delegating recently completed tasks (TTL-based)
 - **Serialization** — `DelegateHandler(serialize_per_room=True)` queues concurrent delegations per room
+- **What the model hands over** — `delegate_task`'s `context` reaches the worker quoted as data; `DelegateHandler(max_conversation=12)` gives the tool a `conversation` argument, held to that maximum and read as the calling agent
 - **Context injection** — previous task descriptions automatically injected into new delegations
 - **Pluggable backend** — `TaskRunner` ABC with `InMemoryTaskRunner` default; swap in Redis/Celery for distributed deployments
 - **Hooks** — `ON_TASK_DELEGATED` and `ON_TASK_COMPLETED` for observability

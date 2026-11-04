@@ -256,6 +256,10 @@ tool = build_delegate_tool([
 setup_delegation(voice_agent, handler, tool=tool)
 ```
 
+A tool built with `build_delegate_tool` holds the model to its list: a call naming
+another agent is answered with an error and starts nothing. Your own
+`handler.handle(...)` is not held to it.
+
 The task is delegated from the room of the call, read from the tool call
 context: one agent attached to several rooms delegates each room's work from
 that room, with or without a `ConversationRouter`. A worker that delegates in
@@ -273,6 +277,41 @@ The AI will see a `delegate_task` tool and can call it naturally:
   }
 }
 ```
+
+### What the worker reads
+
+The worker's child room starts empty. It reads the call's `task`, then, quoted
+as data and never as instructions, whatever the call hands over:
+
+- **`context`**: what the model passes with its task (a branch, a file, what a
+  tool returned), as JSON, at most 4,000 characters. A model that sends a string
+  where the tool says object is read too, under `context`. The `task` stays as
+  written: it is what a hand-back, the StatusBus and the cache name the task by.
+- **The agent's own previous tasks of the room**, with a [cache](#preventing-re-delegation-dedup). Another agent's stay out: they may quote what this one may not read.
+- **The room's last messages**, only when the host allows it:
+
+```python
+handler = DelegateHandler(kit, notify="voice-assistant", max_conversation=12)
+```
+
+With `max_conversation` above 0 the tool gains a `conversation` argument, and a
+call is held to that maximum whatever it asks: more reads as the maximum, a
+negative number or anything but an integer as none. With 0, the default, the
+tool has no such argument and nothing is handed over: the model chooses the
+worker, which may be another vendor's or hold another workspace, so opening this
+is the host's choice.
+
+The messages are those both the calling agent and the notified channel may read:
+a model hands over nothing it could not read itself, and the result goes back to
+that channel. They are text only, 600 characters each, without tool calls or their
+results, so what the worker needs from a tool's result goes in `context`.
+
+An intelligence channel shared into the child room, `default_share_channels`
+included, stops the previous tasks and the conversation: it reads the worker's
+description, and may read less than the agent that called. It does not stop
+`context`, which the model wrote in this call, as it wrote `task`. A shared transport
+stops nothing; it receives the worker's answers, so share one only when what they may
+say can reach it.
 
 ## Delegation for RealtimeVoiceChannel
 
@@ -310,9 +349,9 @@ handler = DelegateHandler(
 
 This enables three features:
 
-- **Gap 13 — Dedup**: If a matching `(room_id, agent_id, task_hash)` was recently completed, the cached result is returned with `"from_cache": True` instead of spawning a new agent.
-- **Gap 14 — Serialization**: With `serialize_per_room=True`, concurrent delegation attempts for the same room are queued. Only one runs at a time, preventing screen/resource conflicts.
-- **Gap 15 — Context injection**: Recent task descriptions are automatically injected into the new delegation's `context["previous_tasks"]` so the background agent knows what was already done.
+- **Gap 13 — Dedup**: If the same agent's call of the same task, with the same `context`, was recently completed for that `(room_id, agent_id)`, the cached result is returned with `"from_cache": True` instead of spawning a new agent. Another `context` is other work and runs, and so does another agent's call: what the first's task returned may hold what that agent passed or may read. A call handing the room's last messages over always runs, and its result answers no later call: it holds for the room as it stood. A task you `cache.put` yourself answers any agent.
+- **Gap 14 — Serialization**: With `serialize_per_room=True`, concurrent delegation attempts for the same room are queued while each one starts. The tasks themselves then run side by side.
+- **Gap 15 — Context injection**: The calling agent's last three completed task descriptions of the room, newest first, reach the new delegation's worker, quoted as data and 600 characters each, so it knows what was already done. They are kept in its `context["previous_tasks"]` too. A task you `cache.put` yourself is any agent's.
 
 ## Shared channels
 
@@ -722,7 +761,7 @@ the top-level parent.
 | `room_id` | `str` | Parent room ID (required) |
 | `agent_id` | `str` | Channel ID of the background agent (required) |
 | `task` | `str` | What the agent should do (required) |
-| `context` | `dict` | Optional context passed to the agent |
+| `context` | `dict` | Host metadata, kept as the child room's `task_context` for hooks, tools and the host: no model reads it, so a requester's email stays away from the vendor. What the agent should read goes in `task` or `brief`. On a `delegate_task` call a model wrote it: a hook that reads it reads a model's text |
 | `share_channels` | `list[str]` | Channel IDs to share from parent |
 | `notify` | `str` | Channel ID to update with result (default: `agent_id`) |
 | `brief` | `str` | What the agent is told instead of `task` (default: the task) |
