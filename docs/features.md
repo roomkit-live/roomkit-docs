@@ -842,7 +842,8 @@ identity the store resolves it to (`link_address`); what the host sends with
 `deliver()` does not close a room to its customer's reply, and a message with no
 `room_id` under the framework's own sender (`system`) is refused
 `reserved_sender`, with nothing written; a host writing under that name passes
-`room_id`. A message with no address, its sender empty or blank and no chat, enters
+`room_id`, its own write: a host naming the room sets `sender_id` itself, and never
+copies a client's. A message with no address, its sender empty or blank and no chat, enters
 a room only through a `group` binding: otherwise it opens a room of its own, no other
 sender admitted. A custom router's answer is the host's
 decision, as a `room_id` is: a room that does not bind the channel has it attached,
