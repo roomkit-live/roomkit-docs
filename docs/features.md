@@ -77,7 +77,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 
 ### Speech-to-Speech AI (Realtime Voice)
 
-`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, OpenAI GPT-Live, xAI Grok Realtime, ElevenLabs Conversational AI, Deepgram Voice Agent) as a first-class channel:
+`RealtimeVoiceChannel` wraps speech-to-speech APIs (Gemini Live, OpenAI Realtime, OpenAI GPT-Live, xAI Grok Realtime, ElevenLabs Conversational AI, Deepgram Voice Agent, Rime Prism) as a first-class channel:
 
 - Audio flows directly between the user and the AI provider -- no intermediate STT/TTS
 - Transcriptions are emitted as RoomEvents so other channels see the conversation
@@ -104,6 +104,7 @@ Voice isn't bolted on -- it's a full `Channel` implementation with:
 - Auto-reconnect on connection drops with exponential backoff
 - Per-session configuration via binding metadata (system prompt, voice, tools, temperature)
 - Deepgram Voice Agent composes its stages from independent vendors — including a non-Deepgram `speak` voice (ElevenLabs, Cartesia…) via `speak_provider`/`speak_endpoint`
+- Rime Prism provides English speech-to-speech with continuous 16 kHz input, 24 kHz output, native turn detection, function tools, acknowledged text injection and live reconfiguration. Connection loss is reported without resetting the conversation through automatic reconnect. See the [Rime guide](guides/rime.md).
 - Pluggable transports: `WebSocketRealtimeTransport` (WebSocket) or `FastRTCRealtimeTransport` (WebRTC via FastRTC)
 - Per-connection server ICE callbacks refresh short-lived TURN credentials without network access during route mounting; failed lookups leave the endpoint available for later offers. See [FastRTC configuration](guides/fastrtc-backend.md#short-lived-turn-credentials).
 - Full-duplex providers (OpenAI GPT-Live) — the model listens and speaks at once and handles being talked over itself; the channel reads `provider.full_duplex` and leaves interruption to it: no playback flush, no gating of the model's audio on user speech, pipeline VAD in the observation role (RFC §12.4.1)
@@ -3841,6 +3842,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `VoxtralSTTProvider` | Mistral Voxtral 3: file transcription on Voxtral Mini or Small Transcribe 3 (PCM, a `data:` URI, or an http(s) URL Mistral fetches), and live on Voxtral Mini Transcribe Realtime 3 with the model's turn detection — a final per turn and a speech start in continuous mode, or one final per VAD utterance; streaming delay 80–1200 ms or 2400, Mistral's default and aggressive presets, context bias, a per-call language; final about 0.7 s after speech with the fast settings, 1.7 s with the defaults; speaker labels with `diarize` (a file, or live in continuous mode: a turn ends on a change of voice or a pause), known voices named from reference clips. See the [Voxtral guide](guides/voxtral.md) | `roomkit[mistral-voice]` |
 | `GeminiSTTProvider` | Batch only — one pass over a whole recording returns transcript, speaker turns and timestamps together (as shared `SpeakerSegment`s on `transcribe()` with `speaker_segments=True`). A multimodal model by default; `model="gemini-3.5-transcribe"` for Google's dedicated recogniser, about twice as fast with every word timed to 100 ms. For meetings, voicemail and audio files, not live turn-taking | `roomkit[gemini]` |
 | `MockSTTProvider` | Configurable responses, cycling transcripts | None |
+| `RimeSTTProvider` | English/Spanish, revised partials and one final per utterance, explicit language and context terms; pipeline VAD required for live turn-taking, no native endpointing or diarization. See the [Rime guide](guides/rime.md) | `roomkit[rime]` |
 
 **TTS providers:**
 
@@ -3858,6 +3860,7 @@ The `VoiceChannel` orchestrates the full real-time pipeline:
 | `PhononTTSProvider` | Gradium Phonon, local on the CPU through its Rust runtime (no torch): 31M and 40M models, streaming at ~10x real time on two threads, about a hundred catalog voices and Gradium Studio voice files; English, French, German, Spanish, Portuguese. See the [Phonon guide](guides/phonon.md) | `roomkit[phonon]` |
 | `VoxtralTTSProvider` | Mistral Voxtral Speech 3: each text rendered and streamed as 24 kHz PCM (first audio about 0.45 s), 36 Voxtral 3 presets in 21 languages (four French) plus Voxtral 2's and the workspace's saved voices, inline emotion and pace tags, expressiveness; public preview. See the [Voxtral guide](guides/voxtral.md) | `roomkit[mistral-voice]` |
 | `MockTTSProvider` | Simulated audio content | None |
+| `RimeTTSProvider` | Coda and Mist v3, streamed text input and PCM16 output at 8/16/24/48 kHz, independent synthesis contexts, live voice catalog; complete synthesis returns WAV. See the [Rime guide](guides/rime.md) | `roomkit[rime]` |
 
 **Denoisers:** WebRTC NS, RNNoise, ai|coustics, sherpa-onnx GTCRN and DPDFNet (streaming, 16/48 kHz). See the [sherpa-onnx guide](guides/sherpa-onnx.md#sherpaonnxdenoiserprovider). RNNoise uses the system `librnnoise`, else the copy `pip install roomkit[rnnoise]` installs (Linux, macOS, Windows).
 

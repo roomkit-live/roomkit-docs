@@ -178,6 +178,16 @@ See the [Voxtral guide](../guides/voxtral.md) for the turn timing and the latenc
 
 Install with: `pip install roomkit[mistral-voice]`
 
+### Rime STT
+
+::: roomkit.voice.stt.RimeSTTProvider
+
+::: roomkit.voice.stt.RimeSTTConfig
+
+::: roomkit.voice.stt.RimeSTTError
+
+See the [Rime guide](../guides/rime.md) for utterance boundaries and language selection.
+
 ## TTS (Text-to-Speech)
 
 ::: roomkit.voice.tts.TTSProvider
@@ -268,6 +278,16 @@ Install with: `pip install roomkit[pocket-tts]` (CPU or CUDA GPU).
 See the [Phonon guide](../guides/phonon.md) for models, voices and measured speed.
 
 Install with: `pip install roomkit[phonon]` (CPU).
+
+### Rime TTS (Coda and Mist v3)
+
+::: roomkit.voice.tts.RimeTTSProvider
+
+::: roomkit.voice.tts.RimeTTSConfig
+
+::: roomkit.voice.tts.RimeTTSError
+
+See the [Rime guide](../guides/rime.md) for streamed text input and the voice catalog.
 
 ### Voxtral Speech TTS (Mistral)
 

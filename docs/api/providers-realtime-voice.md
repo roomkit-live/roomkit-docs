@@ -164,6 +164,16 @@ Turn detection is always Deepgram's (`server_vad=False` is ignored with a warnin
 
 ::: roomkit.providers.deepgram.DeepgramAgentConfig
 
+### Rime Prism
+
+Install with: `pip install 'roomkit[rime]'`. English speech-to-speech with
+16 kHz input, 24 kHz output, native turn detection and function tools.
+See the [Rime guide](../guides/rime.md) for configuration and supported capabilities.
+
+::: roomkit.voice.realtime.RimeRealtimeProvider
+
+::: roomkit.voice.realtime.RimeRealtimeConfig
+
 ## Reasoning Delegation
 
 The integrator-side backend a full-duplex model's delegations are served
