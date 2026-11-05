@@ -103,9 +103,12 @@ to five seconds: supply live audio, not a recording uploaded faster than real
 time. For a microphone/speaker conversation:
 
 ```bash
-uv sync --extra rime --extra local-audio --extra webrtc-aec
-RIME_API_KEY=... uv run examples/realtime_voice_local_rime.py
+uv sync --extra rime --extra local-audio --extra webrtc-aec --extra console
+RIME_API_KEY=... CONSOLE=1 uv run examples/realtime_voice_local_rime.py
 ```
+
+`CONSOLE=1` enables the same voice dashboard as the other local examples.
+It is disabled when the variable is unset or `0`, and closed on shutdown.
 
 The example enables WebRTC AEC by default through the existing local backend,
 which resamples the 24 kHz playback reference to the 16 kHz capture rate.
