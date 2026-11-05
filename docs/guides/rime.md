@@ -90,12 +90,13 @@ provider = RimeRealtimeProvider(RimeRealtimeConfig(
 ))
 channel = RealtimeVoiceChannel(
     "voice", provider=provider, transport=transport,
-    input_sample_rate=16000, output_sample_rate=24000, server_vad=True,
+    input_sample_rate=16000, output_sample_rate=24000,
     system_prompt="Keep your spoken replies brief.",
 )
 ```
 
-Prism owns turn detection. The adapter paces input in 20 ms frames and fills
+Leave the channel's pipeline VAD unset: it then uses Prism's turn detection.
+The adapter paces input in 20 ms frames and fills
 capture gaps with silence. Keep microphone capture active during playback for
 barge-in; use headphones or acoustic echo cancellation. Buffering is limited
 to five seconds: supply live audio, not a recording uploaded faster than real
