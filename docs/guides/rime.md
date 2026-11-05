@@ -100,7 +100,18 @@ The adapter paces input in 20 ms frames and fills
 capture gaps with silence. Keep microphone capture active during playback for
 barge-in; use headphones or acoustic echo cancellation. Buffering is limited
 to five seconds: supply live audio, not a recording uploaded faster than real
-time. Run `examples/realtime_voice_local_rime.py` for a microphone conversation.
+time. For a microphone/speaker conversation:
+
+```bash
+uv sync --extra rime --extra local-audio --extra webrtc-aec
+RIME_API_KEY=... uv run examples/realtime_voice_local_rime.py
+```
+
+The example enables WebRTC AEC by default through the existing local backend,
+which resamples the 24 kHz playback reference to the 16 kHz capture rate.
+`AEC=webrtc|speex|0` chooses or disables cancellation; `AEC_DELAY_MS` sets an
+optional measured delay. Without AEC, playback mutes the microphone.
+`MUTE_MIC=0|1` overrides this choice; use `AEC=0 MUTE_MIC=0` with headphones.
 
 The provider maps transcripts, audio, speech/response boundaries, errors,
 usage and function calls onto the realtime callbacks. Late user transcripts
