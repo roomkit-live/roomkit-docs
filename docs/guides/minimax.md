@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install roomkit[openai]
+pip install roomkit[minimax]
 ```
 
 ## Quick start

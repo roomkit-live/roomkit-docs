@@ -408,7 +408,7 @@ Install with: `pip install roomkit[openai]`
 
 ::: roomkit.providers.minimax.MiniMaxConfig
 
-See the [MiniMax guide](../guides/minimax.md).
+Install with `pip install "roomkit[minimax]"`. See the [MiniMax guide](../guides/minimax.md).
 
 ## Kimi Provider
 
@@ -416,7 +416,7 @@ See the [MiniMax guide](../guides/minimax.md).
 
 ::: roomkit.providers.kimi.KimiConfig
 
-See the [Kimi guide](../guides/kimi.md).
+Install with `pip install "roomkit[kimi]"`. See the [Kimi guide](../guides/kimi.md).
 
 ## Cerebras Provider
 
