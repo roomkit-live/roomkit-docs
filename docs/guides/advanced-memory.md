@@ -52,6 +52,9 @@ class MemoryResult:
 | `CompactingMemory` | 500+ messages | LLM calls | Long conversations, full context retention |
 | `SummarizingMemory` | Any length | LLM calls | Agentic workloads with large tool results and proactive budget management |
 
+!!! note "`max_context_tokens` is the model's window"
+    `BudgetAwareMemory`, `CompactingMemory` and `SummarizingMemory` size the history to what the window leaves once the rest of the turn is in it: the system prompt, the tools, the channel's notes, the current message and the reply (RFC §20). With a 32,000-token window, a 12,000-token system prompt, 8,000 tokens of tools and a 6,000-token reply, the history, a summary included, gets under 6,000 tokens. Pass the model's window, not a budget for the history.
+
 ---
 
 ## SlidingWindowMemory (Default)
@@ -96,8 +99,8 @@ from roomkit.memory import BudgetAwareMemory, SlidingWindowMemory
 
 memory = BudgetAwareMemory(
     inner=SlidingWindowMemory(max_events=200),
-    max_context_tokens=8000,
-    safety_margin_ratio=0.15,   # Reserve 15% of budget
+    max_context_tokens=8000,    # The model's context window
+    safety_margin_ratio=0.15,   # Reserve 15% of the window for the reply
     min_events=3,               # Never drop below 3 events
 )
 
@@ -107,8 +110,8 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `inner` | required | Wrapped memory provider |
-| `max_context_tokens` | required | Total token budget for context |
-| `safety_margin_ratio` | `0.15` | Reserve this fraction of budget (15%) |
+| `max_context_tokens` | required | The model's context window |
+| `safety_margin_ratio` | `0.15` | Reserve this fraction of the window for the reply (15%) |
 | `min_events` | `3` | Minimum events to preserve |
 | `reserved_tokens` | `0` | A floor on the turn's non-history input; the larger of it and the channel's measure is reserved, never their sum |
 
@@ -149,8 +152,8 @@ summarizer = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-ha
 memory = CompactingMemory(
     inner=SlidingWindowMemory(max_events=200),
     provider=summarizer,
-    max_context_tokens=8000,
-    summary_ratio=0.10,              # 10% of budget for summaries
+    max_context_tokens=8000,         # The model's context window
+    summary_ratio=0.10,              # 10% of the window for summaries
     safety_margin_ratio=0.15,        # 15% safety margin
     min_events=5,                    # Keep at least 5 recent events
     summary_cache_ttl_seconds=300.0, # Cache summaries for 5 minutes
@@ -163,17 +166,22 @@ ai = AIChannel("ai-assistant", provider=provider, memory=memory)
 |-----------|---------|-------------|
 | `inner` | required | Wrapped memory provider |
 | `provider` | required | AI provider for summarization |
-| `max_context_tokens` | required | Total token budget |
-| `summary_ratio` | `0.10` | Fraction of budget allocated to summaries |
-| `safety_margin_ratio` | `0.15` | Safety margin fraction |
+| `max_context_tokens` | required | The model's context window |
+| `summary_ratio` | `0.10` | Fraction of the window allocated to summaries |
+| `safety_margin_ratio` | `0.15` | Fraction of the window reserved for the reply |
 | `min_events` | `5` | Minimum events before compacting |
 | `summary_cache_ttl_seconds` | `300.0` | How long to cache summaries per room |
 
 **How it works**:
 
 1. Calls `inner.retrieve()` to get all events
-2. If total tokens fit in budget → return as-is (no compacting)
-3. If over budget:
+2. Budget = the window less the turn's footprint, as `BudgetAwareMemory`
+   reckons it (RFC §20): the input the AI channel measured
+   (`current_turn_footprint()`), the current event, the inner provider's
+   messages and notes, and for the reply the larger of
+   `max_context_tokens * safety_margin_ratio` and the turn's `max_tokens`.
+   If the events fit in it → return as-is (no compacting)
+3. If over budget, the latest events that fit the budget less the summary's share are kept:
     - Split events into **trimmed** (old) and **kept** (recent)
     - Summarize trimmed events via the AI provider, each quoted on one line after who said it: `[user]` and `[assistant]` in a one-to-one conversation, the runtime's label (`Alice: “…”`, `@sms1: “…”`) when the turns retrieved, summarized or kept, hold several speakers, `[assistant]` naming only the agent the summary is for; the result's `speakers` lists the labels named, which the conversation counts
     - Inject summary as a pre-built message at the context start
@@ -204,9 +212,9 @@ summarizer = AnthropicAIProvider(AnthropicConfig(
 memory = SummarizingMemory(
     inner=SlidingWindowMemory(max_events=100),
     provider=summarizer,
-    max_context_tokens=128_000,
-    tier1_ratio=0.50,                # Truncate old events at 50% capacity
-    tier2_ratio=0.85,                # Summarize at 85% capacity
+    max_context_tokens=128_000,      # The model's context window
+    tier1_ratio=0.50,                # Truncate old events at 50% of what the turn leaves
+    tier2_ratio=0.85,                # Summarize at 85% of it
     truncate_chars=2000,             # Max chars per old event in tier 1
     summary_max_tokens=1000,         # Max tokens for summaries
     min_events=5,                    # Always keep at least 5 recent events
@@ -220,9 +228,9 @@ ai = AIChannel("ai-agent", provider=main_provider, memory=memory)
 |-----------|---------|-------------|
 | `inner` | required | Wrapped memory provider |
 | `provider` | required | AI provider for summarization |
-| `max_context_tokens` | required | Total token budget |
-| `tier1_ratio` | `0.50` | Fraction of budget that triggers tier-1 truncation |
-| `tier2_ratio` | `0.85` | Fraction of budget that triggers tier-2 summarization |
+| `max_context_tokens` | required | The model's context window |
+| `tier1_ratio` | `0.50` | Fraction of the history's budget that triggers tier-1 truncation |
+| `tier2_ratio` | `0.85` | Fraction of the history's budget that triggers tier-2 summarization |
 | `truncate_chars` | `2000` | Max characters per old event body in tier 1 |
 | `summary_max_tokens` | `1000` | Max output tokens for the LLM summary |
 | `min_events` | `5` | Minimum events to keep before summarizing |
@@ -231,10 +239,14 @@ ai = AIChannel("ai-agent", provider=main_provider, memory=memory)
 **How it works**:
 
 1. Calls `inner.retrieve()` to get events and pre-built messages
-2. Estimates total tokens (events + prior messages)
-3. **Tier 1** (at ~50% capacity): Truncates large text bodies in the older half of events to `truncate_chars`. No LLM call — cheap and fast.
-4. **Tier 2** (at ~85% capacity): Calls the summary provider to summarize older events into a concise paragraph. Keeps recent events at full fidelity. Supports chained summaries — if a prior summary exists, it is incorporated into the new one.
-5. Summaries are cached using a content-derived key with TTL
+2. History's budget = the window less what the rest of the turn takes (RFC §20):
+   the input the AI channel measured (`current_turn_footprint()`), the turn's
+   `max_tokens` and the current event
+3. Estimates total tokens (events + prior messages and notes)
+4. **Tier 1** (at ~50% of the budget): Truncates large text bodies in the older half of events to `truncate_chars`. No LLM call — cheap and fast.
+5. **Tier 2** (at ~85% of the budget): Calls the summary provider to summarize older events into a concise paragraph. Keeps recent events at full fidelity. Supports chained summaries — if a prior summary exists, it is incorporated into the new one.
+6. Drops the oldest events until the result fits the budget, one event always kept
+7. Summaries are cached using a content-derived key with TTL
 
 **Graceful degradation**: If tier-2 summarization fails (provider error), the events are returned un-summarized with a placeholder.
 
