@@ -22,6 +22,8 @@ it is running under from a contextvar — see
 
 ::: roomkit.tools.current_tool_actor_id
 
+::: roomkit.tools.current_tool_chain_depth
+
 ::: roomkit.tools.current_tool_allowed_names
 
 ::: roomkit.tools.current_tool_call
