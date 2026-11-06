@@ -50,13 +50,13 @@ A tool round of a turn, with this provider and with a generic one:
 {"role": "assistant", "content": "Looking.", "tool_calls": [...]}
 ```
 
-Kimi answers 400 to a tool round without the field ("thinking is enabled but reasoning_content is missing in assistant tool call message", its error reference), and K3 always thinks. So every round that called tools carries it, and a round with no reasoning carries a single space:
+Kimi's platform requires the field in a tool loop, and K3 always thinks. Kimi Code's error reference, a product of the same vendor, names the 400 a tool round without it gets ("thinking is enabled but reasoning_content is missing in assistant tool call message"); the platform's pages name none. So every round that called tools carries it, and a round with no reasoning carries a single space:
 
 ```python
 {"role": "assistant", "content": None, "reasoning_content": " ", "tool_calls": [...]}
 ```
 
-That is every round of an earlier turn, since RoomKit stores no reasoning ([RFC §6.4](https://github.com/roomkit-live/roomkit-specs/blob/main/roomkit-rfc.md)). An empty field reads as a missing one: LiteLLM's Moonshot code sends the same space, as "the minimum value the API accepts". None of this was checked on Kimi's wire; `examples/kimi_ai.py` does it, with a key.
+That is every round of an earlier turn, since RoomKit stores no reasoning ([RFC §6.4](https://github.com/roomkit-live/roomkit-specs/blob/main/roomkit-rfc.md)). An empty field reads as a missing one, by LiteLLM's Moonshot code alone, which sends the same space as "the minimum value the API accepts". None of this was checked on Kimi's wire; `examples/kimi_ai.py` does it, with a key.
 
 !!! warning "Earlier turns"
     Kimi's page says K3 requires the reasoning "in multi-turn conversations and tool-call loops", and its API reference that without it "the model may lose reasoning context". RoomKit sends it back for as long as a turn lasts, not in a later turn. Its answers go without the field, for which Kimi documents no refusal.
@@ -80,13 +80,13 @@ On llama.cpp with K2.6's and K2.7's templates, each request of a turn reuses the
 KimiConfig(api_key="...", model="kimi-k3.1-pro", reasoning_effort="low")
 ```
 
-`reasoning_effort` (`low`, `high`, `max`, default `max`) goes on a turn with tools as on any other, and a turn's own effort outranks it. K3 always thinks, so a turn that states off sends `low` for the catalogued models. On a model the catalogue does not name, the effort goes as stated, and a bare off sends nothing.
+`reasoning_effort` (`low`, `high`, `max`, default `max`) goes on a turn with tools as on any other, and a turn's own effort outranks it. On a catalogued model, another level goes as the nearest Kimi takes (`medium` as `low`, `xhigh` as `high`), and since K3 always thinks, a turn that states off sends `low`. On a model the catalogue does not name, the effort goes as stated, and a bare off sends nothing.
 
-`max_tokens` defaults to no cap: reasoning counts toward it, and Kimi recommends at least 16,000. `supports_custom_temperature` defaults to `False`, since K3 fixes `temperature` and asks that it be left out.
+`max_tokens` defaults to no cap, which leaves K3's own default, 131,072: reasoning counts toward it, and a small cap cuts an answer after its reasoning. A cap goes as `max_completion_tokens`, since Kimi deprecates `max_tokens`; `use_max_completion_tokens=False` for a server that reads `max_tokens` alone. `supports_custom_temperature` defaults to `False`, since K3 fixes `temperature` and asks that it be left out.
 
 ## Images
 
-K3 reads images, and Kimi's API takes them as base64 or as `ms://<file-id>`, not as a public URL. An `AIImagePart` carrying a URL is refused by the vendor (`unsupported image url`).
+K3 reads images, and its quickstart says Kimi's API takes them as base64 or as `ms://<file-id>`, not as a public URL. An image as a `data:` URI goes as it is; one as a public URL fails the turn with a `ProviderError` from the vendor.
 
 ## Tool names
 

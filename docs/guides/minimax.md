@@ -72,12 +72,12 @@ On llama.cpp with M2's and M3.1's templates, each request of a turn reuses the w
 MiniMaxConfig(api_key="...", model="MiniMax-M3.1-Flash", reasoning_effort="low")
 ```
 
-`reasoning_effort` (`low`, `medium`, `high`, `xhigh`, `max`, default `max`) is effective on M3.1-Flash alone, on a turn with tools as on any other, and a turn's own effort outranks it. A turn that states off sends `low` on M3.1-Flash, which answers 400 to `none`, and `thinking: {"type": "disabled"}` on M3. On a model the catalogue does not name, the effort goes as stated, and a bare off sends nothing.
+`reasoning_effort` (`low`, `medium`, `high`, `xhigh`, `max`, default `max`) is effective on M3.1-Flash alone, on a turn with tools as on any other, and a turn's own effort outranks it. On a catalogued model, another level goes as the nearest MiniMax takes (`minimal` as `low`), and a turn that states off sends `low` on M3.1-Flash, which answers 400 to `none`, and `thinking: {"type": "disabled"}` on M3. On a model the catalogue does not name, the effort goes as stated, `none` included, and a bare off sends nothing.
 
-`max_tokens` defaults to no cap. Reasoning counts toward it, and MiniMax documents that a cap too small yields `finish_reason: "length"` with an empty answer.
+`max_tokens` defaults to no cap. Reasoning counts toward it, and MiniMax documents that a cap too small yields `finish_reason: "length"` with an empty answer. A cap goes as `max_completion_tokens`, MiniMax's field for new integrations; `use_max_completion_tokens=False` for a server that reads `max_tokens` alone. `supports_custom_temperature` defaults to `False`: MiniMax's API ignores `temperature` and always uses 1, the value its model cards recommend; set it for a server of your own that honours it.
 
 MiniMax's API documents `response_format` for `MiniMax-Text-01` alone, so `supports_response_schema` is `False` by default. Set it on the config for a server that takes it.
 
 ## Pricing
 
-`available_models()` carries MiniMax's rates. `MiniMax-M3`'s are its standard tier up to 512k input tokens: past that they double, and its `priority` tier costs 1.5 times as much. `ModelPricing` has one rate per model, so such a request bills more than quoted.
+`available_models()` carries MiniMax's rates. `MiniMax-M3`'s are its standard tier: past 512k input tokens they double, which its `long_context_*` fields carry. Its `priority` tier costs 1.5 times as much, which `ModelPricing` has no place for. MiniMax documents no `/models` listing.
