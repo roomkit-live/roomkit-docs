@@ -86,7 +86,7 @@ KimiConfig(api_key="...", model="kimi-k3.1-pro", reasoning_effort="low")
 
 ## Images
 
-K3 reads images, and its quickstart says Kimi's API takes them as base64 or as `ms://<file-id>`, not as a public URL. An image as a `data:` URI goes as it is; one as a public URL fails the turn with a `ProviderError` from the vendor.
+K3 reads images, and its quickstart says Kimi's API takes them as base64 or as `ms://<file-id>`, not as a public URL. An image as a `data:` URI goes as it is; a public URL goes too, and Kimi's page says it does not take one (not checked on its wire).
 
 ## Tool names
 
