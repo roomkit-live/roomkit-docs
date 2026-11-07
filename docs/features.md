@@ -2194,6 +2194,28 @@ await kit.attach_channel("support-room", "ai-bot",
 
 Tool calls are returned in `AIResponse.tool_calls` for the host application to execute.
 
+Within a turn, a call repeated with identical arguments runs twice; the third is
+refused, and a model that keeps sending it is stopped (RFC §6.4). A tool whose call
+changes what later calls read (a file edited, a row written) declares it on its
+definition, so that the turn's counts start again once such a call succeeds and a
+test rerun after each edit runs every time:
+
+```python
+ai = AIChannel(
+    "coder",
+    provider=provider,
+    tools=[
+        AITool(name="run_tests", description="Run the test suite"),
+        AITool(name="edit_file", description="Replace text in a file", changes_state=True),
+    ],
+    tool_handler=handle_tools,
+)
+```
+
+A schema dict in `tools=` or a `Tool`'s definition takes `"changes_state": True` the
+same way; the `tools` of a binding's metadata do not read it. The same change made a
+third time is still refused when no other change came between.
+
 #### Streaming with Tools
 
 When tools are configured and the AI provider supports streaming, RoomKit uses a **streaming tool loop** that delivers text progressively while handling tool calls between generation rounds:
