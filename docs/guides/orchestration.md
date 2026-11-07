@@ -636,7 +636,8 @@ await kit.process_inbound(
     ),
     room_id=room_id,
 )
-# The room now holds one message: the advisor's own introduction.
+# The room now holds one message, the advisor's own introduction, and the
+# advisor's own copy of the instruction, which no channel is delivered.
 ```
 
 It goes through the same pipeline — hooks, the room's order, addressing — and:
@@ -647,15 +648,22 @@ It goes through the same pipeline — hooks, the room's order, addressing — an
   created for it; `send_event()` raises `ValueError`. Its other names ask
   nobody: an agent the room does not bind is reported in
   `unavailable_targets`;
-- **is never stored**, blocked or not, consumes no index, and is no activity:
-  it moves neither `last_activity_at` nor a paused room's status;
+- **is never stored as the room's**, blocked or not, consumes no index, and is
+  no activity: it moves neither `last_activity_at` nor a paused room's status;
 - **reaches only the agents it addresses**, never a transport, so no voice
   channel speaks it;
 - **is the agent's input for one turn**, the text its content reads as (a
   rich text's plain text, a media's label, a system notice's body, a tool
   call as `[Tool call: <name>]`, a composite's parts one per line, an empty
-  one skipped), marked as the application's, never as a participant's line,
-  and absent from later turns' history;
+  one skipped), marked as the application's, never as a participant's line;
+- **is kept by the `AIChannel` it directed**, which stores it as a row of its
+  own, `EventType.INSTRUCTION_READ`, before what its turn writes: visible to
+  that agent alone, delivered to no channel, never in another agent's
+  history. Its later turns replay it where the turn read it, marked the same
+  way, so each turn's first request opens with what the turn before sent and
+  a provider that caches a prompt's prefix keeps the history. A standalone
+  instruction (below) is not kept. `get_timeline()` and `list_events()`
+  return the row, as they return the agent's tool calls;
 - **is recorded on the reply** by the pipeline, as a fingerprint of that
   text: `metadata["instruction"] == {"sha256": "…", "length": 51}` (length in
   code points) on every event the agent returns for it, tool rows included,

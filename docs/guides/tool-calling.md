@@ -725,37 +725,38 @@ no configuration needed:
 
 - **Earlier calls in the history** — each round of tool calls an earlier
   turn made reads, at its place in the conversation, the way the turn itself
-  sent it: the assistant's calls, then their results, as the tool messages a
-  chat API carries. A follow-up question ("and the fifteenth board?") is
-  answered from the result instead of invented, and a model never takes the
-  recall for something the person asked. The rounds are read from the store
-  each turn, so they outlive a restart. What a round replays is what the
-  model was given:
+  sent it: the assistant's calls, with the text the model wrote beside them
+  in the same message, then their results, as the tool messages a chat API
+  carries. A follow-up question ("and the fifteenth board?") is answered from
+  the result instead of invented, and a model never takes the recall for
+  something the person asked. The rounds are read from the store each turn,
+  so they outlive a restart. What a round replays is what the model was
+  given, as it was given:
   - the arguments it wrote, never what a `BEFORE_TOOL_USE` hook rewrote them
-    to;
-  - the result it read, an `ON_TOOL_CALL` rewrite included.
+    to, under the id the model gave the call;
+  - the result it read, whole, an `ON_TOOL_CALL` rewrite included.
 
-  Which calls replay:
-  - only the agent's own;
-  - calls a tool answered: served, failed, or withheld by a hook;
-  - never a refused call, nor a discovery or housekeeping call of the
-    channel's own (`find_tools`, `read_stored_result`, `activate_skill`).
+  Which calls replay: the agent's own, every one its turn ended, whatever
+  the outcome or the tool (a refusal, `find_tools`, `activate_skill`,
+  `read_stored_result` included), but a call cancelled before it answered,
+  whose result no model read.
 
-  Bounds:
-  - the last 8 calls;
-  - the three most recent keep their result whole up to 6,000 characters,
-    never more than the eviction threshold (`evict_threshold_tokens`) lets
-    through; a longer result is cut, and says so;
-  - older calls replay a short preview, telling the model to call the tool
-    again for the rest.
-
-  A result eviction stored replays as the placeholder the model read, which
-  `read_stored_result` serves while the room still stores it. Once the stored
-  copy is gone, after a restart, the result reads as its size alone.
+  Nothing shortens a round from one turn to the next, so each turn's first
+  request opens with what the turn before sent, then its answer: a provider
+  that caches a prompt's prefix (OpenAI, a llama.cpp server) keeps
+  the whole history in its cache instead of reprocessing it at each turn.
+  A result too large for the turn itself is stored by eviction
+  (`evict_threshold_tokens`), and replays as the placeholder the model read,
+  which `read_stored_result` serves while the room still stores it; once the
+  stored copy is gone, after a restart, the result reads as its size alone.
+  A context the provider refuses as too long gets one compacted replay: the
+  older history summarized, or the long results of the turn's older rounds
+  stored the same way, a preview in their place.
 
   A round older than the history the memory keeps is not replayed. The
   footprint the turn measures before its memory reads the room counts the
-  rounds (`current_turn_footprint()`).
+  rounds (`current_turn_footprint()`), so a `BudgetAwareMemory` keeps fewer
+  events as the rounds grow.
 - **Images tools returned** — for a model that sees, the two latest images the
   agent's own tool calls in the room returned (a drawing, a screenshot) ride
   each later turn's input, after the notes, each after the call that returned
