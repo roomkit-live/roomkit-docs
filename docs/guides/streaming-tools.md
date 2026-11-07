@@ -228,8 +228,7 @@ class ObservingAIChannel(AIChannel):
                 if delta.reason != "completed":
                     logger.warning("agent stopped: %s after %d rounds",
                                    delta.reason, delta.rounds)
-                continue          # keep the terminal marker out of the stream
-            yield delta
+            yield delta           # the turn's record and the channels read it too
 ```
 
 !!! note "The marker reaches the channel rendering the stream, last"
