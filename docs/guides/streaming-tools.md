@@ -232,15 +232,17 @@ class ObservingAIChannel(AIChannel):
             yield delta
 ```
 
-!!! note "The marker does not reach downstream channels"
+!!! note "The marker reaches the channel rendering the stream, last"
     The framework's inbound streaming path hands a channel's
     `deliver_stream` the text deltas, a `ThinkingDeltaMarker` (from
-    `roomkit.models`) per chunk of reasoning and each row of the response
-    once stored (a text segment, a tool call's start or end), but not the
-    terminal marker — it would arrive at a renderer as noise. So
-    overriding `deliver_stream` on a WebSocket or CLI channel will **not**
-    see it. Wrap the AI channel's own `response_stream`, as above, and act on
-    the reason there.
+    `roomkit.models`) per chunk of reasoning, a `UsageMarker` after each
+    generation, each row of the response once stored (a text segment, a
+    tool call's start or end), and last the turn's `LoopEndMarker`, before
+    the response's failure when it fails. A turn that ends on a tool call
+    has its record written on that call's end row once the stream ended,
+    so the row the channel was handed says nothing of how the turn ended:
+    the marker does (RFC §6.4). A channel that renders text alone skips it;
+    wrapping the AI channel's own `response_stream`, as above, sees it too.
 
 | `reason` | The loop stopped because |
 |---|---|
