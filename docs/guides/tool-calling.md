@@ -754,9 +754,10 @@ no configuration needed:
   stored the same way, a preview in their place.
 
   A round older than the history the memory keeps is not replayed. The
-  footprint the turn measures before its memory reads the room counts the
-  rounds (`current_turn_footprint()`), so a `BudgetAwareMemory` keeps fewer
-  events as the rounds grow.
+  footprint the turn measures before its memory reads the room lists each
+  round apart (`current_turn_footprint().replayed`): `BudgetAwareMemory`,
+  `CompactingMemory` and `SummarizingMemory` charge it to the event it reads
+  with, and keep or cut a turn whole, its rounds with it.
 - **Images tools returned** — for a model that sees, the two latest images the
   agent's own tool calls in the room returned (a drawing, a screenshot) ride
   each later turn's input, after the notes, each after the call that returned
