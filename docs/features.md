@@ -3029,6 +3029,16 @@ Built-in providers: `SlidingWindowMemory` (last N events), `BudgetAwareMemory` (
 
 Before it reads its memory, an AI channel measures the turn's footprint as the first round sends it, readable as `current_turn_footprint()`: its input (system prompt with an `Agent`'s identity, tools declared under Tool Search and the tool policy, the channel's own notes) and its reply budget. `BudgetAwareMemory` reserves the larger of that input and its `reserved_tokens`, and the reply once, the larger of its margin and the reply budget (RFC §20).
 
+A memory is read at a turn's start; between two tool rounds, the AI channel hands it the history before the turn's input and the round's measured usage (`compact(room_id, history, *, usage, channel_id=None)`, RFC §6.4, §20.1). It returns `None` by default, and nothing changes. A history it returns is what the next requests send in place of the old one: the turn's input stays whole, a user text the memory wrote ahead of the history's own messages joins the user message after it, and the long results of the turn's earlier rounds are stored for `read_stored_result`, the last round's left whole, so a long tool turn comes back under its window before the provider refuses it. A memory that raises is logged and the turn goes on as it was. `SummarizingMemory` compacts past `tier2_ratio` of its `max_context_tokens`, every counter of the round counted, by summarizing the older messages (calls and results included) and keeping the latest that fit, `min_events` of them at least; `BudgetAwareMemory`, `CompactingMemory` and `RetrievalMemory` hand the call to the memory they wrap.
+
+```python
+class MyMemory(SlidingWindowMemory):
+    async def compact(self, room_id, history, *, usage, channel_id=None):
+        if sum(usage.values()) < 100_000:
+            return None
+        return [await my_summary(history[:-4]), *history[-4:]]
+```
+
 ### Agentic AI Features
 
 AIChannel includes built-in agentic capabilities for complex, multi-step AI workflows:
