@@ -753,6 +753,12 @@ await backend.serve(executor)
   such an executor takes turns from other processes; one given a predicate,
   as the kit's own, takes those of its process only. The agents the kit
   registers live stay in its process, carried in memory as before.
+- **A pool of generic executors** declares prefixes (`hosts={"acme-*"}`, or
+  `{"*"}` for every agent) and builds each agent from its configuration:
+  agents created on the fly need no executor told of them. Each executor
+  declaring an agent builds it when a room attaches it. An agent the factory
+  builds nothing for fails with `no_executor`, so every executor of a prefix
+  must build every agent under it.
 - **Placement.** A room's turns of a channel go to the executor that took
   its last one while it lives (its session state stays there, RFC §10.6.7),
   else to one alive that declares the channel and defines the room's hooks;

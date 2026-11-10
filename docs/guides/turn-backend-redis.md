@@ -65,6 +65,43 @@ the kit's own executor does for the agents you register live. An executor
 with no `hosts` would take the turns of every channel the kit does not run
 itself: always pass the set.
 
+An entry ending in `*` declares a prefix: `hosts={"acme-*"}` takes every
+agent whose id starts with `acme-`, and `hosts={"*"}` every agent. That is
+how a pool of generic executors serves agents created after it started: each
+executor builds an agent from its configuration, and is never told of each
+one. Every executor declaring an agent builds it when a room attaches it (to
+apply the attach) and keeps it until it closes or the kit releases the
+channel (`kit.release_channel`), whichever executor runs the room's turns: a
+pool of three builds each agent three times.
+
+```python
+def build_agent(channel_id: str) -> Agent | None:
+    config = agent_configs.get(channel_id)  # your service's configuration
+    if config is None:
+        return None
+    return Agent(channel_id, provider=config.provider, system_prompt=config.prompt)
+
+
+executor = TurnExecutor(build_agent, hosts={"acme-*"})
+await backend.serve(executor)
+```
+
+A turn or channel call of an agent the factory builds nothing for (it returns
+`None`) fails with `no_executor`, as when no executor declares the agent, and
+is not handed to another executor. The room's next turns go to that executor
+too, while it lives: every executor declaring a prefix must build every agent
+under it, from the same configuration. `examples/turns_executor_pool.py` runs
+two pool processes, agents created on the fly, and one pool killed mid-way.
+
+Upgrade every room owner process before you start executors that declare
+prefixes: an older owner reads `acme-*` as an agent's id, and fails the turns
+of `acme-sales` with `no_executor`.
+
+The prefix is the only scope an executor declares: `hosts={"*"}` takes the
+turns of every declared agent, whatever its room or organization, from every
+process sharing the backend's `key_prefix`. Assign agent ids yourself, a
+prefix per pool you want kept apart, and never let a tenant choose one.
+
 Room hooks are part of the declaration: an executor that does not define a
 hook a room enabled (`executor.room_hook("audit", ...)`,
 `await kit.enable_room_hook(room_id, "audit")`) is never given that room's turns.
