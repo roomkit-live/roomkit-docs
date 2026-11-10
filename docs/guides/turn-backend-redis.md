@@ -69,10 +69,29 @@ An entry ending in `*` declares a prefix: `hosts={"acme-*"}` takes every
 agent whose id starts with `acme-`, and `hosts={"*"}` every agent. That is
 how a pool of generic executors serves agents created after it started: each
 executor builds an agent from its configuration, and is never told of each
-one. Every executor declaring an agent builds it when a room attaches it (to
-apply the attach) and keeps it until it closes or the kit releases the
-channel (`kit.release_channel`), whichever executor runs the room's turns: a
-pool of three builds each agent three times.
+one. An executor builds an agent at its first turn, channel call or committed
+event there, never for a room's attach or detach, and keeps it until it
+closes or the kit releases the channel (`kit.release_channel`).
+
+`max_channels` bounds what one executor keeps built:
+
+```python
+executor = TurnExecutor(build_agent, hosts={"acme-*"}, max_channels=200)
+```
+
+Past the bound, the executor lets go of the agent it used least recently,
+never one something runs on (a turn, a channel call, a committed event, a
+room's attach or detach), as a release lets it go: the state it kept for its
+rooms goes (an ACP session reopens at its next turn, a speak policy listens
+again), and its next turn builds it anew, the room sending what that turn
+reads. An agent built only to hand it
+a committed event is the first let go. No bound by default: size it above
+the agents one executor serves at once.
+
+The executor closes each agent it lets go of (its bound, a release, its own
+close), and an agent closes its provider with it. Give each build a provider
+of its own: a provider shared by the agents a factory builds is closed with
+the first one let go, and every other agent's next call fails.
 
 ```python
 def build_agent(channel_id: str) -> Agent | None:

@@ -755,10 +755,11 @@ await backend.serve(executor)
   registers live stay in its process, carried in memory as before.
 - **A pool of generic executors** declares prefixes (`hosts={"acme-*"}`, or
   `{"*"}` for every agent) and builds each agent from its configuration:
-  agents created on the fly need no executor told of them. Each executor
-  declaring an agent builds it when a room attaches it. An agent the factory
-  builds nothing for fails with `no_executor`, so every executor of a prefix
-  must build every agent under it.
+  agents created on the fly need no executor told of them. An executor builds
+  an agent at its first turn or committed event there, never for a room's
+  attach, and keeps `max_channels` built at most (least recently used let go first, no bound by
+  default). An agent the factory builds nothing for fails with `no_executor`,
+  so every executor of a prefix must build every agent under it.
 - **Placement.** A room's turns of a channel go to the executor that took
   its last one while it lives (its session state stays there, RFC §10.6.7),
   else to one alive that declares the channel and defines the room's hooks;
