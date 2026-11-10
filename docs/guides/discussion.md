@@ -403,9 +403,16 @@ tenant: a room of another organization reads as holding no discussion.
 | `over` | Whether the discussion is over |
 
 `ON_SPEAK_QUEUE` fires for each change, in the order the changes happened:
-`queued`, `turn_given`, `turn_ended`, `instruction_dropped`, `listening`,
-`talking_again`, `waiting` (the wait beginning or ending: read
+`queued`, `turn_given`, `turn_ended`, `turn_skipped`, `instruction_dropped`,
+`listening`, `talking_again`, `waiting` (the wait beginning or ending: read
 `event.queue.waiting`), `over`.
+
+An agent held by its declaration that no executor online serves
+(`kit.agent_presence(room_id)` says it offline, see
+[Redis turn backend](turn-backend-redis.md)) has its queued turns skipped,
+announced as `turn_skipped`, rather than given to fail with `no_executor`.
+Once an executor serves it, it takes its turns again. On a turn backend that
+does not list its executors the kit cannot tell, and gives the turn.
 
 ## A console for the discussion
 
