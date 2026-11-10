@@ -36,7 +36,6 @@ The executor's process builds the agent and runs its turns:
 
 ```python
 from roomkit import Agent, RedisTurnBackend, TurnExecutor
-from roomkit.store import PostgresStore
 
 
 def build_agent(channel_id: str) -> Agent | None:
@@ -46,12 +45,13 @@ def build_agent(channel_id: str) -> Agent | None:
 
 
 backend = RedisTurnBackend("redis://localhost:6379")
-executor = TurnExecutor(build_agent, hosts={"meteo"}, store=PostgresStore(dsn=DSN))
+executor = TurnExecutor(build_agent, hosts={"meteo"})
 await backend.serve(executor)
 ```
 
-Both processes share the store (the executor reads the rooms there) and the
-Redis server. Run as many executor processes as you need: a room's turns stay
+The executor needs only the Redis server: the store stays with the room, which
+sends what a turn reads, and a hook on the executor asks the room for its
+context. Run as many executor processes as you need: a room's turns stay
 on one of them, new rooms spread over them. With an `OpenTelemetryProvider`
 in each process (`TurnExecutor(telemetry=...)` on the executor's side), a
 turn shows as one trace across both ([Telemetry](telemetry.md#one-trace-across-processes)).
@@ -154,7 +154,7 @@ ERRORS = (QuotaExceededError, httpx.HTTPError)  # a class covers its subclasses
 # The room owner
 kit = RoomKit(store=store, turn_backend=backend, error_classes=ERRORS)
 # Each executor's process
-executor = TurnExecutor(build_agent, hosts={"meteo"}, store=store, error_classes=ERRORS)
+executor = TurnExecutor(build_agent, hosts={"meteo"}, error_classes=ERRORS)
 ```
 
 A class a process does not declare comes back as a `RemoteTurnError`: its
@@ -212,10 +212,9 @@ fails each of its idle reads.
   among them, and with a database other than 0 every beat lands in database
   0, so the other processes take the process for lost. 5.0.2 to 7.4 work too;
   over TCP every version from 5.0.2 does.
-- **A shared store**: `PostgresStore` (or `SQLiteStore` on one machine). An
-  executor that takes turns from other processes without one logs a warning.
-- **Several owner processes** need the distributed lock manager as well (see
-  [Horizontal Scaling](scaling.md)); executors take no room lock.
+- **Several owner processes** need a store they share (`PostgresStore`) and the
+  distributed lock manager (see [Horizontal Scaling](scaling.md)). Executors
+  need neither: they hold no store and take no room lock.
 
 ## Runnable example
 

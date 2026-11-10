@@ -543,7 +543,6 @@ from roomkit import TurnExecutor
 
 executor = TurnExecutor(
     build_agent,                  # the channel for a channel id, built once
-    store=store,                  # shared with the room's owner
     media_resolver=resolve_media,
     telemetry=telemetry,
 )
@@ -686,7 +685,7 @@ executor builds the agent where its turns run (RFC §10.6.2):
 ```python
 from roomkit import AgentIdentity, ChannelDeclaration
 
-executor = TurnExecutor(build_agent, hosts={"meteo"}, store=store)
+executor = TurnExecutor(build_agent, hosts={"meteo"})
 await backend.serve(executor)
 
 kit = RoomKit(store=store, turn_backend=backend)
@@ -746,7 +745,7 @@ kit.register_channel(ChannelDeclaration(channel_id="meteo", identity=AgentIdenti
 
 # The executor's process
 backend = RedisTurnBackend("redis://localhost:6379")
-executor = TurnExecutor(build_agent, hosts={"meteo"}, store=PostgresStore(dsn=DSN))
+executor = TurnExecutor(build_agent, hosts={"meteo"})
 await backend.serve(executor)
 ```
 
@@ -1451,11 +1450,11 @@ register_turn_hooks(host_executor)
 `kit.hooks_for(trigger)` answers the engine a trigger's hooks register on, for
 code that registers on triggers of both sides (`roomkit.TURN_TRIGGERS` lists
 the turn's). An executor you build fires them too: it wires each channel its
-factory builds, as the kit wires the ones it registers, and gives its hooks a
-room context read from the store you give it:
+factory builds, as the kit wires the ones it registers, and its hooks read the
+room's context from the room's owner when they fire:
 
 ```python
-executor = TurnExecutor(build_agent, store=store)  # its hooks read the shared store
+executor = TurnExecutor(build_agent)
 register_turn_hooks(executor)
 ```
 
