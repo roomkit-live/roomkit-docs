@@ -1,6 +1,6 @@
 # Qwen Provider
 
-[Alibaba Cloud Model Studio](https://www.alibabacloud.com/help/en/model-studio/) serves the **Qwen** lineup behind an OpenAI-compatible Chat Completions API — `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-flash`, `qwen3-coder-plus`, `qwen3-vl-plus` — with 1M-token context windows on most of the line and image input on all but the flagship.
+[Alibaba Cloud Model Studio](https://www.alibabacloud.com/help/en/model-studio/) serves the **Qwen** lineup behind an OpenAI-compatible Chat Completions API. RoomKit's catalog lists `qwen3.7-max`, `qwen3.7-plus`, `qwen3.6-flash` and `qwen3-vl-plus`, with 1M-token context windows on most of the line and image input on all but the flagship.
 
 Because Model Studio speaks the OpenAI API verbatim, RoomKit's provider is a thin subclass of `OpenAIAIProvider`: message building, tool calling and streaming all come for free. Four things are Qwen's own, and they are what the subclass exists for.
 
@@ -79,7 +79,7 @@ Model Studio also hosts DeepSeek, Kimi, GLM and MiniMax on the same endpoint. Th
 
 ## Pricing
 
-The catalog carries Alibaba's **international list prices**, which is what `ModelPricing.price()` costs a response against.
+The catalog carries Alibaba's **international list prices**, which is what `ModelPricing.cost_for()` costs a response against.
 
 !!! note "Promotions, regions and tiers"
-    Alibaba runs near-permanent limited-time promotions, quotes different rates per deployment (Beijing bills `qwen3.7-max` roughly a third below international), and tiers several models by input length. `ModelPricing` carries one list rate and a single long-context threshold, so `qwen3-coder-plus` and `qwen3-vl-plus` — four and three bands respectively — report **no** price rather than one that would understate a long-context bill by up to 12x. Check the [billing page](https://www.alibabacloud.com/help/en/model-studio/billing-for-model-studio) when the figure has to be exact.
+    Alibaba runs near-permanent limited-time promotions, quotes different rates per deployment (Beijing bills `qwen3.7-max` roughly a third below international), and tiers several models by input length. `ModelPricing` carries one list rate and a single long-context threshold, so `qwen3-vl-plus`, with three bands, reports **no** price rather than one that would understate a long-context bill. Check the [billing page](https://www.alibabacloud.com/help/en/model-studio/billing-for-model-studio) when the figure has to be exact.

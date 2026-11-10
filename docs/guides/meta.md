@@ -1,12 +1,12 @@
 # Meta Model API Providers
 
-The [Meta Model API](https://dev.meta.ai/docs/overview) serves three models RoomKit
-uses, on one key (`https://api.meta.ai/v1`, sent as a bearer token; Meta's docs
+The [Meta Model API](https://dev.meta.ai/docs/overview) serves chat, image and speech
+models RoomKit uses, on one key (`https://api.meta.ai/v1`, sent as a bearer token; Meta's docs
 name it `MODEL_API_KEY`, RoomKit's examples read `META_API_KEY`):
 
 | Model | RoomKit provider | What it does | Extra |
 |-------|------------------|--------------|-------|
-| `muse-spark-1.3` (and 1.2, 1.1), `muse-wonder-1.0` (preview) | `MetaAIProvider` | Chat, tools, images in, 1M-token window | `roomkit[meta]` |
+| `muse-spark-1.3` (and 1.2, 1.1), `muse-wonder-1.0` (preview), `muse-ember-1.0` | `MetaAIProvider` | Chat, tools, images in, 1M-token window | `roomkit[meta]` |
 | `muse-image-1.0` | `MetaImageProvider` | Image generation and editing | `roomkit[meta]` |
 | `muse-voice-transcribe-1.0` | `MetaSTTProvider` | Streaming and batch speech-to-text, with speaker labels | `roomkit[meta-stt]` |
 
@@ -20,7 +20,7 @@ The account needs a payment method before any billable call: without one every
 request answers `402 billing_not_configured`, and the realtime STT socket closes
 with 1008.
 
-## Muse Spark (chat)
+## Muse Spark, Wonder and Ember (chat)
 
 ```python
 from roomkit import AIChannel, RoomKit
@@ -37,13 +37,13 @@ message building, tool calls, streaming, usage (reasoning and cached tokens) and
 errors are inherited. What is Meta's own:
 
 - **Reasoning cannot be turned off.** `reasoning_effort` takes `minimal`, `low`,
-  `medium`, `high` or `xhigh` and rides every request, tool turns included —
+  `medium`, `high` or `xhigh` (`max` too on Wonder and Ember) and rides every request, tool turns included —
   it is the only lever over the cost and latency of a turn. `"none"` is refused
   by the service and sent as `"minimal"`. Measured on a one-line answer
   (2026-09-27): 3.0 s at `minimal`, 4.6 s at `low`; streaming at `low` showed
   its first text after ~7 s, the reasoning coming first. The reasoning is
   counted in `reasoning_tokens`, never returned.
-- **`list_models()`** keeps the `muse-spark-*` and `muse-wonder-*` ids: Meta's
+- **`list_models()`** keeps the `muse-spark-*`, `muse-wonder-*` and `muse-ember-*` ids: Meta's
   `/v1/models` also lists the image, speech and segmentation models.
 - **Contributor ids** (`muse-spark-1.3-contributor`, `-1.2-contributor`) cost
   $0.10 / $0.20 per million tokens instead of $1.25 / $4.25, because Meta trains
@@ -53,8 +53,16 @@ errors are inherited. What is Meta's own:
   `minimal` to `max` (`"none"` refused, sent as `"minimal"` as for Spark), at
   $4.00 / $20.00 per million tokens ($0.20 cached), Standard mode only, with no
   contributor id.
+- **Muse Ember** (`MetaConfig(api_key="...", model="muse-ember-1.0")`) has the
+  same 1,048,576-token window, tools and image input, with reasoning from
+  `minimal` to `max`. It is Standard-only: $0.10 input / $0.50 output per million
+  tokens, $0.004 for cached input. Above 200,000 input tokens, including cache
+  hits, all token rates triple for the whole request. The catalog's
+  `pricing.cost_for(usage)` applies this tier automatically.
+  [Meta's pricing](https://dev.meta.ai/docs/pricing-rate-limits) was verified on 2026-11-09.
 
 `examples/meta_ai.py` is a terminal chat on it (`--effort minimal` for speed).
+Select Ember with `uv run python examples/meta_ai.py --model muse-ember-1.0 --effort max`.
 
 ## Muse Image
 

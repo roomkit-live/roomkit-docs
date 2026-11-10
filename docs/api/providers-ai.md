@@ -272,13 +272,13 @@ either way. Gemini Live does not flag it yet.
 
 Gemini rejects extra JSON Schema fields common in MCP/OpenAPI tool definitions. RoomKit auto-cleans schemas when building `FunctionDeclaration` objects; nothing is to call.
 
-## Meta Muse Spark Provider
+## Meta Muse Provider
 
 ::: roomkit.providers.meta.MetaAIProvider
 
 ::: roomkit.providers.meta.MetaConfig
 
-Muse Spark cannot turn reasoning off: `reasoning_effort="none"` is sent as
+Muse Spark, Wonder and Ember cannot turn reasoning off: `reasoning_effort="none"` is sent as
 `"minimal"`. See the [Meta Model API guide](../guides/meta.md).
 
 ## vLLM Provider (Local LLM)
@@ -336,6 +336,12 @@ Install with: `pip install roomkit[llamacpp]`
 ::: roomkit.providers.anthropic.AnthropicAIProvider
 
 ::: roomkit.providers.anthropic.AnthropicConfig
+
+The curated catalog includes `claude-fable-5-2`: a 1,000,000-token context window,
+image input, deferred tools and always-on adaptive thinking. Its rates are
+$8 / $40 per million input/output tokens, $0.20 for cache reads and $10 for
+five-minute cache writes ([Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing),
+verified 2026-11-09). A turn requesting no reasoning uses its lowest effort, `low`.
 
 A tool result whose call was refused, failed, blocked, served by nothing or
 cancelled goes to Anthropic with `is_error` set on its `tool_result` block;
