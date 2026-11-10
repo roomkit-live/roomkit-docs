@@ -230,7 +230,7 @@ Combining all patterns for a resilient deployment:
 from __future__ import annotations
 
 from roomkit import RoomKit, RoomTimers
-from roomkit.channels import AIChannel, SMSChannel
+from roomkit.channels import AIChannel, FallbackRouter, SMSChannel
 from roomkit.models import RateLimit, RetryPolicy
 from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
@@ -247,14 +247,13 @@ kit = RoomKit(
     telemetry=telemetry,
 )
 
-# AI with fallback and retries
+# AI with retries, then a fallback
 primary = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5"))
 fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
 
 ai = AIChannel(
     "ai-assistant",
-    provider=primary,
-    fallback_provider=fallback,
+    router=FallbackRouter(primary, fallback),
     retry_policy=RetryPolicy(max_retries=3, base_delay_seconds=1.0),
 )
 

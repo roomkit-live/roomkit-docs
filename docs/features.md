@@ -1834,6 +1834,42 @@ AI features:
 - **The host's own identity** -- `Agent(identity_in_prompt=False)` turns RoomKit's `--- Agent Identity ---` block off in a turn, a handoff and a realtime pipeline alike, for a host that renders identity in its own prompt; `role`, `scope` and `language` stay readable
 - **Steering scoped to a room** -- `steer(directive, room_id=...)`: a `Cancel` reaches every loop of that room and no other, another directive the room's most recent loop; `steer()` returns how many loops it reached (RFC §21.3, [AI Steering guide](guides/ai-steering.md))
 - **Function calling** -- Tools can be defined for AI to call external functions
+- **A provider per turn** -- `AIChannel(router=...)` picks each turn's provider, a local model or a hosted one, say (see [A provider per turn](#a-provider-per-turn))
+
+#### A Provider per Turn
+
+`AIChannel(router=...)` takes an `AIRouter` in place of a `provider` (the two
+are exclusive). Its `route(request)` is asked at each turn's start, before the
+turn's context is built, so the context is built for the model it picks (whether
+it sees images, its window, whether it holds tools unseen), and asked again once
+a generation's retries are spent before it handed anything, when it may hand
+that generation to another provider. Every later round of the turn stays on the
+provider that served it, for its reasoning and its prompt cache (RFC §6.4).
+
+```python
+from roomkit import AIChannel, AIRouter, RouteRequest
+
+
+class LocalOrHosted(AIRouter):
+    def __init__(self, local, hosted) -> None:
+        self.local, self.hosted = local, hosted
+
+    async def route(self, request: RouteRequest):
+        if request.reason == "retry":  # the local model's retries are spent
+            return self.hosted if request.previous is self.local else None
+        hard = len(request.text) > 280 or "```" in request.text
+        return self.hosted if hard else self.local
+
+
+ai = AIChannel("ai-assistant", router=LocalOrHosted(local, hosted))
+```
+
+- **Plain code** -- a router reads what it needs: the turn's text and event, the machine's load, the hour, a [classifier](#classifiers-judgments-composed-in-code)'s typed answer; a classifier written as rules, with no model, is often enough
+- **Fallback** -- `FallbackRouter(primary, fallback)` starts every turn on the primary and hands a generation to the other provider once its retries are spent
+- **On the record** -- the provider that served an answer is on its message (`ai_provider`, `ai_model`); `BEFORE_AI_GENERATION` names the provider the turn starts on; `channel.provider` is `None` and `channel.provider_name` the router's `name`
+- **Closed with the channel** -- the channel closes its router, and a router closes the providers it holds
+
+See `examples/ai_router_local_or_hosted.py`.
 
 #### Local Models with llama.cpp
 
@@ -2287,7 +2323,7 @@ Every provider hands the loop a call the same way. Its arguments are a mapping, 
 
 Each provider declares the turn's tools in its vendor's format. A tool without parameters is declared as an object with none, which every vendor accepts. A tool name no vendor accepts (empty, or a character other than a letter, a digit, `_`, `.`, `:` or `-`) is refused when the `AITool` is created, and an MCP tool under such a name is skipped with a warning; a name one vendor refuses fails before the request on that vendor's provider, with a `ProviderError` naming the tool and the rule (OpenAI, Anthropic and DeepSeek `[A-Za-z0-9_-]{1,128}`, Gemini a dot and a colon but no leading digit, Mistral a dot but no colon). A server behind a custom URL (`base_url`, Mistral's `server_url`) decides its names. A realtime provider checks its endpoint's rule when it declares a session's tools: OpenAI Realtime and GPT-Live's hosted backend OpenAI's, Deepgram its think provider's, Gemini Live Gemini's, xAI none (it accepts any name); and a tool given to a realtime channel or a conference under a name no vendor accepts is refused at construction, as an `AITool` is. Anthropic receives a result whose call did not succeed with `is_error` set, Gemini and Gemini Live under the function response's `error` key, a served result going under `result` whatever its text.
 
-Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` (50 by default) caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls. A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for, so the turn overshoots by one generation at most. Both are off by default and can be set per room (binding metadata) or per turn (`AIChannelTurnConfig`). A budget that is not a positive number, or a cost budget on a model with no catalogue price, raises `ValueError`: on the channel when it is built, otherwise in the turn that reads it. A generation the `fallback_provider` serves is priced at the primary provider's rate; a fallback priced otherwise is logged once (RFC §6.4).
+Two bounds keep a degenerate model from running away with a turn. `max_tool_rounds` (50 by default) caps how many rounds run; a **32-call ceiling per round** caps how wide one round may be, since a model that degenerates mid-completion can otherwise spend its whole output budget emitting tool calls. A turn can also be capped by what it spends: `turn_budget_tokens` counts every token the provider bills for the turn (input, cache reads and writes, output), `turn_budget_usd` prices each generation at the model's catalogue rate. At the first round boundary where the turn has reached either, the loop ends `budget_exceeded`: the calls that round asked for do not run and no further generation is asked for, so the turn overshoots by one generation at most. Both are off by default and can be set per room (binding metadata) or per turn (`AIChannelTurnConfig`). A budget that is not a positive number, or a cost budget on a model with no catalogue price, raises `ValueError`: on the channel when it is built, otherwise in the turn that reads it. Every generation of a turn is priced at the rate of the provider it started on, one a router hands to another provider included; a provider priced otherwise is logged once (RFC §6.4).
 
 The loop yields a final `LoopEndMarker` on every exit (its `reason`, the tool `rounds` that ran, and the limits the turn ran under), `completed` included, so a consumer never has to infer why a stream ended. Read it by subclassing `AIChannel` and wrapping `ChannelOutput.response_stream`:
 

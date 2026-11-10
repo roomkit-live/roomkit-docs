@@ -252,12 +252,15 @@ its delivery.
 
 ## Fallback Provider Chain
 
-Configure a fallback AI provider for production resilience:
+A fallback provider is a router (`router=`, see
+[A provider per turn](../features.md#a-provider-per-turn)): `FallbackRouter`
+starts every turn on the primary and hands a generation to the fallback once
+its retries are spent:
 
 ```python
 from __future__ import annotations
 
-from roomkit.channels import AIChannel
+from roomkit.channels import AIChannel, FallbackRouter
 from roomkit.models import RetryPolicy
 from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
@@ -267,8 +270,7 @@ fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
 
 ai = AIChannel(
     "ai-assistant",
-    provider=primary,
-    fallback_provider=fallback,
+    router=FallbackRouter(primary, fallback),
     retry_policy=RetryPolicy(max_retries=2, base_delay_seconds=1.0),
 )
 ```
@@ -286,7 +288,9 @@ Primary provider
   └─ Non-retryable error (other 4xx, unreadable body) → fail immediately (skip fallback)
 ```
 
-Works for both streaming and non-streaming generation.
+Works for both streaming and non-streaming generation. A turn the fallback
+served stays on it for its later rounds; a generation it fails is handed back
+to the primary, once its own retries are spent.
 
 The fallback receives the rounds the primary already ran in the turn, in a
 form its vendor takes. A reasoning block without a signature (DeepSeek, Qwen,
