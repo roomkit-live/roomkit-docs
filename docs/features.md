@@ -760,6 +760,11 @@ await backend.serve(executor)
   attach, and keeps `max_channels` built at most (least recently used let go first, no bound by
   default). An agent the factory builds nothing for fails with `no_executor`,
   so every executor of a prefix must build every agent under it.
+- **Agent presence.** `kit.executors()` lists the executors, online or not,
+  and what each declares; `kit.agent_presence(room_id)` says which of a room's agents
+  can answer, and where. The kit publishes `presence_online` /
+  `presence_offline` for an agent in its rooms when that changes, one room
+  owner process publishing each change.
 - **Placement.** A room's turns of a channel go to the executor that took
   its last one while it lives (its session state stays there, RFC §10.6.7),
   else to one alive that declares the channel and defines the room's hooks;

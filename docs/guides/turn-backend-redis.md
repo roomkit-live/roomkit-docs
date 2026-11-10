@@ -195,6 +195,36 @@ it, a refusal places it again, and a process that does not answer within
 retries a pipeline whose connection dropped after Redis executed it writes
 its messages twice: each is still handled once.
 
+## Which agents can answer
+
+The kit reads the executors from the same beats placement reads:
+
+```python
+for info in await kit.executors():
+    print(info.executor_id, info.node, sorted(info.hosts or []), info.last_beat, info.online)
+
+for presence in await kit.agent_presence(room_id):
+    print(presence.channel_id, presence.online, presence.executors)
+```
+
+An executor is online while it beats within `heartbeat_timeout`: a process
+killed stays online until that bound passes, never offline on one late beat.
+An agent is online in a room while an executor online covers it there: it
+declares the agent and defines the room's enabled hooks.
+
+The kit also publishes each agent's presence in its rooms, as the presence
+ephemerals people's presence uses (`presence_online` / `presence_offline`,
+`user_id` the agent's channel id): as the agent is attached, and when the
+executors covering it change, in its active and paused rooms (the 10,000
+oldest at most). Every room owner process sees the change; one publishes it,
+the presence last published being kept in Redis
+(`TurnBackend.claim_presence`), so a restart publishes nothing that did not
+change. A publication, or a claim, that fails is tried again at a later look
+of the owner that made it (an owner closing lets go of the claims it could not
+publish), and a presence failure never fails the attach or the detach that
+caused it. `DiscussionConsole` shows an agent no executor serves as `offline`.
+`examples/agent_presence.py` runs it in one process.
+
 ## Errors across processes
 
 An error a turn raised on the executor reaches the room owner rebuilt from a
