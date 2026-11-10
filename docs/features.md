@@ -375,8 +375,8 @@ before any effect. Unset, no room is read for the scope, as before:
 - **Tasks, feedback and steering** -- `start_task`, `submit_feedback`,
   `steer`: no task, observation, hook or steer. `cancel_task` answers `False`
   for a task of another organization's room, which keeps running, and
-  `steer()` without a `room_id` reaches only the turns of that
-  organization's rooms (`TurnClient.steer()` takes it too).
+  `TurnClient.steer()` given an organization reaches only the turns of that
+  organization's rooms.
 - **Ephemerals** -- `publish_typing`, `publish_tool_call`, `publish_presence`,
   `publish_read_receipt`, `publish_reaction`, `subscribe_room`: nothing
   published or subscribed.
@@ -644,7 +644,7 @@ its memory), so an agent on a host's executor, or held by its declaration
 alone, learns the whole conversation.
 
 **The kit steers and answers its turns wherever they run.**
-`kit.steer(directive, channel_id, room_id=...)` reaches the turns the kit
+`kit.steer(room_id, channel_id, directive)` reaches the turns the kit
 started (see the [steering guide](guides/ai-steering.md)), and
 `kit.answer_input(pending_id, value)` / `kit.reject_input(pending_id, reason)`
 answer a human-input request a turn opened, held 60 seconds when it comes

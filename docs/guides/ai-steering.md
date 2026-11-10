@@ -9,17 +9,19 @@ from __future__ import annotations
 
 from roomkit.models import Cancel, InjectMessage, UpdateSystemPrompt
 
-# Get the AI channel
-ai = kit.get_channel("ai-assistant")
-
-# Cancel an active tool loop
-ai.steer(Cancel(reason="user_left"))
+# Every steer names the room whose turn it is for
+# Cancel the agent's running turns in the room
+await kit.steer("room-a", "ai-assistant", Cancel(reason="user_left"))
 
 # Inject context between tool rounds
-ai.steer(InjectMessage(content="User just uploaded a document.", role="user"))
+await kit.steer(
+    "room-a", "ai-assistant", InjectMessage(content="User just uploaded a document.", role="user")
+)
 
 # Append to the system prompt
-ai.steer(UpdateSystemPrompt(append="\nIMPORTANT: User is a VIP customer."))
+await kit.steer(
+    "room-a", "ai-assistant", UpdateSystemPrompt(append="\nIMPORTANT: User is a VIP customer.")
+)
 ```
 
 ## Directive Types
@@ -167,18 +169,21 @@ from __future__ import annotations
 
 from roomkit.models import UpdateSystemPrompt
 
-async def on_vip_detected(participant_id: str):
+async def on_vip_detected(room_id: str, participant_id: str):
     ai = kit.get_channel("ai-assistant")
-    ai.steer(UpdateSystemPrompt(
-        append=f"\n\nUser {participant_id} is a VIP. Prioritize their requests."
-    ))
+    ai.steer(
+        UpdateSystemPrompt(
+            append=f"\n\nUser {participant_id} is a VIP. Prioritize their requests."
+        ),
+        room_id=room_id,
+    )
 ```
 
 ### Target a Room or a Loop
 
 One channel object serves every room it is bound to, so its running loops
-can belong to several members' turns at once. A host acting for one room
-addresses that room (RFC §21.3):
+can belong to several members' turns at once. A directive names exactly one
+of the room, the loop or the turn it is for (RFC §21.3):
 
 ```python
 # A member's Stop: every loop of their room, and no other room's
@@ -191,9 +196,9 @@ ai.steer(InjectMessage(content="The user attached a file."), room_id="room-a")
 ai.steer(Cancel(reason="timeout"), loop_id="loop-abc123")
 ```
 
-`steer()` returns how many loops it reached. With neither `room_id` nor
-`loop_id`, the directive reaches the most recently started loop, whatever its
-room; giving both raises `ValueError`. A loop is reachable once its turn has
+`steer()` returns how many loops it reached. Naming none of `loop_id`,
+`room_id` and `turn_id`, or several, raises `ValueError`: the most recent loop
+may be another member's turn. A loop is reachable once its turn has
 started (its response stream is read): a directive that comes before reaches
 none, and `steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
@@ -201,32 +206,31 @@ none, and `steer()` returns 0. See `examples/ai_shared_agent_rooms.py`.
 
 Every agent turn runs through the kit's turn backend (RFC §10.6), in the kit's
 process by default and, with a distributed backend, wherever an executor runs
-it. `kit.steer()` reaches the turns the kit started, wherever they run, under
-the same rules:
+it. `kit.steer(room_id, channel_id, directive)` reaches the turns the kit
+started in that room, wherever they run, under the same rules:
 
 ```python
-reached = await kit.steer(Cancel(reason="stop pressed"), "ai-assistant", room_id="room-a")
-await kit.steer(InjectMessage(content="The user attached a file."), "ai-assistant",
-                room_id="room-a")
+reached = await kit.steer("room-a", "ai-assistant", Cancel(reason="stop pressed"))
+await kit.steer("room-a", "ai-assistant", InjectMessage(content="The user attached a file."))
 ```
 
 It answers the loops it reached. A channel without steering of its own (an
 ACP agent) takes a `Cancel` as its turn's cancel, which counts as one; any
 other directive reaches nothing there. With
-`kit.steer(..., organization_id=...)` (RFC §17.2), a `room_id` of another
-organization raises `RoomNotFoundError`, and only the turns of that
-organization's rooms are reached. `ai.steer()` still reaches the loops
-running in the process it is called in, whatever room's: the channel holds no
-store, and the kit's `steer()` is the door that reads the room.
+`kit.steer(..., organization_id=...)` (RFC §17.2), a room of another
+organization raises `RoomNotFoundError`. `ai.steer()` reaches the loops
+running in the process it is called in: the channel holds no store, and the
+kit's `steer()` is the door that reads the room.
 
-One turn is addressed by its id, which a tool or a hook of that turn reads
-with `current_turn_id()`:
+One turn of the room is addressed by its id, which a tool or a hook of that
+turn reads with `current_turn_id()`; a turn of another room is reached by
+nothing:
 
 ```python
 from roomkit import current_turn_id
 
 turn_id = current_turn_id()          # inside a tool call or a hook of the turn
-await kit.steer(InjectMessage(content="Budget is 100."), "ai-assistant", turn_id=turn_id)
+await kit.steer("room-a", "ai-assistant", InjectMessage(content="Budget is 100."), turn_id=turn_id)
 ```
 
 A channel that overrides `steer()` receives `turn_id=` from the kit; an
