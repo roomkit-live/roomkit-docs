@@ -116,10 +116,44 @@ Upgrade every room owner process before you start executors that declare
 prefixes: an older owner reads `acme-*` as an agent's id, and fails the turns
 of `acme-sales` with `no_executor`.
 
-The prefix is the only scope an executor declares: `hosts={"*"}` takes the
-turns of every declared agent, whatever its room or organization, from every
-process sharing the backend's `key_prefix`. Assign agent ids yourself, a
-prefix per pool you want kept apart, and never let a tenant choose one.
+An executor serves the organizations it declares:
+
+```python
+executor = TurnExecutor(build_agent, hosts={"*"}, organizations={acme_id})
+```
+
+takes the turns of the rooms whose `organization_id` is `acme_id` (exact ids,
+your own, a UUID say, which leave out the rooms without an organization;
+`organizations={"*"}` for every organization and the rooms without one).
+Without `organizations=` it serves the rooms without an organization alone,
+so an executor started without a declaration never takes a tenant's turns. A
+room's turns, channel calls and committed events go only to an executor
+serving its organization, else fail with `no_executor`; the executor refuses
+one of another, and a room's attach or detach reaches only the executors
+serving it. `kit.agent_presence` reads an agent offline in a room of an
+organization none of its executors serves.
+
+To upgrade without cutting tenant rooms off, in this order:
+
+1. Start the executors of the new release with `organizations={"*"}` and
+   exact agent ids in `hosts=`. An older owner ignores the organizations,
+   `"*"` takes its messages, which name no organization, and it reads a
+   prefix as an agent's id (above).
+2. Upgrade every room owner process. An owner of the new release reads an
+   executor of an older release as serving the rooms without an organization
+   alone, so upgrading the owners first would fail every tenant room's turns
+   with `no_executor`.
+3. Narrow each executor to its organizations, and to prefixes if it uses
+   them.
+
+`kit.executors()` is the platform's view, every executor's organizations
+included: show a tenant only what is its own.
+
+This keeps honest executors apart; it does not authenticate them. Any
+process that reaches the Redis under the backend's `key_prefix` can declare
+any organization, or `{"*"}`: keep the Redis on a network only your
+processes reach (below). Assign agent ids yourself, and never let a tenant
+choose one.
 
 Room hooks are part of the declaration: an executor that does not define a
 hook a room enabled (`executor.room_hook("audit", ...)`,
@@ -201,7 +235,7 @@ The kit reads the executors from the same beats placement reads:
 
 ```python
 for info in await kit.executors():
-    print(info.executor_id, info.node, sorted(info.hosts or []), info.last_beat, info.online)
+    print(info.executor_id, info.node, sorted(info.hosts or []), info.organizations, info.online)
 
 for presence in await kit.agent_presence(room_id):
     print(presence.channel_id, presence.online, presence.executors)

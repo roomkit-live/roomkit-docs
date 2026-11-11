@@ -760,6 +760,10 @@ await backend.serve(executor)
   attach, and keeps `max_channels` built at most (least recently used let go first, no bound by
   default). An agent the factory builds nothing for fails with `no_executor`,
   so every executor of a prefix must build every agent under it.
+- **An executor serves the organizations it declares**
+  (`organizations={acme_id}`, `{"*"}` for every one): a room's turns go only
+  to an executor serving its organization, and one declaring none serves the
+  rooms without an organization alone.
 - **Agent presence.** `kit.executors()` lists the executors, online or not,
   and what each declares; `kit.agent_presence(room_id)` says which of a room's agents
   can answer, and where. The kit publishes `presence_online` /
