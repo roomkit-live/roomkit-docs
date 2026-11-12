@@ -191,7 +191,7 @@ about the turn, in one call, and composes the answers in code:
 from roomkit import AIChannel, ClassifierSpeakPolicy, JevClassifier
 
 policy = ClassifierSpeakPolicy(
-    JevClassifier(),  # or OpenAIClassifier(), LLMClassifier(provider), MockClassifier(...)
+    JevClassifier(),  # or OpenAIClassifier(), GeminiClassifier(key), LLMClassifier(provider)...
     agent_name="Nova",
     agent_role="the team's assistant",
     languages={"English": "Answer in English only."},
@@ -238,7 +238,9 @@ the same rules read without change, at the cost of a generation per turn. On
 `OpenAIClassifier` the judgments differ from Jev's: in
 `examples/speaking_judgments.py`, "Paul, do you have the September numbers?"
 read directness 0.57 and Nova spoke where she should have kept quiet; measure
-the policy on your own turns first.
+the policy on your own turns first. On `GeminiClassifier` the same example made
+Jev's eight decisions, though "just listen for now" read `listen_request` 0.57
+where Jev reads 0.90, nearer the 0.5 the policy acts on.
 
 ### Staying quiet when asked
 

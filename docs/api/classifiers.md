@@ -27,6 +27,8 @@ Narrow, typed questions answered with probabilities. See the
 
 ::: roomkit.classifiers.OpenAIClassifier
 
+::: roomkit.classifiers.GeminiClassifier
+
 ::: roomkit.classifiers.SystemOneClassifier
 
 ::: roomkit.classifiers.LlamaCppClassifier

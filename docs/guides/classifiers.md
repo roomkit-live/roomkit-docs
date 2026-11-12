@@ -84,6 +84,7 @@ what a failure means; a speak policy, for instance, lets the agent speak.
 |------------|---------------|---------|-------|
 | `JevClassifier(api_key=None, *, model=None, timeout=3.0, client=None)` | calibrated: threshold on them, read a spread as doubt | ~150 ms for the whole call | `pip install roomkit[typesafe]`, `TYPESAFE_API_KEY` |
 | `OpenAIClassifier(api_key=None, *, model="gpt-6-luna", timeout=3.0, client=None)` | probabilities from OpenAI's Decisions API, often near 0 or 1; OpenAI advises calibrating thresholds on labelled data | ~150–450 ms for the whole call | `pip install roomkit[openai]`, `OPENAI_API_KEY` |
+| `GeminiClassifier(api_key=None, *, model="gemini-decision-1", timeout=3.0, client=None)` | calibrated, as Google documents them; a yes/no one stays within [0.01, 0.99] | ~250–450 ms for the whole call, network included | `pip install roomkit[gemini]`, a Gemini API key |
 | `SystemOneClassifier(base_url=None, *, model=None, api_key=None, timeout=10.0, client=None)` | the decision model's own, through any server with a System One API (below) | from ~50 ms on a local GPU to ~800 ms, by server and model | `pip install roomkit[typesafe]`, the server |
 | `LlamaCppClassifier(config, *, timeout=30.0)` | the decision model's own; RoomKit runs `llama-server` itself | ~50 ms per call on a GPU with d1 | `pip install roomkit[typesafe,llamacpp]` |
 | `LLMClassifier(provider, *, timeout=10.0, max_tokens=1000)` | 0 or 1: the model picks one answer per question | a generation (about 1 s on Claude Haiku 5.5) | an AI provider whose `supports_response_schema` is true |
@@ -175,6 +176,27 @@ On the questions of a discussion's dispatch policy (eighteen messages to a team
 of four), it picked right 17 times and Jev 18; its probabilities sit nearer 0
 and 1. A policy whose thresholds were measured on Jev (the speak policy) may
 read them differently: measure it on your own turns before relying on it.
+
+**`GeminiClassifier`** answers on Gemini's Decisions API (`POST /v1beta/decisions`,
+`gemini-decision-1`), which scores the same three kinds of question in one
+forward pass rather than generating an answer: a yes/no question goes as a
+`noul`, with what a yes and a no cover as its criteria, a choice as a `choice`
+over the options, a score as a `score` over the levels. Google documents the
+probabilities as calibrated; a yes/no one stays within [0.01, 0.99], so a
+threshold above 0.99 never matches. A structured state is sent as its JSON. The
+model reads the instructions, never the question's name, so write the whole
+question there; a name is `[A-Za-z0-9_-]`, 64 characters at most. An input the
+API's safety filters block, or a call past one of its limits, fails with
+`ClassifierError`. The call goes through google-genai's `decisions` resource
+and always names v1beta, the API's only version. Without a `client`, it builds
+the client the Gemini providers share and closes it on `close()`; a
+`google.genai.Client` you pass stays yours. The key is never read from the
+environment.
+
+On the three classifier examples it decided as Jev does: the same five
+judgments, the same eight speak decisions, and the same six answers from a
+discussion's dispatch, which it reached in seven agent turns where Jev took
+eight (measured 2026-11-12).
 
 **`LLMClassifier`** asks any AI provider for one JSON document under a response
 schema (RFC §6.7): a boolean per yes/no question, an option per choice, a level
