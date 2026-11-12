@@ -461,7 +461,7 @@ sequenceDiagram
 |---|---|---|
 | Anthropic Claude | `anthropic>=1.8,<2` | Conversational AI responses via `AnthropicAIProvider` |
 | OpenAI | `openai>=2.28,<3` | Conversational AI responses via `OpenAIAIProvider` |
-| Google Gemini | `google-genai>=2.25.0` | Conversational AI responses via `GeminiAIProvider` with native vision and function calling |
+| Google Gemini | `google-genai[httpx]>=3.2,<4` | Conversational AI responses via `GeminiAIProvider` with native vision and function calling |
 | Mistral AI | `mistralai>=2.0,<4` | Conversational AI responses via `MistralAIProvider` with streaming, vision, and function calling |
 
 All AI providers support:
@@ -476,7 +476,7 @@ All AI providers support:
 | Deepgram | `deepgram-sdk>=6.0.0` | Streaming speech-to-text via `DeepgramSTTProvider` |
 | ElevenLabs | `elevenlabs>=2.40,<2.72`, `websockets>=14.2` | Text-to-speech synthesis via `ElevenLabsTTSProvider` |
 | FastRTC | `fastrtc`, `numpy` | WebSocket audio transport with VAD via `FastRTCVoiceBackend`; WebRTC passthrough via `FastRTCRealtimeTransport` |
-| Gemini Live | `google-genai>=2.25.0` | Speech-to-speech AI via `GeminiLiveProvider` |
+| Gemini Live | `google-genai[httpx]>=3.2,<4` | Speech-to-speech AI via `GeminiLiveProvider` |
 | OpenAI Realtime | `openai>=2.28`, `websockets>=14.2`, `tiktoken>=0.7` | Speech-to-speech AI via `OpenAIRealtimeProvider` |
 
 Voice providers use the same **lazy dependency loading** pattern as other providers -- the SDK is imported only when the provider is instantiated. The `roomkit[fastrtc]` optional extra installs FastRTC and NumPy.

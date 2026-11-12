@@ -1290,8 +1290,8 @@ tts = GeminiTTSProvider(
 ```
 
 Install with `pip install roomkit[gemini]` — the same extra the Gemini AI
-provider and Gemini Live use. It requires `google-genai>=2.25.0`, the first
-release that carries the 3.8 `speech_metadata` annotation.
+provider and Gemini Live use. It requires `google-genai>=3.2`; the 3.8
+`speech_metadata` annotation it reads came with 2.25.0.
 
 ### Latency: not a conversational TTS
 

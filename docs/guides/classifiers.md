@@ -189,8 +189,9 @@ question there; a name is `[A-Za-z0-9_-]`, 64 characters at most. An input the
 API's safety filters block, or a call past one of its limits, fails with
 `ClassifierError`. The call goes through google-genai's `decisions` resource
 and always names v1beta, the API's only version. Without a `client`, it builds
-the client the Gemini providers share and closes it on `close()`; a
-`google.genai.Client` you pass stays yours. The key is never read from the
+the client the Gemini providers share and closes it on `close()`; a Gemini
+Developer API `google.genai.Client` you pass stays yours (Vertex AI has no
+Decisions API). The key is never read from the
 environment.
 
 On the three classifier examples it decided as Jev does: the same five
