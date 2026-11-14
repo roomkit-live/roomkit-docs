@@ -504,7 +504,8 @@ Several processes may serve one room, behind a load balancer, on one store
   turns, each change of the queue read and written under the room lock;
 - one process that installed the discussion gives the turns, under a lease
   stored with the queue (15 s, renewed while held); another such process
-  takes over once it expires, so a crash stalls the room 15 s at most;
+  takes over at its first read of the queue (once a second) one second past
+  the lease's expiry, so a crash stalls the room 17 s at most;
 - the holder reads the queue again every second, which carries another
   process's queued turn, or its `listen_only`, to it;
 - an instruction's turn moves the lease to the process holding its text.
