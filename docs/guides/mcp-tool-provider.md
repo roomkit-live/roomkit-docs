@@ -50,7 +50,7 @@ When a tool is not a handler's own (it raises `UnservedToolCallError`, or answer
 
 `label=` (on the constructor, `from_url` and `from_command`) is the host's name for the server, the `<server>` of an alias `mcp__<server>__<tool>`: letters, digits and `_ . -`, 64 at most, no `__` and no final `_`, either of which would make an alias read another server (`ValueError` otherwise). A labelled provider's handler serves only the aliases naming its server; one naming another server raises `UnservedToolCallError`, so the next handler of the `compose_tool_handlers` chain takes it (RFC §21.2). Give `label=` to every provider of a chain: an unlabelled one serves an alias whatever server it names, so the first provider of the chain that has the tool runs it.
 
-A policy judges an alias under both its names (RFC §21.1). To keep a server out, deny its aliases; to admit one server only, allow its aliases and its tools' own names. Either holds only when the tools are declared under their aliases alone: a call under a bare name (`delete_records`) names no server, and the first handler of the chain that serves it runs it. Declared under aliases alone, a bare name is refused as not declared:
+A policy judges an alias under both its names (RFC §21.1). To keep a server out, deny its aliases; to admit one server only, allow its aliases and its tools' own names. A call under a bare name (`delete_records`) names no server: a labelled provider serves it unless the policy names its server to keep it out, through a deny pattern covering its alias (`mcp__archive__delete_records`) or allow patterns naming aliases none of which covers it. The call runs on the first server of the chain the policy does not keep out, and on none when it keeps each out; a policy that names no server (`allow=["delete_records"]`) leaves it on the first server that has it (RFC §21.2). Declared under aliases alone, a bare name is refused as not declared:
 
 ```python
 from roomkit.channels import AIChannel
@@ -75,7 +75,7 @@ async with (
     # Or admit the CRM only: ToolPolicy(allow=["mcp__crm__*", "delete_records", "search_records"])
 ```
 
-`allow=["mcp__crm__*"]` alone admits nothing: the tool's own name fails it. A host that declares the bare names instead puts first in the chain the server its bare names must reach. Runnable: `examples/mcp_server_labels.py`.
+`allow=["mcp__crm__*"]` alone admits nothing: the tool's own name fails it. Declared under their bare names, a server's tools still run on a server the policy admits: with the archive first in the chain and kept out, a bare `delete_records` runs on the CRM. Runnable: `examples/mcp_server_labels.py`.
 
 ## MCPToolProvider
 
@@ -104,6 +104,8 @@ async with provider as mcp:
 Enter and exit the provider in the same task, with `async with`: the MCP SDK's transports hold anyio cancel scopes that must close where they were opened. If connecting fails half-way (the server exits, `initialize` errors), everything already opened is closed before the error reaches you.
 
 The tools are listed **once**, on entry, following the listing's cursor across every page. No call lists them again: not a call of a listed tool, and not a call of a tool the listing never named (a gateway's per-caller tool through `as_tool_handler(gate_discovery=False)`), which the MCP SDK's own `ClientSession.call_tool` would answer with a whole `tools/list` each time (RFC §21.2).
+
+A listed tool is its server's declaration: its description and its parameters reach the model as the server wrote them, in the request's tools rather than in a text of the runtime, so they are not framed as the server's instructions are (RFC §21.2). They are bounded, each with a warning naming the server: a description over 4,096 characters is cut at a word, a tool whose name is over 128 characters or whose parameters' schema is over 32 KiB is left out, a listing keeps 512 tools at most, and a name listed twice keeps its first definition.
 
 #### Connecting without listing
 
