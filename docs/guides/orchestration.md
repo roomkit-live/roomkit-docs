@@ -179,7 +179,8 @@ worker the framework:
    The supervisor's provider must therefore call tools. A verdict that never
    comes, or a review that times out, counts as a reject.
 4. On REJECT, sends the worker the supervisor's feedback for a **rework** — up
-   to `max_revisions` times.
+   to `max_revisions` times. Each rework starts from the step's own task, with
+   only the latest output and the latest feedback.
 5. Carries the validated result into the next worker's brief.
 
 Each worker is bounded by `task_timeout` (default 120s, per worker — not a
@@ -332,7 +333,11 @@ async def after(event, ctx):
 When `auto_delegate=False` (default), the AI decides when to delegate:
 
 - With `strategy` set: a single `delegate_workers` tool is injected
-- Without `strategy`: per-worker `delegate_to_<id>` tools are injected
+- Without `strategy`: per-worker `delegate_to_<id>` tools are injected. An id
+  that makes no tool name every provider accepts (`agent:<uuid>`) has each
+  character outside `[A-Za-z0-9_-]` replaced by `_`
+  (`delegate_to_agent_<uuid>`); a replaced name that meets another worker's,
+  or passes 128 characters, ends with `_` and 8 hex digits of the id's SHA-256.
 
 ```python
 # AI decides via per-worker tools
@@ -387,8 +392,14 @@ Each iteration:
 
 1. Producer generates content in a child room
 2. Reviewers evaluate (sequential or parallel) in child rooms
-3. If **all** reviewers approve (response contains "APPROVED") → loop ends
-4. Otherwise → combined feedback sent back to producer for revision
+3. Each reviewer gives its verdict by calling the `submit_review` tool its
+   review's task declares (`approved`, `feedback`), re-prompted when a turn
+   ends without it. The reviewer's provider must therefore call tools: words
+   never approve, so "Not approved" or "I cannot mark this APPROVED yet" is a
+   refusal, and so is a review that never calls the tool.
+4. If **all** reviewers approve → loop ends
+5. Otherwise → combined feedback sent back to producer for revision, with the
+   producer's original task, its latest output and the latest feedback
 
 Agent prompts describe only their role — no orchestration instructions:
 
