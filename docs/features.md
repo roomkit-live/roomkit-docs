@@ -3483,7 +3483,18 @@ written (`stream_start`, `stream_chunk`, each stored row, `stream_end`). One
 registered without it reads, through its `send_fn`, the rows the stream hands
 once they are stored (each text segment, each call's start and end), each
 once, and no end event: nothing of a row a hook blocked or narrowed away, the
-store kept out, or of a blank answer.
+store kept out, or of a blank answer. The `stream_end` event carries no text,
+except a cut stream's (below): its metadata holds `_segmented` when rows were
+handed, and without it no row was, so a client drops its bubble.
+
+A stream cut from outside (`kit.cancel_delivery()`, a steering cut, a held
+task's cut, the kit's close) ends once its text is stored, marked cancelled:
+the framework hands that row to the streaming channel's `deliver_cut(event,
+row, binding, context)`, `None` when no row is the channel's, and the
+WebSocket channel sends its streaming connections a `stream_end` carrying the
+row, the only place they read it, and the row to its other connections. A
+channel that renders what it is handed, a voice, keeps the default, which
+does nothing.
 
 The `WebSocketChannel` is the only transport channel with a dedicated class (not using `TransportChannel`). It supports typing indicators, reactions, and read receipts.
 
