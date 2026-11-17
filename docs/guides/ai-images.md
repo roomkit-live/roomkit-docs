@@ -18,11 +18,30 @@ A `MediaContent` URL is one of:
 | A reference | `media://photo-42` | Asks the application's `media_resolver` for the bytes |
 
 A reference is `<scheme>://…` in a scheme your application chooses: RoomKit
-never interprets it. A `file:`, `ftp:`, `javascript:` or `vbscript:` URL, a URL
-without a scheme, and a reference a path reader could follow (a one-letter
-scheme read as a Windows drive, a `..` segment, a backslash) are refused when
-the `MediaContent` is built, because some transports read a URL they are
-handed as a local path.
+never interprets it. These are refused when the `MediaContent` is built:
+
+- a URL without a scheme, or a one-letter scheme (read as a Windows drive);
+- a scheme a reader fetches, opens or runs by itself: files on the machine,
+  in an archive or on a share (`file:`, `ftp:`, `smb:`, `sftp:`, `zip:`…),
+  the network protocols generic readers fetch (`ws:`, `rtsp:`, `rtmp:`,
+  `gopher:`, `ldap:`, `ipfs:`…), the wrappers that read through another
+  protocol or a file (`cache:`, `concat:`, `pipe:`…) and code to run
+  (`javascript:`, `php:`, `jar:`), alone or as a part of a scheme joined by
+  `+` (`hls+http:`, `crypto+file:`); the RFC (§6.4) lists all 84;
+- a reference a path reader could follow once it decodes or trims it: a `..`
+  segment, a backslash or a control character, percent-encoded or not
+  (`media://a/%2e%2e/b`, `media://a/%252e%252e/b`, `media://a/ ../b`), a
+  reference still encoded after three decodings, or one whose rest after
+  `://` starts, once decoded, with `~`, a drive letter or a slash only
+  decoding writes (`media://~root/x`, `media://C:/x`, `media://%2Fetc/x`).
+
+Some transports read a URL they are handed as a local path, after decoding or
+trimming it. An encoded character that leads nowhere (`file%2Ename.png`),
+`a..b`, a space, an empty authority (`media:///photos/1`), your own scheme and
+a store you read with your own rights (`s3:`, `gs:`) stay references. An
+event stored by an earlier release whose media URL this rule refuses fails
+every read of its room's history: find such events in the stored rows with
+the new release's `MediaContent` and rewrite them before the rooms are read.
 
 ## Images by reference
 
