@@ -677,6 +677,16 @@ alone. A contributor that needs the room's history reads it from the store
 | Plan update | Ephemeral `CUSTOM` event with `type="acp_plan_update"` |
 | Usage update | Ephemeral `CUSTOM` event with `type="acp_usage"` |
 
+Room subscribers receive a tool call's ID and name on start, then its status
+and duration on completion. To display the arguments and a result preview of
+up to 500 characters, construct the channel with
+`ACPChannel(..., publish_tool_call_text=True)`. This setting controls what
+subscribers see. Intermediate progress includes `sessionUpdate`, `toolCallId`,
+`status` and `kind` when present. Opting in includes the full ACP progress
+update. The call name on start and end comes from the agent's latest tool
+title. A title such as `Reading README.md` is visible in that name with either
+setting. The stored tool rows and tool hooks retain their full data.
+
 Generated text and tool activity continue through RoomKit's regular streaming
 pipeline. Visibility, chain-depth limits, persistence, hooks, and re-broadcast
 therefore behave like other intelligence-channel output.
