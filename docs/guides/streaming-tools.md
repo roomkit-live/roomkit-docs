@@ -235,7 +235,9 @@ class ObservingAIChannel(AIChannel):
     The framework's inbound streaming path hands a channel's
     `deliver_stream` the text deltas, a `ThinkingDeltaMarker` (from
     `roomkit.models`) per chunk of reasoning, a `UsageMarker` after each
-    generation, each row of the response once stored (a text segment, a
+    generation (and, before it, one marked `partial` with the input a
+    provider tells as its stream starts, which a channel that sums usage
+    skips), each row of the response once stored (a text segment, a
     tool call's start or end), and last the turn's `LoopEndMarker`, before
     the response's failure when it fails. A turn that ends on a tool call
     has its record written on that call's end row once the stream ended,
