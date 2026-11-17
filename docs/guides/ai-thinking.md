@@ -427,16 +427,17 @@ The `AIChannel` handles this automatically — thinking deltas trigger ephemeral
 
 ### ON_AI_THINKING hook
 
-Fires when the AI produces thinking content. Use it for logging, observability, or cost tracking:
+Fires once per reasoning block, as the block closes (the model starts its answer's text or composes a call, or its generation ends, fails or stops), with the block's whole text in `event.thinking`. Use it for logging, observability, or cost tracking:
 
 ```python
 from roomkit import HookTrigger
 
 @kit.hook(HookTrigger.ON_AI_THINKING)
 async def log_thinking(event, ctx):
-    thinking = ctx.get("thinking", "")
-    print(f"AI reasoning ({len(thinking)} chars): {thinking[:100]}...")
+    print(f"AI reasoning, round {event.round_index} ({len(event.thinking)} chars): {event.thinking[:100]}...")
 ```
+
+A host that wants the moment a block opens reads the `THINKING_START` ephemeral event.
 
 ### Ephemeral events
 

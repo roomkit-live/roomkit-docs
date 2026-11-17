@@ -1681,7 +1681,7 @@ Filter options:
 | `ON_SPEAK_QUEUE` | Async | A discussion's speak queue changed: an agent queued, a turn given or ended, a queued instruction dropped, an agent listening only or talking again, the discussion waiting for a person or over. Carries a `SpeakQueueEvent` (room, the `SpeakQueue` as it now is, the `SpeakQueueChange`, the agents it concerns, the event involved), in the order the changes happened |
 | `ON_THOUGHT` | Async | An AI channel's thinker came back with a new thought in a room, or speaking emptied what the agent wanted to say. Carries a `ThoughtEvent` (room, channel, thought, the one it replaces, `duration_ms` of the thinker call, `None` without one) |
 | `BEFORE_AI_GENERATION` | Sync | Modify or block AI generation context before provider invocation |
-| `ON_AI_THINKING` | Async | AI reasoning/thinking events (extended thinking). Carries a `ThinkingEvent`; fires with or without a realtime backend |
+| `ON_AI_THINKING` | Async | A block of AI reasoning (extended thinking) closed: once per block, its `ThinkingEvent.thinking` the block's whole text; fires with or without a realtime backend |
 | `ON_AI_RESPONSE` | Async | A turn of intelligence completed — scoring, analytics, job tracking. `response_content` is the turn's transcript (the segments a tool call cut, separated by a blank line) and `segments` carries them one by one. `loop_end_reason` names which of the tool loop's rules ended the turn — `completed`, or `max_rounds` / `timeout` / `budget_exceeded` / `cancelled` / `force_stopped` / `truncated` / `empty_response` / `unfinished` / `error` for a turn that was cut (`error`: the provider interrupted it after a tool round; its rounds are kept, no message is added to say so, the report carries their usage and `ON_ERROR` fires after it; a stored `[Response interrupted]` message, marked `interruption_marker`, is no answer: no agent answers it and no strategy or delegation takes it for one); infer that from `tool_calls_count` and a healthy multi-round answer reads as a cut-off. `thinking` is the turn's reasoning, each round's. The loop also records `loop_end_reason` and `ai_usage` on the turn's last message, a turn without tools included, whatever the provider streams. A turn whose loop did not reach its end (a barge-in, a stream the transport stopped reading, a task cancelled from outside, an error raised before any round ended) fires nothing; its `llm.generate` span carries what its rounds used. `declared_tools` is the union, over every round of the turn, of the tools the provider received (name, description, `parameters` as declared), each with the reason Tool Search let it through (`always`, `pinned`, `sticky`, `revealed`; a tool Tool Search never gates, such as one orchestration injected or one of the channel's own like `plan_tasks`, is `always`, after its first use too); `BEFORE_AI_GENERATION` sees the turn's catalogue, not the rounds' declarations, so a tool `find_tools` revealed shows up here and nowhere else. Fires for **any** channel of category `INTELLIGENCE`, an ACP coding agent included (whose `declared_tools` stays empty: the toolset is the agent's) |
 | `ON_PLAN_UPDATED` | Async | An agent rewrote its structured task plan. Carries a `PlanUpdatedEvent` with the plan as the agent wrote it |
 | `ON_STATUS_POSTED` | Async | A status reached the inter-agent StatusBus. Fires for the room named in the entry's `metadata["room_id"]` — the bus itself is global |
@@ -2592,7 +2592,7 @@ Thinking support varies by provider:
 - **Kimi** — Reasoning replayed in `reasoning_content`, on every tool round (a single space when the round did not reason) and on an answer, which Kimi requires; [Kimi guide](guides/kimi.md)
 - **OpenAI-compatible servers, Azure, LiteLLM** — the provider cannot know the model behind a `base_url`, a deployment name or an alias, so a turn with tools leaves the reasoning out (one warning per provider) unless `supports_reasoning_effort_with_tools=True` on the config says the server takes it there
 
-During streaming, thinking arrives as `StreamThinkingDelta` events before text. The `ON_AI_THINKING` hook fires when reasoning is produced, and `THINKING_START` / `THINKING_END` ephemeral events enable real-time UI indicators.
+During streaming, thinking arrives as `StreamThinkingDelta` events before text. The `ON_AI_THINKING` hook fires as each block of reasoning closes, with the block's text, and `THINKING_START` / `THINKING_END` ephemeral events enable real-time UI indicators.
 
 See the [AI Thinking guide](guides/ai-thinking.md) for full details on configuration, streaming, and provider-specific behavior.
 
@@ -3191,6 +3191,17 @@ await kit.unsubscribe_room(sub_id)
 | `PRESENCE_OFFLINE` | User went offline |
 | `READ_RECEIPT` | User read a message |
 | `CUSTOM` | Custom ephemeral event |
+
+**A tool call's arguments and result, live, opt-in:**
+
+An AIChannel publishes each tool call it runs as `TOOL_CALL_START` (each
+call's `id` and `name`) and `TOOL_CALL_END` (each call's `status`, and the
+round's `duration_ms`), with the call's `intent` when it has one. No hook
+judges an ephemeral, so what a `BEFORE_BROADCAST` hook blocks or redacts on
+the call's stored rows would reach a subscriber in clear: a call's arguments
+and its result's preview (500 characters) go out only for a channel built
+with `AIChannel(publish_tool_call_text=True)`, as the reasoning's text does
+with `publish_thinking_text`.
 
 **A delegated task's answer, live, for the code that delegated it:**
 

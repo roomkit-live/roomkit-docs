@@ -420,7 +420,10 @@ does not list its executors the kit cannot tell, and gives the turn.
 on a room a discussion holds: the room on the left (every message and tool
 call, who asks you), a card per agent on the right (identity, model, live
 state: speaking, next, listening, asking, nothing to add), the speak queue
-below, your input at the bottom.
+below, your input at the bottom. A tool call shows its arguments and its
+result, and a background task the agent that started it, for an agent built
+with `publish_tool_call_text=True`: the room's realtime events carry them only
+then.
 
 ```python
 from roomkit import WebSocketChannel

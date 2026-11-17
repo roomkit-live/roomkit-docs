@@ -233,11 +233,15 @@ bus either. `TOOL_CALL_DELTA` fills that gap:
 
 `arguments_chars` is cumulative per call, so a frame is the round's snapshot and
 a dropped one costs nothing. A client that ignores the event loses nothing
-either — everything it carries also arrives, complete, in `TOOL_CALL_START`.
+either: the call's name arrives in `TOOL_CALL_START` too.
 
 **It never carries the argument content.** Only the tool's name and how much has
-been composed. Arguments can be megabytes or hold personal data, and
-`TOOL_CALL_START` already delivers them in full once the call is complete.
+been composed. Arguments can be megabytes or hold personal data: a channel built
+with `AIChannel(publish_tool_call_text=True)` delivers them in full in
+`TOOL_CALL_START` once the call is complete, and its result's preview in
+`TOOL_CALL_END`. By default neither goes out, since no hook judges an
+ephemeral: what a `BEFORE_BROADCAST` hook blocks on the call's rows would
+reach a subscriber in clear.
 
 The first fragment of a call publishes immediately — the tool's name is the
 signal — and the rest are batched on the same windows as thinking deltas

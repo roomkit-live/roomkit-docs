@@ -665,8 +665,15 @@ sub_id = await kit.subscribe_room("room-1", on_tool_event)
 The streaming-only `TOOL_CALL_DELTA` reports the tool name and cumulative
 argument size, never the argument content. An empty `tool_calls` terminal frame
 closes every composition attempt, including cancellation, provider failure,
-retry, or fallback. Counts restart when a retry begins; the complete arguments
-still arrive once in `TOOL_CALL_START`.
+retry, or fallback. Counts restart when a retry begins.
+
+`TOOL_CALL_START` carries each call's `id` and `name`, and `TOOL_CALL_END` its
+`status`, each with the call's `intent` when it has one. A call's arguments and
+its result's preview (500 characters) are opt-in, as the reasoning's text is:
+no hook judges an ephemeral, so what a `BEFORE_BROADCAST` hook blocks or
+redacts on the call's stored rows would reach a subscriber in clear. Build the
+channel with `AIChannel(publish_tool_call_text=True)` and `TOOL_CALL_START`
+adds each call's `arguments`, `TOOL_CALL_END` each call's `result`.
 
 ### A call's intent, for the person
 
