@@ -137,7 +137,7 @@ async def on_identified(event, ctx):
 | Method | Status Set | Effect |
 |--------|-----------|--------|
 | `IdentityHookResult.resolved(identity)` | `IDENTIFIED` | Create identified participant |
-| `IdentityHookResult.pending(display_name)` | `PENDING` | Create pending participant |
+| `IdentityHookResult.pending(display_name)` | `PENDING` | Create pending participant, named `display_name` |
 | `IdentityHookResult.challenge(inject, message)` | `CHALLENGE_SENT` | Block message, ask the sender who they are |
 | `IdentityHookResult.reject(reason)` | `REJECTED` | Block message entirely |
 

@@ -746,10 +746,12 @@ task = await kit.delegate(
 # result.output is the JSON-encoded submit_result payload
 ```
 
-The framework injects the `submit_result` tool, runs the agent, and applies a
-completion guard: if the agent ends a turn without calling it, the agent is
-re-prompted to use the tool (up to `max_result_retries` times); if it still
-hasn't, the orchestration submits a failure on its behalf
+The framework injects the `submit_result` tool and runs the agent. The
+agent's turn ends as soon as its `submit_result` call is served: its model is
+not asked again in that turn (a call an `ON_TOOL_CALL` hook blocks is no
+result, so that turn goes on). A completion guard covers the rest: if the
+agent ends a turn without calling it, the agent is re-prompted to use the
+tool (up to `max_result_retries` times); if it still hasn't, the orchestration submits a failure on its behalf
 (`status="failed"`, `by="orchestration"`) carrying the worker's last raw output
 so the caller knows what went wrong. A turn cut short (above) keeps a result
 the worker submitted before the cut; without one, the task fails at once,
