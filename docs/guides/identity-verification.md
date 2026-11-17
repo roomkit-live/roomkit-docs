@@ -153,6 +153,15 @@ whole text is a code of the right length is an attempt: it completes the
 request or counts against it, and it is **consumed** — never stored, never
 broadcast, read by no agent. Any other message is an ordinary one.
 
+The reply's `process_inbound` returns `InboundResult(blocked=True,
+reason="verification_code")` once the release below is over, the agents'
+answer to the released message included, however long it takes:
+`process_timeout` does not cut it, nor does a caller that stops waiting. A
+webhook that must answer its provider at once passes `defer_delivery=True`:
+the call then returns as soon as the reply is known for a code, with no
+handle, and the attempt, the release and the answer go on as the kit's own
+work (its failures are logged; `close()` gives them its grace).
+
 ## Release
 
 When a request completes, the held messages its sender wrote while it was open
