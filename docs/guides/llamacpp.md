@@ -28,7 +28,7 @@ kit.register_channel(AIChannel("ai", provider=provider, system_prompt="You are h
 
 `model` is the only required setting. It is either a Hugging Face reference `repo:quant` (a GGUF repository and the quantization to take from it), or the path of a local `.gguf` file.
 
-Call `await provider.start()` at startup if you do not want the first user message to wait for the model to load. `await kit.close()` (or `await provider.close()`) stops the server.
+Call `await provider.start()` at startup if you do not want the first user message to wait for the model to load. `await provider.close()` stops the server: the provider is yours, so `kit.close()` leaves it running for the other channels you may have handed it to (a server still running when the interpreter exits is stopped then).
 
 A runnable version with two tools: [`examples/llamacpp_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/llamacpp_tools.py).
 

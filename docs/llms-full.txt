@@ -2213,13 +2213,16 @@ class LocalOrHosted(AIRouter):
         hard = len(request.text) > 280 or "```" in request.text
         return self.hosted if loaded or hard else self.local
 
-    async def close(self) -> None:  # the channel closes its router
-        await self.local.close()
-        await self.hosted.close()
 
 
 agent = AIChannel("assistant", router=LocalOrHosted(local, hosted))
 ```
+
+A provider or a router handed to a channel stays its owner's: the channel's
+close, the kit's and an executor's leave it open, as a router's close leaves
+open the providers it was handed, and a memory's the provider it summarizes
+with. One provider may serve every agent of a process; the host closes it
+once nothing uses it (`await provider.close()`).
 
 A router is plain code: rules like these are often enough, and a `Classifier`
 (a model's typed judgment, or a subclass that answers from rules) can decide
@@ -2311,8 +2314,9 @@ await kit.attach_channel(room_id, "meteo")  # an intelligence binding
   `TurnExecutor(max_channels=N)` keeps N built at most, letting go of the one
   used least recently that nothing runs on, as a release does (its next turn
   builds it anew; an ACP session it held reopens). The executor closes each
-  agent it lets go of, and an agent closes its provider: the factory gives
-  each build a provider of its own, never one shared by the agents it builds.
+  agent it lets go of, which leaves open the provider the agent was handed:
+  the factory may hand every build one shared provider, which the host
+  closes once the executor is closed.
   A turn or channel call of an agent the factory builds nothing for
   (it returns `None`) fails with `no_executor` and goes to no other executor;
   the room's next turns go to that executor too while it lives, so every
@@ -6028,6 +6032,11 @@ own `uninstall()` step, then takes back what its install added for the room:
 room hooks, tools set up on the agents, the turn runners the kit keeps for
 them, agents it attached, room metadata it wrote.
 
+A room holds its strategy only while it lives: its close, by `close_room` or
+by its timers, takes the strategy back out as `uninstall_strategy` does, so
+a kit that closes its rooms keeps nothing of them on the agents they share.
+A reopened room holds no strategy; install one again if it should have one.
+
 ```python
 await kit.install_strategy(room_id, Discussion([assistant, dev]))   # on a live room
 await kit.uninstall_strategy(room_id)                               # back to the room's policy
@@ -8343,8 +8352,8 @@ kit = RoomKit(
 |--------|-------------|
 | `create_room(room_id?, metadata?, orchestration?)` | Create a room; a key of *metadata* only the framework writes is dropped with a warning, the rest written: any `roomkit:` key (a detach's revocation, what the room keeps for a channel) and a key of the room's private state (`author_register`, `_speak_queue_results`) |
 | `get_room(room_id)` | Get room by ID |
-| `close_room(room_id)` | Close a room; a CLOSED room is returned as stored, an ARCHIVED one raises `TransitionRefusedError` |
-| `archive_room(room_id)` | Archive a room, the terminal status; an ARCHIVED room is returned as stored |
+| `close_room(room_id)` | Close a room, then uninstall its strategy as `uninstall_strategy` does; a CLOSED room is returned as stored, an ARCHIVED one raises `TransitionRefusedError` |
+| `archive_room(room_id)` | Archive a room, the terminal status, its strategy uninstalled as a close does; an ARCHIVED room is returned as stored |
 | `update_room_metadata(room_id, metadata)` | Update room metadata; a key only the framework writes is dropped with a warning, the rest written: any `roomkit:` key (a detach's revocation `roomkit:detached_channels`, what the room keeps for a channel `roomkit:channel_state:`, written by `channel_call` alone) and a key of the room's private state (`author_register`, `_speak_queue_results`). A read-modify-write (`{**room.metadata, ...}`) writes and leaves those keys as they are; a turn's `TurnHost.update_room_metadata` drops them the same way |
 | `check_room_timers(room_id)` | Apply one room's due timer transitions, each at the instant it fell due (RFC §5.1) |
 | `check_all_timers()` | Check every ACTIVE and PAUSED room; returns those that transitioned |

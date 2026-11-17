@@ -494,6 +494,12 @@ kit.room_strategy(room_id)                                          # the instal
   turn runners the kit keeps for them, agents it attached, room metadata it
   wrote. If something cannot
   be taken back, the room stays claimed and a retry finishes it.
+- A room holds its strategy only while it lives: `close_room`, its timers,
+  or `archive_room` on a room still open, takes the strategy back out the
+  same way once the close is announced, the timeline kept, so a kit that
+  closes its rooms keeps nothing of them on the agents they share. A closed
+  or archived room refuses `install_strategy` (`RoomClosedError`); a
+  reopened room holds no strategy, so install one again if it should.
 - A second strategy is refused while one is installed, but for a
   `Discussion` installed over a discussion, here or stored by another
   process, which takes its place and keeps its queue (see

@@ -89,20 +89,26 @@ a committed event is the first let go. No bound by default: size it above
 the agents one executor serves at once.
 
 The executor closes each agent it lets go of (its bound, a release, its own
-close), and an agent closes its provider with it. Give each build a provider
-of its own: a provider shared by the agents a factory builds is closed with
-the first one let go, and every other agent's next call fails.
+close), which leaves open the provider the agent was handed: a provider is
+its owner's. The factory may hand every build one shared provider, one client
+per process, which you close once the executor is closed.
 
 ```python
+provider = AnthropicAIProvider(AnthropicConfig(api_key=...))  # one client, every build
+
+
 def build_agent(channel_id: str) -> Agent | None:
     config = agent_configs.get(channel_id)  # your service's configuration
     if config is None:
         return None
-    return Agent(channel_id, provider=config.provider, system_prompt=config.prompt)
+    return Agent(channel_id, provider=provider, system_prompt=config.prompt)
 
 
 executor = TurnExecutor(build_agent, hosts={"acme-*"})
 await backend.serve(executor)
+...
+await executor.close()
+await provider.close()
 ```
 
 A turn or channel call of an agent the factory builds nothing for (it returns

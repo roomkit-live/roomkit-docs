@@ -1871,7 +1871,7 @@ ai = AIChannel("ai-assistant", router=LocalOrHosted(local, hosted))
 - **Plain code** -- a router reads what it needs: the turn's text and event, the machine's load, the hour, a [classifier](#classifiers-judgments-composed-in-code)'s typed answer; a classifier written as rules, with no model, is often enough
 - **Fallback** -- `FallbackRouter(primary, fallback)` starts every turn on the primary and hands a generation to the other provider once its retries are spent
 - **On the record** -- the provider that served an answer is on its message (`ai_provider`, `ai_model`); `BEFORE_AI_GENERATION` names the provider the turn starts on; `channel.provider` is `None` and `channel.provider_name` the router's `name`
-- **Closed with the channel** -- the channel closes its router, and a router closes the providers it holds
+- **Yours to close** -- a router or a provider handed to a channel stays its owner's: the channel's close leaves it open, as a router's close leaves open the providers it was handed; close them once nothing uses them
 
 See `examples/ai_router_local_or_hosted.py`.
 
