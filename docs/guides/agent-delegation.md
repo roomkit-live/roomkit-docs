@@ -265,6 +265,19 @@ context: one agent attached to several rooms delegates each room's work from
 that room, with or without a `ConversationRouter`. A worker that delegates in
 turn runs in its own child room, so its task hangs off that room.
 
+The AI will see a `delegate_task` tool and can call it naturally:
+
+```json
+{
+  "name": "delegate_task",
+  "arguments": {
+    "agent": "pr-reviewer",
+    "task": "Review PR #42 and summarize findings",
+    "share_channels": ["email-out"]
+  }
+}
+```
+
 ### A worker that delegates in turn
 
 By default a worker's `delegate_task` call starts a background task, as from the
@@ -288,20 +301,8 @@ task ended, with how it ended and its result, bounded by `max_result_chars`:
 
 The worker goes on with its own turn and ends its task with what it found, which
 comes back to the conversation. Cancelling the worker's task cancels the task it
-waits for. A call from the conversation's own room still starts a background task.
-
-The AI will see a `delegate_task` tool and can call it naturally:
-
-```json
-{
-  "name": "delegate_task",
-  "arguments": {
-    "agent": "pr-reviewer",
-    "task": "Review PR #42 and summarize findings",
-    "share_channels": ["email-out"]
-  }
-}
-```
+waits for. Your own `handler.handle(...)` on a task's room waits the same way; a
+call from the conversation's own room still starts a background task.
 
 ### What the worker reads
 
