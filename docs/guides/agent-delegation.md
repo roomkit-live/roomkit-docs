@@ -292,7 +292,8 @@ setup_delegation(researcher, handler)
 ```
 
 A call made from a task's room then runs its task inline. It answers once the
-task ended, with how it ended and its result, bounded by `max_result_chars`:
+task ended, with how it ended and its result, bounded by `max_result_chars`
+(empty for a failed task):
 
 ```json
 {"status": "completed", "task_id": "task-…", "child_room_id": "support::task-…::task-…",
