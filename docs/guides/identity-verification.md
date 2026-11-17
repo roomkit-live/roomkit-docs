@@ -160,7 +160,8 @@ answer to the released message included, however long it takes:
 webhook that must answer its provider at once passes `defer_delivery=True`:
 the call then returns as soon as the reply is known for a code, with no
 handle, and the attempt, the release and the answer go on as the kit's own
-work (its failures are logged; `close()` gives them its grace).
+work (its failures are logged, and `close()` ends it as the rest of the
+kit's work).
 
 ## Release
 
