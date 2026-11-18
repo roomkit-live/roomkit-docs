@@ -3246,6 +3246,13 @@ so narrowing it mid-turn stops them at once), and the triggering message's
 scoped elsewhere (a supervisor's whisper, an internal agent, a read-only
 agent) shows no live activity to the room's subscribers (RFC §8.4).
 
+The same rule applies when your application calls a wired AI or ACP channel's
+`on_event` directly. For example, an agent can begin a tool call while its
+answers are public. If its binding becomes private before the tool finishes,
+room subscribers receive the start and the end is withheld. Each publication
+requires a current binding in the same room incarnation. The result of the
+tool still reaches the agent.
+
 **Distributed deployments:**
 
 The default `InMemoryRealtime` is single-process only. `RedisRealtimeBackend`
