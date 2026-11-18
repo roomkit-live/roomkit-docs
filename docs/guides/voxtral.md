@@ -66,6 +66,12 @@ Partials carry the text so far: Voxtral's text is final as it arrives and only e
 grows. The documented input rates (8, 16, 22.05, 24, 44.1, 48 kHz) go through as
 they are; any other is resampled to 16 kHz.
 
+A partial can end inside a word: Voxtral Realtime 3 wrote "Ou" before "Ouais", "Je" before
+"Je vois", "D" before "D'accord". A backchannel detector may therefore answer such a
+partial `pending` ([Voice interruption](voice-interruption.md)): a genuine interruption whose
+first words may open an acknowledgement then cuts one partial later, 0.06 to 0.35 s measured
+on Voxtral.
+
 ### Turn detection and latency
 
 The model scores how likely the person is still speaking, and its thresholds turn the

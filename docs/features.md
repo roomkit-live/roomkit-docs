@@ -3447,12 +3447,13 @@ authorship, identification or verification. See
 | **Reactions** | x | -- | x | -- | -- | x | x | -- | x | -- | -- | -- | -- |
 | **Read receipts** | x | x | x | -- | x | x | x | -- | -- | -- | -- | -- | -- |
 | **Typing indicators** | x | -- | -- | -- | -- | -- | x | -- | -- | -- | -- | -- | -- |
-| **Max length** | -- | 1600 | 3000 | -- | 2000 | 28000 | 4096 | 4096 | 2000 | -- | -- | -- | -- |
+| **Max length** | -- | 1600 | 8000 | -- | 2000 | 28000 | 4096 | 4096 | 2000 | -- | -- | -- | -- |
 | **Bidirectional** | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | **Category** | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Transport | Intelligence | Transport | Transport |
 
 *SMS supports MMS for media attachments.
 *[1] AI channels support media when the provider has vision capability (`supports_vision=True`).*
+*Max length is the channel's default `max_length` capability, in Unicode code points (RFC §5.8); the framework truncates a longer text to it (RFC §6.6). WhatsApp Personal declares 4096, as WhatsApp does; `--` is no limit.*
 
 ### WebSocket Channel
 

@@ -25,7 +25,7 @@ user:      Carol: "Who proposed what?"
            name.]
 ```
 
-- Every line of an attributable `user` turn in the window is given as `Name: "line"`, the trigger turn included: what was typed on the line follows the label as a JSON string (its `"` escaped, every other double quote mark made `'`), so a `Name:` in the middle of a line reads as part of it.
+- Every line of an attributable `user` turn in the window is given as `Name: "line"`, the trigger turn included: what was typed on the line follows the label as a JSON string (its `"` escaped, every other double quote mark made `'`), so a `Name:` in the middle of a line reads as part of it. With the label alone, models read such a `Name:` as another author's (Haiku 5.5 28 times in 48, Sonnet 5.5 6 in 24, gpt-6-luna 22 in 32); with the string, 4 in 96, 0 in 24 and 0 in 32 (RMK-635).
 - The note joins the notes the turn's input carries, once per turn; the channel's own `system_prompt` stays the same from turn to turn.
 - Assistant turns are never prefixed.
 - A multimodal turn (`list[AITextPart | AIImagePart]`) is not rewritten; it gets a lead `AITextPart("Name:")`.
