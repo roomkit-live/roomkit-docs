@@ -951,7 +951,7 @@ from roomkit.providers.xai import XAIRealtimeConfig, XAIRealtimeProvider
 provider = XAIRealtimeProvider(
     XAIRealtimeConfig(
         api_key="xai-...",
-        model="grok-3-fast",                   # Default model
+        model="grok-2-audio",                  # Default model
         voice="eve",                           # Default voice
         transcription_model="grok-2-audio",    # Input transcription model
     )
@@ -960,7 +960,7 @@ provider = XAIRealtimeProvider(
 # Or with keyword arguments:
 provider = XAIRealtimeProvider(
     api_key="xai-...",
-    model="grok-3-fast",
+    model="grok-2-audio",
 )
 ```
 
@@ -1014,7 +1014,7 @@ provider_config = {
 
 ```bash
 XAI_API_KEY=xai-...  uv run python examples/realtime_voice_local_xai.py
-XAI_MODEL=grok-3-fast  # Model override
+XAI_MODEL=grok-2-audio  # Model override
 XAI_VOICE=ara           # Voice override
 ```
 

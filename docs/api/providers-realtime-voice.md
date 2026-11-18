@@ -124,7 +124,7 @@ from roomkit.providers.xai import XAIRealtimeConfig, XAIRealtimeProvider
 provider = XAIRealtimeProvider(
     XAIRealtimeConfig(
         api_key="...",
-        model="grok-3-fast",
+        model="grok-2-audio",
         voice="eve",
         transcription_model="grok-2-audio",
     )

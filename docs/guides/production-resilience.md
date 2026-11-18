@@ -249,7 +249,7 @@ kit = RoomKit(
 
 # AI with retries, then a fallback
 primary = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5"))
-fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
+fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-6-sol"))
 
 ai = AIChannel(
     "ai-assistant",

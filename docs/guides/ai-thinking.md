@@ -358,20 +358,18 @@ and the turn outranks the configuration on what it states:
   Gemini 3.x models. A turn's `reasoning_effort` replaces it, and reaches a
   model with no configured level when the catalogue says the model takes levels
   (every Gemini 3 model; Gemini 2.5 refuses one). `minimal` goes as `low` to a
-  model that refuses it: measured on 2026-09-30, `gemini-3.8-flash`,
-  `gemini-3.7-flash` and `gemini-3.1-pro-preview`
+  model that refuses it: measured on 2026-09-30, `gemini-3.8-flash` and
+  `gemini-3.1-pro-preview`
 - `thinking_budget` (per turn, from the channel) — a token budget, for Gemini 2.5.
   `0` turns reasoning off, as on every other provider, a configured level
   included, and so do `enable_thinking=False` and `reasoning_effort="none"`.
   Not every model can run without it: `gemini-3.1-pro-preview` and
   `gemini-3.5-flash-lite` answer 400 to a budget of `0` (measured
   2026-09-27), so off is sent there as the lowest level the model takes
-  (`low`, `minimal`); `gemini-3.7-flash` and `gemini-3.8-flash` accept `0`
-  but still reason a little (46 to 150 thought tokens, 2026-09-30). A
-  positive budget with a level set keeps the level
+  (`low`, `minimal`); `gemini-3.8-flash` accepts `0` but still reasons a
+  little (2026-09-30). A positive budget with a level set keeps the level
 - `enable_thinking=True` alone sends a dynamic budget (`-1`), which turns
   reasoning on for a model that does not reason by default
-  (`gemini-3.1-flash-lite`)
 
 ```python
 from roomkit.providers.gemini import GeminiAIProvider, GeminiConfig
@@ -497,7 +495,7 @@ on where the model has it, and a model without it needs a `thinking_budget`.
 | Ollama `think="high"` | `reasoning_effort="low"` | `think="low"` |
 | Ollama `think=None` | `reasoning_effort="low"` | nothing: a level only goes to a model configured with one, since Ollama refuses a level on a model that takes none |
 | Gemini `thinking_level="high"` | `thinking_budget=0` | `thinking_budget=0`, reasoning off |
-| Gemini, no level, `gemini-3.7-flash` | `reasoning_effort="low"` | `thinking_level="low"`, the levels a model takes read from the catalogue |
+| Gemini, no level, `gemini-3.8-flash` | `reasoning_effort="low"` | `thinking_level="low"`, the levels a model takes read from the catalogue |
 | PolarGrid `thinking=True` | `enable_thinking=False` | `enable_thinking=false` |
 
 Where the vendor restricts what a turn with tools accepts, the provider sends
@@ -506,10 +504,10 @@ the value accepted, read from its model catalogue:
 | Provider | On a turn with tools |
 |---|---|
 | Anthropic, Gemini, Ollama, vLLM, Cerebras, Meta, Qwen, PolarGrid, xAI, Mistral, DeepSeek, MiniMax, Kimi, OpenRouter | As on any turn |
-| OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3`, `o4-mini` | The turn's `reasoning_effort` |
+| OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-5.1`, `gpt-5.2`, `o3` | The turn's `reasoning_effort` |
 | OpenAI: `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-6-sol`, `gpt-6-luna` | `none`, the only value Chat Completions takes with function tools |
 | OpenAI: a model not in the catalogue, or not tagged (`gpt-4.1`), OpenAI behind a `base_url`, Azure OpenAI, LiteLLM | Left out, with one warning per provider: the model is not known. `supports_reasoning_effort_with_tools=True` sends it |
-| OpenAI: `gpt-6-astra`, `gpt-6.1-sol`, the `-pro` models | The turn is refused before the request (`ProviderError`): Chat Completions takes no function tools for them, or does not serve them |
+| OpenAI: `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6.2-astra`, `gpt-6.2-sol`, the `-pro` models | The turn is refused before the request (`ProviderError`): Chat Completions takes no function tools for them, or does not serve them |
 
 Behind a `base_url`, on an Azure deployment or a LiteLLM alias, the provider
 cannot know which model answers, nor so whether it takes `reasoning_effort`

@@ -22,8 +22,8 @@ pip install roomkit
 pip install roomkit[local-video]    # opencv-python-headless
 
 # Vision providers (pick one)
-pip install roomkit[gemini]         # Gemini 2.5 Flash (recommended)
-pip install roomkit[openai]         # OpenAI GPT-4o / Ollama / vLLM
+pip install roomkit[gemini]         # Gemini 3.8 Flash (recommended)
+pip install roomkit[openai]         # OpenAI GPT-6.2 Sol / Ollama / vLLM
 ```
 
 ## Quick Start
@@ -94,7 +94,7 @@ Analyzes video frames and returns structured descriptions. Three implementations
 
 | Provider | Backend | Install |
 |----------|---------|---------|
-| `GeminiVisionProvider` | Google Gemini 2.5 Flash | `roomkit[gemini]` |
+| `GeminiVisionProvider` | Google Gemini 3.8 Flash | `roomkit[gemini]` |
 | `OpenAIVisionProvider` | OpenAI, Ollama, vLLM | `roomkit[openai]` |
 | `MockVisionProvider` | Unit tests | Built-in |
 
@@ -105,7 +105,7 @@ from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
 
 vision = GeminiVisionProvider(GeminiVisionConfig(
     api_key="AIza...",
-    model="gemini-2.5-flash",
+    model="gemini-3.8-flash",
 ))
 ```
 
@@ -120,6 +120,26 @@ vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="ollama",
 ))
 ```
+
+#### OpenAI
+
+```python
+from roomkit.video.vision import OpenAIVisionConfig, OpenAIVisionProvider
+
+vision = OpenAIVisionProvider(OpenAIVisionConfig(
+    api_key="sk-...",
+    base_url="https://api.openai.com/v1",
+    model="gpt-6.2-sol",
+    max_tokens=25000,
+))
+```
+
+On OpenAI's own endpoint the cap goes as `max_completion_tokens` from GPT-4.1
+and on the o-series, and the temperature is left out from GPT-5 and on the
+o-series, as `OpenAIConfig` profiles those models; another server gets
+`max_tokens` and `temperature` as set. A reasoning model counts its reasoning
+in the cap, and an answer cut before any visible output is empty: OpenAI
+suggests reserving 25,000 tokens to start with.
 
 ### VideoChannel
 

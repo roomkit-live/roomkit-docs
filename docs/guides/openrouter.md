@@ -19,7 +19,7 @@ from roomkit.providers.openrouter import OpenRouterAIProvider, OpenRouterConfig
 provider = OpenRouterAIProvider(
     OpenRouterConfig(
         api_key="sk-or-...",                     # from https://openrouter.ai/keys
-        model="anthropic/claude-sonnet-4.5",     # any OpenRouter slug
+        model="anthropic/claude-sonnet-5",       # any OpenRouter slug
     )
 )
 
@@ -28,7 +28,7 @@ ai = AIChannel("ai-assistant", provider=provider, system_prompt="You are helpful
 kit.register_channel(ai)
 ```
 
-The `model` field is **required** — choosing the model is the whole point of OpenRouter. Pass any slug from the [models list](https://openrouter.ai/models), e.g. `openai/gpt-5.5`, `google/gemini-3.5-flash`, `deepseek/deepseek-v4-pro`, or `x-ai/grok-4.20`.
+The `model` field is **required** — choosing the model is the whole point of OpenRouter. Pass any slug from the [models list](https://openrouter.ai/models), e.g. `openai/gpt-5.5`, `google/gemini-3.6-flash`, `deepseek/deepseek-v4-pro`, or `x-ai/grok-4.20`.
 
 ## App attribution (optional)
 
@@ -82,7 +82,7 @@ ai = AIChannel(
     "assistant",
     provider=OpenRouterAIProvider(OpenRouterConfig(
         api_key="sk-or-...",
-        model="anthropic/claude-sonnet-4.5",
+        model="anthropic/claude-sonnet-5",
         reasoning_effort="high",     # used when thinking_budget is None
     )),
     thinking_budget=4096,            # >0 → reasoning on (max_tokens cap); 0 → off

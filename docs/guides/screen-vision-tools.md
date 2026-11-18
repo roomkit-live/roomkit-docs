@@ -23,7 +23,7 @@ pip install roomkit[screen-capture]    # mss (screenshot)
 pip install roomkit[local-video]       # opencv-python-headless
 
 # Vision providers (pick one)
-pip install roomkit[openai]            # OpenAI GPT-4o
+pip install roomkit[openai]            # OpenAI GPT-6.2 Sol
 pip install roomkit[gemini]            # Gemini Vision
 ```
 
@@ -64,7 +64,8 @@ async def main():
     vision = OpenAIVisionProvider(OpenAIVisionConfig(
         api_key=os.environ["OPENAI_API_KEY"],
         base_url="https://api.openai.com/v1",
-        model="gpt-4o",
+        model="gpt-6.2-sol",
+        max_tokens=25000,
     ))
 
     kit = RoomKit()
@@ -162,7 +163,8 @@ from roomkit.video.vision import (
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="sk-...",
     base_url="https://api.openai.com/v1",
-    model="gpt-4o",
+    model="gpt-6.2-sol",
+    max_tokens=25000,
 ))
 webcam_tool = DescribeWebcamTool(vision, device=0)
 ```
@@ -346,7 +348,7 @@ All screen and webcam tools accept any `VisionProvider`. Pick one based on your 
 | Provider | Install | Best for |
 |----------|---------|----------|
 | `GeminiVisionProvider` | `roomkit[gemini]` | Fast cloud analysis, good OCR |
-| `OpenAIVisionProvider` | `roomkit[openai]` | GPT-4o quality, broad compatibility |
+| `OpenAIVisionProvider` | `roomkit[openai]` | GPT-6.2 Sol quality, broad compatibility |
 | `OpenAIVisionProvider` (Ollama) | `roomkit[openai]` | Local/private, no API key needed |
 | `MockVisionProvider` | built-in | Testing without API calls |
 
@@ -355,12 +357,13 @@ All screen and webcam tools accept any `VisionProvider`. Pick one based on your 
 from roomkit.video.vision import GeminiVisionConfig, GeminiVisionProvider
 vision = GeminiVisionProvider(GeminiVisionConfig(api_key="AIza..."))
 
-# OpenAI GPT-4o
+# OpenAI GPT-6.2 Sol
 from roomkit.video.vision import OpenAIVisionConfig, OpenAIVisionProvider
 vision = OpenAIVisionProvider(OpenAIVisionConfig(
     api_key="sk-...",
     base_url="https://api.openai.com/v1",
-    model="gpt-4o",
+    model="gpt-6.2-sol",
+    max_tokens=25000,
 ))
 
 # Ollama (local)

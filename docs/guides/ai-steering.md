@@ -266,7 +266,7 @@ from roomkit.providers.anthropic import AnthropicAIProvider, AnthropicConfig
 from roomkit.providers.openai import OpenAIAIProvider, OpenAIConfig
 
 primary = AnthropicAIProvider(AnthropicConfig(api_key="...", model="claude-opus-5"))
-fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-4o"))
+fallback = OpenAIAIProvider(OpenAIConfig(api_key="...", model="gpt-6-sol"))
 
 ai = AIChannel(
     "ai-assistant",

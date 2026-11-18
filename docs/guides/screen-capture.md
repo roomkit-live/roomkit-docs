@@ -23,7 +23,7 @@ pip install roomkit[screen-capture]    # mss
 
 # Vision providers (pick one)
 pip install roomkit[gemini]            # Gemini (recommended)
-pip install roomkit[openai]            # OpenAI GPT-4o / Ollama / vLLM
+pip install roomkit[openai]            # OpenAI GPT-6.2 Sol / Ollama / vLLM
 ```
 
 ## Quick Start
