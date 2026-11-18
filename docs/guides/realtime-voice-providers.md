@@ -326,7 +326,7 @@ API offers.
 | `system` | `system` message, then a response | a `user` turn (no system role in turns) | instructions append |
 | `user` | `user` message, then a response | `user` turn | commentary: said aloud, paraphrased |
 | `assistant` | `system` message asking to say the line, then a response | `user` turn asking to say the line | instructions append asking to say the line |
-| `silent` | the message, no response | turn left incomplete; a marked context text once audio flows | thinking append |
+| `silent` | the message, no response | turn left incomplete; a marked context text once audio flows (best effort) | thinking append |
 
 So **anything that directs the model is `role="system"`**, an instruction to
 greet included; a greeting the application wrote itself is `role="assistant"`. Sent as `role="user"`, a full-duplex model says it — or improvises
