@@ -618,10 +618,10 @@ provider_config = {
 
 ## OpenAI GPT-Live (full-duplex)
 
-GPT-Live (`gpt-live-1`) is a different API from OpenAI Realtime. The model
-listens and speaks at the same time, handles being interrupted by itself, and
-holds no tools: it *delegates* reasoning and tool use to a backend model while
-the conversation continues (RFC §12.4.1).
+GPT-Live (`gpt-live-1.1`, `gpt-live-1`) is a different API from OpenAI
+Realtime. The model listens and speaks at the same time, handles being
+interrupted by itself, and holds no tools: it *delegates* reasoning and tool
+use to a backend model while the conversation continues (RFC §12.4.1).
 
 ```python
 from __future__ import annotations
@@ -630,7 +630,7 @@ from roomkit.providers.openai import HostedReasoning, OpenAILiveProvider
 
 provider = OpenAILiveProvider(
     api_key="sk-...",
-    model="gpt-live-1",                    # default
+    model="gpt-live-1.1",                  # default
     delegation=HostedReasoning(            # OpenAI runs the backend model
         model="gpt-5.6-terra",
         instructions="You are the backend of a voice assistant. ...",
@@ -704,12 +704,14 @@ text messages seeding the session, at most 128).
 
 The voice is fixed for the session (`voice=` on the channel or in the
 session metadata); changing it means a new session, which is what
-`reconfigure(voice=...)` does. Fourteen voices: marin (default) and cedar,
+`reconfigure(voice=...)` does. Twenty-three voices: marin (default) and cedar,
 plus regional ones — quartz, ripple (Australian), vesper (British), willow,
 stone (Irish), gleam, meridian (North American), delta, cinder (Southern US),
-beacon (Filipino), bossa, tempo (Brazilian Portuguese). `available_voices()`
-lists them with language and gender. Custom voices from your own recording
-exist on the API but need OpenAI's approval.
+beacon (Filipino), bossa, tempo (Brazilian Portuguese) — and nine for other
+languages: nuri, juni, flitz (German), brise, sillage (French), nira (Hindi),
+harema, shida (Japanese), noeul (Korean). `available_voices()` lists them
+with language and gender. Custom voices from your own recording exist on the
+API but need OpenAI's approval.
 
 There is no speed parameter. Delivery is steered through the instructions,
 and GPT-Live follows them closely — OpenAI's own prompting guide suggests:

@@ -97,7 +97,7 @@ from roomkit.providers.openai import HostedReasoning, OpenAILiveProvider
 
 provider = OpenAILiveProvider(
     api_key="...",
-    model="gpt-live-1",
+    model="gpt-live-1.1",
     delegation=HostedReasoning(model="gpt-5.6-terra", instructions="..."),
 )
 ```
