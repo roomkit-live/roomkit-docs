@@ -354,8 +354,9 @@ room and speaker it is attached to, so without it a notification layer can only
 broadcast — and in a room where two people talk to one agent, whoever answers
 first answers for someone else.
 
-It is `None` when the turn had no author (a system injection, a webhook, a
-scheduled run) or when a caller driving its own tool loop did not supply one.
+It is `None` when the turn's waking event named no participant (one the host
+sent with none named, another agent's answer) or when a caller driving its
+own tool loop did not supply one.
 And like the accessor it comes from, it names the turn without authenticating
 it: resolve it against the room's roster before treating it as a principal —
 see [What a handler knows about the call](tool-calling.md#what-a-handler-knows-about-the-call).

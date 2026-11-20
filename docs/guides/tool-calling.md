@@ -390,9 +390,11 @@ model was shown: `current_tool_actor_id()` is the sender id of the message the
 turn answers, a participant's id when the room knows them. It names the turn
 and authenticates no one. Compare it with the id you expect and never test it
 for absence: a turn the host opened with `kit.deliver()` reads `"system"`,
-and `None` is a sender the room does not name (a participant's id on a
-channel that does not reach them). In the gate of a realtime voice channel it
-answers `None` today: read `event.session.participant_id` there.
+and `None` does not single out the host: it is an event that names no
+participant (a `kit.send_event()` or `kit.post()` without one, another
+agent's answer), or a participant's id on a channel that does not reach them,
+which a sender can produce. In the gate of a realtime voice channel it answers
+`None` today: read `event.session.participant_id` there.
 
 ```python
 from roomkit import HookResult, HookTrigger
@@ -486,17 +488,18 @@ async def my_handler(name: str, arguments: dict) -> str:
     return await fetch_rows_for(participant.identity_id)
 ```
 
-The author need not be human, either: in a multi-agent room the waking event may
-be another agent's. An AI agent speaks through an intelligence channel, and an
-AI participant the host records in the room takes `ParticipantRole.BOT` —
-compare `participant.role` against it when that matters.
-`ParticipantRole.AGENT` is a human advisor, a person.
+The author need not be human, either: an AI participant the host records in the
+room takes `ParticipantRole.BOT` — compare `participant.role` against it when
+that matters. `ParticipantRole.AGENT` is a human advisor, a person. An agent
+that answers through its intelligence channel names no participant: the turn
+its answer wakes reads `None`.
 
 !!! warning
-    `None` is an answer, not a missing value. A system injection, a webhook or a
-    scheduled run has no author; falling back to whoever spoke last is how a
-    tool answers one person with another person's data. Refuse, or use a
-    principal you configured on purpose.
+    `None` is an answer, not a missing value. An event that names no
+    participant has no author (one the host sends with none named, another
+    agent's answer); falling back to whoever spoke last is how a tool answers
+    one person with another person's data. Refuse, or use a principal you
+    configured on purpose.
 
 See [Identity Resolution](identity-resolution.md) for how a sender becomes an
 identified participant, and `examples/tool_call_context.py` for a runnable
