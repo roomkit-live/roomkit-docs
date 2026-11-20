@@ -1207,7 +1207,7 @@ the model again once it has answered (RFC §21.3). It implies
 `serialize_room_turns`. Only the author of the message the turn answers
 writes to it: a turn runs in its author's name (`current_tool_actor_id()`, the
 role its `tool_policy` is resolved for), so someone else's message waits a
-turn of its own, as without the option (RFC §6.4). See [AI Steering](guides/ai-steering.md#writing-to-an-agent-while-it-works).
+turn of its own, as with `serialize_room_turns` alone (RFC §6.4). See [AI Steering](guides/ai-steering.md#writing-to-an-agent-while-it-works).
 
 A message the running turn sends into its own room that asks the same agent (a
 tool calling `kit.process_inbound()`, `kit.send_event()` or `kit.post()`) is

@@ -386,12 +386,13 @@ handler directly describes the turn with `tool_turn_context`
 
 A `BEFORE_TOOL_USE` hook of an `AIChannel` runs under the call's turn and reads
 the same accessors, so a gate knows who asked without trusting a name the
-model was shown: `current_tool_actor_id()` is the id of the participant who
-wrote the message the turn answers. It names the turn and authenticates no
-one, and `None` is a turn with no author (a system injection, a scheduled
-run), which a gate on a person's request refuses. In the gate of a realtime
-voice channel it answers `None` today: read `event.session.participant_id`
-there.
+model was shown: `current_tool_actor_id()` is the sender id of the message the
+turn answers, a participant's id when the room knows them. It names the turn
+and authenticates no one. Compare it with the id you expect and never test it
+for absence: a turn the host opened with `kit.deliver()` reads `"system"`,
+and `None` is a sender the room does not name (a participant's id on a
+channel that does not reach them). In the gate of a realtime voice channel it
+answers `None` today: read `event.session.participant_id` there.
 
 ```python
 from roomkit import HookResult, HookTrigger
