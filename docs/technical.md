@@ -9,7 +9,7 @@
 | **Skill frontmatter** | PyYAML | >= 6 |
 | **HTTP Client** | httpx | >= 0.27 (optional) |
 | **AI - Anthropic** | anthropic SDK | >= 1.8, < 2 (optional) |
-| **AI - OpenAI** | openai SDK | >= 2.28, < 3 (optional) |
+| **AI - OpenAI** | openai SDK | >= 3, < 4 (optional) |
 | **AI - Gemini** | google-genai, with its `httpx` extra | >= 3.2, < 4 (optional) |
 | **AI - Mistral** | mistralai | >= 2.0, < 4 (optional) |
 | **SMS - Twilio** | twilio | >= 9.0 (optional) |
@@ -718,7 +718,7 @@ An excerpt, as it stands in `pyproject.toml`:
 [project.optional-dependencies]
 httpx = ["httpx>=0.27"]
 anthropic = ["anthropic>=1.8,<2"]
-openai = ["openai>=2.28,<3"]
+openai = ["openai>=3,<4"]
 gemini = ["google-genai[httpx]>=3.2,<4"]
 mistral = ["mistralai>=2.0,<4"]
 websocket = ["websockets>=14.2"]

@@ -167,10 +167,10 @@ yes/no question goes as a `predicate` (what a yes and a no cover join its
 instructions, the API taking instructions alone), a choice as a `choice`, a
 score as a `score` over labelled levels. The API reads a text, so a structured
 state is sent as its JSON. A question the API declines to answer (a `refusal`)
-fails the whole call with `ClassifierError`. The OpenAI SDK 2.x has no
-`decisions` resource yet: the call goes through the client's generic `post`,
-with its key, retries and errors. Without a `client`, it makes an `AsyncOpenAI`
-and closes it on `close()`.
+fails the whole call with `ClassifierError`. The call goes through the
+client's generic `post`, with its key, retries and errors: the OpenAI SDK's
+`decisions` resource came during its 3.x line (3.0.0 has none). Without a
+`client`, it makes an `AsyncOpenAI` and closes it on `close()`.
 
 On the questions of a discussion's dispatch policy (eighteen messages to a team
 of four), it picked right 17 times and Jev 18; its probabilities sit nearer 0

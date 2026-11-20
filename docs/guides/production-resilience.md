@@ -85,7 +85,9 @@ Used by `AIChannel` for provider calls (see [AI Steering guide](ai-steering.md) 
 ## Connect vs Read Timeout
 
 Every HTTP provider config carries two timeouts, and its adapter hands the
-client an `httpx.Timeout` built from both rather than a bare float:
+client a timeout built from both rather than a bare float (an `httpx.Timeout`,
+or the SDK's own `Timeout` where the SDK runs on httpx2: the `openai` SDK and
+Anthropic's):
 
 ```python
 from __future__ import annotations
@@ -108,9 +110,10 @@ the kernel exhausts its SYN retries first — about two minutes per attempt,
 whatever the value.
 
 The default `connect_timeout` is 5 s, the same as the OpenAI and Anthropic
-SDKs' own. It applies to every httpx-backed config in `roomkit.providers`:
-the AI providers (OpenAI and its derivatives, Azure, Anthropic, Gemini and
-Gemini on Vertex, Ollama, vLLM, PolarGrid), the image providers, and the SMS,
+SDKs' own. It applies to every config in `roomkit.providers` backed by httpx
+or httpx2: the AI providers (OpenAI and its derivatives, Azure, Anthropic,
+Gemini and Gemini on Vertex, Ollama, vLLM, PolarGrid), the image providers,
+and the SMS,
 RCS, email, Telegram, Messenger and webhook transports. `AnamConfig.timeout`
 has no counterpart because it bounds the SDK's connect call itself, not an
 HTTP client.

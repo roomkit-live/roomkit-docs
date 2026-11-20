@@ -57,7 +57,7 @@ Built-in patterns that you'd otherwise have to implement yourself:
 - **Circuit breakers** — Failing providers don't take down the whole room
 - **Rate limiting** — Per-channel token bucket with configurable limits
 - **Retry with backoff** — Exponential backoff for transient failures
-- **Connect timeout apart from read** — Every HTTP provider hands its client an `httpx.Timeout` with `connect_timeout` (5 s) beside `timeout`, so a host that no longer accepts connections fails in seconds rather than after the read budget (see [Connect vs Read Timeout](guides/production-resilience.md#connect-vs-read-timeout))
+- **Connect timeout apart from read** — Every HTTP provider hands its client a timeout with `connect_timeout` (5 s) beside `timeout` (an `httpx.Timeout`, or the SDK's own `Timeout` where the SDK runs on httpx2: the `openai` SDK and Anthropic's), so a host that no longer accepts connections fails in seconds rather than after the read budget (see [Connect vs Read Timeout](guides/production-resilience.md#connect-vs-read-timeout))
 - **Chain depth limiting** — Prevents AI-to-AI infinite loops
 - **Idempotency** — Duplicate detection inside the room lock
 
@@ -2054,8 +2054,10 @@ See `examples/list_models.py`.
 
 `OpenAIAIProvider(config, transport=...)`, every provider built on it, and
 `create_vllm_provider(config, transport=...)` send every request through an
-`httpx.AsyncBaseTransport` placed inside the SDK's own default client
+`httpx2.AsyncBaseTransport` placed inside the SDK's own default client
 (redirects followed, each hop through the transport; per-request timeout kept).
+The `openai` SDK 3.x runs on httpx2: a transport built on `httpx` raises
+`TypeError` when the provider is built.
 The transport owns its connection pool and limits, and environment proxies are
 not read. A host that lets users name the endpoint puts there a policy judging
 the address actually dialled. See `examples/openai_outbound_policy.py`.
@@ -2063,9 +2065,11 @@ the address actually dialled. See `examples/openai_outbound_policy.py`.
 The image and vision clients take the same keyword: `OpenAIImageProvider`,
 `AzureImageProvider`, `XAIImageProvider`, `MetaImageProvider` and
 `OpenAIVisionProvider` inside the SDK's default client, `OpenRouterImageProvider`
-in its own `httpx.AsyncClient`. `LiteLLMAIProvider.list_models()` and
+in its own `httpx.AsyncClient`, with an `httpx.AsyncBaseTransport`.
+`LiteLLMAIProvider.list_models()` and
 `OpenRouterAIProvider.list_models()` go through the provider's transport too.
-An image attempt the policy refuses before it is sent (an `httpx.ConnectError`
+An image attempt the policy refuses before it is sent (its client's
+`ConnectError`, `httpx2.ConnectError` or `httpx.ConnectError` on OpenRouter,
 or a subclass) is `failed`; any other failure, or any failure once the SDK
 retried, is `unknown`: the vendor may have run and billed it (RFC §25.2).
 
