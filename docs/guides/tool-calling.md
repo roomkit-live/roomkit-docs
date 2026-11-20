@@ -384,6 +384,27 @@ tool call (a direct call) — keep your own fallback there. A test that calls a
 handler directly describes the turn with `tool_turn_context`
 (see [Testing a handler on its own](#testing-a-handler-on-its-own)).
 
+A `BEFORE_TOOL_USE` hook of an `AIChannel` runs under the call's turn and reads
+the same accessors, so a gate knows who asked without trusting a name the
+model was shown: `current_tool_actor_id()` is the id of the participant who
+wrote the message the turn answers. It names the turn and authenticates no
+one, and `None` is a turn with no author (a system injection, a scheduled
+run), which a gate on a person's request refuses. In the gate of a realtime
+voice channel it answers `None` today: read `event.session.participant_id`
+there.
+
+```python
+from roomkit import HookResult, HookTrigger
+from roomkit.tools import current_tool_actor_id
+
+
+@kit.hook(HookTrigger.BEFORE_TOOL_USE, name="email_gate")
+async def email_gate(event, ctx) -> HookResult:
+    if event.name == "send_email" and current_tool_actor_id() != "p-alice":
+        return HookResult.block("Only Alice may ask for an email.")
+    return HookResult.allow()
+```
+
 ```python
 from roomkit.tools import current_tool_actor_id, current_tool_room, current_tool_room_id
 

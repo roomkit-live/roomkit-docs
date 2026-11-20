@@ -141,7 +141,7 @@ STT and no VAD in the pipeline:
   channel (`kit.add_member(room_id, "voice", "p-sylvain", display_name="Sylvain")`).
   A voice is never matched to a participant by its name alone: one named
   like a registered person without being matched to them reads as another
-  person (`Sylvain (2)`):
+  person (`Sylvain (2, not Sylvain)`):
 
   ```python
   return HookResult.modify(

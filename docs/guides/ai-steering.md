@@ -121,6 +121,16 @@ which reads the first turn's answer. In a room where several people speak, the
 turn reads the message under its speaker's label. Runnable:
 `examples/agent_steered_turn.py`.
 
+**Only the author of the message the turn answers writes to it.** A turn runs
+in its author's name: its tools and its `BEFORE_TOOL_USE` hooks read them as
+`current_tool_actor_id()`, and the agent's `tool_policy` is resolved for their
+role. A message from someone else is therefore not handed to the running turn,
+where their request would run under that name and that role: it waits and is
+answered by a turn of its own, as without the option. Someone else is another
+sender, or the same sender id under another name (a bridge, a shared
+microphone whose voices are named). A directive the host sends itself with
+`kit.steer(...)` is the host's own act and is delivered as before.
+
 The `steer()` method is safe to call from any async context. Cancel directives also set the fast-path event for immediate exit.
 
 ## Practical Patterns

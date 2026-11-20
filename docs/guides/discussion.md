@@ -235,7 +235,7 @@ Martin` is addressed as `@AliceMartin`) and at most 32 of them. `people`, when
 set, keeps only the names it lists. What an agent asked is recorded against
 the person as the transcript labels them, and only when one person answers to
 the name: a name two people answer to records nothing, and a sender who takes
-another's name (labelled `Alice (2)`) never answers for them.
+another's name (labelled `Alice (2, not Alice)`) never answers for them.
 
 Only a room with a person waits: a room whose only other senders are bots and
 webhooks stays idle instead, and the next event that asks for a turn opens it

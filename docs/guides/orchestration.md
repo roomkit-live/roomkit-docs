@@ -1039,7 +1039,7 @@ reviewer judges are a `<worker_output>` block of their own under their label,
 and the user's goal copied into such an input is a `<task>` block. The task a
 supervisor frames for a worker stays that worker's own input. When several
 people speak in the room, a `<task>` block is headed by who asked for it:
-`Alice asked:` before a participant's own words, `Requested by Alice (2), in
+`Alice asked:` before a participant's own words, `Requested by Alice (2, not Alice), in
 the delegating agent's words:` before a task an agent wrote (a tool reads the
 asker with `roomkit.tools.current_tool_requester()`). Only the block's heading
 names the asker: the runtime's own prompts and a worker's own input carry
