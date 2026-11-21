@@ -158,5 +158,6 @@ print("several people take part" in str(last.messages[-1].content))
 ## What this is not
 
 - Not a change to the stored events. Prefixes exist only in the `AIContext` handed to the provider; `RoomEvent.content` is untouched, and so is anything a transport delivers.
+- Not an authorisation. A label tells sources apart; the register ranks a name that reads like an earlier one as a whole (`ALICE`, a Cyrillic `А`), not one that holds or resembles another's. Beside `Alice`, senders named `Alice Martin`, `AliceTeamLead` or `Allice` keep their plain labels, and a tool-calling model told that only Alice may ask for an email sent it for the first two 6 times out of 6, for `Allice` 3 out of 6, for a sender named `Team lead` 3 out of 6. A rule a prompt states by name is not a control: enforce it in a `BEFORE_TOOL_USE` hook on `current_tool_actor_id()` (see [Tool calling](tool-calling.md#what-a-handler-knows-about-the-call)), which refused every such attempt replayed against it.
 - Not addressing. The model learns who said what; deciding whether the AI should answer at all is still the job of your hooks and orchestration (see the [Multi-Agent Orchestration guide](orchestration.md)).
 - Not a rename of the `user` role. Providers that support per-message names natively are not asked to; the prefix is the one representation every provider reads the same way.

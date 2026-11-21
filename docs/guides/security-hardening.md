@@ -86,6 +86,13 @@ validated when the socket opened, not a field in the message — or install an
 `identity_resolver` and let the framework resolve it. RoomKit cannot tell the
 difference between the two, and does not try to.
 
+A display name is weaker still. What a model reads before a turn is its
+sender's label, a name the sender or their transport chose: a prompt that says
+"only Alice may ask for this" is obeyed for a sender named `Alice Martin` or
+`AliceTeamLead` (see [Multi-speaker rooms](multi-speaker-rooms.md#what-this-is-not)).
+Gate what matters on the id, in a `BEFORE_TOOL_USE` hook that compares
+`current_tool_actor_id()` with the participant you expect.
+
 Conference participants are the exception, and deliberately so: identity there
 is resolved only from `asserted_metadata`, which a backend may populate solely
 with values the SFU established (RFC §12.10). Widening that to what a client
