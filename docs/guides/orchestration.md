@@ -657,6 +657,12 @@ await kit.process_inbound(
 # advisor's own copy of the instruction, which no channel is delivered.
 ```
 
+In a kit with an identity resolver and identity hooks, send it with
+`kit.deliver(room_id, text, addressed_to=["advisor"], instruction=True)`
+instead: a message under `system` passed to `process_inbound()` is resolved
+like any caller's, and a hook that challenges unknown senders challenges it
+(see [Identity resolution](identity-resolution.md#when-resolution-is-skipped)).
+
 It goes through the same pipeline — hooks, the room's order, addressing — and:
 
 - **names an agent the kit registers**: one naming no registered intelligence

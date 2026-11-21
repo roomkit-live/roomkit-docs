@@ -260,13 +260,14 @@ Inbound Message
 ### When resolution is skipped
 
 A resolver maps an *address* — a number, an email, a handle — to an `Identity`.
-Two senders carry no such question, and the framework does not ask
+Three senders carry no such question, and the framework does not ask
 (RFC §11.6):
 
 | Case | What it means |
 |------|---------------|
 | The room has already identified the sender | The event's `participant_id` names, on the event's channel, a `Participant` of the room whose `identification` is `IDENTIFIED`. The answer is on the roster; `identity_id` already carries it. The same id arriving through a channel the participant was never reached through (`connected_via`) answers nothing: it is resolved like any sender, and carries the participant's verification only if that resolution identifies it as them |
 | The channel names its own senders | The channel sets `sender_is_participant = True`, declaring its `sender_id` is a room `Participant.id` rather than an address. `ConferenceChannel` does — see below |
+| The framework wrote the message itself | A `kit.deliver()` or an orchestration cue names no correspondent: no resolver call, no identity hook, and the event stays under the sender `system`. The framework knows its message by where it comes from, never by that sender id: a message a caller passes to `process_inbound()` under `system` is resolved like any other |
 
 Skipping matters beyond the saved lookup. Re-resolving a sender the room already
 identified returns `UNKNOWN` — no resolver matches a framework identifier — so
@@ -279,6 +280,11 @@ async def refuse(event, ctx, id_result):
 ```
 
 would block every message from a participant the framework itself identified.
+
+So in a kit that challenges or refuses unknown senders, send the application's
+own instructions with `kit.deliver(room_id, text, addressed_to=[...],
+instruction=True)`: an `INSTRUCTION` passed to `process_inbound()` under
+`system` is a caller's message, and the identity hooks apply to it.
 
 `PENDING` and `AMBIGUOUS` participants are deliberately *not* skipped: a
 participant the room has is not one it has identified, the resolver may still be
