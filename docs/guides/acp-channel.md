@@ -934,10 +934,16 @@ it (a Stop, a process restart), `refused` when RoomKit refused the agent's
 permission request for it, else `failed` or `served` as the agent reported.
 With an external handler, a call the turn ended under reaches it through
 `on_tool_cancelled` rather than `on_tool_result`; by default that reports it
-cancelled. A permission request runs in the connection's own task, so
-cancelling the turn does not cancel a pending `process_tool_call`: an override
-resolves it itself (it denies the approval still pending) before calling
-`super().on_tool_cancelled(...)`.
+cancelled, a call whose permission request was still pending included, even
+one the agent never announced. Cancelling the turn (`cancel(room_id)`, a
+steering `Cancel`, the turn's caller cancelled) answers each permission
+request still pending `cancelled`, as ACP requires of a client that cancels a
+prompt: the pending `process_tool_call` is cancelled, and its decision never
+reaches the agent. A turn that ends otherwise while a decision is pending (the
+agent answered its prompt without waiting) leaves that decision to the
+handler, to withdraw in its `on_tool_cancelled`. An agent's `$/cancel_request`
+withdraws nothing: ACP lets a client ignore it, so the handler keeps deciding
+the request and its decision is the answer.
 
 A call that never ran reaches `ON_TOOL_CALL`'s ASYNC observers only, never a
 SYNC hook: a rejected permission is marked `refused`, a call the turn ended
