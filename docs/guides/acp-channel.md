@@ -936,10 +936,12 @@ With an external handler, a call the turn ended under reaches it through
 `on_tool_cancelled` rather than `on_tool_result`; by default that reports it
 cancelled, a call whose permission request was still pending included, even
 one the agent never announced. Cancelling the turn (`cancel(room_id)`, a
-steering `Cancel`, the turn's caller cancelled) answers each permission
-request still pending `cancelled`, as ACP requires of a client that cancels a
-prompt: the pending `process_tool_call` is cancelled, and its decision never
-reaches the agent. A turn that ends otherwise while a decision is pending (the
+steering `Cancel`, the turn's caller cancelled, `close()`) answers each
+permission request still pending `cancelled`, after `session/cancel`, as ACP
+requires of a client that cancels a prompt: the pending `process_tool_call` is
+cancelled, and its decision never reaches the agent, even one the handler
+makes as the cancellation goes out. A handler need not withdraw that decision
+itself. A turn that ends otherwise while a decision is pending (the
 agent answered its prompt without waiting) leaves that decision to the
 handler, to withdraw in its `on_tool_cancelled`. An agent's `$/cancel_request`
 withdraws nothing: ACP lets a client ignore it, so the handler keeps deciding
