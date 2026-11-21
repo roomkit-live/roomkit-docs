@@ -483,6 +483,8 @@ content = skill.read_reference("api-spec.md")
 
 The filename must be a plain name inside the skill's `references/` directory. It is resolved and checked for containment, so a symlink planted in `references/` cannot serve a file from elsewhere — a clean-looking `notes.md` pointing at `/etc/passwd` is rejected. The directory itself is checked the same way: replacing all of `references/` or `scripts/` with a symlink is refused before anything inside it is listed, read or resolved, since a contained child of an escaped directory proves nothing. Violations raise `SkillPathError`, which subclasses `ValueError`.
 
+The checked file is then read through the descriptor its check opened, never by its name again, so a file swapped for a link out between the check and the read is refused rather than read. On Linux the open file's own path (`/proc/self/fd`) must be inside `references/` too, and a `/proc` that cannot be read refuses the file. A skill's `SKILL.md` is read the same way, and must be a regular file inside the skill; a refused one raises `SkillParseError`.
+
 ---
 
 ## Error handling
