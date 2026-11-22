@@ -107,6 +107,7 @@ from roomkit.providers.ai import (
     AIContext,
     AIProvider,
     CallIds,
+    FinishReason,
     StreamDone,
     StreamEvent,
     StreamTextDelta,
@@ -140,7 +141,13 @@ class MyProvider(AIProvider):
         # over it), and garbled when the response was not cut over it. Only
         # the last call can be cut: a call another followed was closed by it.
         ids = CallIds()
-        finish_reason = self._finish_reason
+        # The vendor's stop word in the contract's one vocabulary
+        # (FinishReason); a word the provider does not know is None.
+        finish_reason = {
+            "done": FinishReason.STOP,
+            "calls": FinishReason.TOOL_CALLS,
+            "cap": FinishReason.LENGTH,
+        }.get(self._stop_word)
         calls = self._pending_tool_calls
         for n, tool_call in enumerate(calls):
             raw, last = tool_call.raw_arguments, n == len(calls) - 1
@@ -251,8 +258,8 @@ class ObservingAIChannel(AIChannel):
 | `max_rounds` | `max_tool_rounds` was reached |
 | `timeout` | The wall-clock deadline passed |
 | `budget_exceeded` | The turn reached its `turn_budget_tokens` or `turn_budget_usd`; the round's calls did not run |
-| `truncated` | The final round ran out of room with no text: the output cap (often reasoning consuming the whole budget) or the context window filling up (`model_context_window_exceeded`, `model_length`). Not retried: the same room runs out again |
-| `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed or taken (Gemini's `MALFORMED_FUNCTION_CALL`, `UNEXPECTED_TOOL_CALL`), and the bounded retries were spent |
+| `truncated` | The final round ran out of room with no text: the output cap (often reasoning consuming the whole budget) or the context window filling up, the finish reason `length`. Not retried: the same room runs out again |
+| `empty_response` | The model answered nothing after its tool rounds, or its last call could not be parsed or taken (`malformed_call`, `unexpected_call`), and the bounded retries were spent |
 | `unfinished` | The channel's continuation policy still asked to go on once the retries it shares with an empty round were spent |
 | `force_stopped` | The anti-loop guard cut a model that kept repeating a blocked call; the text it ends on is a summary of a cut turn, not an answer |
 | `cancelled` | The turn was cancelled |

@@ -2357,8 +2357,8 @@ async def _observe(self, inner):
 that reads the text of a round the model ended itself, without a call and with
 a tool declared, and returns the instruction that makes the model go on, or
 `None` when the answer stands. The loop decides the natural stop from what the
-round carried, every provider alike (`stop`, `end_turn`, `stop_sequence`,
-`STOP`; never a truncation, a filter or a call it could not parse), hands the
+round carried: `stop`, the one word every provider maps its vendor's natural
+stop onto (never a truncation, a filter or a call it could not parse), hands the
 next round the text as the assistant's message and the instruction as the
 user's (the text stays its own message: the loop yields a
 `SegmentBreakMarker` there, where a segment ends as at a call's start), and keeps
@@ -2586,10 +2586,9 @@ chat turn where the reasoning is the value. Steering it only on the provider
 config forced a second channel, and a second provider, to say so.
 
 Reasoning and the answer also compete for the same `max_tokens`. A round that
-spends its whole budget thinking returns empty content with a truncation
-finish reason; RoomKit recognises that case across every provider's spelling
-of it (`length`, `max_tokens`, `MAX_TOKENS`) and does not waste a retry
-re-prompting under the same cap.
+spends its whole budget thinking returns empty content with the finish reason
+`length`, which each provider maps its vendor's word onto, and RoomKit does not
+waste a retry re-prompting under the same cap.
 
 Thinking support varies by provider:
 

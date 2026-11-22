@@ -18,6 +18,16 @@
 
 ::: roomkit.providers.ai.AIResponse
 
+::: roomkit.providers.ai.FinishReason
+
+A response and a stream's end say why the generation stopped in one closed
+vocabulary (RFC §6.7): `stop`, `tool_calls`, `length`, `content_filter`,
+`refusal`, `malformed_call`, `unexpected_call` or `error`, or `None` for no
+reason the provider knows. A provider maps its vendor's words onto it in its
+adapter (Anthropic's `end_turn` is `stop`, Gemini's `MAX_TOKENS` is `length`),
+and `AIResponse` and `StreamDone` refuse any other word: the tool loop reads no
+vendor's word. See `examples/ai_finish_reason.py`.
+
 ::: roomkit.providers.ai.ModelInfo
 
 ::: roomkit.providers.ai.ModelPricing

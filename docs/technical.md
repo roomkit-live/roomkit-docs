@@ -256,7 +256,8 @@ class AIContext(BaseModel):
 class AIResponse(BaseModel):
     """Response from an AI provider."""
     content: str
-    finish_reason: str | None
+    finish_reason: FinishReason | None  # stop, tool_calls, length, content_filter,
+                                        # refusal, malformed_call, unexpected_call, error
     usage: dict[str, int]
     tool_calls: list[AIToolCall]        # Function calls to execute
     tasks: list[Task]
