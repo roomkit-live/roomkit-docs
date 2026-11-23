@@ -69,8 +69,6 @@ The test double, with fault injection — see
 
 ::: roomkit.ConferenceRecordingConfig
 
-::: roomkit.ConferenceRecordingMode
-
 ::: roomkit.ConferenceRecordingStarted
 
 ::: roomkit.ConferenceRecordingStopped
