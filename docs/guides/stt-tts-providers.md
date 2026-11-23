@@ -171,7 +171,10 @@ live; named voices from reference clips) and `GeminiSTTProvider` with
 normalised by `roomkit.voice.base.speaker_label`: a string, `None` for an
 unattributed speaker, and without a leading "speaker" word (`"Speaker 1"` →
 `"1"`); a longer word that starts with it stays whole (`"Speakerphone"`). Deepgram's older `diarize=True` keeps its ids in `words` and does not
-report `supports_diarization`.
+report `supports_diarization`. Each label is a speaker of its own in the room:
+an `ON_TRANSCRIPTION` hook that names two labels alike without giving their
+`participant_id` gets two people whose names read alike, ranked apart
+(`Sylvain (2, not Sylvain)`); give the `participant_id` to make them one person.
 
 This is the STT's own diarization, aligned to its words. The pipeline's
 `DiarizationProvider` (see [Audio Pipeline Stages](audio-pipeline-stages.md))
