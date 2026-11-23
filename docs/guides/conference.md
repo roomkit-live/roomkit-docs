@@ -110,7 +110,7 @@ ConferenceChannel("conf", backend=backend, stt=stt, tts=tts)
 | `speak_text_events` | `bool` | `False` | Speak non-AI text events too — off because a meeting is not a place to read other channels' traffic aloud |
 | `close_providers` | `bool` | `True` | Close STT/TTS/pipeline when the channel closes |
 | `max_queued_frames` | `int` | `100` | Per-lane backpressure bound (~2 s of audio) |
-| `identity_address_keys` | `Sequence[str] \| None` | `CONFERENCE_ADDRESS_KEYS` | Which provider attributes can found an identity |
+| `identity_address_keys` | `Sequence[str] \| None` | the backend's `address_keys`, then `CONFERENCE_ADDRESS_KEYS` | Which provider attributes can found an identity |
 | `identity_trusts_unasserted_metadata` | `bool` | `False` | Trust participant-supplied attributes — see [Identity Resolution](identity-resolution.md) |
 
 ## The lazy join
@@ -269,8 +269,8 @@ session (§17.7), and every effective change on a connected session emits
 the `conference_bot_grants_changed` framework event.
 
 **Refusals and ownership.** A plug refuses exactly what construction
-refuses — `stt` or `recording` on an E2EE conference, a recording mode with
-no egress surface — and a slot already holding a provider is refused rather
+refuses — `stt` or `recording` on an E2EE conference, a recording with no
+recorder — and a slot already holding a provider is refused rather
 than silently replaced: a swap is a teardown and a rebuild whatever single
 verb offers it, so the observation gap belongs in the open — unplug, then
 plug. Unplugging an empty slot is a no-op. An unplugged provider is closed
@@ -819,7 +819,7 @@ Both have their own guides. With `recorder=` and
 `recording=ConferenceRecordingConfig()`, every subscribed track is recorded
 *separately*, attributed to its publisher, the bot's own audio included;
 `ON_RECORDING_STARTED` is a consent point (a handler that refuses captures
-nothing), and audio-only — there is no video egress. The details live in
+nothing), and audio-only — there is no video recording. The details live in
 [Room Media Recorder](room-media-recorder.md#conference-recording).
 
 A conference is also where participants the framework did not admit arrive —
@@ -842,7 +842,7 @@ Current boundaries, each tracked rather than papered over:
   point) exists, the rest is tracked separately.
 - **Audio only.** The channel declares audio capability alone: no vision on
   conference video tracks yet, no bot-published video (nothing produces it
-  until an avatar does), no video egress recording.
+  until an avatar does), no video recording.
 
 ## Relationship to audio bridging
 

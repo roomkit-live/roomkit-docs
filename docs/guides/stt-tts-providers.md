@@ -201,8 +201,8 @@ voice = VoiceChannel(
   the stage keeps its labels for the session) and `sender_name`, and
   `ON_TRANSCRIPTION` carries the speaker, so the hook above renames it, or
   matches it to its participant, the same way.
-- A voice the stage matched to nobody (sherpa-onnx says `"unknown"` below its
-  `search_threshold`) is `"Unknown speaker"`. An utterance the stage gave no
+- A voice the stage matched to nobody (`speaker_id=None`, as sherpa-onnx says
+  below its `search_threshold`) is `"Unknown speaker"`. An utterance the stage gave no
   result for carries no speaker, as without the option.
 - `ON_SPEAKER_CHANGE` still comes from the stage alone, with
   `source="pipeline"`, and never for a voice it matched to nobody.

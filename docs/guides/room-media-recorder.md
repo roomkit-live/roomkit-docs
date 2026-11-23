@@ -260,7 +260,7 @@ If you write your own `MediaRecorder`, this is the contract from your side: `on_
 
 Recording counts as collection, so it stops when the room binding stops permitting it (`kit.set_access(room, "conf", Access.NONE)`), and `channel.info["rooms"][room]["recording_active"]` answers whether a given conference is being recorded right now.
 
-`ConferenceRecordingConfig(mode="egress")` — delegating to the SFU, the only way to obtain a *composed* grid or active-speaker video — is specified but not implemented, and is refused rather than silently ignored.
+A *composed* grid or active-speaker video is not a framework recording: it would mean decoding, compositing and re-encoding every video track, which RoomKit leaves to the SFU. Drive the SFU's own recording API for it, outside RoomKit.
 
 ### Nothing the recorder does happens on the frame callback
 
@@ -324,7 +324,7 @@ async def on_stopped(event) -> None:
 
 **One report per track, not one per conference.** The tracks of a meeting do not end together: a participant who leaves halfway through has a finished file while the meeting runs on, and holding those results back for a single report at the end would deliver them after the point you could act on them. An integrator that wants the meeting's full list accumulates it by room — which is state it was going to keep anyway.
 
-A track that stayed silent reports nothing at all, since it produced no file. Both hooks are ASYNC: a recording already written is a fact, not a decision. Egress mode fires neither — it carries no result contract (RFC §12.10.8).
+A track that stayed silent reports nothing at all, since it produced no file. Both hooks are ASYNC: a recording already written is a fact, not a decision.
 
 A runnable end-to-end walkthrough, against the mock backend and recorder, is in [`examples/conference_recording_result.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/conference_recording_result.py).
 

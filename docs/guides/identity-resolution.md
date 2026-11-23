@@ -367,12 +367,12 @@ attribution reads.
 ```python
 # The SFU asserts the trunk's number → identified.
 await backend.simulate_participant_joined(
-    "room-1", "sip_15551234", metadata={"sip.phoneNumber": "+15551234"}
+    "room-1", "sip_15551234", metadata={"phone_number": "+15551234"}
 )
 
 # The participant writes it itself → the resolver is never called.
 await backend.simulate_participant_joined(
-    "room-1", "sip_9", client_metadata={"sip.phoneNumber": "+15551234"}
+    "room-1", "sip_9", client_metadata={"phone_number": "+15551234"}
 )
 ```
 
@@ -391,28 +391,37 @@ channel = ConferenceChannel("conf", backend=backend, identity_trusts_unasserted_
 
 ### Which attribute counts as an address
 
-Among the asserted attributes, the channel reads a documented list of keys, most
-specific first, and takes the first non-empty string it finds:
+Among the asserted attributes, the channel reads its backend's own keys first,
+then a documented list of generic ones, and takes the first non-empty string it
+finds. Which key an SFU uses for a caller's number is the provider's knowledge,
+so the backend declares it (`ConferenceBackend.address_keys`; `LiveKitConferenceBackend`
+declares `sip.phoneNumber`), and the generic list names no provider's:
 
 ```python
-from roomkit import CONFERENCE_ADDRESS_KEYS
+from roomkit import CONFERENCE_ADDRESS_KEYS, MockConferenceBackend
 
 CONFERENCE_ADDRESS_KEYS
-# ("sip.phoneNumber", "phone_number", "phoneNumber",
-#  "caller_id", "callerId", "from_number")
+# ("phone_number", "phoneNumber", "caller_id", "callerId", "from_number")
+
+class SipTrunkBackend(MockConferenceBackend):
+    @property
+    def address_keys(self) -> tuple[str, ...]:
+        return ("sip.phoneNumber",)  # read before the generic keys
 ```
 
 `sip.trunkPhoneNumber` — the number the caller *dialled* — is deliberately absent:
 every dial-in reaches the same trunk, so reading it would identify all of them as
 one person. So is `from`: it is a SIP header name generic enough that a value
 found under it says nothing about where it came from. If your provider names the
-caller's number differently, say so rather than forking:
+caller's number differently, say so rather than forking. `identity_address_keys=`
+replaces the whole list, the backend's keys included, so keep them when you
+extend it:
 
 ```python
 channel = ConferenceChannel(
     "conf",
     backend=backend,
-    identity_address_keys=("x-caller-number", *CONFERENCE_ADDRESS_KEYS),
+    identity_address_keys=(*backend.address_keys, "x-caller-number", *CONFERENCE_ADDRESS_KEYS),
 )
 ```
 
