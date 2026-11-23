@@ -419,7 +419,7 @@ diarization = SherpaOnnxDiarizationProvider(
 diarization.enroll_speaker("Sylvain", diarization.extract_embedding(pcm, 16000))
 ```
 
-Returns `DiarizationResult(speaker_id, confidence, is_new_speaker)` and fires `ON_SPEAKER_CHANGE` when the speaker changes. A stage reports a voice it attributes to nobody with `speaker_id=None`, which is no speaker — it fires no change and does not reset the last one (the result stays on the frame); any string is a speaker, so a stage of your own turns its own spelling of nobody into `None`. The sherpa-onnx provider matches against enrolled voices and returns `None` below `search_threshold`.
+Returns `DiarizationResult(speaker_id, confidence, is_new_speaker)` and fires `ON_SPEAKER_CHANGE` when the speaker changes. A stage reports a voice it attributes to nobody with `speaker_id=None`, which is no speaker — it fires no change and does not reset the last one (the result stays on the frame); any non-empty string is a speaker, so a stage of your own turns its own spelling of nobody into `None`. The sherpa-onnx provider matches against enrolled voices and returns `None` below `search_threshold`.
 
 !!! tip
     To put the stage's speaker on each transcript — one room message with `sender_name` — pass `pipeline_speakers=True` to the `VoiceChannel`. See [Speakers from the pipeline stage](stt-tts-providers.md#speakers-from-the-pipeline-stage).
