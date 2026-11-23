@@ -170,7 +170,7 @@ live; named voices from reference clips) and `GeminiSTTProvider` with
 `speaker_segments` (batch only). Labels are
 normalised by `roomkit.voice.base.speaker_label`: a string, `None` for an
 unattributed speaker, and without a leading "speaker" word (`"Speaker 1"` →
-`"1"`). Deepgram's older `diarize=True` keeps its ids in `words` and does not
+`"1"`); a longer word that starts with it stays whole (`"Speakerphone"`). Deepgram's older `diarize=True` keeps its ids in `words` and does not
 report `supports_diarization`.
 
 This is the STT's own diarization, aligned to its words. The pipeline's
