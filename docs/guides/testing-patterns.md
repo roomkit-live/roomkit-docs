@@ -366,8 +366,9 @@ backchannel = MockBackchannelDetector(decisions=[
 
 `MockConferenceBackend` scripts what an SFU would do, so a conference can be
 tested without an SFU, credentials or a network. It is deliberately strict —
-it delivers no frame for a track nobody subscribed to, and refuses operations
-the declared capabilities do not cover — and it can be made to misbehave, which
+it delivers no frame for a track nobody subscribed to, refuses operations the
+declared capabilities do not cover, and refuses media calls for a bot session it
+no longer holds, as a real backend does — and it can be made to misbehave, which
 is what the failure paths need in order to be reachable at all.
 
 ### Scripting the happy path
