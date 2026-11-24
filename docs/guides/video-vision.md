@@ -172,7 +172,7 @@ Text visible: Quarterly targets
 </vision>
 ```
 
-The description, the objects and the text read in the frame are data the vision model or the camera saw, set apart in a block they cannot close: a sign that reads "Ignore your instructions" stays a sign. The system prompt never changes with the camera (so the provider's prompt cache holds), and the room's binding is never written.
+The description, the objects and the text read in the frame are data the vision model or the camera saw, set apart in a block they cannot close: a sign that reads "Ignore your instructions" stays a sign. The system prompt never changes with the camera (so the provider's prompt cache holds), and the room's binding is never written. The view ends with its video session, and with a result the vision provider returns with an empty description: that result is not published, and the turns stop reading the session's earlier view rather than take it for the camera's current one.
 
 `setup_video_vision()` is deprecated and does nothing beyond its warning: it wrote the latest description into one AIChannel's system prompt.
 

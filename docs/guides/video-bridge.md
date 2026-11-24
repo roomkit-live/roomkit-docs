@@ -78,13 +78,13 @@ av = AudioVideoChannel("av", backend=backend, video_bridge=config)
 | `max_participants` | `10` | Maximum bridged sessions per room. Raises `RuntimeError` if exceeded. |
 | `forwarding_strategy` | `"forward"` | Direct frame forwarding. N-party compositing (`"composite"`) is planned for a future release. |
 | `keyframe_interval_s` | `5.0` | Send a PLI to every session in the room this often, so a decoder stuck after packet loss recovers. `0` disables. |
-| `keyframe_wait_s` | `1.0` | How long a receiver holds delta frames from a sender that has not produced a keyframe yet. `0` forwards unconditionally. |
+| `keyframe_wait_s` | `1.0` | How long a receiver goes without the delta frames of a sender that has not delivered it a keyframe yet: they are dropped, timed from the first one. `0` forwards unconditionally. |
 
 ### Waiting for a keyframe
 
 A decoder handed delta frames from the middle of a stream renders garbage until
-the next keyframe, so the bridge holds a sender's deltas until that sender has
-delivered one keyframe *to that receiver*. Joining a room already requests a
+the next keyframe, so the bridge drops a sender's deltas to a receiver until
+that sender has delivered one keyframe *to that receiver*. Joining a room already requests a
 keyframe from every peer, so a cooperating sender clears the gate almost
 immediately and a late joiner starts on a clean picture instead of a smear.
 
