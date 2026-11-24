@@ -214,8 +214,8 @@ class ReservingBackend(TurnBackend):
                     raise  # handed, or cut: the worker may have begun the turn
                 # Refused before anything was handed: reserve another worker.
 
-    # serve, control, attend, claim_presence, executors and close forward
-    # to self._inner
+    # serve, control, attend, claim_presence, executors, executors_now,
+    # watch_executors and close forward to self._inner
 ```
 
 `executor` is an `ExecutorInfo` as `kit.executors()` lists it. Its
