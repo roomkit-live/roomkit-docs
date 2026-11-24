@@ -229,8 +229,8 @@ forwarding.  This ensures:
 
 Use `set_bridge_filter()` to inspect or modify audio frames before they
 are forwarded.  The filter runs synchronously as each frame is forwarded:
-in the audio callback thread, or after the `BEFORE_BRIDGE_AUDIO` hooks when
-one is registered. It must complete quickly (< 1ms):
+inside the pipeline's frame callback, or after the `BEFORE_BRIDGE_AUDIO` hooks
+when one is registered. It must complete quickly (< 1ms):
 
 ```python
 # Mute a specific participant
