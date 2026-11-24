@@ -2353,6 +2353,19 @@ async def _observe(self, inner):
 
 `reason` is one of `completed`, `max_rounds`, `timeout`, `budget_exceeded`, `truncated`, `empty_response`, `unfinished`, `force_stopped`, `cancelled` or `error`. `max_rounds`, `timeout_seconds`, `budget_tokens` and `budget_usd` name the limits the turn ran under (`None` for no such limit; the budget is the turn's, resolved per turn), so a consumer names the one a `max_rounds`, `timeout` or `budget_exceeded` end hit without reading the channel. They ride the marker only, not `ON_AI_RESPONSE`. Without the reason, a loop cut at its deadline is indistinguishable from a model that returned nothing — and gets reported as the latter. The channel rendering the stream is handed the marker too, as its `deliver_stream`'s last item, before the response's failure when it fails: a turn that ends on a tool call has its record written on that call's end row once the stream ended, so the marker is how that channel learns how the turn ended. A channel that renders text alone skips it.
 
+**Where a streamed text reads in the conversation.** Rows are stored in the
+order they are written, and a text is written when something ends it: a record
+the room receives while a generation is under way, before its first word, is
+stored before that text. Each text of a streamed response names the row it
+follows, `metadata["follows_index"]`: the index of the last row the room held
+when its writing began, which is the room's latest row as the kit begins to
+read the response, then each row the turn stores. The event `deliver_stream`
+is handed carries the key too, so a screen places the first text before its
+first word. The timeline stays in index order; order by
+`(event.metadata.get("follows_index", event.index), event.index)` to read the
+conversation as it was written, live and from the store. A row without the key
+reads at its index. See `examples/conversation_order.py`.
+
 **An answer that did not act.** `AIChannel(continuation=...)` takes a policy
 that reads the text of a round the model ended itself, without a call and with
 a tool declared, and returns the instruction that makes the model go on, or
