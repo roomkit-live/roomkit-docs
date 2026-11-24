@@ -134,8 +134,10 @@ session registry, filter/processor callbacks, and hook triggers.
 ## Frame Filtering
 
 Use `set_bridge_filter()` to inspect or modify video frames before they
-are forwarded.  The filter runs synchronously in the video callback
-thread and must complete quickly:
+are forwarded.  The filter runs synchronously as each frame is forwarded:
+in the video callback thread, or, once a `BEFORE_BRIDGE_VIDEO` hook is
+registered, after that hook in a task on the event loop. It must complete
+quickly:
 
 ```python
 # Mute video from a specific participant
@@ -199,8 +201,9 @@ async def monitor_bridge(event, ctx):
     overhead.  When hooks are registered, frames are routed through
     the event loop for hook evaluation.
 
-For synchronous, low-latency frame filtering, use
-`set_bridge_filter()` instead.
+For synchronous frame filtering that builds no room context, use
+`set_bridge_filter()` instead; it runs in the callback thread only while
+no `BEFORE_BRIDGE_VIDEO` hook is registered.
 
 ### Other Video Hooks
 
@@ -228,7 +231,8 @@ await kit.leave(session)
 
 All bridge operations are thread-safe.  `VideoBridge.forward()` is
 called from video callback threads (the same context as
-`on_video_received`).  Internal state is protected by a
+`on_video_received`), or from a task on the event loop once a
+`BEFORE_BRIDGE_VIDEO` hook is registered.  Internal state is protected by a
 `threading.Lock`.
 
 ## Comparison with Audio Bridging
