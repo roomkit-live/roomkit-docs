@@ -202,28 +202,31 @@ class ReservingBackend(TurnBackend):
         self._scheduler = scheduler
 
     async def submit(self, request: TurnRequest) -> TurnLink:
-        worker: ExecutorInfo = await self._scheduler.reserve(request)
-        try:
-            return await self._inner.submit_to(request, worker)
-        except TurnLinkError as error:
-            await self._scheduler.release(worker)
-            if error.reason == "no_executor":
+        while True:
+            # Raises once no worker is left: that ends the loop.
+            worker: ExecutorInfo = await self._scheduler.reserve(request)
+            try:
+                return await self._inner.submit_to(request, worker)
+            except BaseException as error:
+                await self._scheduler.release(worker)
+                refused = isinstance(error, TurnLinkError) and error.reason == "no_executor"
+                if not refused or request.handed:
+                    raise  # handed, or cut: the worker may have begun the turn
                 # Refused before anything was handed: reserve another worker.
-                return await self.submit(request)
-            raise  # handed: the worker may have begun the turn, never elsewhere
 
     # serve, control, attend, claim_presence, executors and close forward
     # to self._inner
 ```
 
 `executor` is an `ExecutorInfo` as `kit.executors()` lists it. Its
-`executor_id` names it, and its `node` too when several processes serve that
-id (the same id restarted in another process is another executor); an id two
-processes serve, named without a node, is refused. The executor takes the
-turn as it would take one placed: it declares the channel, serves the room's
-organization, defines its room hooks and is alive. From then it holds the
-room, so the room's next turns placed as usual stay on it. No other executor
-is tried, whoever held the room.
+`executor_id` names it, and its `node` too when you give it: the same id
+restarted in another process is another executor. Named by its id alone, it
+is the one executor of that id that would take the turn; when executors of
+two processes would, the submission is refused until you name the node. The
+executor takes the turn as it would take one placed: it declares the channel,
+serves the room's organization, defines its room hooks and is alive. From
+then it holds the room, so the room's next turns placed as usual stay on it.
+No other executor is tried, whoever held the room.
 
 What `submit_to` raises says what the host may do next:
 
