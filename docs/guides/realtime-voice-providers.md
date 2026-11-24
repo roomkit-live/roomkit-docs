@@ -398,8 +398,8 @@ provider.on_response_end(turn_done)
 ```
 
 Read it at the end of a turn, and only there. The next report replaces it, and
-the realtime channel clears it once it has closed the turn's telemetry span, so
-a ledger built by polling comes out short — that is what `on_usage` is for.
+the realtime channel clears it at the end of each turn, telemetry or not, so a
+ledger built by polling comes out short — that is what `on_usage` is for.
 
 ### What the keys mean
 
