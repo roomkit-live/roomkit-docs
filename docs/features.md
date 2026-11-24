@@ -774,6 +774,15 @@ await backend.serve(executor)
   else to one alive that declares the channel and defines the room's hooks;
   new rooms spread over them. A turn no executor declares fails at once with
   `no_executor`.
+- **A turn submitted to the executor a host chose.**
+  `TurnBackend.submit_to(request, executor)` hands a turn to one executor,
+  named by an `ExecutorInfo` (its `executor_id`, and its `node` when several
+  processes serve the id), where `submit` places it: a host that reserves a
+  worker by rules of its own wraps the kit's turn backend and calls it. The
+  executor takes the turn as it would take one placed, then holds the room;
+  one that does not take it raises `no_executor` before anything is handed,
+  and one that never answers `executor_lost`, the turn never handed elsewhere
+  (RFC §10.6.7).
 - **Liveness.** An executor's process beats from a thread of its own, so a
   turn busy with its CPU is slow, never lost; a killed executor fails its
   turn with `executor_lost` within `heartbeat_timeout`, the text already
