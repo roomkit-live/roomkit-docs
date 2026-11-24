@@ -250,7 +250,7 @@ For speech-to-speech AI (no intermediate STT/TTS), the `RealtimeVoiceChannel` us
 | Component | ABC | Implementations | Responsibility |
 |---|---|---|---|
 | **RealtimeVoiceProvider** | `voice/realtime/provider.py` | `GeminiLiveProvider`, `OpenAIRealtimeProvider`, `MockRealtimeProvider` | Speech-to-speech AI: connect, send/receive audio, tool calling, transcriptions |
-| **RealtimeAudioTransport** | `voice/realtime/transport.py` | `WebSocketRealtimeTransport`, `FastRTCRealtimeTransport`, `MockRealtimeTransport` | Browser-to-server audio: WebSocket or WebRTC connections, no VAD |
+| **VoiceBackend** (realtime transport) | `voice/backends/base.py` | `WebSocketRealtimeTransport`, `FastRTCRealtimeTransport`, `MockRealtimeTransport` | Browser-to-server audio: a VoiceBackend that accepts WebSocket or WebRTC connections, no VAD |
 
 ```
 Client audio → Transport (passthrough) → Provider (server-side VAD + AI) → Transport → Client

@@ -228,8 +228,9 @@ forwarding.  This ensures:
 ## Frame Filtering
 
 Use `set_bridge_filter()` to inspect or modify audio frames before they
-are forwarded.  The filter runs synchronously in the audio callback
-thread and must complete quickly (< 1ms):
+are forwarded.  The filter runs synchronously as each frame is forwarded:
+in the audio callback thread, or after the `BEFORE_BRIDGE_AUDIO` hooks when
+one is registered. It must complete quickly (< 1ms):
 
 ```python
 # Mute a specific participant
@@ -297,7 +298,7 @@ async def duck_when_flagged(event, ctx):
 ```
 
 For synchronous, ultra-low-latency frame filtering (< 1ms), use
-`set_bridge_filter()` instead. It runs synchronously in the frame callback
+`set_bridge_filter()` instead. It runs synchronously as the frame is forwarded
 and builds no room context, so it is the right place for a transform applied to *every*
 frame; the hook is for the occasional frame a policy has to reshape.
 
@@ -327,9 +328,9 @@ await kit.leave(session)
 ## Thread Safety
 
 All bridge operations are thread-safe.  `AudioBridge.forward()` is
-called from audio callback threads (the same context as
-`on_audio_received`).  Internal state is protected by a
-`threading.Lock`.
+called from the pipeline's frame callback, or from a task on the event
+loop when a `BEFORE_BRIDGE_AUDIO` hook is registered.  Internal state is
+protected by a `threading.Lock`.
 
 ## Examples
 
