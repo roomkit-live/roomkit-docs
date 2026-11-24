@@ -79,7 +79,7 @@ config = RecordingConfig(
 
 - If `RecordingConfig.storage` is set, files are written there (directories created automatically).
 - If `storage` is empty, files go to the system temp directory (`tempfile.gettempdir()`).
-- A `storage` containing `..` raises `ValueError` when the recording starts: nothing is written, and the files are never moved to another directory (RFC §12.3.7).
+- A `storage` containing `..`, or a URL (`s3://…`), raises `ValueError` when the recording starts: nothing is written, and the files are never moved to another directory (RFC §12.3.7). `storage` is a local directory; a URL used to be read as a relative path.
 
 ## File naming
 

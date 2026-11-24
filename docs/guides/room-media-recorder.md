@@ -134,7 +134,7 @@ config = MediaRecordingConfig(
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `storage` | `./recordings` | Output directory path |
+| `storage` | `./recordings` | Output directory path; a URL (`s3://…`) or a path with `..` raises `ValueError` before the room is written |
 | `video_codec` | `auto` | Tries NVENC first, falls back to libx264 |
 | `video_fps` | `30` | Video stream rate for PTS resolution |
 | `audio_codec` | `aac` | Audio codec (AAC recommended for MP4) |

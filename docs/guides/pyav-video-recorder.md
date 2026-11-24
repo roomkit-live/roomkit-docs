@@ -78,7 +78,7 @@ config = VideoRecordingConfig(
 )
 ```
 
-A `storage` containing `..` raises `ValueError`: the recording does not start, and `kit.join()` fails before the session is bound.
+A `storage` containing `..`, or a URL (`s3://…`), raises `ValueError`: the recording does not start, and `kit.join()` fails before the session is bound. `storage` is a local directory.
 
 ## Encryption at rest
 
