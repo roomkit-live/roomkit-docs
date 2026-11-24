@@ -139,7 +139,7 @@ config = MediaRecordingConfig(
 | `video_fps` | `30` | Video stream rate for PTS resolution |
 | `audio_codec` | `aac` | Audio codec (AAC recommended for MP4) |
 | `audio_sample_rate` | `16000` | Audio sample rate in Hz |
-| `format` | `mp4` | Container format |
+| `format` | `mp4` | Container format, the file's extension; one that is no plain extension (letters and digits) raises `ValueError` before the room is written |
 | `metadata` | `{}` | Caller-supplied, carried to the recorder verbatim — a matter id, a retention class. The framework never reads it; a conference channel copies `ConferenceRecordingConfig.metadata` into it, one copy per per-track recording. |
 | `encryption` | `None` | `RecordingEncryption` applied to the finished file (RFC §17.6) |
 | `storage_encrypted_at_rest` | `False` | Your statement that the storage already encrypts every byte |
