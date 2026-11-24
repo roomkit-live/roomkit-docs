@@ -202,17 +202,19 @@ class ReservingBackend(TurnBackend):
         self._scheduler = scheduler
 
     async def submit(self, request: TurnRequest) -> TurnLink:
+        refused: list[ExecutorInfo] = []
         while True:
-            # Raises once no worker is left: that ends the loop.
-            worker: ExecutorInfo = await self._scheduler.reserve(request)
+            # Raises once no worker but the refused ones is left.
+            worker = await self._scheduler.reserve(request, besides=refused)
             try:
                 return await self._inner.submit_to(request, worker)
             except BaseException as error:
                 await self._scheduler.release(worker)
-                refused = isinstance(error, TurnLinkError) and error.reason == "no_executor"
-                if not refused or request.handed:
+                refusal = isinstance(error, TurnLinkError) and error.reason == "no_executor"
+                if not refusal or request.handed:
                     raise  # handed, or cut: the worker may have begun the turn
                 # Refused before anything was handed: reserve another worker.
+                refused.append(worker)
 
     # serve, control, attend, claim_presence, executors, executors_now,
     # watch_executors and close forward to self._inner
