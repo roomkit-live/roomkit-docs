@@ -2357,11 +2357,12 @@ async def _observe(self, inner):
 order they are written, and a text is written when something ends it: a record
 the room receives while a generation is under way, before its first word, is
 stored before that text. Each text of a streamed response names the row it
-follows, `metadata["follows_index"]`: the index of the last row the room held
-when its writing began, which is the room's latest row as the kit begins to
-read the response, then each row the turn stores. The event `deliver_stream`
-is handed carries the key too, so a screen places the first text before its
-first word. The timeline stays in index order; order by
+follows, `metadata["follows_index"]`: the index of the row the turn stored
+before it, or, for a text no row of the turn comes before, of the room's
+latest row as the kit begins to read the response. The event `deliver_stream`
+is handed carries the key too, with the room's latest row as the read begins,
+so a screen places the text under way before its first word, then after each
+row its stream hands it. The timeline stays in index order; order by
 `(event.metadata.get("follows_index", event.index), event.index)` to read the
 conversation as it was written, live and from the store. A row without the key
 reads at its index. See `examples/conversation_order.py`.
