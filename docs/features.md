@@ -167,8 +167,8 @@ fields (persona, age, use case, category). See `examples/list_voices.py`.
 
 A TTS provider's `list_voices()` takes filters that every provider applies the
 same way, server side or on the results: `language` matches a tag or its
-prefix (`"fr"` finds `fr-CA` and `fr-FR`), `gender` matches exactly, and `query`
-searches the name and the description. Gemini reads Google's whole catalog —
+prefix (`"fr"` finds `fr-CA` and `fr-FR`), `gender` matches its whole value
+without regard to case, and `query` searches the name and the description. Gemini reads Google's whole catalog —
 2,089 voices on 2026-09-27, 68 of them Québec French; ElevenLabs and Gradium
 return the account's voices, its own clones included.
 
