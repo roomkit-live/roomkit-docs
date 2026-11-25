@@ -108,8 +108,10 @@ await kit.delegate("incident-room", "dev-code", "Why do Canadian checkouts fail?
 The posted message goes through the room's pipeline as the agent's response
 would (`BEFORE_BROADCAST`, the agent's right to write, storage), carries the
 task in its metadata (`task_id`, `agent_id`, `task_status`, `task`), and asks no
-one. A task that failed or was cancelled posts that it did, without its error;
-a completed task with nothing to say posts nothing. `post` needs `notify` to
+one. A task that was cancelled posts that it was, and one that failed that it
+did and [why](#why-a-task-did-not-complete) (`The task “…” failed: it reached
+its limit of tool rounds before giving an answer.`), without its error; a
+completed task with nothing to say posts nothing. `post` needs `notify` to
 name an intelligence channel attached to the room, and a background task. In a
 room a [discussion](discussion.md#talking-and-working-tasks) holds, the posted
 result waits at the front of the speak queue for the turn under way to end;
@@ -224,6 +226,57 @@ cancel the work, use `kit.task_runner.cancel(task.id)`. A custom
 `TaskRunner` ends a cancelled task through its `on_complete`, with
 `roomkit.tasks.models.cancelled_task_fields(context)`.
 
+## Why a task did not complete
+
+Whoever asked for a task reads why it did not complete: one code of a closed
+list, with the runtime's words for it. A reviewer capped at one round of tool
+calls hands this back to the agent that delegated it:
+
+```
+[Background task from reviewer failed: it reached its limit of tool rounds before giving an answer (max_rounds). Task: “Review the placement change.”. Share the outcome with the user.]
+```
+
+| Code | When |
+|---|---|
+| `max_rounds`, `timeout`, `budget_exceeded` | The worker's turn hit its round cap, its deadline or its token budget |
+| `truncated`, `unfinished`, `force_stopped` | Its answer was cut at the output limit, announced an action it did not take, or was stopped |
+| `empty_response` | The task failed with no error: the worker answered nothing. A custom channel whose `on_event` raised reads so too, since its raise stays with its delivery and never reaches the task |
+| `max_tokens`, `max_turn_requests`, `refusal`, `interrupted` | An ACP worker's prompt stopped on that reason, or never returned |
+| `cancelled` | The task was cancelled from outside, or a stop cancelled the worker's turn |
+| `error` | Any other failure the task carries: the provider's error, a raise in the worker's turn, a reason off this list |
+
+The same code reads everywhere the task's end does:
+
+- the relayed hand-back says it in words then by its code, as above, and a
+  posted one in words; both carry `task_end_reason` in their metadata, beside
+  `task_status`;
+- `ON_TASK_COMPLETED` and the task's terminal entry on the status bus carry
+  `task_end_reason` too (the entry's `detail` stays `failed` or `cancelled`);
+- `task_status`, `room_tasks()` and a `delegate_task` call that ran its task
+  inline answer with `end_reason` and `end_reason_text`. A line reads its
+  reason from the entry's `task_end_reason` only when the list names it, so
+  an entry another process posts gives a model no words of its own;
+- the tasks of a turn's notes read `failed: it reached its limit of tool
+  rounds before giving an answer (max_rounds)`;
+- a strategy reads it of a worker's task that failed: `The task failed: it
+  reached its limit of tool rounds before giving an answer (max_rounds).` A
+  worker past the strategy's own `task_timeout` still reads `The task timed
+  out after 30s.`, and the run's failed entry names `task_end_reason` too:
+  the task's, `timeout` for that bound, `cancelled` when its caller cut it,
+  `error` when it raised.
+
+`cancel_task`'s answer for a task that already ended gives its status alone;
+`task_status` says why.
+
+`error` gives no detail, on purpose: a provider's message, a raised error's
+text or a stop reason an external agent made up never reaches a model. The
+detail is the host's, on the task's result (`result.error`,
+`result.exception`, `metadata["loop_end_reason"]`) and on `ON_TASK_COMPLETED`.
+A worker's last narration stays there too, in `result.output`: the agent that
+asked reads the reason, never a cut narration as if it were an answer. A task
+that completed names no reason. Runnable example:
+`examples/task_end_reason.py`.
+
 ## Parallel delegation
 
 ```python
@@ -293,11 +346,14 @@ setup_delegation(researcher, handler)
 
 A call made from a task's room then runs its task inline. It answers once the
 task ended, with how it ended and its result, bounded by `max_result_chars`
-(empty for a failed task):
+(empty for a failed task, which says [why](#why-a-task-did-not-complete)):
 
 ```json
 {"status": "completed", "task_id": "task-…", "child_room_id": "support::task-…::task-…",
  "agent_id": "digger", "result": "Found it."}
+{"status": "failed", "task_id": "task-…", "child_room_id": "support::task-…::task-…",
+ "agent_id": "digger", "end_reason": "max_rounds",
+ "end_reason_text": "it reached its limit of tool rounds before giving an answer", "result": ""}
 ```
 
 The worker goes on with its own turn and ends its task with what it found, which
@@ -427,7 +483,8 @@ Every delegation is posted on `kit.status_bus` ([Status Bus guide](status-bus.md
 `failed` for a task that failed or was cancelled (never the error's text). Each
 entry names the worker (`agent_id`), carries `action="task"`, and in its metadata
 `room_id` (the parent room), `task_id` and `child_room_id`; the terminal entry
-adds `task_status` and `duration_ms`. Its `detail` is a summary for whoever
+adds `task_status`, `duration_ms` and, for a task that did not complete,
+`task_end_reason` ([why](#why-a-task-did-not-complete)). Its `detail` is a summary for whoever
 follows the bus, bounded at 200 characters and cut at a word (the cut ends in
 "…"); a longer result stays whole in `metadata["result"]` (up to 4,000
 characters), and that is what `task_status` gives back.

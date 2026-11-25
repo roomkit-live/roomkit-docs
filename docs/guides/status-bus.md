@@ -141,7 +141,11 @@ For another transport (NATS, ...), implement the `StatusBackend` ABC:
 `kit.delegate()` posts each task on the framework's bus: `pending` once its
 child room is ready, then `completed` (the result, bounded) or `failed` (failed
 or cancelled, never the error's text), under the worker's `agent_id` with
-`action="task"` and `room_id`, `task_id`, `child_room_id` in the metadata. An
+`action="task"` and `room_id`, `task_id`, `child_room_id` in the metadata. A
+terminal entry of a task that did not complete adds `task_end_reason`, one code
+of a closed list (`max_rounds`, `timeout`, `cancelled`, `error`...), which
+`task_status` gives the agent with the runtime's words for it: see
+[Why a task did not complete](agent-delegation.md#why-a-task-did-not-complete). An
 agent reads its room's tasks with the `task_status` tool:
 
 ```python
