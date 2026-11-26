@@ -9,6 +9,8 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 
 ::: roomkit.InMemoryTurnBackend
 
+::: roomkit.DistributedTurnBackend
+
 ::: roomkit.RedisTurnBackend
 
 ::: roomkit.TurnExecutor
@@ -70,3 +72,31 @@ Every turn of an intelligence channel runs through a turn backend (RFC
 ::: roomkit.TurnLinkError
 
 ::: roomkit.RemoteTurnError
+
+## Across processes: the two ports
+
+::: roomkit.TurnBroker
+
+::: roomkit.TurnInbox
+
+::: roomkit.InboxEntry
+
+::: roomkit.BrokerMessage
+
+::: roomkit.TurnRegistry
+
+::: roomkit.BeatWriter
+
+::: roomkit.Beat
+
+::: roomkit.RegistryView
+
+::: roomkit.Beats
+
+::: roomkit.InMemoryTurnBroker
+
+::: roomkit.InMemoryTurnRegistry
+
+::: roomkit.testing.check_turn_broker
+
+::: roomkit.testing.check_turn_registry

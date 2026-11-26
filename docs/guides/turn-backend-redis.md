@@ -381,6 +381,52 @@ the URL's query (`?socket_timeout=...`) take precedence over the backend's,
 the inbox's connection included: one shorter than the inbox's blocking read
 fails each of its idle reads.
 
+## On another service: the two ports
+
+`RedisTurnBackend` is `DistributedTurnBackend` given two services that Redis
+keeps. The backend's logic (placement, liveness, a lost executor, the work a
+turn began) is RoomKit's; it reaches what crosses between processes through
+two ports alone:
+
+- a `TurnBroker` carries the messages, one inbox a node: `post(node,
+  messages)` adds messages to an inbox in their order, `inbox(node, block)`
+  opens its reader (a `TurnInbox`, whose `read(last)` gives the entries after
+  `last`), `acknowledge(node, ids)` lets go of what was read;
+- a `TurnRegistry` keeps what the processes share: each node's `Beat`, written
+  at the registry's time (the time of day, in milliseconds), by the
+  heartbeat's own `BeatWriter` too, read back as a `RegistryView` and as
+  `Beats`; the executor holding a room; the presence last published.
+
+A call either cuts by its own bound (a connection gone half-open) raises
+`TimeoutError`: the backend tries an inbox read or a beat again at once, so
+that it lands inside the silence bound.
+
+A service that gives both, as NATS or a database, runs the backend alone; a
+message broker, as Kafka or RabbitMQ, gives the first and takes its registry
+elsewhere:
+
+```python
+from roomkit import DistributedTurnBackend, RoomKit
+
+backend = DistributedTurnBackend(MyBroker(), MyRegistry())
+kit = RoomKit(turn_backend=backend)
+```
+
+`InMemoryTurnBroker` and `InMemoryTurnRegistry` keep both in one process, for
+tests and for nodes that share a process. The contract of the two ports is
+also a pair of checks, which a service's own tests call on a namespace of
+their own:
+
+```python
+from roomkit.testing import check_turn_broker, check_turn_registry
+
+await check_turn_broker(MyBroker())
+await check_turn_registry(MyRegistry())
+```
+
+The same ports are roomkit-rs's (`roomkit::turns`), where Redis's two
+services live in the `roomkit-providers-redis` crate.
+
 ## Prerequisites
 
 - **Redis 6.2 or later.**
@@ -406,4 +452,13 @@ model otherwise.
 
 ```bash
 REDIS_URL=redis://localhost:6379 uv run python examples/turns_redis.py
+```
+
+`examples/turns_distributed_in_memory.py` runs two nodes of
+`DistributedTurnBackend` in one process, on the in-memory pair, behind a
+broker of its own that counts what it carries: a room's turn runs on the
+other node's executor, and the room lists that executor with its last beat.
+
+```bash
+uv run python examples/turns_distributed_in_memory.py
 ```

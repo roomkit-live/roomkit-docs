@@ -793,10 +793,19 @@ await backend.serve(executor)
   reaches the owner process that submitted the turn.
 - **Redis is the trust boundary**: whoever can write to it can act as an
   executor or an owner. Restrict it as the rooms it carries (ACL, TLS).
+- **On another service.** `RedisTurnBackend` is `DistributedTurnBackend` on
+  Redis's two services. `DistributedTurnBackend(broker, registry)` takes
+  any: a `TurnBroker` carries the messages between processes, one inbox a
+  node, and a `TurnRegistry` keeps what they share (beats, a room's holder,
+  the presence last published). `InMemoryTurnBroker` and
+  `InMemoryTurnRegistry` keep both in one process;
+  `roomkit.testing.check_turn_broker` and `check_turn_registry` check a
+  service of your own against the contract. The same ports as roomkit-rs's.
 
 Guide: [Agent Turns in Another Process (Redis)](guides/turn-backend-redis.md).
 Runnable: `examples/turns_redis.py` (an executor in a second process, killed
-mid-answer, then replaced).
+mid-answer, then replaced), `examples/turns_distributed_in_memory.py` (two
+nodes in one process, a turn crossing a broker of its own).
 
 ### Inbound Routing: One Conversation per Correspondent
 
