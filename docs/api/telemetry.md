@@ -14,6 +14,16 @@ Observability and tracing for RoomKit applications. See the [Telemetry guide](..
 
 ::: roomkit.telemetry.SpanKind
 
+## The current span
+
+A provider written outside RoomKit reads the span the current work runs
+under, and the context its provider gave that span, to start its own spans
+in the same trace.
+
+::: roomkit.telemetry.get_current_span
+
+::: roomkit.telemetry.get_current_telemetry_ctx
+
 ## Built-in Providers
 
 ::: roomkit.telemetry.ConsoleTelemetryProvider
