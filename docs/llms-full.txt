@@ -2755,9 +2755,18 @@ first definition.
 
 Entering a provider waits `connect_timeout` seconds at most
 (`from_command(..., connect_timeout=60.0)`, `from_url(..., connect_timeout=60.0)`):
-the handshake and the listing, and the start of a server it starts. Past it the
-server is stopped, or the connection closed and its session deleted, and
-entering raises `TimeoutError`.
+the protocol's negotiation and the listing, and the start of a server it
+starts. Past it the server is stopped, or the connection closed and its session
+deleted, and entering raises `TimeoutError`.
+
+The negotiation probes `server/discover` and speaks MCP 2026-07-28 with a server
+that answers it; a server of an earlier revision, which refuses the probe or
+leaves it unanswered for 10 seconds, is reached through the `initialize`
+handshake. `protocol="legacy"` goes straight to the handshake, for a server that
+fails on the probe (a Python server on `mcp` 1.9.3 or earlier); the legacy `sse`
+transport always does. `propagate_trace_context=True` carries the trace context
+of the current OpenTelemetry span on each request; without it a request carries
+only the trace keys written in its `_meta`.
 
 `from_url` refuses at construction (`ValueError`) what its transport cannot
 send as given: a URL that is not HTTP(S), names no host, or carries credentials
@@ -2830,8 +2839,9 @@ policy admits: with the archive first in the chain and kept out, a bare
 
 #### Server instructions
 
-A server may publish, when it connects, how to use its tools
-(`InitializeResult.instructions`). `mcp.instructions` keeps that text (`None`
+A server may publish, when it connects, how to use its tools (the
+`instructions` of its discovery result, MCP 2026-07-28, or of its `initialize`
+result). `mcp.instructions` keeps that text (`None`
 when the server sent none) and `mcp.server_info` what the server says of itself
 (`name`, `version`). Hand the instructions to the channel, under a label of
 your own for each server:

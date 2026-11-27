@@ -172,7 +172,7 @@ In `inline_full` mode, every body is handed over when the session starts, which 
 | `request(method, params=None, timeout=30)` | Sends a raw JSON-RPC request and returns its result as a dict |
 | `read_resource(uri)` | Reads a resource (a skill's file) |
 
-The extension works over the session `mcp` 1.x negotiates (protocol `2025-06-18` or `2025-11-25`): a listing without the newer `ttlMs`, `cacheScope` and `resultType` fields is read as complete.
+The extension works on a 2026-07-28 connection and on one of an earlier revision (protocol `2025-06-18` or `2025-11-25`): a listing without the newer `ttlMs`, `cacheScope` and `resultType` fields is read as complete.
 
 ---
 

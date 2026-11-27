@@ -101,7 +101,7 @@ async with provider as mcp:
 # Connection is closed automatically
 ```
 
-Enter and exit the provider in the same task, with `async with`: the MCP SDK's transports hold anyio cancel scopes that must close where they were opened. If connecting fails half-way (the server exits, `initialize` errors), everything already opened is closed before the error reaches you.
+Enter and exit the provider in the same task, with `async with`: the MCP SDK's transports hold anyio cancel scopes that must close where they were opened. If connecting fails half-way (the server exits, the protocol's negotiation errors), everything already opened is closed before the error reaches you.
 
 The tools are listed **once**, on entry, following the listing's cursor across every page. No call lists them again: not a call of a listed tool, and not a call of a tool the listing never named (a gateway's per-caller tool through `as_tool_handler(gate_discovery=False)`), which the MCP SDK's own `ClientSession.call_tool` would answer with a whole `tools/list` each time (RFC §21.2).
 
@@ -141,7 +141,7 @@ async with MCPToolProvider.from_command(
 
 The arguments are passed as a list, with no shell. The MCP SDK starts the server with a **minimal environment** (on POSIX `HOME`, `PATH`, `SHELL`, `TERM`, `USER`, `LOGNAME`; on Windows the system and profile variables), not the whole of your process's: whatever the server needs beyond that, an API key or a config path, goes in `env=`, which is added to that minimum. The server's own stderr goes to yours. The provider logs the server's command without its arguments, which may carry secrets; entering a provider that is already connected is refused.
 
-Entering waits `connect_timeout` seconds at most (60 by default) for the server's start, the handshake and the listing of its tools, a first start that fetches its package included: past it, the server is stopped and entering raises `TimeoutError`, so a server that never answers does not hold the host. Raise it for a package that takes longer to fetch. When the provider is exited, the MCP SDK gives the server 2 seconds to exit once its input is closed, then sends it `SIGTERM`, then `SIGKILL` 2 seconds later.
+Entering waits `connect_timeout` seconds at most (60 by default) for the server's start, the protocol's negotiation and the listing of its tools, a first start that fetches its package included: past it, the server is stopped and entering raises `TimeoutError`, so a server that never answers does not hold the host. Raise it for a package that takes longer to fetch. When the provider is exited, the MCP SDK gives the server 2 seconds to exit once its input is closed, then sends it `SIGTERM`, then `SIGKILL` 2 seconds later.
 
 A runnable version with a local model and a small notes server: [`examples/mcp_stdio_tools.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_stdio_tools.py).
 
@@ -159,6 +159,8 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `cwd` | `None` | Working directory of the server |
 | `discover` | `True` | List the server's tools on entry; `False` connects without listing |
 | `connect_timeout` | `60.0` | Seconds entering may take for a server it starts (stdio): past it, the server is stopped and `TimeoutError` raised |
+| `protocol` | `"auto"` | How the connection agrees on the MCP revision: `"auto"` probes `server/discover` (2026-07-28) and falls back to the `initialize` handshake; `"legacy"` goes straight to the handshake, for a server that fails on the probe |
+| `propagate_trace_context` | `False` | Carry your telemetry's trace context (`traceparent`, `tracestate`, `baggage`) on each request |
 
 ### Methods
 
@@ -192,7 +194,7 @@ unknown-tool envelope, so it goes **last** in a `compose_tool_handlers` chain.
 
 ### Server instructions: what the model reads beside the tools
 
-A server may publish, in its `initialize` result, how a model should use its
+A server may publish, when it connects (in its discovery result, or its `initialize` result for an earlier revision), how a model should use its
 tools: resolve the dice rolls itself, which names it accepts, which skill
 unlocks which tools. `mcp.instructions` keeps that text. Hand it to the
 channel, under a label of your own for the server:
@@ -263,10 +265,10 @@ Two other places compose a model's prompt:
 A conference's realtime bot sends the prompt you wrote as it is: the channel
 adds nothing to it.
 
-RoomKit reads the instructions from the `initialize` handshake (protocol
-2025-11-25), the one it negotiates. A host on its own `mcp` session reads them
-with `session.instructions` (the handshake it negotiated, `server/discover`
-included) and passes them the same way.
+RoomKit reads the instructions from the result its negotiation agreed on: the
+`server/discover` result of a 2026-07-28 server, the `initialize` result of a
+server of an earlier revision. A host on its own `mcp` session reads them with
+`session.instructions` and passes them the same way.
 
 ### MCP Apps: what the host reads beside the model's tools
 
@@ -311,9 +313,9 @@ A bad image would fail the whole request at the vendor, and base64 read as text 
 pip install roomkit[mcp]
 ```
 
-The import is lazy — `mcp` is only required when you actually connect. RoomKit runs on `mcp` 2.3 and later in the 2.x line, which uses `httpx2`; the connection opens with the `initialize` handshake (protocol 2025-11-25), which servers on the 2026-07-28 revision still answer.
+The import is lazy — `mcp` is only required when you actually connect. RoomKit runs on `mcp` 2.3 and later in the 2.x line, which uses `httpx2`. A connection probes `server/discover` and speaks MCP 2026-07-28 with a server that answers it: each request carries the protocol's `_meta` entries and, over HTTP, its `Mcp-*` headers, an argument a tool annotates with `x-mcp-header` included (a tool whose annotation that revision does not accept is left out). A server of an earlier revision, which refuses the probe or leaves it unanswered for 10 seconds, is reached through the `initialize` handshake. A Python server on `mcp` 1.9.3 or earlier fails on the probe: give it `protocol="legacy"`, which goes straight to the handshake, as the legacy `sse` transport always does.
 
-Over Streamable HTTP a server's SSE event may be up to 4 MiB; a larger one fails the request it answers with an `MCPError`. The legacy HTTP+SSE transport (`transport="sse"`) is deprecated by MCP 2026-07-28 and warns (`DeprecationWarning`): its events are bounded at 1 MiB, as the SDK sets it, and a larger one ends the connection. A request given up past its timeout returns at its deadline and tells the server with `notifications/cancelled`. A request carries the trace context of your telemetry (`traceparent`, `tracestate`, `baggage`) only where you wrote it in its `_meta`.
+Over Streamable HTTP a server's SSE event may be up to 4 MiB; a larger one fails the request it answers with an `MCPError`. The legacy HTTP+SSE transport (`transport="sse"`) is deprecated by MCP 2026-07-28 and warns (`DeprecationWarning`): its events are bounded at 1 MiB, as the SDK sets it, and a larger one ends the connection. A request given up past its timeout returns at its deadline and tells the server, with `notifications/cancelled` or, over 2026-07-28 Streamable HTTP, by aborting its POST. A request carries the trace context of your telemetry (`traceparent`, `tracestate`, `baggage`) only where you wrote it in its `_meta`, unless the provider is given `propagate_trace_context=True`, which carries the current span's on every request.
 
 ## compose_tool_handlers
 
