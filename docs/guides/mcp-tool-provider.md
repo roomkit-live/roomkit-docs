@@ -171,7 +171,7 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `as_tool_handler(gate_discovery=True)` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
 | `tool_meta()` | `dict[str, dict]` | Each discovered tool's `_meta`, from the listing made at connection (an MCP App's `ui`) |
 | `read_resource(uri, timeout=30)` | `dict` | A resource read as the server sent it (an MCP App's HTML): its `contents` in order, extension fields and explicit nulls included, each URI normalized |
-| `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `is_error` included, for a host relaying it |
+| `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's result as the SDK models it, `is_error` included, for a host relaying it |
 | `connected` | `bool` | Whether the connection is live: entered, not yet exited |
 | `server_extensions` | `dict[str, dict]` | The extensions the server declared when it connected (a copy) |
 | `request(method, params=None, timeout=30)` | `dict` | A raw JSON-RPC request, its result as a dict: a method the SDK does not model, such as `skills/list`. An empty `params`, or an empty `_meta`, is sent as none; a `_meta` that is not an object raises `ValidationError` |
@@ -313,7 +313,7 @@ pip install roomkit[mcp]
 
 The import is lazy — `mcp` is only required when you actually connect. RoomKit runs on `mcp` 2.3 and later in the 2.x line, which uses `httpx2`; the connection opens with the `initialize` handshake (protocol 2025-11-25), which servers on the 2026-07-28 revision still answer.
 
-Over Streamable HTTP a server's SSE event may be up to 4 MiB; a larger one fails the connection. The legacy HTTP+SSE transport (`transport="sse"`) is deprecated by MCP 2026-07-28 and warns (`DeprecationWarning`): its events are bounded at 1 MiB, as the SDK sets it. A request given up past its timeout tells the server with `notifications/cancelled`.
+Over Streamable HTTP a server's SSE event may be up to 4 MiB; a larger one fails the request it answers with an `MCPError`. The legacy HTTP+SSE transport (`transport="sse"`) is deprecated by MCP 2026-07-28 and warns (`DeprecationWarning`): its events are bounded at 1 MiB, as the SDK sets it, and a larger one ends the connection. A request given up past its timeout returns at its deadline and tells the server with `notifications/cancelled`. A request carries the trace context of your telemetry (`traceparent`, `tracestate`, `baggage`) only where you wrote it in its `_meta`.
 
 ## compose_tool_handlers
 
