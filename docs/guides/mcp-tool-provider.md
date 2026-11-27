@@ -88,7 +88,7 @@ from roomkit.tools import MCPToolProvider
 
 provider = MCPToolProvider.from_url(
     "http://localhost:8000/mcp",
-    transport="streamable_http",  # or "sse"
+    transport="streamable_http",  # or "sse", deprecated
     headers={"Authorization": "Bearer token"},
     tool_filter=lambda name: name.startswith("search_"),
 )
@@ -113,7 +113,8 @@ A host that only reads a resource (an MCP App's HTML, a document) has no use for
 
 ```python
 async with MCPToolProvider.from_url(url, headers=headers, discover=False) as mcp:
-    html = await mcp.read_resource("ui://board/view")
+    result = await mcp.read_resource("ui://board/view")
+    html = result["contents"][0]["text"]
 ```
 
 `get_tools()` and `tool_meta()` are then empty, a gated `as_tool_handler()` serves no name (every call raises `UnservedToolCallError`), and no call is checked against an output schema; `call_tool()` and `call_tool_result()` still work. A runnable version: [`examples/mcp_read_resource.py`](https://github.com/roomkit-live/roomkit/blob/main/examples/mcp_read_resource.py).
@@ -169,11 +170,11 @@ A runnable version with a local model and a small notes server: [`examples/mcp_s
 | `call_tool(name, args)` | `str` | Call a tool directly and get the result |
 | `as_tool_handler(gate_discovery=True)` | `ToolHandler` | Get a handler for `AIChannel(tool_handler=...)` |
 | `tool_meta()` | `dict[str, dict]` | Each discovered tool's `_meta`, from the listing made at connection (an MCP App's `ui`) |
-| `read_resource(uri, timeout=30)` | `ReadResourceResult` | A resource as the server returns it (an MCP App's HTML) |
-| `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `isError` included, for a host relaying it |
+| `read_resource(uri, timeout=30)` | `dict` | A resource read as the server sent it (an MCP App's HTML): its `contents` in order, extension fields and explicit nulls included, each URI normalized |
+| `call_tool_result(name, args, timeout=30)` | `CallToolResult` | A tool's raw result, `is_error` included, for a host relaying it |
 | `connected` | `bool` | Whether the connection is live: entered, not yet exited |
 | `server_extensions` | `dict[str, dict]` | The extensions the server declared when it connected (a copy) |
-| `request(method, params=None, timeout=30)` | `dict` | A raw JSON-RPC request, its result as a dict: a method the SDK does not model, such as `skills/list` |
+| `request(method, params=None, timeout=30)` | `dict` | A raw JSON-RPC request, its result as a dict: a method the SDK does not model, such as `skills/list`. An empty `params`, or an empty `_meta`, is sent as none; a `_meta` that is not an object raises `ValidationError` |
 | `instructions` | `str \| None` | What the server published, when it connected, on how to use its tools; `None` when it published nothing |
 | `server_info` | `dict` | What the server said of itself when it connected (`name`, `version`), a copy |
 
@@ -262,9 +263,9 @@ Two other places compose a model's prompt:
 A conference's realtime bot sends the prompt you wrote as it is: the channel
 adds nothing to it.
 
-RoomKit reads the instructions from the `initialize` handshake, which is the one
-`mcp` 1.x negotiates. A host on its own `mcp` 2 session reads them with
-`session.instructions` (the handshake it negotiated, `server/discover`
+RoomKit reads the instructions from the `initialize` handshake (protocol
+2025-11-25), the one it negotiates. A host on its own `mcp` session reads them
+with `session.instructions` (the handshake it negotiated, `server/discover`
 included) and passes them the same way.
 
 ### MCP Apps: what the host reads beside the model's tools
@@ -274,9 +275,9 @@ needs from the same connection, without a second `tools/list`:
 
 ```python
 ui = mcp.tool_meta().get("show_board", {}).get("ui")   # resourceUri, csp
-html = await mcp.read_resource(ui["resourceUri"])      # ReadResourceResult
+html = (await mcp.read_resource(ui["resourceUri"]))["contents"][0]["text"]
 result = await mcp.call_tool_result("save_checkpoint", {"state": "s1"})
-if result.isError:
+if result.is_error:
     ...
 ```
 
@@ -310,7 +311,9 @@ A bad image would fail the whole request at the vendor, and base64 read as text 
 pip install roomkit[mcp]
 ```
 
-The import is lazy — `mcp` is only required when you actually connect. RoomKit supports `mcp` 1.24 and later in the 1.x line; `mcp` 2 renames its model fields and moves to `httpx2`, and is not supported.
+The import is lazy — `mcp` is only required when you actually connect. RoomKit runs on `mcp` 2.3 and later in the 2.x line, which uses `httpx2`; the connection opens with the `initialize` handshake (protocol 2025-11-25), which servers on the 2026-07-28 revision still answer.
+
+Over Streamable HTTP a server's SSE event may be up to 4 MiB; a larger one fails the connection. The legacy HTTP+SSE transport (`transport="sse"`) is deprecated by MCP 2026-07-28 and warns (`DeprecationWarning`): its events are bounded at 1 MiB, as the SDK sets it. A request given up past its timeout tells the server with `notifications/cancelled`.
 
 ## compose_tool_handlers
 
